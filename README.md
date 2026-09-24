@@ -15,7 +15,7 @@ A local frontend-design workbench for the assistant (the Faustus workspace) and 
 - a **reference gallery**: capture a website's desktop and mobile screenshots, a scroll video, its fonts,
   palette and animation libraries, and search them later by tag, vibe or library.
 
-Everything above is exposed both as a small REST API (for its own UI) and as 24 MCP tools (for the assistant),
+Everything above is exposed both as a small REST API (for its own UI) and as 25 MCP tools (for the assistant),
 built from the *same* code, so they can never disagree.
 
 ## Why
@@ -44,7 +44,7 @@ before a person ever has to say "this looks AI-generated."
   radius, shadows and motion tokens (durations, easings, a motion-intensity knob), exported four ways.
 - **Reference gallery**: capture any URL or raw HTML, extract its palette (Pillow quantization), detected
   animation libraries and motion characteristics, and search the gallery later.
-- **MCP + REST**: 24 tools behind one token-guarded bridge, plus the identical REST routes the bundled UI uses
+- **MCP + REST**: 25 tools behind one token-guarded bridge, plus the identical REST routes the bundled UI uses
   (see `docs/API.md`).
 
 ## Install
@@ -120,6 +120,7 @@ The bridge never opens the database itself: it proxies every call to `POST /api/
 | `render_preview` | no | Render HTML or a URL in Chromium, screenshot at widths, run lint. |
 | `design_lint` | yes | Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). |
 | `design_critique` | no | Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. |
+| `page_assay` | yes | Functional check of a generated page in a real browser: does every control work? Runs [assay](https://github.com/awss1i/assay) (`pip install assay-ui`) — no tests written, no model. |
 | `render_compare` | yes | Pixel-diff two renders at a given width: percent changed + a diff image. |
 | `tokens_generate` | no | Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. |
 | `tokens_get` | yes | Get a generated design system in json, css, tailwind or w3c format. |

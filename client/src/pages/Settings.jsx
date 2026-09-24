@@ -88,6 +88,7 @@ export default function Settings() {
         <div className="flex flex-col gap-1">
           <StatusRow label={t("settings_browser")} ok={!!status?.browser?.ok} detail={status?.browser?.error} />
           <StatusRow label={t("settings_ffmpeg")} ok={!!status?.ffmpeg} />
+          <StatusRow label={t("settings_assay")} ok={!!status?.assay} />
           <StatusRow label={t("settings_git")} ok={!!status?.git} />
         </div>
       </div>

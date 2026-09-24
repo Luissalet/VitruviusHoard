@@ -49,7 +49,7 @@
                                  mcp-token, url, backend.json, logs/)
 ```
 
-`agent_tools.py` is the single source of truth for the 24 MCP tools: it defines pydantic argument models, the
+`agent_tools.py` is the single source of truth for the 25 MCP tools: it defines pydantic argument models, the
 `TOOLS` table (description, `readOnlyHint`/`destructiveHint`/`idempotentHint`, the function that runs it against
 a `Services` instance) and `tool_catalog()`/`call_tool()`. `api/agent.py` and `mcp_server.py` both consume that
 one catalogue, so the REST bridge and the MCP bridge can never disagree about what a tool does or how it is
@@ -78,7 +78,7 @@ router, and the SPA catch-all (`GET /{path:path}`) is registered **last** so it 
 | `ingest/catalog.py` | Loose CSV/JSON → styles/palettes/font_pairings parsers, tolerant of unknown columns. |
 | `ingest/rules.py` | Mines Do/Don't/Avoid/Never/Always bullets into `rules`, guessing area/severity/`check_id`. |
 | `ingest/runner.py` | The one-source-at-a-time background ingest worker; `ingest_source()` is also the synchronous entry point used by `scripts/ingest.py` and by tests. |
-| `agent_tools.py` | The 24-tool MCP/REST catalogue (single source of truth). |
+| `agent_tools.py` | The 25-tool MCP/REST catalogue (single source of truth). |
 | `api/*` | Thin FastAPI routers that validate input and call into `Services`. |
 | `hoard_link/` | Vendored family contract: `family.emit/record_call/health_block`, `Link.chat/embed` resolution against Faustus or a loopback model server. |
 

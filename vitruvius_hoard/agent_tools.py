@@ -9,15 +9,13 @@ from pydantic import BaseModel, Field
 
 from .services import Services
 
-AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a library of criterion from open design-skill repos,
-a render -> capture -> critique loop on real Chromium, a design-system (tokens) generator with a live playground,
-and a reference gallery of captured websites.
+AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
+loop on real Chromium, a design-system (tokens) generator with a playground, and a gallery of captured websites.
 Always cite `[vitruvius: ...]` when quoting the library (design_search, design_brief, design_rules).
-The iteration loop: write HTML -> render_preview -> design_critique -> fix -> render again; stop at score >= 8 or after 3 rounds.
-Use design_brief before writing a page from scratch (style, palette, fonts, rules, anti-patterns, all cited).
-Use styles_search / palettes_search / fonts_search for quick catalog lookups.
-reference_add, source_add, source_ingest, tokens_delete and reference_delete change things on disk or in the DB:
-only call them when the user actually asks to save, add a source, re-ingest, or delete something."""
+Loop: write HTML -> render_preview -> design_critique -> fix -> render again; stop at score >= 8 or after 3 rounds,
+then page_assay it (drives every control in a real browser and reports what does not work).
+Use design_brief before a page from scratch; styles_search / palettes_search / fonts_search for quick lookups.
+reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when the user asks."""
 
 
 class Empty(BaseModel):
@@ -87,6 +85,14 @@ class LintArgs(BaseModel):
     html: Optional[str] = Field(None, max_length=2_000_000)
     url: Optional[str] = Field(None, max_length=2000)
     render_id: Optional[str] = Field(None, max_length=40)
+
+
+class AssayArgs(BaseModel):
+    html: Optional[str] = Field(None, max_length=2_000_000, description="The page to check (a complete HTML document).")
+    url: Optional[str] = Field(None, max_length=2000, description="A URL whose HTML is downloaded and checked as a single page.")
+    render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
+    path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
+    timeout_s: int = Field(300, ge=30, le=900)
 
 
 class CritiqueArgs(BaseModel):
@@ -261,6 +267,12 @@ def run_render_preview(services: Services, args: RenderArgs) -> dict:
 
 def run_design_lint(services: Services, args: LintArgs) -> dict:
     return services.lint_html(html=args.html, url=args.url, render_id=args.render_id)
+
+
+def run_page_assay(services: Services, args: AssayArgs) -> dict:
+    if not (args.html or args.url or args.render_id or args.path):
+        raise ValueError("page_assay needs html, url, render_id or path")
+    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s)
 
 
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
@@ -440,6 +452,12 @@ TOOLS: list[Tool] = [
         "Merges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy).\n"
         "Sinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
         CritiqueArgs, _ann(False, False, False), run_design_critique),
+    Tool("page_assay",
+        "Functional check of a page in a real browser: does every control work? No tests needed. ¿Funciona la página?\n"
+        "Runs assay (pip install assay-ui): measures every control, derives a test plan, drives it and reports contradictions\n"
+        "(dead buttons, `undefined` shown, a control answering differently to the same input). Takes ~15-60 s.\n"
+        "Sinónimos: probar la página, comprobar botones, test funcional, assay, ¿funciona?, smoke test de UI.",
+        AssayArgs, _ann(True, False, False), run_page_assay),
     Tool("render_compare",
         "Pixel-diff two renders at a given width: percent changed + a diff image. Comparar dos renders.\n"
         "Sinónimos: comparar, diff visual, antes y después.",

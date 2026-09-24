@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from . import SERVICE, __version__
+from . import assay as assay_mod
 from . import critique as critique_mod
 from . import library as library_mod
 from . import lint as lint_mod
@@ -65,8 +66,9 @@ def ffmpeg_available() -> bool:
 
 class Services:
     def __init__(self, config: Config, *, browser: Any = None, link: Any = None, clock_fn: Callable[[], float] = time.time,
-                 autostart_ingest: bool = True):
+                 autostart_ingest: bool = True, assay_runner: Any = None):
         self.config = config
+        self.assay_runner = assay_runner  # tests inject a fake `(cmd, timeout) -> (code, out, err)`
         self.clock = clock_fn
         self.started_at = time.time()
         config.data_dir.mkdir(parents=True, exist_ok=True)
@@ -228,6 +230,13 @@ class Services:
         capture = self.browser.capture(html=html, url=url, widths=widths, full_page=full_page, dark=dark,
                                        wait_ms=wait_ms, record=record, out_dir=out_dir)
         ms = (time.monotonic() - t0) * 1000
+        if html is not None:
+            # Kept next to the screenshots so a later page_assay / render_compare can reopen the page.
+            try:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                (out_dir / "source.html").write_text(html, encoding="utf-8")
+            except OSError:
+                pass
         input_hash = str(hash((html or "") + (url or "")))
         kind = "url" if url else "html"
 
@@ -334,6 +343,26 @@ class Services:
                                        out_dir=self.config.renders_dir / ("lint-" + uuid.uuid4().hex[:8]))
         probe = capture.get("probe") or {}
         return lint_mod.run_lint(probe, html or "")
+
+    # ---------------- functional check (assay) ----------------
+    def assay_page(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,
+                   path: Optional[str] = None, timeout_s: int = 300) -> dict[str, Any]:
+        if render_id:
+            source = self.config.renders_dir / render_id / "source.html"
+            if not source.is_file():
+                raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
+            path, html = str(source), None
+        elif url:
+            import httpx
+
+            response = httpx.get(url, timeout=30, follow_redirects=True, headers={"User-Agent": "Vitruvius/0.1"})
+            response.raise_for_status()
+            html = response.text
+        if html is None and not path:
+            raise ValueError("page_assay needs html, url, render_id or a local path")
+        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner)
+        self._emit_event("vitruvius.assay.done", {"id": result.get("id"), "works": result.get("works"), "failed": result.get("failed")})
+        return result
 
     def critique_render(self, render_id: str, *, focus: Optional[str] = None, use_vision: bool = True) -> dict[str, Any]:
         row = self.db.one("SELECT * FROM renders WHERE id = ?", (render_id,))
@@ -502,5 +531,6 @@ class Services:
         return {
             "service": SERVICE, "version": __version__, "data_dir": str(self.config.data_dir),
             "started_at": self.started_at, "now": self.clock(), "browser": browser_status,
-            "ffmpeg": ffmpeg_available(), "git": git_available(), "counts": counts, "models": link_status,
+            "ffmpeg": ffmpeg_available(), "git": git_available(), "assay": assay_mod.available(),
+            "counts": counts, "models": link_status,
         }
