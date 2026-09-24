@@ -157,6 +157,44 @@ function CritiqueView({ critique, t }) {
   );
 }
 
+function AssayView({ assay, t }) {
+  if (!assay) return null;
+  if (assay.error) {
+    return (
+      <div className="panel mt-4">
+        <h3 className="text-[13px] font-semibold mb-1">{t("assay_title")}</h3>
+        <div className="help">{assay.error}{assay.hint ? ` — ${assay.hint}` : ""}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="panel mt-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="text-[13px] font-semibold">{t("assay_title")}</h3>
+        <span className={`chip ${assay.works ? "chip-ok" : "chip-danger"}`}>
+          {assay.works ? t("assay_works") : t("assay_broken")} · {assay.passed}/{assay.planned}
+        </span>
+      </div>
+      <div className="help mt-1">{t("assay_surface")}: {(assay.surface || []).map((s) => `${s.kind} “${s.label || s.selector}”`).join(", ") || "—"}</div>
+      {!!assay.failing?.length && (
+        <div className="flex flex-col gap-2 mt-3">
+          {assay.failing.map((c) => (
+            <div key={c.id} className="card">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[13px]">{c.what}</span>
+                <span className="chip chip-danger">{c.id}</span>
+              </div>
+              {c.detail && <div className="text-[12px] mt-1" style={{ color: "var(--muted)" }}>{c.detail}</div>}
+              {!!c.acts?.length && <div className="mono mt-1" style={{ color: "var(--muted)" }}>{JSON.stringify(c.acts)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="help mt-2">{Math.round((assay.ms || 0) / 1000)} s</div>
+    </div>
+  );
+}
+
 export default function Critique() {
   const { t, notify, lang } = useApp();
   const [html, setHtml] = useState("");
@@ -167,6 +205,8 @@ export default function Critique() {
   const [critique, setCritique] = useState(null);
   const [busyRender, setBusyRender] = useState(false);
   const [busyCritique, setBusyCritique] = useState(false);
+  const [assay, setAssay] = useState(null);
+  const [busyAssay, setBusyAssay] = useState(false);
   const [history, setHistory] = useState(null);
 
   const loadHistory = async () => {
@@ -187,6 +227,7 @@ export default function Critique() {
     if (!html.trim() && !url.trim()) return;
     setBusyRender(true);
     setCritique(null);
+    setAssay(null);
     try {
       const body = { widths: widths.length ? widths : WIDTHS, dark, full_page: true, lint: true };
       if (html.trim()) body.html = html;
@@ -198,6 +239,20 @@ export default function Critique() {
       notify(e.message);
     } finally {
       setBusyRender(false);
+    }
+  };
+
+  const doAssay = async () => {
+    if (!html.trim() && !url.trim()) return;
+    setBusyAssay(true);
+    setAssay(null);
+    try {
+      const body = html.trim() ? { html } : { url };
+      setAssay(await api.assay(body));
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setBusyAssay(false);
     }
   };
 
@@ -267,12 +322,16 @@ export default function Critique() {
               <button type="button" className="btn" onClick={doCritique} disabled={!render || busyCritique}>
                 {busyCritique ? t("critique_critiquing") : t("critique_with_vision")}
               </button>
+              <button type="button" className="btn" onClick={doAssay} disabled={busyAssay || (!html.trim() && !url.trim())} title={t("assay_hint")}>
+                {busyAssay ? t("assay_running") : t("assay_button")}
+              </button>
             </div>
           </div>
 
           {!render && <div className="mt-4"><Empty>{t("critique_empty")}</Empty></div>}
           <RenderView render={render} t={t} />
           <CritiqueView critique={critique} t={t} />
+          <AssayView assay={assay} t={t} />
         </div>
 
         <div className="panel">

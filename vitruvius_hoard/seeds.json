@@ -405,6 +405,26 @@
       "paths": [
         "README.md"
       ]
+    },
+    {
+      "id": "assay",
+      "kind": "git",
+      "url": "https://github.com/awss1i/assay",
+      "license": "MIT",
+      "category": "tooling",
+      "tags": [
+        "functional-testing",
+        "browser",
+        "contradictions",
+        "no-tests",
+        "harness"
+      ],
+      "paths": [
+        "README.md",
+        "docs/**",
+        "plugins/**/*.md"
+      ],
+      "note": "Checks that a generated page works by deriving a test plan from the rendered controls; wrapped by the page_assay tool."
     }
   ],
   "galleries": [

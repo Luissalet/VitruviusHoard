@@ -42,6 +42,7 @@ export const api = {
   renderFileUrl: (id, name) => `/api/renders/${encodeURIComponent(id)}/files/${name}`,
   renderCritique: (id, body) => request("POST", `/api/renders/${encodeURIComponent(id)}/critique`, { body }),
   lint: (body) => request("POST", "/api/lint", { body }),
+  assay: (body) => request("POST", "/api/assay", { body }),
   renderCompare: (body) => request("POST", "/api/renders/compare", { body }),
 
   tokensList: (limit) => request("GET", "/api/tokens", { params: { limit } }),

@@ -89,6 +89,27 @@ def lint_route(request: Request, body: LintBody):
         raise HTTPException(404, str(error)) from error
 
 
+class AssayBody(BaseModel):
+    html: Optional[str] = None
+    url: Optional[str] = None
+    render_id: Optional[str] = None
+    path: Optional[str] = None
+    timeout_s: int = 300
+
+
+@router.post("/assay")
+def assay_route(request: Request, body: AssayBody):
+    if not (body.html or body.url or body.render_id or body.path):
+        raise HTTPException(400, "html, url, render_id or path is required")
+    try:
+        return services(request).assay_page(html=body.html, url=body.url, render_id=body.render_id, path=body.path,
+                                            timeout_s=max(30, min(900, body.timeout_s)))
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+
+
 class CompareBody(BaseModel):
     render_a: str
     render_b: str

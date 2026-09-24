@@ -16,7 +16,7 @@ Un taller de diseño de interfaces local, para el asistente (el entorno Faustus)
 - una **galería de referencias**: captura una web con sus capturas de escritorio y móvil, un vídeo de scroll, sus
   fuentes, paleta y librerías de animación, y búscalas después por etiqueta, vibe o librería.
 
-Todo lo anterior se expone tanto como una pequeña API REST (para su propia interfaz) como 24 herramientas MCP
+Todo lo anterior se expone tanto como una pequeña API REST (para su propia interfaz) como 25 herramientas MCP
 (para el asistente), construidas desde el *mismo* código, para que nunca puedan discrepar.
 
 ## Por qué
@@ -50,7 +50,7 @@ hecho por una IA".
   exportados de cuatro formas.
 - **Galería de referencias**: captura cualquier URL o HTML en bruto, extrae su paleta (cuantización con Pillow),
   las librerías de animación detectadas y sus características de motion, y búscalas después.
-- **MCP + REST**: 24 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
+- **MCP + REST**: 25 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
   usa la interfaz incluida (ver `docs/API.md`).
 
 ## Instalación
@@ -127,6 +127,7 @@ ejecución (arrancándola automáticamente si no lo está) usando el token del p
 | `render_preview` | no | Renderiza HTML o una URL en Chromium, captura a varios anchos, ejecuta el lint. |
 | `design_lint` | sí | Comprobaciones deterministas de diseño sobre HTML/URL (tipografía, contraste, motion, a11y, patrones genéricos de IA). |
 | `design_critique` | no | Critica una página renderizada: puntuación 0-10, hallazgos con arreglos, usando lint + modelo de visión local. |
+| `page_assay` | sí | Comprobación funcional de una página generada en un navegador real: ¿funciona cada control? Ejecuta [assay](https://github.com/awss1i/assay) (`pip install assay-ui`), sin tests escritos ni modelo. |
 | `render_compare` | sí | Diferencia de píxeles entre dos renders a un ancho dado: porcentaje cambiado + imagen de diferencia. |
 | `tokens_generate` | no | Genera un sistema de diseño: paletas OKLCH, escala tipográfica, espaciado, tokens de motion. |
 | `tokens_get` | sí | Obtiene un sistema de diseño generado en formato json, css, tailwind o w3c. |
