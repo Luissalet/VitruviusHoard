@@ -1,0 +1,450 @@
+{
+  "_note": "Initial sources for Vitruvius's Hoard. kind=git → shallow clone; only `paths` (globs, relative) are ingested when given. license is what the repo states on 2026-09-24; 'check' = not verified, ingest but flag in the UI.",
+  "sources": [
+    {
+      "id": "impeccable",
+      "kind": "git",
+      "url": "https://github.com/pbakaus/impeccable",
+      "license": "Apache-2.0",
+      "category": "criterion",
+      "tags": [
+        "design-language",
+        "critique",
+        "audit",
+        "commands",
+        "detectors"
+      ],
+      "paths": [
+        "skill/**",
+        "docs/**",
+        "plugin/**",
+        "README.md",
+        "DESIGN.md",
+        "PRODUCT.md"
+      ],
+      "note": "24 commands (craft, critique, audit, polish, animate, colorize, typeset, layout…) and 61 deterministic detector rules."
+    },
+    {
+      "id": "anti-slop",
+      "kind": "git",
+      "url": "https://github.com/miqdadbadjuber/anti-slop",
+      "license": "MIT",
+      "category": "rules",
+      "tags": [
+        "anti-slop",
+        "filter",
+        "rules",
+        "gates",
+        "copy",
+        "liveliness"
+      ],
+      "paths": [
+        "**/*.md"
+      ],
+      "note": "38 mandatory rules in three tiers (Hard Gate, Purpose-Gate, Quality Locks), six skills, delivery gate, liveliness dials."
+    },
+    {
+      "id": "hallmark",
+      "kind": "git",
+      "url": "https://github.com/Nutlope/hallmark",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "themes",
+        "anti-patterns",
+        "gates",
+        "audit",
+        "redesign",
+        "study"
+      ],
+      "paths": [
+        "**/*.md"
+      ],
+      "note": "21 themes, 57 slop-test gates, audit/redesign/study modes."
+    },
+    {
+      "id": "superdesign-skill",
+      "kind": "git",
+      "url": "https://github.com/superdesigndev/superdesign-skill",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "design-system",
+        "replica",
+        "iterate",
+        "presentations"
+      ],
+      "paths": [
+        "**/*.md"
+      ]
+    },
+    {
+      "id": "anthropic-frontend-design",
+      "kind": "git",
+      "url": "https://github.com/anthropics/skills",
+      "license": "Apache-2.0",
+      "category": "criterion",
+      "tags": [
+        "aesthetic-direction",
+        "anti-generic",
+        "process"
+      ],
+      "paths": [
+        "skills/frontend-design/**"
+      ],
+      "note": "Only the frontend-design skill; the document skills in that repo are source-available and are NOT ingested."
+    },
+    {
+      "id": "vercel-web-interface-guidelines",
+      "kind": "git",
+      "url": "https://github.com/vercel-labs/web-interface-guidelines",
+      "license": "MIT",
+      "category": "rules",
+      "tags": [
+        "interactions",
+        "animation",
+        "layout",
+        "forms",
+        "performance",
+        "accessibility"
+      ],
+      "paths": [
+        "AGENTS.md",
+        "command.md",
+        "README.md"
+      ]
+    },
+    {
+      "id": "ui-ux-pro-max",
+      "kind": "git",
+      "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "license": "MIT",
+      "category": "catalog",
+      "tags": [
+        "styles",
+        "palettes",
+        "font-pairings",
+        "charts",
+        "ux-guidelines",
+        "stacks"
+      ],
+      "paths": [
+        "src/ui-ux-pro-max/data/**",
+        "src/ui-ux-pro-max/templates/**",
+        "README.md"
+      ],
+      "structured": true,
+      "note": "CSV/JSON catalogs → styles, palettes, font_pairings tables."
+    },
+    {
+      "id": "taste-skill",
+      "kind": "git",
+      "url": "https://github.com/Leonxlnx/taste-skill",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "knobs",
+        "variance",
+        "motion-intensity",
+        "density"
+      ],
+      "paths": [
+        "skills/**",
+        "research/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "aesthetic-anchors",
+      "kind": "git",
+      "url": "https://github.com/Ilm-Alan/frontend-design",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "anchors",
+        "swiss",
+        "brutalist",
+        "industrial",
+        "aurora",
+        "retro-futuristic",
+        "organic",
+        "lo-fi"
+      ],
+      "paths": [
+        "SKILL.md",
+        "README.md"
+      ]
+    },
+    {
+      "id": "frontend-design-pro-demo",
+      "kind": "git",
+      "url": "https://github.com/claudekit/frontend-design-pro-demo",
+      "license": "MIT",
+      "category": "reference",
+      "tags": [
+        "demos",
+        "aesthetics",
+        "html"
+      ],
+      "paths": [
+        "skills/**",
+        "demos-v02/**",
+        "demos-v01/**",
+        "README.md"
+      ],
+      "note": "11 aesthetics with working HTML demos → also imported into the reference gallery as local captures."
+    },
+    {
+      "id": "distinctive-frontend",
+      "kind": "git",
+      "url": "https://github.com/Koomook/claude-frontend-skills",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "typography",
+        "color",
+        "motion",
+        "backgrounds"
+      ],
+      "paths": [
+        "skills/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "design-motion-principles",
+      "kind": "git",
+      "url": "https://github.com/kylezantos/design-motion-principles",
+      "license": "MIT",
+      "category": "motion",
+      "tags": [
+        "motion",
+        "audit",
+        "recipes",
+        "easing",
+        "reduced-motion"
+      ],
+      "paths": [
+        "skills/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "emil-skills",
+      "kind": "git",
+      "url": "https://github.com/emilkowalski/skills",
+      "license": "MIT",
+      "category": "motion",
+      "tags": [
+        "animation",
+        "review",
+        "vocabulary",
+        "apple-design",
+        "prototype"
+      ],
+      "paths": [
+        "skills/**",
+        "performance-cheatsheet.md",
+        "README.md"
+      ]
+    },
+    {
+      "id": "claude-design-skillstack",
+      "kind": "git",
+      "url": "https://github.com/freshtechbro/claudedesignskills",
+      "license": "MIT",
+      "category": "motion",
+      "tags": [
+        "gsap",
+        "scrolltrigger",
+        "framer-motion",
+        "three",
+        "lottie",
+        "anime"
+      ],
+      "paths": [
+        ".claude/skills/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "bang-motion",
+      "kind": "git",
+      "url": "https://github.com/bangtutorial/bang-motion",
+      "license": "MIT",
+      "category": "motion",
+      "tags": [
+        "motion-graphics",
+        "kinetic-typography",
+        "openers",
+        "explainers",
+        "mp4"
+      ],
+      "paths": [
+        "SKILL.md",
+        "references/**",
+        "assets/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "hyperframes",
+      "kind": "git",
+      "url": "https://github.com/heygen-com/hyperframes",
+      "license": "Apache-2.0",
+      "category": "motion",
+      "tags": [
+        "html-to-video",
+        "keyframes",
+        "motion-graphics",
+        "render"
+      ],
+      "paths": [
+        "skills/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "nullmotion",
+      "kind": "git",
+      "url": "https://github.com/blixvip/NullMotion",
+      "license": "check",
+      "category": "motion",
+      "tags": [
+        "motion-graphics",
+        "typography",
+        "mp4"
+      ],
+      "paths": [
+        "README.md",
+        "**/*.md"
+      ]
+    },
+    {
+      "id": "web-quality-skills",
+      "kind": "git",
+      "url": "https://github.com/addyosmani/web-quality-skills",
+      "license": "MIT",
+      "category": "rules",
+      "tags": [
+        "core-web-vitals",
+        "accessibility",
+        "wcag",
+        "performance",
+        "seo"
+      ],
+      "paths": [
+        "skills/**",
+        "AGENTS.md",
+        "README.md"
+      ]
+    },
+    {
+      "id": "designer-skills",
+      "kind": "git",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": [
+        "design-systems",
+        "ui-design",
+        "interaction-design",
+        "visual-critique"
+      ],
+      "paths": [
+        "design-systems/**",
+        "ui-design/**",
+        "interaction-design/**",
+        "visual-critique/**",
+        "README.md"
+      ]
+    },
+    {
+      "id": "awesome-web-animation",
+      "kind": "git",
+      "url": "https://github.com/sergey-pimenov/awesome-web-animation",
+      "license": "CC0-1.0",
+      "category": "index",
+      "tags": [
+        "libraries",
+        "svg",
+        "canvas",
+        "scroll",
+        "text"
+      ],
+      "paths": [
+        "readme.md"
+      ]
+    },
+    {
+      "id": "motion-ui-design",
+      "kind": "git",
+      "url": "https://github.com/fliptheweb/motion-ui-design",
+      "license": "check",
+      "category": "index",
+      "tags": [
+        "motion",
+        "inspiration",
+        "software"
+      ],
+      "paths": [
+        "README.md"
+      ]
+    },
+    {
+      "id": "frontend-design-toolkit",
+      "kind": "git",
+      "url": "https://github.com/wilwaldon/Claude-Code-Frontend-Design-Toolkit",
+      "license": "check",
+      "category": "index",
+      "tags": [
+        "skills",
+        "mcp",
+        "toolkit"
+      ],
+      "paths": [
+        "README.md"
+      ]
+    }
+  ],
+  "galleries": [
+    {
+      "name": "Godly",
+      "url": "https://godly.website",
+      "note": "Not scraped: paste page URLs into reference_add."
+    },
+    {
+      "name": "Lapa Ninja",
+      "url": "https://www.lapa.ninja"
+    },
+    {
+      "name": "Curated Design",
+      "url": "https://www.curated.design"
+    },
+    {
+      "name": "Dark Design",
+      "url": "https://www.dark.design"
+    },
+    {
+      "name": "Minimal Gallery",
+      "url": "https://minimal.gallery"
+    },
+    {
+      "name": "Siteinspire",
+      "url": "https://www.siteinspire.com"
+    },
+    {
+      "name": "Refero",
+      "url": "https://refero.design"
+    },
+    {
+      "name": "Awwwards",
+      "url": "https://www.awwwards.com"
+    },
+    {
+      "name": "Design Skills index",
+      "url": "https://designskills.dev",
+      "note": "Independent index of 230+ design skills; each keeps its own licence. Browse and add repos with source_add."
+    }
+  ]
+}
