@@ -1,0 +1,4 @@
+# Only for scripts/make_icon.py (regenerating the icon) and numpy-accelerated
+# palette/pixel-diff paths; the app degrades gracefully without these.
+pillow>=11
+numpy>=2
