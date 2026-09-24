@@ -30,7 +30,18 @@ log = logging.getLogger("vitruvius")
 
 
 def write_token(config: Config) -> str:
+    """The MCP token is persistent: created once, reused on every later start.
+
+    Rotating it on each start would break a bridge (or a second, port-clashing
+    instance would break the running one) the moment the file changed.
+    """
     config.data_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        existing = config.token_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        existing = ""
+    if len(existing) >= 32:
+        return existing
     token = secrets.token_hex(32)
     config.token_path.write_text(token, encoding="utf-8")
     try:
@@ -463,8 +474,8 @@ class Services:
         return self.get_settings()
 
     # ---------------- status ----------------
-    def status(self) -> dict[str, Any]:
-        counts = {
+    def counts(self) -> dict[str, int]:
+        return {
             "sources": self.db.one("SELECT COUNT(*) AS n FROM sources")["n"],
             "documents": self.db.one("SELECT COUNT(*) AS n FROM documents")["n"],
             "chunks": self.db.one("SELECT COUNT(*) AS n FROM chunks")["n"],
@@ -476,7 +487,14 @@ class Services:
             "design_systems": self.db.one("SELECT COUNT(*) AS n FROM design_systems")["n"],
             "references": self.db.one("SELECT COUNT(*) AS n FROM references_t")["n"],
         }
-        browser_status = self.browser.status() if hasattr(self.browser, "status") else {"ok": True}
+
+    def browser_status(self) -> dict[str, Any]:
+        return self.browser.status() if hasattr(self.browser, "status") else {"ok": True}
+
+    def status(self) -> dict[str, Any]:
+        """The full picture, including the (network-probing, ~seconds) model resolution."""
+        counts = self.counts()
+        browser_status = self.browser_status()
         try:
             link_status = self.link_sync.status()
         except Exception as error:  # noqa: BLE001

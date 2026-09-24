@@ -88,11 +88,17 @@ class VitruviusBridge(FastMCP):
 
 
 def _healthy() -> bool:
-    try:
-        response = httpx.get(f"{BASE_URL}/api/health", timeout=2, trust_env=False)
-        return response.status_code == 200 and response.json().get("service") == "vitruvius-hoard"
-    except Exception:
-        return False
+    # Two tries with a generous timeout: a render in flight must not look like a dead app.
+    for timeout in (4, 8):
+        try:
+            response = httpx.get(f"{BASE_URL}/api/health", timeout=timeout, trust_env=False)
+            if response.status_code == 200 and response.json().get("service") == "vitruvius-hoard":
+                return True
+        except httpx.ConnectError:
+            return False
+        except Exception:
+            continue
+    return False
 
 
 def ensure_running(timeout_s: float = 40.0) -> bool:
