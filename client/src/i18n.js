@@ -1,7 +1,6 @@
 // Bilingual UI: Spanish (castellano) or English, chosen from the browser language and switchable (remembered locally).
 const DICT = {
   es: {
-    tagline: "Firmeza, utilidad, belleza — para interfaces.",
     nav_library: "Biblioteca",
     nav_critique: "Crítica",
     nav_tokens: "Tokens",
@@ -201,7 +200,6 @@ const DICT = {
     empty_hint_ok: "Todo listo.",
   },
   en: {
-    tagline: "Firmness, commodity, delight — for interfaces.",
     nav_library: "Library",
     nav_critique: "Critique",
     nav_tokens: "Design system",

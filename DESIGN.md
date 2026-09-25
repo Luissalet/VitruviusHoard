@@ -87,7 +87,7 @@ router, and the SPA catch-all (`GET /{path:path}`) is registered **last** so it 
 
 ### Identity
 
-- **Name**: Vitruvius's Hoard — *Firmness, commodity, delight — for interfaces.*
+- **Name**: Vitruvius's Hoard (no tagline anywhere: the name and what it does).
 - **Glyph**: a circle inside a square with a drafting divider (the Vitruvian proportion), gold with a dark
   outline, drawn at ≈400px centred at (627, 768) on the icon canvas (`scripts/make_icon.py`).
 
