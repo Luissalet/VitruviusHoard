@@ -76,6 +76,7 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
     mode: auto (hybrid when vectors exist, else bm25), hybrid, bm25, dense.
     """
     items: list[dict[str, Any]] = []
+    loose_bm25 = False  # True when no passage had every word and bm25 fell back to any-word matches
     fts_and = _fts_query(query, "and")
     rows: list[Any] = []
     use_dense = dense is not None and mode in ("auto", "hybrid", "dense") and dense.usable()
@@ -102,6 +103,7 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
             if fts_or and fts_or != fts_and:
                 params[0] = fts_or
                 rows = db.query(sql, params)
+                loose_bm25 = True
 
     by_id = {int(r["chunk_id"]): r for r in rows}
     bm25_ids = [int(r["chunk_id"]) for r in rows]
@@ -120,7 +122,9 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
     if dense_ids:
         from .dense import rrf
 
-        order = rrf([bm25_ids, dense_ids] if bm25_ids else [dense_ids])
+        # Any-word keyword hits are weak evidence (one shared word like «lateral»): they still count,
+        # but a passage the model ranks first by meaning should not lose to them.
+        order = rrf([bm25_ids, dense_ids], [0.3 if loose_bm25 else 1.0, 1.0]) if bm25_ids else rrf([dense_ids])
         bm25_set, dense_set = set(bm25_ids), set(dense_ids)
         for cid, fused in order:
             r = by_id[cid]

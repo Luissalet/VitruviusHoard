@@ -350,9 +350,10 @@ def _embed_text(heading: str, text: str) -> str:
     return f"{head}\n{body}" if head else body
 
 
-def rrf(rankings: list[list[int]]) -> list[tuple[int, float]]:
+def rrf(rankings: list[list[int]], weights: Optional[list[float]] = None) -> list[tuple[int, float]]:
     fused: dict[int, float] = {}
-    for ranking in rankings:
+    for i, ranking in enumerate(rankings):
+        weight = weights[i] if weights else 1.0
         for rank, chunk_id in enumerate(ranking, start=1):
-            fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.0 / (RRF_K + rank)
+            fused[chunk_id] = fused.get(chunk_id, 0.0) + weight / (RRF_K + rank)
     return sorted(fused.items(), key=lambda item: -item[1])
