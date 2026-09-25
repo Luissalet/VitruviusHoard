@@ -1,7 +1,5 @@
 # Vitruvius's Hoard
 
-*Firmness, commodity, delight — for interfaces.*
-
 A local frontend-design workbench for the assistant (the Faustus workspace) and for the person using it: the
 "design sense" a raw code model lacks. Four cores, one app:
 

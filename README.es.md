@@ -1,7 +1,5 @@
 # Vitruvius's Hoard
 
-*Firmeza, utilidad, belleza — para interfaces.*
-
 Un taller de diseño de interfaces local, para el asistente (el entorno Faustus) y para la persona que lo usa: el
 "sentido del diseño" que le falta a un modelo de código en bruto. Cuatro núcleos, una sola app:
 
