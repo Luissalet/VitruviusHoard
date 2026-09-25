@@ -118,3 +118,23 @@ def test_call_tool_reference_add_and_delete(services):
     assert fetched["id"] == added["id"]
     deleted = call_tool(services, "reference_delete", {"id": added["id"]})
     assert deleted["ok"] is True
+
+
+def test_render_and_lint_accept_a_page_on_disk(services, tmp_path):
+    page = tmp_path / "site" / "index.html"
+    page.parent.mkdir()
+    page.write_text("<html><body><h1>Pan del día</h1></body></html>", encoding="utf-8")
+    by_file = call_tool(services, "render_preview", {"path": str(page)})
+    by_folder = call_tool(services, "design_lint", {"path": str(page.parent)})
+    assert "id" in by_file and "findings" in by_folder
+
+
+def test_local_page_errors_are_clear(tmp_path):
+    from vitruvius_hoard.agent_tools import read_local_page
+    import pytest
+
+    with pytest.raises(ValueError, match="No such page"):
+        read_local_page(str(tmp_path / "missing.html"))
+    (tmp_path / "notes.txt").write_text("x")
+    with pytest.raises(ValueError, match="Not an HTML file"):
+        read_local_page(str(tmp_path / "notes.txt"))

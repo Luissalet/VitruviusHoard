@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
@@ -73,6 +74,7 @@ class FontsSearchArgs(BaseModel):
 class RenderArgs(BaseModel):
     html: Optional[str] = Field(None, max_length=2_000_000)
     url: Optional[str] = Field(None, max_length=2000)
+    path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     widths: list[int] = Field(default_factory=lambda: [390, 1024, 1440])
     full_page: bool = True
     dark: bool = False
@@ -85,6 +87,7 @@ class RenderArgs(BaseModel):
 class LintArgs(BaseModel):
     html: Optional[str] = Field(None, max_length=2_000_000)
     url: Optional[str] = Field(None, max_length=2000)
+    path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     render_id: Optional[str] = Field(None, max_length=40)
 
 
@@ -100,6 +103,7 @@ class CritiqueArgs(BaseModel):
     render_id: Optional[str] = Field(None, max_length=40)
     html: Optional[str] = Field(None, max_length=2_000_000)
     url: Optional[str] = Field(None, max_length=2000)
+    path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     focus: Optional[str] = Field(None, max_length=200)
     use_vision: bool = True
 
@@ -259,8 +263,34 @@ def run_fonts_search(services: Services, args: FontsSearchArgs) -> dict:
     return {"count": len(rows[: args.limit]), "fonts": rows[: args.limit]}
 
 
+MAX_LOCAL_PAGE = 2_000_000
+
+
+def read_local_page(path: str) -> str:
+    """The HTML of a page the assistant already wrote to disk (a file, or a folder's index.html),
+    so it does not have to paste the whole document again into html (slow for a local model)."""
+    target = Path(path).expanduser()
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_file():
+        raise ValueError(f"No such page: {path}")
+    if target.suffix.lower() not in (".html", ".htm"):
+        raise ValueError(f"Not an HTML file: {target.name}")
+    if target.stat().st_size > MAX_LOCAL_PAGE:
+        raise ValueError(f"{target.name} is larger than {MAX_LOCAL_PAGE // 1_000_000} MB")
+    return target.read_text(encoding="utf-8", errors="replace")
+
+
+def _page_html(args) -> Optional[str]:
+    if args.html:
+        return args.html
+    if getattr(args, "path", None):
+        return read_local_page(args.path)
+    return None
+
+
 def run_render_preview(services: Services, args: RenderArgs) -> dict:
-    row = services.render(html=args.html, url=args.url, widths=args.widths, full_page=args.full_page, dark=args.dark,
+    row = services.render(html=_page_html(args), url=args.url, widths=args.widths, full_page=args.full_page, dark=args.dark,
                           wait_ms=args.wait_ms, lint=args.lint, title=args.title)
     out = _strip_html(row)
     if not args.include_images:
@@ -269,7 +299,7 @@ def run_render_preview(services: Services, args: RenderArgs) -> dict:
 
 
 def run_design_lint(services: Services, args: LintArgs) -> dict:
-    return services.lint_html(html=args.html, url=args.url, render_id=args.render_id)
+    return services.lint_html(html=_page_html(args), url=args.url, render_id=args.render_id)
 
 
 def run_page_assay(services: Services, args: AssayArgs) -> dict:
@@ -281,7 +311,7 @@ def run_page_assay(services: Services, args: AssayArgs) -> dict:
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
     render_id = args.render_id
     if render_id is None:
-        row = services.render(html=args.html, url=args.url, widths=[390, 1024, 1440], full_page=True)
+        row = services.render(html=_page_html(args), url=args.url, widths=[390, 1024, 1440], full_page=True)
         render_id = row["id"]
     return services.critique_render(render_id, focus=args.focus, use_vision=args.use_vision)
 
@@ -449,7 +479,7 @@ TOOLS: list[Tool] = [
     Tool("render_preview",
         "Render HTML or a URL in Chromium, screenshot at widths, run lint. Renderiza y captura.\n"
         "Returns render id, absolute file paths, size, lint summary and metrics (fonts, colours, libs). Never returns "
-        "image bytes unless include_images=true.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
+        "image bytes unless include_images=true. A page already written to disk goes as path, not pasted into html.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
         RenderArgs, _ann(False, False, False), run_render_preview),
     Tool("design_lint",
         "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n"
