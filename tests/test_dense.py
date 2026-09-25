@@ -108,3 +108,12 @@ def test_app_runs_without_numpy(monkeypatch, tmp_path):
     assert emb.name == "none"
     assert not emb.available()
     assert "numpy" in (emb.status()["error"] or "")
+
+
+def test_rrf_weights_let_a_strong_dense_hit_beat_loose_keyword_hits():
+    loose = [10, 11, 12, 40]          # any-word keyword matches
+    dense_rank = [99] + list(range(50, 90)) + [40]  # 40 is dense rank 42
+    even = dict(rrf([loose, dense_rank]))
+    weighted = dict(rrf([loose, dense_rank], [0.3, 1.0]))
+    assert even[40] > even[99]         # unweighted: weak agreement wins
+    assert weighted[99] > weighted[40]  # weighted: the passage the model ranks first stays first
