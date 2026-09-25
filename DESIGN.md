@@ -78,6 +78,7 @@ router, and the SPA catch-all (`GET /{path:path}`) is registered **last** so it 
 | `ingest/catalog.py` | Loose CSV/JSON → styles/palettes/font_pairings parsers, tolerant of unknown columns. |
 | `ingest/rules.py` | Mines Do/Don't/Avoid/Never/Always bullets into `rules`, guessing area/severity/`check_id`. |
 | `ingest/runner.py` | The one-source-at-a-time background ingest worker; `ingest_source()` is also the synchronous entry point used by `scripts/ingest.py` and by tests. |
+| `dense.py` | Multilingual vectors keyed by text hash + model, background build, cosine top-k, RRF fusion with bm25. |
 | `agent_tools.py` | The 25-tool MCP/REST catalogue (single source of truth). |
 | `api/*` | Thin FastAPI routers that validate input and call into `Services`. |
 | `hoard_link/` | Vendored family contract: `family.emit/record_call/health_block`, `Link.chat/embed` resolution against Faustus or a loopback model server. |

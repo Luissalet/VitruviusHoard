@@ -405,3 +405,12 @@ Response (200): `{"id": string, "works": boolean, "planned": number, "passed": n
 When assay is not installed or cannot open the page: `{"error": string, "hint": string}` with status 200 (the UI shows the hint). 404 for a render without a saved source; 400 without a page source.
 
 `GET /api/status` gains `"assay": boolean` (installed or not).
+
+
+## Dense search (multilingual vectors)
+
+`GET /api/library/search` gains `mode` = `auto` (default: hybrid when vectors exist, else bm25) | `hybrid` | `bm25` | `dense`; the response adds `"dense": boolean` and each item `"match": "bm25"|"dense"|"both"` and `"similarity": number|null`.
+
+`GET /api/library/embeddings` → `{"backend": "fastembed"|"fake"|"none", "model": string, "state": string, "dim": number, "error": string|null, "chunks": number, "vectors": number, "active": boolean, "build": {"state": "idle"|"queued"|"building"|"ready"|"error", "done": number, "total": number, "error": string|null, "seconds": number|null}}`
+
+`POST /api/library/embeddings` → starts the background build (`{"started": boolean, ...build}`). The tool equivalent is `source_ingest` with `embeddings: true`. Env: `VITRUVIUS_EMBED` (auto|fake|none), `VITRUVIUS_EMBED_MODEL`, `VITRUVIUS_MODELS_DIR`, `VITRUVIUS_EMBED_AUTO` (rebuild after an ingest, default 1).

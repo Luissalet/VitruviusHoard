@@ -47,12 +47,35 @@ def _cite(source_id: str, path: str, heading: str) -> str:
     return f"[vitruvius: {source_id}/{path}{tail}]"
 
 
+def _chunk_rows(db: Database, ids: list[int], kind: Optional[str], source: Optional[str]) -> dict[int, Any]:
+    if not ids:
+        return {}
+    sql = (
+        "SELECT c.id AS chunk_id, c.heading, c.text, d.path, d.kind AS doc_kind, d.source_id, s.license "
+        "FROM chunks c JOIN documents d ON d.id = c.document_id JOIN sources s ON s.id = d.source_id "
+        f"WHERE c.id IN ({','.join('?' * len(ids))})"
+    )
+    params: list[Any] = list(ids)
+    if kind:
+        sql += " AND d.kind = ?"
+        params.append(kind)
+    if source:
+        sql += " AND d.source_id = ?"
+        params.append(source)
+    return {int(r["chunk_id"]): r for r in db.query(sql, params)}
+
+
 def search(db: Database, query: str, *, kind: Optional[str] = None, source: Optional[str] = None,
-           area: Optional[str] = None, limit: int = 8) -> list[dict[str, Any]]:
+           area: Optional[str] = None, limit: int = 8, dense: Any = None, mode: str = "auto") -> list[dict[str, Any]]:
+    """bm25 over FTS5, fused by reciprocal rank with multilingual dense vectors when they exist.
+
+    mode: auto (hybrid when vectors exist, else bm25), hybrid, bm25, dense.
+    """
     items: list[dict[str, Any]] = []
     fts_and = _fts_query(query, "and")
     rows: list[Any] = []
-    if fts_and:
+    use_dense = dense is not None and mode in ("auto", "hybrid", "dense") and dense.usable()
+    if fts_and and mode != "dense":
         sql = (
             "SELECT c.id AS chunk_id, c.heading, c.text, d.path, d.kind AS doc_kind, d.source_id, "
             "s.license, bm25(chunks_fts) AS rank "
@@ -68,7 +91,7 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
             sql += " AND d.source_id = ?"
             params.append(source)
         sql += " ORDER BY rank LIMIT ?"
-        params.append(limit * 3)  # over-fetch: duplicates are folded below
+        params.append(max(limit * 3, 30 if use_dense else limit * 3))  # over-fetch: duplicates are folded below
         rows = db.query(sql, params)
         if not rows:
             fts_or = _fts_query(query, "or")
@@ -76,16 +99,46 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
                 params[0] = fts_or
                 rows = db.query(sql, params)
 
-    for r in rows:
-        items.append({
-            "cite": _cite(r["source_id"], r["path"], r["heading"]),
-            "source": r["source_id"],
-            "license": r["license"],
-            "score": round(-float(r["rank"]), 4),
-            "text": r["text"],
-            "kind": r["doc_kind"],
-            "heading": r["heading"],
-        })
+    by_id = {int(r["chunk_id"]): r for r in rows}
+    bm25_ids = [int(r["chunk_id"]) for r in rows]
+    dense_ids: list[int] = []
+    dense_scores: dict[int, float] = {}
+    if use_dense:
+        try:
+            hits = dense.query(query, k=max(50, limit * 6))
+        except Exception:  # noqa: BLE001 - a broken model never breaks keyword search
+            hits = []
+        missing = [cid for cid, _ in hits if cid not in by_id]
+        by_id.update(_chunk_rows(db, missing, kind, source))
+        dense_ids = [cid for cid, _ in hits if cid in by_id]
+        dense_scores = {cid: sc for cid, sc in hits}
+
+    if dense_ids:
+        from .dense import rrf
+
+        order = rrf([bm25_ids, dense_ids] if bm25_ids else [dense_ids])
+        bm25_set, dense_set = set(bm25_ids), set(dense_ids)
+        for cid, fused in order:
+            r = by_id[cid]
+            match = "both" if cid in bm25_set and cid in dense_set else ("bm25" if cid in bm25_set else "dense")
+            items.append({
+                "cite": _cite(r["source_id"], r["path"], r["heading"]),
+                "source": r["source_id"], "license": r["license"], "score": round(fused * 1000, 3),
+                "text": r["text"], "kind": r["doc_kind"], "heading": r["heading"], "match": match,
+                "similarity": round(dense_scores[cid], 3) if cid in dense_scores else None,
+            })
+    else:
+        for r in rows:
+            items.append({
+                "cite": _cite(r["source_id"], r["path"], r["heading"]),
+                "source": r["source_id"],
+                "license": r["license"],
+                "score": round(-float(r["rank"]), 4),
+                "text": r["text"],
+                "kind": r["doc_kind"],
+                "heading": r["heading"],
+                "match": "bm25",
+            })
 
     if area:
         rule_rows = db.query(

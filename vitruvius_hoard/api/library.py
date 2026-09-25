@@ -14,9 +14,21 @@ router = APIRouter(prefix="/api")
 
 @router.get("/library/search")
 def library_search(request: Request, query: str = Query(..., min_length=1), kind: Optional[str] = None,
-                   source: Optional[str] = None, area: Optional[str] = None, limit: int = Query(8, ge=1, le=50)):
-    items = services(request).library_search(query, kind=kind, source=source, area=area, limit=limit)
-    return {"count": len(items), "items": items}
+                   source: Optional[str] = None, area: Optional[str] = None, limit: int = Query(8, ge=1, le=50),
+                   mode: str = Query("auto", pattern="^(auto|hybrid|bm25|dense)$")):
+    svc = services(request)
+    items = svc.library_search(query, kind=kind, source=source, area=area, limit=limit, mode=mode)
+    return {"count": len(items), "items": items, "dense": svc.dense.usable()}
+
+
+@router.get("/library/embeddings")
+def embeddings_status(request: Request):
+    return services(request).dense.status()
+
+
+@router.post("/library/embeddings")
+def embeddings_build(request: Request):
+    return services(request).embeddings_build()
 
 
 class BriefBody(BaseModel):

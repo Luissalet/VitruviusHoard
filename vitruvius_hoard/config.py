@@ -43,6 +43,9 @@ class Config:
     allowed_hosts: tuple[str, ...] = ()
     data_dir_configured: bool = False
     autostart: bool = True  # start the ingest runner with the app
+    embed_backend: str = "auto"  # auto (fastembed when installed) | fake | none
+    embed_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embed_auto: bool = True  # (re)build vectors after an ingest when the model is already on disk
 
     @property
     def db_path(self) -> Path:
@@ -84,4 +87,7 @@ class Config:
             allowed_hosts=parse_allowed_hosts(_env("VITRUVIUS_ALLOWED_HOSTS")),
             data_dir_configured=bool(raw_dir),
             autostart=_env("VITRUVIUS_AUTOSTART", "1") != "0",
+            embed_backend=(_env("VITRUVIUS_EMBED", "auto") or "auto").lower(),
+            embed_model=_env("VITRUVIUS_EMBED_MODEL") or "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            embed_auto=_env("VITRUVIUS_EMBED_AUTO", "1") != "0",
         )
