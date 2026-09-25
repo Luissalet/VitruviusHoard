@@ -37,8 +37,18 @@ def _matches_any(rel_posix: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(low, pat.lower()) for pat in patterns)
 
 
-_SKIP_DIR_RE = re.compile(r"(^|/)(node_modules|dist|build|e2e|tests?|__tests__|changelog|changelogs|contributing|\.github|coverage|examples?/[^/]+/node_modules)(/|$)", re.IGNORECASE)
-_SKIP_FILE_RE = re.compile(r"(^|/)(changelog|contributing|code_of_conduct|security|package(-lock)?\.json|.*\.lock)$", re.IGNORECASE)
+_SKIP_DIR_RE = re.compile(r"(^|/)(node_modules|dist|build|e2e|tests?|__tests__|changelog|changelogs|contributing|\.github|coverage|vendor|vendors|third[_-]party|examples?/[^/]+/node_modules)(/|$)", re.IGNORECASE)
+_SKIP_FILE_RE = re.compile(r"(^|/)(changelog|contributing|code_of_conduct|security|package(-lock)?\.json|.*\.lock|.*\.min\.(js|css)|.*\.(umd|bundle)\.js)$", re.IGNORECASE)
+
+
+def looks_minified(text: str) -> bool:
+    """Bundled or minified code: very long lines, no prose worth citing."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return False
+    longest = max(len(ln) for ln in lines)
+    average = sum(len(ln) for ln in lines) / len(lines)
+    return longest > 2000 or average > 300
 
 
 def _iter_files(root: Path, patterns: list[str]):
@@ -169,6 +179,8 @@ def ingest_source(db: Database, config: Any, source: dict[str, Any]) -> dict[str
                 continue
 
             if ext not in TEXT_EXTENSIONS and ext not in (".py", ".js", ".ts", ""):
+                continue
+            if ext in (".js", ".ts", "") and looks_minified(text):
                 continue
 
             result = chunk_markdown(text, default_title=path.stem)

@@ -125,3 +125,27 @@ def test_reingest_clears_old_rows(tmp_path):
     ingest_source(db, config, dict(db.one("SELECT * FROM sources WHERE id = 'demo'")))
     docs = db.query("SELECT * FROM documents WHERE source_id = 'demo'")
     assert len(docs) == 2  # not doubled
+
+
+def test_ingest_skips_vendored_and_minified_code(tmp_path):
+    folder = make_local_source(tmp_path)
+    (folder / "assets" / "vendor").mkdir(parents=True)
+    (folder / "assets" / "vendor" / "gsap.js").write_text("function a(){return 1}\n")
+    (folder / "lib.min.js").write_text("var a=1;\n")
+    (folder / "bundle.js").write_text("!function(t){" + "t=t+1;" * 600 + "}(0)\n")  # one 3,600-char line
+    (folder / "helper.js").write_text("// Keep motion under 300 ms for drawers.\nexport const ms = 240;\n")
+    config = make_config(tmp_path)
+    db = Database(config.db_path)
+    db.execute("INSERT INTO sources(id, kind, url, paths, status) VALUES ('demo', 'local', ?, '[]', 'idle')", (str(folder),))
+    ingest_source(db, config, dict(db.one("SELECT * FROM sources WHERE id = 'demo'")))
+    paths = {r["path"] for r in db.query("SELECT path FROM documents WHERE source_id = 'demo'")}
+    assert "helper.js" in paths
+    assert not paths & {"assets/vendor/gsap.js", "lib.min.js", "bundle.js"}
+
+
+def test_looks_minified():
+    from vitruvius_hoard.ingest.runner import looks_minified
+
+    assert looks_minified("x" * 2500)
+    assert looks_minified(("a=1;" * 100 + "\n") * 5)
+    assert not looks_minified("# Title\n\nShort prose line.\n")
