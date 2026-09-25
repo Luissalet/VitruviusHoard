@@ -97,3 +97,14 @@ def test_tool_and_routes(client):
     out = client.post("/api/agent/call", json={"name": "source_ingest", "arguments": {"embeddings": True}},
                       headers={"Authorization": f"Bearer {token}"})
     assert out.status_code == 200 and "embeddings" in out.json()
+
+
+def test_app_runs_without_numpy(monkeypatch, tmp_path):
+    """No numpy (an old venv): the embedder degrades to none and search stays BM25 instead of crashing."""
+    import vitruvius_hoard.dense as dense
+
+    monkeypatch.setattr(dense, "np", None)
+    emb = dense.make_embedder("fastembed", dense.DEFAULT_MODEL, tmp_path)
+    assert emb.name == "none"
+    assert not emb.available()
+    assert "numpy" in (emb.status()["error"] or "")

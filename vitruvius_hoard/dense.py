@@ -23,7 +23,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-import numpy as np
+try:  # numpy arrives with fastembed; without it the app still runs, BM25 only.
+    import numpy as np
+except ImportError:  # pragma: no cover - exercised by test_dense via monkeypatch
+    np = None  # type: ignore[assignment]
 
 from .db import Database
 
@@ -64,7 +67,9 @@ class Embedder:
 
 
 class NoneEmbedder(Embedder):
-    pass
+    def status(self) -> dict[str, Any]:
+        missing = "numpy is not installed: pip install -r requirements.txt" if np is None else None
+        return {**super().status(), "error": missing}
 
 
 class FakeEmbedder(Embedder):
@@ -118,6 +123,8 @@ class FastembedEmbedder(Embedder):
         self._load_seconds: Optional[float] = None
 
     def available(self) -> bool:
+        if np is None:
+            return False
         try:
             import importlib.util
 
@@ -202,6 +209,8 @@ def default_cache_dir(data_dir: Path) -> Path:
 
 
 def make_embedder(backend: str, model: str, cache_dir: Path) -> Embedder:
+    if np is None:
+        return NoneEmbedder()
     if backend == "fake":
         return FakeEmbedder()
     if backend == "none":
