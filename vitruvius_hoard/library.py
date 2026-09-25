@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from .db import Database
 
-_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+_TOKEN_RE = re.compile(r"\w+")  # Unicode: «animación» stays one token (FTS5 folds the accent)
 
 DEFAULT_ANTI_PATTERNS = [
     "Do not default to the generic hero + three feature cards layout.",
@@ -35,7 +35,11 @@ def _quote_token(tok: str) -> str:
 
 
 def _fts_query(query: str, mode: str) -> str:
-    tokens = _TOKEN_RE.findall(query or "")
+    tokens = [t for t in _TOKEN_RE.findall(query or "") if len(t) > 1 or t.isdigit()]
+    if mode != "and":
+        # OR over function words matches everything; keep the content words when there are any.
+        content = [t for t in tokens if t.lower() not in _FTS_STOP]
+        tokens = content or tokens
     if not tokens:
         return ""
     joiner = " AND " if mode == "and" else " OR "
@@ -189,6 +193,9 @@ def _hue_from_text(text: str) -> float:
 
 _STOP = {"the", "a", "an", "for", "of", "and", "or", "with", "app", "page", "site", "web", "una", "un", "para", "de", "la",
          "el", "los", "las", "y", "con", "que", "in", "on", "to", "is", "it", "as", "at", "by", "from", "this", "that"}
+_FTS_STOP = _STOP | {"del", "al", "en", "por", "se", "lo", "es", "su", "sus", "mi", "me", "le", "cómo", "como", "qué",
+                     "cuál", "cuánto", "cuanto", "cuánta", "debe", "debo", "puedo", "hay", "uso", "usar", "hago",
+                     "how", "what", "which", "should", "do", "does", "can", "use", "my", "i", "be", "are", "much", "long"}
 
 # Spanish/English synonyms so «sobria», «lujo» or «cálido» find catalog rows written in English.
 _SYNONYMS = {
