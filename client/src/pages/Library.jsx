@@ -68,6 +68,9 @@ function SearchPanel({ t }) {
                 <span className="chip chip-accent">{item.kind}</span>
                 <span className="help">{item.source}</span>
                 <LicenseBadge license={item.license} t={t} />
+                {item.match && item.match !== "bm25" && (
+                  <span className="chip" title={t("match_hint")}>{t(`match_${item.match}`)}{item.similarity != null ? ` · ${item.similarity}` : ""}</span>
+                )}
               </div>
               <CopyButton value={item.cite} t={t} />
             </div>
@@ -76,6 +79,38 @@ function SearchPanel({ t }) {
             <div className="mono mt-2" style={{ color: "var(--muted)" }}>{item.cite}</div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function EmbeddingsBar({ t, notify }) {
+  const [st, setSt] = useState(null);
+  const load = async () => {
+    try { setSt(await api.embeddings()); } catch (e) { /* older server: no dense search */ }
+  };
+  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!st || !["queued", "building"].includes(st.build?.state)) return undefined;
+    const timer = setTimeout(load, 2000);
+    return () => clearTimeout(timer);
+  }, [st]);
+  if (!st) return null;
+  const building = ["queued", "building"].includes(st.build?.state);
+  const build = async () => {
+    try { await api.embeddingsBuild(); load(); } catch (e) { notify(e.message); }
+  };
+  return (
+    <div className="card mb-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-[13px] font-semibold">{t("dense_title")}</div>
+        <button type="button" className="btn btn-sm" onClick={build} disabled={building || st.backend === "none"}>
+          {building ? `${t("dense_building")} ${st.build.done}/${st.build.total}` : t("dense_build")}
+        </button>
+      </div>
+      <div className="help mt-1">
+        {st.active ? t("dense_on") : t("dense_off")} · {st.vectors}/{st.chunks} · {st.model || st.backend}
+        {st.error ? ` · ${st.error}` : ""}{st.build?.error ? ` · ${st.build.error}` : ""}
       </div>
     </div>
   );
@@ -142,6 +177,7 @@ function SourcesPanel({ t, notify }) {
         <h2 className="text-[14px] font-semibold">{t("sources_title")}</h2>
         <button type="button" className="btn btn-sm" onClick={ingestAll} disabled={!sources?.length}>{t("sources_ingest_all")}</button>
       </div>
+      <EmbeddingsBar t={t} notify={notify} />
       <div className="flex flex-col gap-2 mb-4">
         {sources === null && <div className="help">{t("sources_empty")}</div>}
         {sources?.length === 0 && <div className="help">{t("sources_empty")}</div>}

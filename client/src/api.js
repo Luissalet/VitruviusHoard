@@ -25,6 +25,8 @@ export const api = {
   status: () => request("GET", "/api/status"),
 
   librarySearch: (params) => request("GET", "/api/library/search", { params }),
+  embeddings: () => request("GET", "/api/library/embeddings"),
+  embeddingsBuild: () => request("POST", "/api/library/embeddings", { body: {} }),
   libraryBrief: (body) => request("POST", "/api/library/brief", { body }),
   libraryRules: (params) => request("GET", "/api/library/rules", { params }),
 

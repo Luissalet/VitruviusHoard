@@ -30,6 +30,10 @@ before a person ever has to say "this looks AI-generated."
 
 - **Library**: full-text search (SQLite FTS5, `bm25` ranking) over ingested skill repositories, with an optional
   vector rerank once embeddings exist. Every hit carries a `[vitruvius: source/path § heading]` citation.
+- **Search by meaning, in any language**: a multilingual sentence model (ONNX via fastembed, CPU, ~120 MB, reused
+  from a sibling app's cache when present) embeds every chunk once, keyed by its text hash so a re-ingest only embeds
+  what changed; `design_search` fuses keywords and meaning by reciprocal rank, so "¿cómo hago que los botones parezcan
+  pulsables?" finds criterion written in English. Each hit says how it matched (`bm25`, `dense`, `both`).
 - **Design briefs**: a deterministic composition of 2-3 matching styles, one palette, one font pairing, rules by
   area and a pre-delivery checklist — all cited, with an optional 150-word art-direction paragraph from a local
   model.

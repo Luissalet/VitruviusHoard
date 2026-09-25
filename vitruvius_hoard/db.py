@@ -189,6 +189,16 @@ MIGRATIONS: list[str] = [
     END;
     CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     """,
+    # 3: dense vectors keyed by chunk-text hash + model (survive re-ingest)
+    """
+    CREATE TABLE vectors (
+      hash TEXT NOT NULL,
+      model TEXT NOT NULL,
+      dim INTEGER NOT NULL,
+      vec BLOB NOT NULL,
+      PRIMARY KEY (hash, model)
+    );
+    """,
 ]
 
 

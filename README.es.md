@@ -33,6 +33,11 @@ hecho por una IA".
 - **Biblioteca**: búsqueda de texto completo (SQLite FTS5, ranking `bm25`) sobre los repositorios de skills
   ingeridos, con un rerank vectorial opcional una vez existen embeddings. Cada resultado lleva una cita
   `[vitruvius: fuente/ruta § encabezado]`.
+- **Búsqueda por significado, en cualquier idioma**: un modelo de frases multilingüe (ONNX con fastembed, CPU, ~120 MB,
+  reutilizado de la caché de una app hermana si ya está) calcula un vector por fragmento, indexado por el hash del
+  texto para que reingerir solo calcule lo que cambió; `design_search` fusiona palabras y significado por rango
+  recíproco, así que «¿cómo hago que los botones parezcan pulsables?» encuentra criterio escrito en inglés. Cada
+  resultado dice cómo se encontró (`bm25`, `dense`, `both`).
 - **Briefs de diseño**: una composición determinista de 2-3 estilos que encajan, una paleta, una combinación
   tipográfica, reglas por área y una checklist previa a la entrega — todo citado, con un párrafo opcional de
   dirección de arte de 150 palabras generado por un modelo local.

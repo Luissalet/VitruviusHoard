@@ -30,6 +30,7 @@ class SearchArgs(BaseModel):
     source: Optional[str] = Field(None, max_length=80, description="Only this source id.")
     area: Optional[str] = Field(None, max_length=40, description="Rule area: typography, color, layout, motion, a11y, forms, performance, content.")
     limit: int = Field(8, ge=1, le=50)
+    mode: str = Field("auto", pattern="^(auto|hybrid|bm25|dense)$", description="auto = keywords + multilingual meaning when the vectors exist; bm25 = keywords only; dense = meaning only.")
 
 
 class BriefArgs(BaseModel):
@@ -181,6 +182,7 @@ class SourceAddArgs(BaseModel):
 class SourceIngestArgs(BaseModel):
     id: Optional[str] = Field(None, max_length=80)
     all: bool = False
+    embeddings: bool = Field(False, description="(Re)build the multilingual vectors (so Spanish questions find English criterion); alone = only that.")
 
 
 class SourceStatusArgs(BaseModel):
@@ -205,8 +207,9 @@ def _strip_html(row: dict) -> dict:
 
 
 def run_design_search(services: Services, args: SearchArgs) -> dict:
-    items = services.library_search(args.query, kind=args.kind, source=args.source, area=args.area, limit=args.limit)
-    return {"count": len(items), "items": items}
+    items = services.library_search(args.query, kind=args.kind, source=args.source, area=args.area, limit=args.limit,
+                                    mode=args.mode)
+    return {"count": len(items), "items": items, "dense": services.dense.usable()}
 
 
 def run_design_brief(services: Services, args: BriefArgs) -> dict:
@@ -395,7 +398,12 @@ def run_source_add(services: Services, args: SourceAddArgs) -> dict:
 
 
 def run_source_ingest(services: Services, args: SourceIngestArgs) -> dict:
-    return services.source_ingest(args.id, all=args.all)
+    if args.embeddings and not args.id and not args.all:
+        return {"embeddings": services.embeddings_build()}
+    result = services.source_ingest(args.id, all=args.all)
+    if args.embeddings:
+        result = {**result, "embeddings": "rebuilt after the ingest finishes (when the model is on disk)"}
+    return result
 
 
 def run_source_status(services: Services, args: SourceStatusArgs) -> dict:
@@ -409,7 +417,8 @@ def run_vitruvius_status(services: Services, args: Empty) -> dict:
 TOOLS: list[Tool] = [
     Tool("design_search",
         "Search the design library: rules, skills, styles, motion recipes with citations. Busca criterio de diseño.\n"
-        "Full-text search (bm25) over ingested design-skill repos; every hit carries a `[vitruvius: source/path § heading]` cite.\n"
+        "Keywords (bm25) fused with multilingual meaning (a Spanish question finds English criterion) over the ingested\n"
+        "design-skill repos; every hit carries a `[vitruvius: source/path § heading]` cite and how it matched.\n"
         "Sinónimos: buscar, criterio, reglas de diseño, motion, tipografía, contraste, biblioteca.",
         SearchArgs, _ann(True), run_design_search),
     Tool("design_brief",
@@ -510,6 +519,7 @@ TOOLS: list[Tool] = [
         SourceAddArgs, _ann(False, False, True), run_source_add),
     Tool("source_ingest",
         "Ingest (or re-ingest) one source or every source; runs in the background. Ingerir fuente.\n"
+        "embeddings=true (re)builds the multilingual vectors (CPU, about a minute for the whole library).\n"
         "Sinónimos: ingerir, actualizar fuente, reindexar, clonar de nuevo.",
         SourceIngestArgs, _ann(False, False, True), run_source_ingest),
     Tool("source_status",

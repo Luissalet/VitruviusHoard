@@ -94,7 +94,17 @@ class Services:
         self._ingest_autostart = autostart_ingest
         self.ingest_runner = IngestRunner(self.db, self.config, emit=self._emit_event)
 
+        from .dense import DenseIndex, default_cache_dir, make_embedder
+        backend = "none" if config.embed_backend == "none" else ("fake" if config.embed_backend == "fake" else "fastembed")
+        self.embedder = make_embedder(backend, config.embed_model, default_cache_dir(config.data_dir))
+        self.dense = DenseIndex(self.db, self.embedder, emit=self._emit_event)
+
     def _emit_event(self, type_: str, data: dict[str, Any]) -> None:
+        if type_ == "vitruvius.source.ingested" and hasattr(self, "dense"):
+            # New chunk texts: the cached matrix is stale; embed what changed when the model is at hand.
+            self.dense.invalidate()
+            if self.config.embed_auto and getattr(self.embedder, "cached", lambda: False)() and self.dense.usable():
+                self.dense.start_build()
         try:
             from .hoard_link import family
             family.emit(type_, data)
@@ -186,7 +196,15 @@ class Services:
 
     # ---------------- library ----------------
     def library_search(self, query: str, **kwargs) -> list[dict[str, Any]]:
-        return library_mod.search(self.db, query, **kwargs)
+        return library_mod.search(self.db, query, dense=self.dense, **kwargs)
+
+    def embeddings_build(self, wait: bool = False) -> dict[str, Any]:
+        """Embed every chunk that has no vector yet (multilingual model, CPU)."""
+        if self.config.embed_backend == "none":
+            return {"started": False, "error": "dense search is off (VITRUVIUS_EMBED=none)"}
+        if wait:
+            return self.dense.build()
+        return self.dense.start_build()
 
     def library_rules(self, **kwargs) -> list[dict[str, Any]]:
         return library_mod.list_rules(self.db, **kwargs)
@@ -515,6 +533,7 @@ class Services:
             "renders": self.db.one("SELECT COUNT(*) AS n FROM renders")["n"],
             "design_systems": self.db.one("SELECT COUNT(*) AS n FROM design_systems")["n"],
             "references": self.db.one("SELECT COUNT(*) AS n FROM references_t")["n"],
+            "vectors": self.db.one("SELECT COUNT(*) AS n FROM vectors")["n"],
         }
 
     def browser_status(self) -> dict[str, Any]:
@@ -532,5 +551,6 @@ class Services:
             "service": SERVICE, "version": __version__, "data_dir": str(self.config.data_dir),
             "started_at": self.started_at, "now": self.clock(), "browser": browser_status,
             "ffmpeg": ffmpeg_available(), "git": git_available(), "assay": assay_mod.available(),
+            "embeddings": self.dense.status(),
             "counts": counts, "models": link_status,
         }
