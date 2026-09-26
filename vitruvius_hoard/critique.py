@@ -77,7 +77,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
                 {"role": "system", "content": _VISION_PROMPT},
                 {"role": "user", "content": f"Focus: {focus or 'overall quality'}. Rate and critique this page."},
             ]
-            result = link.chat(messages, images=images)
+            result = link.chat(messages, images=images, effort="high")
             text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
             model = getattr(result, "model", None) or (result.get("model") if isinstance(result, dict) else None)
             parsed = _extract_json(text or "")

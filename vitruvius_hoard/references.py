@@ -126,6 +126,7 @@ def add(db: Database, browser: Any, config: Any, *, url: Optional[str] = None, h
             chat_result = link.chat(
                 [{"role": "user", "content": "Describe this web page's visual vibe in one short phrase, and suggest 3 tags."}],
                 images=[image_bytes],
+                effort="off",
             )
             text = getattr(chat_result, "text", None) or (chat_result.get("text") if isinstance(chat_result, dict) else "")
             analysis = {"raw": text}

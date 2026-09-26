@@ -377,7 +377,7 @@ def brief(db: Database, *, subject: str, vibe: Optional[str] = None, product_typ
                      f"'{subject}', vibe '{vibe or 'unspecified'}', platform '{platform or 'web'}'. "
                      f"Reference the chosen style names ({', '.join(s['name'] for s in styles) or 'n/a'}), "
                      f"the palette and the font pairing. Plain prose, no headings.")
-            chat_result = link.chat([{"role": "user", "content": prompt}])
+            chat_result = link.chat([{"role": "user", "content": prompt}], effort="medium")
             result["direction"] = getattr(chat_result, "text", None) or (
                 chat_result.get("text") if isinstance(chat_result, dict) else str(chat_result))
         except Exception as error:  # noqa: BLE001
