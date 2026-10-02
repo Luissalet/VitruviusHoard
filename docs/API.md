@@ -248,10 +248,11 @@ first captured width).
 ```json
 {"design_systems": [{"id": "d1e2f3", "name": "Finance dark", "created_ts": 1790000000.0,
                      "brief": {"name": "Finance dark", "base_color": "#1b2f9e"}, "css": "...", "tailwind": "...",
-                     "preview_render_id": "a1b2c3"}]}
+                     "preview_render_id": "a1b2c3", "roles": {"light": {"background": "#fafafa", "text": "#...", "accent": "#..."}, "dark": {}, "fonts": {}, "radius": {}}}]}
 ```
 
-(`tokens`, the full generated token tree, is omitted from the list for size — fetch one by id for that.)
+(`tokens`, the full generated token tree, is omitted from the list for size — fetch one by id for that. `roles` is the
+compact reading other apps use: colour roles per mode, font families and radii, derived from the tokens.)
 
 ### `POST /api/tokens`
 
@@ -294,6 +295,10 @@ Response, `201 Created` (a "design system" object):
     "breakpoints": {"sm": "480px", "md": "768px", "lg": "1024px", "xl": "1280px", "2xl": "1536px"},
     "style": "soft", "density": "comfortable"
   },
+  "roles": {"light": {"background": "#...", "surface": "#...", "surface2": "#...", "border": "#...", "text": "#...",
+                      "muted": "#...", "accent": "#...", "on_accent": "#...", "accent2": "#..."},
+            "dark": {"...": "same keys"}, "fonts": {"heading": "...", "body": "...", "mono": "..."},
+            "radius": {"sm": "6px", "md": "10px", "lg": "16px", "xl": "24px", "pill": "999px"}},
   "css": ":root {\n  --color-primary-50: #...;\n  ...\n}\n",
   "tailwind": "@theme {\n  --color-primary-50: #...;\n  ...\n}\n",
   "preview_render_id": null

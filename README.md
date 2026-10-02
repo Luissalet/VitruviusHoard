@@ -125,8 +125,8 @@ The bridge never opens the database itself: it proxies every call to `POST /api/
 | `page_assay` | yes | Functional check of a generated page in a real browser: does every control work? Runs [assay](https://github.com/awss1i/assay) (`pip install assay-ui`) — no tests written, no model. |
 | `render_compare` | yes | Pixel-diff two renders at a given width: percent changed + a diff image. |
 | `tokens_generate` | no | Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. |
-| `tokens_get` | yes | Get a generated design system in json, css, tailwind or w3c format. |
-| `tokens_list` | yes | List generated design systems. |
+| `tokens_get` | yes | Get a generated design system in json, css, tailwind or w3c format; the json carries `roles` too. |
+| `tokens_list` | yes | List generated design systems with their `roles`; `compact=true` returns only id, name and roles. |
 | `tokens_preview` | no | Render the design system's live playground and lint it. |
 | `tokens_delete` | no (destructive) | Delete a generated design system (only when the user asks). |
 | `reference_add` | no | Capture a website into the reference gallery: screenshots, video, fonts, palette. |
@@ -143,6 +143,16 @@ The assistant is told, in `AGENT_INSTRUCTIONS`, to cite the library with `[vitru
 `render_preview` → `design_critique` → fix → render again (stopping at score ≥ 8 or after 3 rounds), and to only
 call the writing tools (`reference_add`, `source_add`, `source_ingest`, `tokens_delete`, `reference_delete`) when
 the user actually asks for that.
+
+## Link with Cicero's Hoard
+
+Every design system carries `roles`, a compact reading other apps can use without parsing the full token tree:
+colour roles per mode (`light` and `dark`: `background`, `surface`, `surface2`, `border`, `text`, `muted`, `accent`,
+`on_accent`, `accent2`, each text-like role chosen so it reads at 4.5:1 on the background), `fonts` (heading, body,
+mono family stacks) and `radius` (sm to pill). They are derived from the stored tokens, never stored, and appear in
+`tokens_get` (json format), `tokens_list` and `GET /api/tokens/{id}`. Cicero's Hoard (the presentation workspace)
+lists these design systems in its theme tab and turns one into a slide theme with its `theme_from_tokens` tool,
+through the family hub. `tokens_get` also accepts `tokens_id` as a synonym of `id`.
 
 ## Sources it ships with
 

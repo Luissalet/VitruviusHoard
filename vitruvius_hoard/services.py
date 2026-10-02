@@ -422,8 +422,9 @@ class Services:
 
     @staticmethod
     def _tokens_dict(r) -> dict[str, Any]:
+        tokens = json.loads(r["tokens"] or "{}")
         return {"id": r["id"], "name": r["name"], "created_ts": r["created_ts"], "brief": json.loads(r["brief"] or "{}"),
-               "tokens": json.loads(r["tokens"] or "{}"), "css": r["css"], "tailwind": r["tailwind"],
+               "tokens": tokens, "roles": tokens_mod.roles_of(tokens), "css": r["css"], "tailwind": r["tailwind"],
                "preview_render_id": r["preview_render_id"]}
 
     def tokens_get(self, tokens_id: str) -> Optional[dict[str, Any]]:

@@ -466,6 +466,63 @@ def to_tailwind(tokens: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Roles: the compact reading other apps use (swatches, slide themes, ...)
+# ---------------------------------------------------------------------------
+
+# Ramp steps tried in order when a role needs readable text on a surface.
+_TEXT_STEPS = {"light": ("700", "600", "800", "500", "900"), "dark": ("300", "400", "200", "500", "100")}
+_MUTED_STEPS = {"light": ("700", "600", "800", "900"), "dark": ("300", "400", "200", "100")}
+MIN_TEXT_CONTRAST = 4.5
+
+
+def _readable(ramp: dict[str, str], steps: tuple[str, ...], backgrounds: list[str]) -> str | None:
+    for step in steps:
+        value = ramp.get(step)
+        if value and all(contrast_ratio(value, bg) >= MIN_TEXT_CONTRAST for bg in backgrounds):
+            return value
+    return None
+
+
+def roles_of(tokens: dict[str, Any]) -> dict[str, Any]:
+    """The design system read as colour *roles* per mode, font families and radii.
+
+    ``light`` and ``dark`` each give ``background``, ``surface`` (the raised card), ``surface2`` (the
+    stronger panel fill), ``border``, ``text``, ``muted`` (secondary text), ``accent`` and ``on_accent``
+    (the text that sits on it) and ``accent2`` (a second accent). ``text``, ``muted``, ``accent`` and
+    ``accent2`` are picked from the ramps so that each one reads (WCAG 4.5:1) on both ``background`` and
+    ``surface2``; a role that no ramp step can satisfy falls back to ``text``. Also returns ``fonts``
+    (heading, body, mono: the CSS family stacks as generated), ``radius`` (sm..pill) and ``name``.
+    Pure and cheap: the roles are derived from the stored tokens, never stored.
+    """
+    color = tokens.get("color") or {}
+    surfaces, on = color.get("surfaces") or {}, color.get("on") or {}
+    primary, neutral = color.get("primary") or {}, color.get("neutral") or {}
+    semantic = color.get("semantic") or {}
+    out: dict[str, Any] = {"name": tokens.get("name", "")}
+    for mode in ("light", "dark"):
+        surf = surfaces.get(mode)
+        if not surf:
+            continue
+        bg, card, panel = surf["bg"], surf["surface"], surf["surface-2"]
+        text = (on.get(mode) or {}).get("on-bg") or best_on_color(bg)
+        both = [bg, panel]
+        accent = _readable(primary, _TEXT_STEPS[mode], both) or text
+        out[mode] = {
+            "background": bg, "surface": card, "surface2": panel, "border": surf["border"],
+            "text": text,
+            "muted": _readable(neutral, _MUTED_STEPS[mode], both) or text,
+            "accent": accent,
+            "on_accent": best_on_color(accent),
+            "accent2": _readable(semantic.get("warn") or {}, _TEXT_STEPS[mode], both)
+            or _readable(semantic.get("info") or {}, _TEXT_STEPS[mode], both) or accent,
+        }
+    typography = tokens.get("typography") or {}
+    out["fonts"] = {k: typography.get(k, "") for k in ("heading", "body", "mono")}
+    out["radius"] = dict(tokens.get("radius") or {})
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Playground HTML
 # ---------------------------------------------------------------------------
 
@@ -662,5 +719,5 @@ __all__ = [
     "oklch_to_rgb01", "rgb01_to_oklch", "parse_hex", "to_hex", "oklch_to_hex", "hex_to_oklch",
     "relative_luminance", "contrast_ratio", "best_on_color", "wcag_level",
     "make_ramp", "neutral_ramp", "type_scale", "generate",
-    "to_flat", "to_w3c", "to_css", "to_tailwind", "playground_html",
+    "to_flat", "to_w3c", "to_css", "to_tailwind", "roles_of", "playground_html",
 ]

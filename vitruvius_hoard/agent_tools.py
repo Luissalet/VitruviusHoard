@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .services import Services
 
@@ -133,9 +133,18 @@ class TokensGetArgs(BaseModel):
     id: str = Field(..., max_length=40)
     format: str = Field("json", pattern="^(json|css|tailwind|w3c)$")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_tokens_id(cls, data: Any) -> Any:
+        """Other apps of the family say `tokens_id`; the catalogue keeps `id`."""
+        if isinstance(data, dict) and "id" not in data and data.get("tokens_id"):
+            return {**data, "id": data["tokens_id"]}
+        return data
+
 
 class TokensListArgs(BaseModel):
     limit: int = Field(30, ge=1, le=200)
+    compact: bool = Field(False, description="Only id, name, created_ts and the colour/font/radius roles (no CSS or Tailwind text).")
 
 
 class TokensPreviewArgs(BaseModel):
@@ -377,7 +386,9 @@ def run_tokens_get(services: Services, args: TokensGetArgs) -> dict:
 
 def run_tokens_list(services: Services, args: TokensListArgs) -> dict:
     rows = services.tokens_list(limit=args.limit)
-    return {"count": len(rows), "design_systems": [{k: v for k, v in r.items() if k != "tokens"} for r in rows]}
+    keep = ("id", "name", "created_ts", "roles")
+    return {"count": len(rows),
+            "design_systems": [{k: v for k, v in r.items() if (k in keep if args.compact else k != "tokens")} for r in rows]}
 
 
 def run_tokens_preview(services: Services, args: TokensPreviewArgs) -> dict:
@@ -508,10 +519,12 @@ TOOLS: list[Tool] = [
         TokensGenerateArgs, _ann(False, False, False), run_tokens_generate),
     Tool("tokens_get",
         "Get a generated design system in json, css, tailwind or w3c format. Obtener design system.\n"
+        "The json format also carries `roles`: colours per mode, font families and radii (other apps read these). "
         "Sinónimos: exportar tokens, css variables, tailwind theme, w3c tokens.",
         TokensGetArgs, _ann(True), run_tokens_get),
     Tool("tokens_list",
-        "List generated design systems. Listar design systems.\nSinónimos: listar tokens, sistemas guardados.",
+        "List generated design systems. Listar design systems.\n"
+        "Each carries its `roles` (colours, fonts, radii); compact=true returns only that. Sinónimos: listar tokens, sistemas guardados.",
         TokensListArgs, _ann(True), run_tokens_list),
     Tool("tokens_preview",
         "Render the design system's live playground and lint it. Previsualizar design system.\n"

@@ -133,8 +133,8 @@ ejecución (arrancándola automáticamente si no lo está) usando el token del p
 | `page_assay` | sí | Comprobación funcional de una página generada en un navegador real: ¿funciona cada control? Ejecuta [assay](https://github.com/awss1i/assay) (`pip install assay-ui`), sin tests escritos ni modelo. |
 | `render_compare` | sí | Diferencia de píxeles entre dos renders a un ancho dado: porcentaje cambiado + imagen de diferencia. |
 | `tokens_generate` | no | Genera un sistema de diseño: paletas OKLCH, escala tipográfica, espaciado, tokens de motion. |
-| `tokens_get` | sí | Obtiene un sistema de diseño generado en formato json, css, tailwind o w3c. |
-| `tokens_list` | sí | Lista los sistemas de diseño generados. |
+| `tokens_get` | sí | Obtiene un sistema de diseño generado en formato json, css, tailwind o w3c; el json incluye también `roles`. |
+| `tokens_list` | sí | Lista los sistemas de diseño generados con sus `roles`; con `compact=true` solo id, nombre y roles. |
 | `tokens_preview` | no | Renderiza el playground en vivo del sistema de diseño y lo audita. |
 | `tokens_delete` | no (destructiva) | Elimina un sistema de diseño generado (solo cuando el usuario lo pide). |
 | `reference_add` | no | Captura una web en la galería de referencias: capturas, vídeo, tipografías, paleta. |
@@ -151,6 +151,16 @@ Al asistente se le indica, en `AGENT_INSTRUCTIONS`, que cite la biblioteca con `
 `render_preview` → `design_critique` → arreglar → renderizar de nuevo (parando en puntuación ≥ 8 o tras 3
 rondas), y que solo llame a las herramientas que cambian algo (`reference_add`, `source_add`, `source_ingest`,
 `tokens_delete`, `reference_delete`) cuando el usuario lo pida explícitamente.
+
+## Enlace con Cicero's Hoard
+
+Cada sistema de diseño lleva `roles`, una lectura compacta que otras apps pueden usar sin recorrer todo el árbol de
+tokens: roles de color por modo (`light` y `dark`: `background`, `surface`, `surface2`, `border`, `text`, `muted`,
+`accent`, `on_accent`, `accent2`; los de tipo texto se eligen para leerse a 4,5:1 sobre el fondo), `fonts` (familias
+de títulos, cuerpo y monoespaciada) y `radius` (de sm a pill). Se derivan de los tokens guardados, no se almacenan, y
+aparecen en `tokens_get` (formato json), `tokens_list` y `GET /api/tokens/{id}`. Cicero's Hoard (el espacio de
+presentaciones) lista estos sistemas en su pestaña de tema y convierte uno en tema de diapositivas con su herramienta
+`theme_from_tokens`, a través del hub de la familia. `tokens_get` acepta además `tokens_id` como sinónimo de `id`.
 
 ## Fuentes con las que viene
 
