@@ -5,12 +5,14 @@ The criterion in the library is written in English; people ask in Spanish
 a multilingual sentence model can. Vectors are keyed by the SHA-1 of the chunk
 text and the model name, so re-ingesting a source only embeds what changed.
 
-- `Embedder` backends: fastembed (ONNX, CPU, downloaded on first use),
-  fake (tests), none (dense search off).
+- `Embedder` backends: family (Borges's Hoard through the hub, `hoard_link.fam_embed`: the one multilingual model the family keeps
+  loaded), fastembed (ONNX, CPU, in this process, downloaded on first use: the offline fallback when Borges is not running),
+  fake (tests), none (dense search off). Vectors of two models are never mixed: they are stored per model name.
 - `DenseIndex.build()` embeds pending chunks in batches (background thread
   via `start_build`), reporting progress.
 - `DenseIndex.query()` loads one float32 matrix (cached until the next build
-  or ingest) and returns the nearest chunk ids by cosine.
+  or ingest) and returns the nearest chunk ids by cosine (`hoard_link.docs.vecmath.topk`); the fusion with keywords is
+  `hoard_link.docs.vecmath.rrf`.
 """
 
 from __future__ import annotations
@@ -29,12 +31,14 @@ except ImportError:  # pragma: no cover - exercised by test_dense via monkeypatc
     np = None  # type: ignore[assignment]
 
 from .db import Database
+from .hoard_link import fam_embed
+from .hoard_link.docs import vecmath
 
 log = logging.getLogger("vitruvius.dense")
 
 DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 FAKE_DIM = 512
-RRF_K = 60
+HUB_PROBE_S = 30.0  # how long "is Borges there, and which model is it" is remembered
 
 
 def text_hash(text: str) -> str:
@@ -192,30 +196,136 @@ class FastembedEmbedder(Embedder):
 
 
 def default_cache_dir(data_dir: Path) -> Path:
-    """data/models, unless a sibling app already downloaded the same model (the family shares the
-    multilingual MiniLM with the library app): then reuse that folder instead of a second copy."""
+    """Where the in-process model is kept: `VITRUVIUS_MODELS_DIR`, else `<data>/models`."""
     explicit = os.environ.get("VITRUVIUS_MODELS_DIR")
-    if explicit:
-        return Path(explicit).expanduser()
-    own = data_dir / "models"
-    if any(own.glob("models--*")):
-        return own
-    repo = data_dir.parent
-    for sibling in sorted(repo.parent.glob("*Borges*")):
-        candidate = sibling / "data" / "models"
-        if any(candidate.glob("models--*paraphrase-multilingual-MiniLM-L12-v2*")):
-            return candidate
-    return own
+    return Path(explicit).expanduser() if explicit else data_dir / "models"
+
+
+class FamilyEmbedder(Embedder):
+    """Borges's embedder through the hub, with the in-process model (`local`) as the fallback when Borges is not running.
+
+    Which of the two answers is decided by `fam_embed` (is Borges running and is its model loaded?) and remembered for 30 seconds.
+    The vectors of the two models are different spaces, so `model` / `dim` always describe the one in use, the index keeps its
+    vectors per model name, and a build that loses its model half way stops with an error instead of mixing two spaces."""
+
+    name = "family"
+
+    def __init__(self, local: Optional[Embedder] = None):
+        self.local = local
+        self._probe: Optional[tuple[float, Optional[dict[str, Any]]]] = None
+        self._pinned: Optional[str] = None
+        self._error: Optional[str] = None
+
+    # -- who answers ---------------------------------------------------------
+    def _hub(self) -> Optional[dict[str, Any]]:
+        """Borges's `embed_status` while it is running and ready, else None (cached)."""
+        now = time.monotonic()
+        if self._probe is not None and now - self._probe[0] < HUB_PROBE_S:
+            return self._probe[1]
+        info: Optional[dict[str, Any]] = None
+        try:
+            if fam_embed.available():
+                got = fam_embed.status(timeout_s=10.0)
+                if got.get("ok") and got.get("ready") and got.get("model") and int(got.get("dim") or 0) > 0:
+                    info = got
+                else:
+                    self._error = str(got.get("error") or got.get("state") or "Borges's embedder is not ready")
+        except Exception as error:  # noqa: BLE001 - never raises into a search
+            self._error = f"{type(error).__name__}: {error}"
+        self._probe = (now, info)
+        return info
+
+    def forget(self) -> None:
+        self._probe = None
+
+    def via_hub(self) -> bool:
+        return self._hub() is not None
+
+    def _active(self) -> Optional[Embedder]:
+        return self if self.via_hub() else self.local
+
+    # -- the Embedder interface ------------------------------------------------
+    @property
+    def model(self) -> str:  # type: ignore[override]
+        hub = self._hub()
+        if hub is not None:
+            return str(hub["model"])
+        return self.local.model if self.local else ""
+
+    @property
+    def dim(self) -> int:  # type: ignore[override]
+        hub = self._hub()
+        if hub is not None:
+            return int(hub["dim"])
+        return self.local.dim if self.local else 0
+
+    def available(self) -> bool:
+        return self.via_hub() or bool(self.local and self.local.available())
+
+    def ready(self) -> bool:
+        return self.via_hub() or bool(self.local and self.local.ready())
+
+    def cached(self) -> bool:
+        """The model is at hand without a download."""
+        return self.via_hub() or bool(self.local and getattr(self.local, "cached", lambda: False)())
+
+    def ensure_loaded(self) -> bool:
+        if self.via_hub():
+            self._pinned = self.model
+            return True
+        self._pinned = None
+        return bool(self.local and self.local.ensure_loaded())
+
+    def embed(self, texts: list[str]) -> np.ndarray:
+        if not texts:
+            return np.zeros((0, self.dim), dtype=np.float32)
+        if not self.via_hub():
+            if self.local is None:
+                raise RuntimeError(self._error or "Borges's embedder is not running")
+            return self.local.embed(texts)
+        got = fam_embed.embed_texts(texts, kind="document", local_fallback=False)
+        if not got.get("ok"):
+            self.forget()
+            raise RuntimeError(f"Borges could not embed the texts: {got.get('error')}")
+        if self._pinned and got.get("model") != self._pinned:
+            self.forget()
+            raise RuntimeError(f"the family embedding model changed during the build ({self._pinned!r} -> {got.get('model')!r}); build again")
+        return np.asarray(got["vectors"], dtype=np.float32)
+
+    def embed_query(self, text: str) -> np.ndarray:
+        if not self.via_hub():
+            if self.local is None:
+                raise RuntimeError(self._error or "Borges's embedder is not running")
+            return self.local.embed_query(text)
+        got = fam_embed.embed_query(text, local_fallback=False)
+        if not got.get("ok"):
+            self.forget()
+            raise RuntimeError(f"Borges could not embed the query: {got.get('error')}")
+        return np.asarray(got["vector"], dtype=np.float32)
+
+    def status(self) -> dict[str, Any]:
+        hub = self._hub()
+        if hub is not None:
+            return {"backend": self.name, "model": str(hub["model"]), "state": "ready", "dim": int(hub["dim"]), "error": None,
+                    "via": "borges", "cached": True}
+        base = self.local.status() if self.local else {"backend": self.name, "model": "", "state": "disabled", "dim": 0, "error": None}
+        return {**base, "via": "local", "hub": self._error or "Borges's Hoard is not running"}
 
 
 def make_embedder(backend: str, model: str, cache_dir: Path) -> Embedder:
+    """`auto` / `fastembed`: Borges through the hub, the in-process model when it is not there; `family`: Borges only;
+    `local`: the in-process model only; `fake` and `none` as named."""
     if np is None:
         return NoneEmbedder()
     if backend == "fake":
         return FakeEmbedder()
     if backend == "none":
         return NoneEmbedder()
-    return FastembedEmbedder(model, cache_dir)
+    if backend == "local":
+        return FastembedEmbedder(model, cache_dir)
+    if backend == "family":
+        return FamilyEmbedder(None)
+    return FamilyEmbedder(FastembedEmbedder(model, cache_dir))
 
 
 class DenseIndex:
@@ -338,9 +448,8 @@ class DenseIndex:
         q = self.embedder.embed_query(text)
         if q.shape[0] != matrix.shape[1]:
             return []
-        scores = matrix @ q
-        top = np.argsort(-scores)[:k]
-        return [(int(ids[i]), float(scores[i])) for i in top]
+        top = vecmath.topk(matrix, q, k, min_score=-1.0, normalized=True)
+        return [(int(ids[i]), score) for i, score in top]
 
 
 def _embed_text(heading: str, text: str) -> str:
@@ -348,12 +457,3 @@ def _embed_text(heading: str, text: str) -> str:
     head = (heading or "").strip()
     body = (text or "").strip()[:1500]
     return f"{head}\n{body}" if head else body
-
-
-def rrf(rankings: list[list[int]], weights: Optional[list[float]] = None) -> list[tuple[int, float]]:
-    fused: dict[int, float] = {}
-    for i, ranking in enumerate(rankings):
-        weight = weights[i] if weights else 1.0
-        for rank, chunk_id in enumerate(ranking, start=1):
-            fused[chunk_id] = fused.get(chunk_id, 0.0) + weight / (RRF_K + rank)
-    return sorted(fused.items(), key=lambda item: -item[1])

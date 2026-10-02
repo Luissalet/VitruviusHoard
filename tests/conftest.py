@@ -40,7 +40,7 @@ _PNG_1x1 = _make_png_bytes()
 
 def make_config(tmp_path: Path, **overrides) -> Config:
     base = dict(data_dir=tmp_path / "data", port=0, port_strict=False, render_timeout_s=5.0,
-               data_dir_configured=True, autostart=False)
+               data_dir_configured=True, autostart=False, embed_backend="none")  # never reach a hub that may be running on this machine
     base.update(overrides)
     return Config(**base)
 

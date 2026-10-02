@@ -2,7 +2,8 @@
 import numpy as np
 
 from vitruvius_hoard.config import Config
-from vitruvius_hoard.dense import DenseIndex, FakeEmbedder, NoneEmbedder, rrf, text_hash
+from vitruvius_hoard.dense import DenseIndex, FakeEmbedder, NoneEmbedder, text_hash
+from vitruvius_hoard.hoard_link.docs.vecmath import rrf
 from vitruvius_hoard.db import Database
 from vitruvius_hoard import library
 

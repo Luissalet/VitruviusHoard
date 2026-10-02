@@ -58,3 +58,22 @@ def test_tokens_estimate_is_positive():
 def test_plain_text_without_headings_becomes_one_section():
     r = chunk_markdown("Just plain text without any heading at all.")
     assert len(r["chunks"]) == 1
+
+
+def test_a_hash_inside_a_code_fence_is_not_a_heading():
+    md = "# Guide\n## Install\nRun this:\n```bash\n# not a heading\nmake\n```\nDone."
+    r = chunk_markdown(md)
+    assert [c["heading"] for c in r["chunks"]] == ["Guide § Install"]
+    assert "# not a heading" in r["chunks"][0]["text"]
+
+
+def test_the_page_heading_beats_the_file_name_as_the_title():
+    assert chunk_markdown("# Real Title\ntext", default_title="readme")["title"] == "Real Title"
+    assert chunk_markdown("text only", default_title="readme")["title"] == "readme"
+
+
+def test_an_oversized_paragraph_is_cut_at_a_sentence_not_in_the_middle_of_a_word():
+    sentence = "This is a fairly ordinary sentence about typography and rhythm. "
+    r = chunk_markdown("# Doc\n" + sentence * 60)
+    assert len(r["chunks"]) > 1
+    assert all(len(c["text"]) <= 1200 and c["text"].endswith(".") for c in r["chunks"])

@@ -8,8 +8,8 @@ import re
 from typing import Any, Optional
 
 from .db import Database
-
-_TOKEN_RE = re.compile(r"\w+")  # Unicode: «animación» stays one token (FTS5 folds the accent)
+from .hoard_link.docs import citations, textsearch
+from .hoard_link.docs.vecmath import rrf
 
 DEFAULT_ANTI_PATTERNS = [
     "Do not default to the generic hero + three feature cards layout.",
@@ -30,25 +30,25 @@ DEFAULT_CHECKLIST = [
 ]
 
 
-def _quote_token(tok: str) -> str:
-    return '"' + tok.replace('"', '""') + '"'
+# Words that make a question rather than name a topic, on top of the function words `textsearch.fts_query` already drops.
+_QUESTION_WORDS = {"cuánto", "cuanto", "cuánta", "debe", "debo", "puedo", "uso", "usar", "hago", "should", "do", "does", "can", "use",
+                   "be", "much", "long"}
 
 
 def _fts_query(query: str, mode: str) -> str:
-    tokens = [t for t in _TOKEN_RE.findall(query or "") if len(t) > 1 or t.isdigit()]
+    """The MATCH expression for a question (`hoard_link.docs.textsearch.fts_query`): `and` needs every content word as a whole word,
+    `or` is any of them, prefix-expanded. Function words are dropped unless the question is only function words; the wider `or`
+    net also drops generic words (`app`, `page`, `use`, `cuánto` ...) while there are topic words left."""
     if mode != "and":
-        # OR over function words matches everything; keep the content words when there are any.
-        content = [t for t in tokens if t.lower() not in _FTS_STOP]
-        tokens = content or tokens
-    if not tokens:
-        return ""
-    joiner = " AND " if mode == "and" else " OR "
-    return joiner.join(_quote_token(t) for t in tokens)
+        topic = [w for w in re.findall(r"\w+", query or "") if w.lower() not in _STOP and w.lower() not in _QUESTION_WORDS]
+        if topic:
+            query = " ".join(topic)
+    return textsearch.fts_query(query, mode=mode)
 
 
 def _cite(source_id: str, path: str, heading: str) -> str:
-    tail = f" § {heading}" if heading else ""
-    return f"[vitruvius: {source_id}/{path}{tail}]"
+    """`[vitruvius: <source>/<path> § <heading>]` (`hoard_link.docs.citations.cite`, kind `code`)."""
+    return f"[vitruvius: {citations.cite('code', f'{source_id}/{path}', section=heading, lang='en')}]"
 
 
 def _chunk_rows(db: Database, ids: list[int], kind: Optional[str], source: Optional[str]) -> dict[int, Any]:
@@ -120,8 +120,6 @@ def search(db: Database, query: str, *, kind: Optional[str] = None, source: Opti
         dense_scores = {cid: sc for cid, sc in hits}
 
     if dense_ids:
-        from .dense import rrf
-
         # Any-word keyword hits are weak evidence (one shared word like «lateral»): they still count,
         # but a passage the model ranks first by meaning should not lose to them.
         order = rrf([bm25_ids, dense_ids], [0.3 if loose_bm25 else 1.0, 1.0]) if bm25_ids else rrf([dense_ids])
@@ -197,10 +195,6 @@ def _hue_from_text(text: str) -> float:
 
 _STOP = {"the", "a", "an", "for", "of", "and", "or", "with", "app", "page", "site", "web", "una", "un", "para", "de", "la",
          "el", "los", "las", "y", "con", "que", "in", "on", "to", "is", "it", "as", "at", "by", "from", "this", "that"}
-_FTS_STOP = _STOP | {"del", "al", "en", "por", "se", "lo", "es", "su", "sus", "mi", "me", "le", "cómo", "como", "qué",
-                     "cuál", "cuánto", "cuanto", "cuánta", "debe", "debo", "puedo", "hay", "uso", "usar", "hago",
-                     "how", "what", "which", "should", "do", "does", "can", "use", "my", "i", "be", "are", "much", "long"}
-
 # Spanish/English synonyms so «sobria», «lujo» or «cálido» find catalog rows written in English.
 _SYNONYMS = {
     "calm": ["calm", "serene", "quiet", "minimal", "clean", "soft"], "calma": ["calm", "serene", "quiet"],
