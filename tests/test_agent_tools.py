@@ -104,6 +104,18 @@ def test_call_tool_tokens_roundtrip(services):
     assert deleted["ok"] is True
 
 
+def test_tokens_roles_in_get_and_compact_list_and_tokens_id_alias(services):
+    created = call_tool(services, "tokens_generate", {"name": "Roles", "base_color": "#3355ff"})
+    full = call_tool(services, "tokens_get", {"tokens_id": created["id"]})  # the family's spelling of `id`
+    assert full["id"] == created["id"] and full["tokens"]["color"]
+    assert full["roles"]["light"]["background"] and full["roles"]["dark"]["text"] and full["roles"]["fonts"]["body"]
+    assert full["roles"]["radius"]["lg"]
+    compact = call_tool(services, "tokens_list", {"compact": True})["design_systems"][0]
+    assert set(compact) == {"id", "name", "created_ts", "roles"} and compact["roles"] == full["roles"]
+    plain = call_tool(services, "tokens_list", {})["design_systems"][0]
+    assert "css" in plain and "roles" in plain and "tokens" not in plain
+
+
 def test_call_tool_sources_list_and_add(services):
     listed = call_tool(services, "sources_list", {})
     before = listed["count"]

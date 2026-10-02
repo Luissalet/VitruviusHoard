@@ -171,3 +171,24 @@ def test_playground_html_is_self_contained_no_external_requests():
     tokens = T.generate({"name": "d"})
     html = T.playground_html(tokens)
     assert "http://" not in html and "https://" not in html
+
+
+def test_roles_cover_what_other_apps_need():
+    tokens = T.generate({"name": "Roles", "base_color": "#3355ff", "fonts": {"heading": "Georgia, serif"}, "style": "sharp"})
+    roles = T.roles_of(tokens)
+    assert roles["name"] == "Roles"
+    assert roles["fonts"]["heading"] == "Georgia, serif" and roles["fonts"]["body"] and roles["fonts"]["mono"]
+    assert roles["radius"]["md"] == "4px" and "pill" in roles["radius"]
+    for mode in ("light", "dark"):
+        r = roles[mode]
+        assert set(r) == {"background", "surface", "surface2", "border", "text", "muted", "accent", "on_accent", "accent2"}
+        assert all(re.fullmatch(r"#[0-9a-f]{6}", v) for v in r.values()), r
+        for key in ("text", "muted", "accent", "accent2"):
+            assert T.contrast_ratio(r[key], r["background"]) >= 4.5, (mode, key)
+            assert T.contrast_ratio(r[key], r["surface2"]) >= 4.5, (mode, key)
+        assert T.contrast_ratio(r["on_accent"], r["accent"]) >= 4.5
+
+
+def test_roles_of_an_empty_token_set_do_not_raise():
+    roles = T.roles_of({})
+    assert roles["fonts"] == {"heading": "", "body": "", "mono": ""} and roles["radius"] == {}
