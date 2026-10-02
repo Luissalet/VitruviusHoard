@@ -33,6 +33,16 @@ def test_meta_from_html():
     assert meta["description"] == "A nice page"
 
 
+def test_meta_from_html_decodes_entities_and_ignores_attribute_order():
+    html = ('<html><head><title>Tom &amp; Jerry</title><meta content="Cats &amp; mice" name="description">'
+            '<meta content="OG title" property="og:title"><meta property="og:image" content="/i.png"></head></html>')
+    meta = R._meta_from_html(html)
+    assert meta["description"] == "Cats & mice"
+    assert meta["og"]["title"] == "OG title" and meta["og"]["image"] == "/i.png"
+    assert meta["title"] in ("Tom & Jerry", "OG title")
+    assert R._meta_from_html("") == {"title": "", "description": "", "og": {}}
+
+
 def test_add_and_get_reference(tmp_path, services):
     row = services.reference_add(html="<html><title>Demo</title><body>hi</body></html>", tags=["glass"], note="test",
                                  video=False, analyze=False)

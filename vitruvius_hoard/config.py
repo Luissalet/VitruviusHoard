@@ -26,6 +26,12 @@ class Config:
     embed_backend: str = "auto"  # auto (fastembed when installed) | fake | none
     embed_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     embed_auto: bool = True  # (re)build vectors after an ingest when the model is already on disk
+    allow_local_urls: bool = False  # let render / reference_add / page_assay open localhost and private-network pages
+
+    @property
+    def url_profile(self) -> str:
+        """The `hoard_link.web.safety` profile for URLs the assistant asks to open."""
+        return "operator_local" if self.allow_local_urls else "public"
 
     @property
     def db_path(self) -> Path:
@@ -69,4 +75,5 @@ class Config:
             embed_backend=(env_str("VITRUVIUS_EMBED", default="auto") or "auto").lower(),
             embed_model=env_str("VITRUVIUS_EMBED_MODEL", default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"),
             embed_auto=env_flag("VITRUVIUS_EMBED_AUTO", True),
+            allow_local_urls=env_flag("VITRUVIUS_ALLOW_LOCAL_URLS", False),
         )

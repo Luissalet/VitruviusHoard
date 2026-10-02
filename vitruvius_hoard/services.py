@@ -22,9 +22,12 @@ from . import tokens as tokens_mod
 from .browser import BrowserWorker
 from .config import Config
 from .db import Database
+from .hoard_link import fam_web
 from .hoard_link import tokens as tokens_lib
 from .hoard_link.atomic import write_json_atomic
 from .hoard_link.config import LinkConfig
+from .hoard_link.media import bins as media_bins
+from .hoard_link.web import safety
 from .hoard_link.tokens import read_or_create_token
 from .ingest.git import git_available
 from .ingest.runner import IngestRunner, ingest_source
@@ -50,8 +53,7 @@ def write_url(config: Config) -> None:
 
 
 def ffmpeg_available() -> bool:
-    import shutil
-    return shutil.which("ffmpeg") is not None
+    return bool(media_bins.find("ffmpeg"))
 
 
 class Services:
@@ -69,7 +71,7 @@ class Services:
         write_url(config)
         self.db = Database(config.db_path)
 
-        self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s)
+        self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s, profile=config.url_profile)
 
         if link is not None:
             self.link_sync = link  # test double, already "sync-shaped"
@@ -226,12 +228,23 @@ class Services:
                 "mono": r["mono"], "category": r["category"], "mood": r["mood"],
                 "google_fonts_url": r["google_fonts_url"], "notes": r["notes"]} for r in rows]
 
+    # ---------------- what the assistant may ask the browser to open ----------------
+    def check_url(self, url: Optional[str]) -> None:
+        """Refuse a URL that is not a public web page (localhost, the local network, a cloud metadata address, credentials in the
+        URL, a scheme other than http/https). `VITRUVIUS_ALLOW_LOCAL_URLS=1` also lets local and private-network pages through."""
+        if not url:
+            return
+        problem = safety.check_url(url, self.config.url_profile)
+        if problem and not problem.startswith(safety.UNRESOLVABLE_PREFIX):
+            raise ValueError(f"This URL cannot be opened: {problem}")
+
     # ---------------- renders ----------------
     def render(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: Optional[list[int]] = None,
               full_page: bool = True, dark: bool = False, wait_ms: int = 800, lint: bool = True,
               record: bool = False, title: str = "") -> dict[str, Any]:
         if not html and not url:
             raise ValueError("render needs html or url")
+        self.check_url(url)
         t0 = time.monotonic()
         render_id = uuid.uuid4().hex[:12]
         out_dir = self.config.renders_dir / render_id
@@ -347,6 +360,7 @@ class Services:
             return lint_mod.run_lint(probe, html or "")
         if html is None and url is None:
             raise ValueError("lint needs html, url or render_id")
+        self.check_url(url)
         capture = self.browser.capture(html=html, url=url, widths=[1024], full_page=False,
                                        out_dir=self.config.renders_dir / ("lint-" + uuid.uuid4().hex[:8]))
         probe = capture.get("probe") or {}
@@ -361,16 +375,31 @@ class Services:
                 raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
             path, html = str(source), None
         elif url:
-            import httpx
-
-            response = httpx.get(url, timeout=30, follow_redirects=True, headers={"User-Agent": "Vitruvius/0.1"})
-            response.raise_for_status()
-            html = response.text
+            self.check_url(url)
+            html = self._fetch_page(url)
         if html is None and not path:
             raise ValueError("page_assay needs html, url, render_id or a local path")
         result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner)
         self._emit_event("vitruvius.assay.done", {"id": result.get("id"), "works": result.get("works"), "failed": result.get("failed")})
         return result
+
+    def _fetch_page(self, url: str) -> str:
+        """The HTML of a page to check: through the family web service (one throttle and block memory for every app) when it is
+        there, else fetched here (`hoard_link.fam_web.fetch_or_local`). Pages on the local network need
+        `VITRUVIUS_ALLOW_LOCAL_URLS=1` and are then fetched here with the operator profile."""
+        if self.config.allow_local_urls:
+            from .hoard_link.web.fetch import Fetcher
+
+            fetcher = Fetcher(profile=safety.OPERATOR_LOCAL, min_interval_s=0.0)
+            try:
+                result = fetcher.get(url, accept="html", respect_robots=False, timeout=30).to_dict(with_text=True)
+            finally:
+                fetcher.close()
+        else:
+            result = fam_web.fetch_or_local(url, accept="html", respect_robots=False, timeout=30)
+        if not result.get("ok"):
+            raise ValueError(f"Could not fetch {url}: {result.get('error') or result.get('error_kind') or 'no answer'}")
+        return str(result.get("text") or "")
 
     def critique_render(self, render_id: str, *, focus: Optional[str] = None, use_vision: bool = True) -> dict[str, Any]:
         row = self.db.one("SELECT * FROM renders WHERE id = ?", (render_id,))
@@ -459,6 +488,7 @@ class Services:
     def reference_add(self, **kwargs) -> dict[str, Any]:
         link = kwargs.pop("link", None)
         analyze = kwargs.get("analyze", True)
+        self.check_url(kwargs.get("url"))
         return references_mod.add(self.db, self.browser, self.config, link=self.link_sync if analyze else None, **kwargs)
 
     def reference_search(self, **kwargs) -> list[dict[str, Any]]:

@@ -10,11 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .db import Database
-
-_META_TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
-_META_DESC_RE = re.compile(r'<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']', re.IGNORECASE)
-_META_OG_RE = re.compile(r'<meta[^>]+property=["\']og:(\w+)["\'][^>]+content=["\'](.*?)["\']', re.IGNORECASE)
-
+from .hoard_link.web.meta import page_meta
 
 _GENERIC_FAMILIES = {"sans-serif", "serif", "monospace", "system-ui", "ui-sans-serif", "ui-serif", "ui-monospace",
                      "-apple-system", "blinkmacsystemfont", "cursive", "fantasy"}
@@ -38,10 +34,9 @@ def _font_names(fonts: dict[str, Any]) -> list[str]:
 
 
 def _meta_from_html(html: str) -> dict[str, Any]:
-    title_m = _META_TITLE_RE.search(html or "")
-    desc_m = _META_DESC_RE.search(html or "")
-    og = {m.group(1): m.group(2) for m in _META_OG_RE.finditer(html or "")}
-    return {"title": (title_m.group(1).strip() if title_m else ""), "description": (desc_m.group(1) if desc_m else ""), "og": og}
+    """Title, description and Open Graph tags of a page (`hoard_link.web.meta.page_meta`: entities decoded, any attribute order)."""
+    found = page_meta(html or "")
+    return {"title": found["title"], "description": found["description"], "og": found["og"]}
 
 
 def extract_palette(image_path: str, n: int = 6) -> list[str]:

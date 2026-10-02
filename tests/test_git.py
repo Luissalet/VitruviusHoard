@@ -50,3 +50,32 @@ def test_clone_or_pull_bad_url_fails_gracefully(tmp_path):
 
 def test_current_commit_none_when_not_a_repo(tmp_path):
     assert current_commit(tmp_path) is None
+
+
+def test_git_runs_through_the_shared_process_runner_and_never_asks_for_a_password(tmp_path, monkeypatch):
+    from vitruvius_hoard.ingest import git as G
+
+    seen = []
+
+    def fake_run(args, **kw):
+        seen.append((list(map(str, args)), kw))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(G.proc, "run", fake_run)
+    monkeypatch.setattr(G, "git_available", lambda: True)
+    ok, message, _ = G.clone_or_pull("https://example.test/r.git", tmp_path / "dest")
+    assert ok and seen[0][0][:4] == ["git", "clone", "--depth", "1"]
+    assert all(kw["env"]["GIT_TERMINAL_PROMPT"] == "0" for _, kw in seen)
+
+
+def test_a_git_that_hangs_is_reported_not_raised(tmp_path, monkeypatch):
+    from vitruvius_hoard.ingest import git as G
+
+    def slow(args, **kw):
+        raise subprocess.TimeoutExpired(args, kw.get("timeout", 1))
+
+    monkeypatch.setattr(G.proc, "run", slow)
+    monkeypatch.setattr(G, "git_available", lambda: True)
+    ok, message, commit = G.clone_or_pull("https://example.test/r.git", tmp_path / "dest", timeout=3)
+    assert not ok and "timed out after 3" in message and commit is None
+    assert G.current_commit(tmp_path) is None
