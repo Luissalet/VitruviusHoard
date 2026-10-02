@@ -1,12 +1,18 @@
-"""Request guard: host allow-list, Origin rule and Fetch Metadata rules."""
+"""Request guard (the shared `hoard_link.guard`): host allow-list, Origin rule and Fetch Metadata rules, as Vitruvius uses them."""
 
 import pytest
 from conftest import make_config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from vitruvius_hoard.guard import check_request, host_of, install_guard, is_allowed_host, parse_allowed_hosts
+from vitruvius_hoard.hoard_link.guard import check_request as _check, host_of, install_guard, is_allowed_host, parse_allowed_hosts
 from vitruvius_hoard.main import create_app
+
+def check_request(method, headers, allowed=()):
+    """None when allowed, else the message (the library answers (403, message))."""
+    verdict = _check(method, headers, 5191, allowed)
+    return verdict[1] if verdict else None
+
 
 NAV = {"sec-fetch-site": "cross-site", "sec-fetch-mode": "navigate", "sec-fetch-dest": "document"}
 CORS = {"sec-fetch-site": "cross-site", "sec-fetch-mode": "cors", "sec-fetch-dest": "empty"}
@@ -21,32 +27,47 @@ def test_host_of_strips_scheme_path_port_and_case():
 
 
 def test_parse_allowed_hosts():
-    assert parse_allowed_hosts(" pc.example , *.TS.net,, pc2.example:8443") == ("pc.example", "*.ts.net", "pc2.example")
+    # an entry with a port is pinned to that port (the shared guard's rule); the old copy dropped the port
+    assert parse_allowed_hosts(" pc.example , *.TS.net,, pc2.example:8443") == ("pc.example", "*.ts.net", "pc2.example:8443")
     assert parse_allowed_hosts(None) == () and parse_allowed_hosts("*.") == ()
 
 
 def test_is_allowed_host_exact_wildcard_unknown():
     allowed = parse_allowed_hosts("pc.example,*.ts.net")
     for host in ("localhost", "127.0.0.1", "[::1]", "pc.example", "my-pc.ts.net", "a.b.ts.net"):
-        assert is_allowed_host(host, allowed), host
+        assert is_allowed_host(host, 5191, allowed), host
     for host in ("ts.net", "evil.example", "pc.example.evil", "", None):
-        assert not is_allowed_host(host, allowed), host
+        assert not is_allowed_host(host, 5191, allowed), host
+    assert not is_allowed_host("my-pc.ts.net", 5191, ())
 
 
 def test_check_request_fetch_metadata_rules():
     local = {"host": "localhost:5191"}
-    assert check_request("GET", local) is None
+    assert check_request("GET", local) is None  # curl / MCP bridge: no Sec-Fetch headers
     assert check_request("POST", {"host": "127.0.0.1:5191"}) is None
-    assert check_request("GET", {**local, **NAV}) is None
-    assert check_request("GET", {**local, **CORS})
+    assert check_request("GET", {**local, **NAV}) is None  # top-level navigation from another site
+    assert check_request("GET", {**local, "sec-fetch-site": "same-origin", "sec-fetch-mode": "cors"}) is None
+    assert check_request("GET", {**local, **CORS})  # cross-site fetch
     assert check_request("GET", {**local, **IFRAME})
-    assert check_request("POST", {**local, **NAV})
+    assert check_request("GET", {**local, **NAV, "sec-fetch-dest": "embed"})
+    assert check_request("POST", {**local, **NAV})  # form post from another site
+    assert check_request("POST", {**local, "sec-fetch-site": "same-origin", "sec-fetch-mode": "navigate"})
     assert check_request("GET", {"host": "evil.example"})
 
 
-def test_middleware_blocks_cross_site_embeds_and_fetches():
+def test_check_request_origin_by_host_not_exact_string():
+    allowed = parse_allowed_hosts("*.ts.net")
+    headers = lambda origin: {"host": "my-pc.ts.net", "origin": origin}  # noqa: E731
+    assert check_request("GET", headers("https://my-pc.ts.net:8443"), allowed) is None
+    assert check_request("GET", headers("http://localhost:5191"), allowed) is None
+    assert check_request("GET", headers("http://localhost:5173"), allowed) is None  # vite dev
+    assert check_request("GET", headers("https://evil.example"), allowed)
+    assert check_request("GET", {"host": "localhost", "origin": "http://my-pc.ts.net"})  # not in the list
+
+
+def test_middleware_navigation_reaches_root_but_not_embeds_or_fetches():
     app = FastAPI()
-    install_guard(app, parse_allowed_hosts("*.ts.net"))
+    install_guard(app, port_getter=lambda: 5191, allowed_hosts="*.ts.net")
 
     @app.get("/")
     def home():
@@ -54,8 +75,10 @@ def test_middleware_blocks_cross_site_embeds_and_fetches():
 
     with TestClient(app, base_url="http://127.0.0.1") as client:
         assert client.get("/", headers=NAV).status_code == 200
+        assert client.get("/", headers={**NAV, "host": "my-pc.ts.net"}).status_code == 200
         assert client.get("/", headers=IFRAME).status_code == 403
         assert client.get("/", headers=CORS).status_code == 403
+        assert client.get("/", headers={**NAV, "host": "other.example"}).status_code == 403
 
 
 @pytest.fixture
@@ -71,13 +94,34 @@ def test_app_host_origin_and_cross_site_rules(guarded):
     assert get(host="pc.example") == 200
     assert get(host="My-PC.ts.net:8443") == 200
     assert get(host="evil.example") == 403
+    assert get(host="ts.net") == 403
     assert get(origin="https://my-pc.ts.net:8443") == 200
+    assert get(origin="http://localhost:5173") == 200
     assert get(origin="https://evil.example") == 403
     assert get(**NAV) == 200
     assert get(**CORS) == 403
     assert get(**IFRAME) == 403
+    post = lambda **headers: guarded.post("/api/agent/call", json={}, headers=headers).status_code  # noqa: E731
+    assert post(**NAV) == 403
+    assert post(**CORS, origin="https://evil.example") == 403
+    assert post(**{"sec-fetch-site": "same-origin", "sec-fetch-mode": "cors"}) != 403  # reaches the route (wants a token)
 
 
 def test_app_without_allowed_hosts_is_local_only(client):
     assert client.get("/api/health", headers={"host": "my-pc.ts.net"}).status_code == 403
-    assert client.get("/api/health", headers={"host": "[::1]:5183"}).status_code == 200
+    assert client.get("/api/health", headers={"host": "[::1]:5191"}).status_code == 200
+
+
+def test_websocket_upgrades_are_guarded_too(guarded):
+    """The old copies only guarded HTTP; the shared guard closes a WebSocket with a foreign Host before it is accepted."""
+    from starlette.websockets import WebSocketDisconnect
+
+    app = guarded.app
+
+    @app.websocket("/ws-probe")
+    async def probe(websocket):  # pragma: no cover - never accepted when the guard works
+        await websocket.accept()
+
+    with pytest.raises(WebSocketDisconnect):
+        with guarded.websocket_connect("/ws-probe", headers={"host": "evil.example"}):
+            pass

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import secrets
 import time
 import uuid
 from pathlib import Path
@@ -23,7 +22,10 @@ from . import tokens as tokens_mod
 from .browser import BrowserWorker
 from .config import Config
 from .db import Database
+from .hoard_link import tokens as tokens_lib
+from .hoard_link.atomic import write_json_atomic
 from .hoard_link.config import LinkConfig
+from .hoard_link.tokens import read_or_create_token
 from .ingest.git import git_available
 from .ingest.runner import IngestRunner, ingest_source
 
@@ -31,30 +33,18 @@ log = logging.getLogger("vitruvius")
 
 
 def write_token(config: Config) -> str:
-    """The MCP token is persistent: created once, reused on every later start.
+    """The MCP token is persistent: created once, reused on every later start (`hoard_link.tokens.read_or_create_token`).
 
     Rotating it on each start would break a bridge (or a second, port-clashing
     instance would break the running one) the moment the file changed.
     """
     config.data_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        existing = config.token_path.read_text(encoding="utf-8").strip()
-    except OSError:
-        existing = ""
-    if len(existing) >= 32:
-        return existing
-    token = secrets.token_hex(32)
-    config.token_path.write_text(token, encoding="utf-8")
-    try:
-        config.token_path.chmod(0o600)
-    except OSError:
-        pass
-    return token
+    return read_or_create_token(config.token_path)
 
 
 def write_url(config: Config) -> None:
     try:
-        config.url_path.write_text(f"http://127.0.0.1:{config.port}", encoding="utf-8")
+        tokens_lib.write_url(config.url_path, f"http://127.0.0.1:{config.port}")
     except OSError:
         pass
 
@@ -502,21 +492,21 @@ class Services:
             except (OSError, ValueError):
                 backend = {}
         return {
-            "backend": backend, "vision_enabled": self.db.get_setting("vision_enabled", "1") == "1",
-            "widths": json.loads(self.db.get_setting("widths", "[390, 1024, 1440]")),
-            "video_enabled": self.db.get_setting("video_enabled", "1") == "1",
+            "backend": backend, "vision_enabled": bool(self.db.get_setting("vision_enabled", True)),
+            "widths": list(self.db.get_setting("widths", [390, 1024, 1440])),
+            "video_enabled": bool(self.db.get_setting("video_enabled", True)),
             "language": self.db.get_setting("language", "en"),
         }
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
         if "backend" in patch and patch["backend"] is not None:
-            self.config.backend_json_path.write_text(json.dumps(patch["backend"], indent=2), encoding="utf-8")
+            write_json_atomic(self.config.backend_json_path, patch["backend"], indent=2)
         if "vision_enabled" in patch:
-            self.db.set_setting("vision_enabled", "1" if patch["vision_enabled"] else "0")
+            self.db.set_setting("vision_enabled", bool(patch["vision_enabled"]))
         if "widths" in patch and patch["widths"]:
-            self.db.set_setting("widths", json.dumps(patch["widths"]))
+            self.db.set_setting("widths", list(patch["widths"]))
         if "video_enabled" in patch:
-            self.db.set_setting("video_enabled", "1" if patch["video_enabled"] else "0")
+            self.db.set_setting("video_enabled", bool(patch["video_enabled"]))
         if "language" in patch and patch["language"] in ("en", "es"):
             self.db.set_setting("language", patch["language"])
         return self.get_settings()

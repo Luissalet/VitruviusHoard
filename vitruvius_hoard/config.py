@@ -2,34 +2,14 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .guard import parse_allowed_hosts
+from .hoard_link.appconfig import env_flag, env_float, env_int, env_str
+from .hoard_link.guard import parse_allowed_hosts
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PORT = 5191
-
-
-def _env(name: str, default: str = "") -> str:
-    return os.environ.get(name, default).strip()
-
-
-def _int(raw: str, default: int, low: int, high: int) -> int:
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        return default
-    return value if low <= value <= high else default
-
-
-def _float(raw: str, default: float, low: float, high: float) -> float:
-    try:
-        value = float(raw)
-    except (TypeError, ValueError):
-        return default
-    return value if low <= value <= high else default
 
 
 @dataclass
@@ -77,17 +57,16 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
-        raw_dir = _env("VITRUVIUS_DATA_DIR")
-        port = _int(_env("VITRUVIUS_PORT") or _env("PORT") or str(DEFAULT_PORT), DEFAULT_PORT, 1, 65535)
+        raw_dir = env_str("VITRUVIUS_DATA_DIR")
         return cls(
             data_dir=Path(raw_dir).expanduser() if raw_dir else REPO_ROOT / "data",
-            port=port,
-            port_strict=_env("PORT_STRICT") == "1",
-            render_timeout_s=_float(_env("VITRUVIUS_RENDER_TIMEOUT_S"), 45.0, 5.0, 600.0),
-            allowed_hosts=parse_allowed_hosts(_env("VITRUVIUS_ALLOWED_HOSTS")),
+            port=env_int("VITRUVIUS_PORT", "PORT", default=DEFAULT_PORT, minimum=1, maximum=65535),
+            port_strict=env_flag("PORT_STRICT", False),
+            render_timeout_s=env_float("VITRUVIUS_RENDER_TIMEOUT_S", default=45.0, minimum=5.0, maximum=600.0),
+            allowed_hosts=parse_allowed_hosts(env_str("VITRUVIUS_ALLOWED_HOSTS")),
             data_dir_configured=bool(raw_dir),
-            autostart=_env("VITRUVIUS_AUTOSTART", "1") != "0",
-            embed_backend=(_env("VITRUVIUS_EMBED", "auto") or "auto").lower(),
-            embed_model=_env("VITRUVIUS_EMBED_MODEL") or "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-            embed_auto=_env("VITRUVIUS_EMBED_AUTO", "1") != "0",
+            autostart=env_flag("VITRUVIUS_AUTOSTART", True),
+            embed_backend=(env_str("VITRUVIUS_EMBED", default="auto") or "auto").lower(),
+            embed_model=env_str("VITRUVIUS_EMBED_MODEL", default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"),
+            embed_auto=env_flag("VITRUVIUS_EMBED_AUTO", True),
         )

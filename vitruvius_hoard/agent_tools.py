@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
 from .services import Services
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -17,10 +17,6 @@ Loop: write HTML -> render_preview -> design_critique -> fix -> render again; st
 then page_assay it (drives every control in a real browser and reports what does not work).
 Use design_brief before a page from scratch; styles_search / palettes_search / fonts_search for quick lookups.
 reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when the user asks."""
-
-
-class Empty(BaseModel):
-    pass
 
 
 # ---------------- library ----------------
@@ -200,19 +196,6 @@ class SourceIngestArgs(BaseModel):
 
 class SourceStatusArgs(BaseModel):
     id: str = Field(..., max_length=80)
-
-
-@dataclass(frozen=True)
-class Tool:
-    name: str
-    description: str
-    input_model: type[BaseModel]
-    annotations: dict[str, bool]
-    run: Callable[[Services, Any], Any]
-
-
-def _ann(read_only: bool, destructive: bool = False, idempotent: bool | None = None) -> dict[str, bool]:
-    return {"readOnlyHint": read_only, "destructiveHint": destructive, "idempotentHint": read_only if idempotent is None else idempotent, "openWorldHint": False}
 
 
 def _strip_html(row: dict) -> dict:
@@ -461,134 +444,139 @@ TOOLS: list[Tool] = [
         "Keywords (bm25) fused with multilingual meaning (a Spanish question finds English criterion) over the ingested\n"
         "design-skill repos; every hit carries a `[vitruvius: source/path § heading]` cite and how it matched.\n"
         "Sinónimos: buscar, criterio, reglas de diseño, motion, tipografía, contraste, biblioteca.",
-        SearchArgs, _ann(True), run_design_search),
+        SearchArgs, ann(True), run_design_search),
     Tool("design_brief",
         "Design brief for a page/app: style, palette, fonts, rules, motion, anti-patterns. Brief de diseño.\n"
         "Deterministic composition (2-3 styles, one palette, one font pairing, rules by area, anti-patterns, checklist), all cited.\n"
         "Sinónimos: brief, dirección de arte, vibe, paleta, tipografía, para una landing, para una app.",
-        BriefArgs, _ann(True), run_design_brief),
+        BriefArgs, ann(True), run_design_brief),
     Tool("design_rules",
         "List design rules by area (typography, color, layout, motion, a11y, forms). Reglas de diseño.\n"
         "Filter by area/severity/source; rules with a check_id are enforced deterministically by design_lint.\n"
         "Sinónimos: reglas, buenas prácticas, do and don't, checklist.",
-        RulesArgs, _ann(True), run_design_rules),
+        RulesArgs, ann(True), run_design_rules),
     Tool("styles_search",
         "Find UI styles (glass, brutalist, swiss, aurora...) with tokens and when to use them. Estilos de UI.\n"
         "Catalog lookup over the ingested style library (colors, typography, effects, best_for, avoid).\n"
         "Sinónimos: estilo visual, brutalist, glassmorphism, swiss, aurora, retro-futurista.",
-        StylesSearchArgs, _ann(True), run_styles_search),
+        StylesSearchArgs, ann(True), run_styles_search),
     Tool("palettes_search",
         "Find catalogued colour palettes by name or product type. Buscar paletas de color.\n"
         "Reads the palettes table (role/hex pairs) ingested from the catalog source.\n"
         "Sinónimos: paleta, colores, esquema de color.",
-        PalettesSearchArgs, _ann(True), run_palettes_search),
+        PalettesSearchArgs, ann(True), run_palettes_search),
     Tool("fonts_search",
         "Find catalogued font pairings by mood or query. Buscar combinaciones de tipografías.\n"
         "Reads the font_pairings table (heading/body/mono, mood, Google Fonts URL).\n"
         "Sinónimos: tipografía, fuente, pareja de fuentes, mood tipográfico.",
-        FontsSearchArgs, _ann(True), run_fonts_search),
+        FontsSearchArgs, ann(True), run_fonts_search),
     Tool("render_preview",
         "Render HTML or a URL in Chromium, screenshot at widths, run lint. Renderiza y captura.\n"
         "Returns render id, absolute file paths, size, lint summary and metrics (fonts, colours, libs). Never returns "
         "image bytes unless include_images=true. A page already written to disk goes as path, not pasted into html.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
-        RenderArgs, _ann(False, False, False), run_render_preview),
+        RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
         "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n"
         "29 checks with stable ids; each finding has area, severity, evidence and a concrete fix.\n"
         "Sinónimos: lint, revisar diseño, patrones genéricos de IA, contraste, accesibilidad.",
-        LintArgs, _ann(True), run_design_lint),
+        LintArgs, ann(True), run_design_lint),
     Tool("design_critique",
         "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\n"
         "Merges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy).\n"
         "Sinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
-        CritiqueArgs, _ann(False, False, False), run_design_critique),
+        CritiqueArgs, ann(False, False, False), run_design_critique),
     Tool("page_assay",
         "Functional check of a page in a real browser: does every control work? No tests needed. ¿Funciona la página?\n"
         "Runs assay (pip install assay-ui): measures every control, derives a test plan, drives it and reports contradictions\n"
         "(dead buttons, `undefined` shown, a control answering differently to the same input). Takes ~15-60 s.\n"
         "Sinónimos: probar la página, comprobar botones, test funcional, assay, ¿funciona?, smoke test de UI.",
-        AssayArgs, _ann(True, False, False), run_page_assay),
+        AssayArgs, ann(True, False, False), run_page_assay),
     Tool("render_compare",
         "Pixel-diff two renders at a given width: percent changed + a diff image. Comparar dos renders.\n"
         "Sinónimos: comparar, diff visual, antes y después.",
-        CompareArgs, _ann(True), run_render_compare),
+        CompareArgs, ann(True), run_render_compare),
     Tool("tokens_generate",
         "Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. Genera design system.\n"
         "Pure-Python OKLCH ramps (50-950), fluid type scale, spacing/radius/shadow/motion tokens, four export formats.\n"
         "Sinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme.",
-        TokensGenerateArgs, _ann(False, False, False), run_tokens_generate),
+        TokensGenerateArgs, ann(False, False, False), run_tokens_generate),
     Tool("tokens_get",
         "Get a generated design system in json, css, tailwind or w3c format. Obtener design system.\n"
         "The json format also carries `roles`: colours per mode, font families and radii (other apps read these). "
         "Sinónimos: exportar tokens, css variables, tailwind theme, w3c tokens.",
-        TokensGetArgs, _ann(True), run_tokens_get),
+        TokensGetArgs, ann(True), run_tokens_get),
     Tool("tokens_list",
         "List generated design systems. Listar design systems.\n"
         "Each carries its `roles` (colours, fonts, radii); compact=true returns only that. Sinónimos: listar tokens, sistemas guardados.",
-        TokensListArgs, _ann(True), run_tokens_list),
+        TokensListArgs, ann(True), run_tokens_list),
     Tool("tokens_preview",
         "Render the design system's live playground and lint it. Previsualizar design system.\n"
         "Sinónimos: preview, playground, ver el sistema de diseño.",
-        TokensPreviewArgs, _ann(False, False, False), run_tokens_preview),
+        TokensPreviewArgs, ann(False, False, False), run_tokens_preview),
     Tool("tokens_delete",
         "Delete a generated design system (only when the user asks). Eliminar design system.\n"
         "Sinónimos: borrar tokens, eliminar sistema de diseño.",
-        TokensDeleteArgs, _ann(False, True, True), run_tokens_delete),
+        TokensDeleteArgs, ann(False, True, True), run_tokens_delete),
     Tool("reference_add",
         "Capture a website into the reference gallery: screenshots, video, fonts, palette. Guardar referencia.\n"
         "Desktop+mobile capture, optional 6s scroll video, Pillow palette, detected libs/motion, optional vision vibe tagging.\n"
         "Sinónimos: guardar web, referencia visual, galería, inspiración.",
-        ReferenceAddArgs, _ann(False, False, False), run_reference_add),
+        ReferenceAddArgs, ann(False, False, False), run_reference_add),
     Tool("reference_search",
         "Search the reference gallery by text, tags, vibe or library. Buscar referencias.\n"
         "Sinónimos: buscar referencias, galería, por tag, por vibe, por librería.",
-        ReferenceSearchArgs, _ann(True), run_reference_search),
+        ReferenceSearchArgs, ann(True), run_reference_search),
     Tool("reference_get",
         "Get one reference's full detail (files, palette, fonts, motion, analysis). Ver referencia.\n"
         "Sinónimos: detalle de referencia, ver captura.",
-        ReferenceIdArgs, _ann(True), run_reference_get),
+        ReferenceIdArgs, ann(True), run_reference_get),
     Tool("reference_delete",
         "Delete a reference from the gallery (only when the user asks). Eliminar referencia.\n"
         "Sinónimos: borrar referencia, quitar de la galería.",
-        ReferenceIdArgs, _ann(False, True, True), run_reference_delete),
+        ReferenceIdArgs, ann(False, True, True), run_reference_delete),
     Tool("sources_list",
         "List every ingested design-criterion source and its status. Listar fuentes.\n"
         "Sinónimos: fuentes, repos ingeridos, estado de ingesta.",
-        Empty, _ann(True), run_sources_list),
+        Empty, ann(True), run_sources_list),
     Tool("source_add",
         "Add a new source to ingest: a git repo, a local folder or a single page URL. Añadir fuente.\n"
         "Only when the user asks to add a new source; call source_ingest afterwards to actually ingest it.\n"
         "Sinónimos: añadir repositorio, nueva fuente, importar skill.",
-        SourceAddArgs, _ann(False, False, True), run_source_add),
+        SourceAddArgs, ann(False, False, True), run_source_add),
     Tool("source_ingest",
         "Ingest (or re-ingest) one source or every source; runs in the background. Ingerir fuente.\n"
         "embeddings=true (re)builds the multilingual vectors (CPU, about a minute for the whole library).\n"
         "Sinónimos: ingerir, actualizar fuente, reindexar, clonar de nuevo.",
-        SourceIngestArgs, _ann(False, False, True), run_source_ingest),
+        SourceIngestArgs, ann(False, False, True), run_source_ingest),
     Tool("source_status",
         "Status of one source's ingest (idle, cloning, ingesting, ready, error). Estado de una fuente.\n"
         "Sinónimos: estado de ingesta, progreso, error de clonado.",
-        SourceStatusArgs, _ann(True), run_source_status),
+        SourceStatusArgs, ann(True), run_source_status),
     Tool("vitruvius_status",
         "Health: browser, ffmpeg, git, library counts, model resolution for vision/chat/embeddings. Estado del sistema.\n"
         "Sinónimos: estado, salud, ¿funciona el navegador?, modelos disponibles.",
-        Empty, _ann(True), run_vitruvius_status),
+        Empty, ann(True), run_vitruvius_status),
 ]
 
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
 def tool_catalog() -> list[dict]:
-    return [
-        {"name": t.name, "description": t.description, "annotations": t.annotations,
-         "inputSchema": t.input_model.model_json_schema(by_alias=True)}
-        for t in TOOLS
-    ]
+    return catalog_of(TOOLS)
 
 
-def call_tool(services: Services, name: str, arguments: dict | None) -> Any:
-    tool = TOOLS_BY_NAME.get(name)
-    if tool is None:
-        raise KeyError(f"Unknown tool: {name}")
-    args = tool.input_model.model_validate(arguments or {})
-    return tool.run(services, args)
+# Results that are the payload itself (a stylesheet, a page, image bytes) and must never be cut to the shared 20 KB cap.
+UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview"})
+
+
+def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:
+    """Run one tool through the shared agent kit (argument validation, result cap). An expected "not found"
+    (`LookupError`) keeps the 404 it always had; a bare `ValueError` is a 400 `invalid`."""
+    if name in UNCAPPED_TOOLS or (name == "render_preview" and (arguments or {}).get("include_images")):
+        cap = False
+    try:
+        return run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap)
+    except LookupError as error:
+        if isinstance(error, KeyError):  # an unknown tool: the router answers 404 unknown_tool itself
+            raise
+        raise AppError("not_found", str(error), status=404) from error
