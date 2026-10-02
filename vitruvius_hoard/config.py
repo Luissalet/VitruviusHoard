@@ -66,7 +66,7 @@ class Config:
         raw_dir = env_str("VITRUVIUS_DATA_DIR")
         return cls(
             data_dir=Path(raw_dir).expanduser() if raw_dir else REPO_ROOT / "data",
-            port=env_int("VITRUVIUS_PORT", "PORT", default=DEFAULT_PORT, minimum=1, maximum=65535),
+            port=env_int("VITRUVIUS_PORT", default=DEFAULT_PORT, minimum=1, maximum=65535),
             port_strict=env_flag("PORT_STRICT", False),
             render_timeout_s=env_float("VITRUVIUS_RENDER_TIMEOUT_S", default=45.0, minimum=5.0, maximum=600.0),
             allowed_hosts=parse_allowed_hosts(env_str("VITRUVIUS_ALLOWED_HOSTS")),

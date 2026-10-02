@@ -28,16 +28,19 @@ before a person ever has to say "this looks AI-generated."
 
 - **Library**: full-text search (SQLite FTS5, `bm25` ranking) over ingested skill repositories, with an optional
   vector rerank once embeddings exist. Every hit carries a `[vitruvius: source/path § heading]` citation.
-- **Search by meaning, in any language**: a multilingual sentence model (ONNX via fastembed, CPU, ~120 MB, reused
-  from a sibling app's cache when present) embeds every chunk once, keyed by its text hash so a re-ingest only embeds
-  what changed; `design_search` fuses keywords and meaning by reciprocal rank, so "¿cómo hago que los botones parezcan
+- **Search by meaning, in any language**: a multilingual sentence model embeds every chunk once, keyed by its text
+  hash so a re-ingest only embeds what changed. The vectors come from Borges's Hoard through the Hoard Link hub when
+  it is running (one model for the whole family), else from an in-process model (ONNX via fastembed, CPU, ~120 MB);
+  the index keeps vectors per model name and never mixes two; `design_search` fuses keywords and meaning by reciprocal rank, so "¿cómo hago que los botones parezcan
   pulsables?" finds criterion written in English. Each hit says how it matched (`bm25`, `dense`, `both`).
 - **Design briefs**: a deterministic composition of 2-3 matching styles, one palette, one font pairing, rules by
   area and a pre-delivery checklist — all cited, with an optional 150-word art-direction paragraph from a local
   model.
 - **Render & capture**: a single background Chromium worker (Playwright), screenshots at any widths, an optional
-  6-second scroll-and-back video (converted to MP4 with ffmpeg when it's on `PATH`), and a rich in-page probe
+  6-second scroll-and-back video (converted to MP4 with ffmpeg when it's found), and a rich in-page probe
   (fonts, computed colours, headings, contrast pairs, tap-target sizes, animation counts, external libraries).
+  Only public web pages are opened: a URL that points at this machine, the local network or a cloud metadata
+  address is refused, and the browser blocks the same targets for redirects and for everything the page loads.
 - **Design lint**: 29 deterministic checks (fonts, contrast, layout, motion, accessibility, content, performance,
   and several "generic AI palette" detectors) with a stable id, severity, evidence and a concrete fix per finding.
 - **Critique**: lint findings merged with an optional vision-model rubric (hierarchy, typography, colour, spacing,
@@ -86,7 +89,24 @@ python -m vitruvius_hoard
 
 The app writes its data to `data/` next to this repository (override with `VITRUVIUS_DATA_DIR`), picks a free
 port starting at `5191` (override with `VITRUVIUS_PORT`, or set `PORT_STRICT=1` to require exactly that port),
-and writes `data/mcp-token` and `data/url` on start.
+and writes `data/mcp-token` and `data/url` on start. A second `python -m vitruvius_hoard` reports the running
+instance and exits.
+
+Other env vars: `VITRUVIUS_ALLOWED_HOSTS` (extra host names the guard answers to, `host` or `host:port`),
+`VITRUVIUS_ALLOW_LOCAL_URLS=1` (let `render_preview`, `reference_add`, `design_lint` and `page_assay` open pages on
+localhost or the private network, e.g. a dev server; cloud metadata addresses stay blocked), `VITRUVIUS_EMBED=auto|family|local|fake|none`
+(where the semantic vectors come from; `family` is Borges only, `local` the in-process model only),
+`VITRUVIUS_MODELS_DIR` (where the in-process model is kept, default `data/models`).
+
+### Shared plumbing
+
+The server plumbing is the shared Hoard Link library vendored in `vitruvius_hoard/hoard_link/` (never edited here): the
+host/origin guard, error handlers, `/api/health`, PWA files and SPA fallback, port and token files (the token is at
+least 32 characters), config readers, the SQLite wrapper, the agent router and the MCP bridge. Browser discovery
+(system Chrome / Edge, Playwright's Chromium), the URL safety policy, page fetching for `page_assay` (through the
+family web service when it runs), page metadata, markdown chunking, query building, citations, rank fusion, the
+process runner (git, ffmpeg, assay) and the embedding client are shared too. `PORT` is no longer read as a port
+fallback; use `VITRUVIUS_PORT`.
 
 ## MCP setup
 
