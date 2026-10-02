@@ -17,11 +17,11 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          vitruvius_hoard (FastAPI)                       │
 │                                                                           │
-│  guard.py ── request guard (Host / Origin / Fetch Metadata)              │
+│  hoard_link.guard ── request guard (Host / Origin / Fetch Metadata)      │
 │                                                                           │
 │  api/  ─────────────────────────────────────────────────────────────┐   │
 │  │ health.py  library.py  render.py  tokens.py  references.py       │   │
-│  │ settings.py  agent.py (tools+call)  pwa.py                       │   │
+│  │ settings.py  agent.py (tools+call)                               │   │
 │  └───────────────────────────────┬───────────────────────────────────┘  │
 │                                  │ every route calls Services            │
 │                                  ▼                                      │
@@ -55,30 +55,29 @@ a `Services` instance) and `tool_catalog()`/`call_tool()`. `api/agent.py` and `m
 one catalogue, so the REST bridge and the MCP bridge can never disagree about what a tool does or how it is
 described.
 
-`main.py`'s route order matters: `family.configure(...)` runs first, then the request guard, then every API
-router, and the SPA catch-all (`GET /{path:path}`) is registered **last** so it never shadows an `/api/*` route.
+`main.py`'s route order matters: `family.configure(...)` runs first, then the request guard, the error handlers and
+`/api/health` (the shared `hoard_link.service.health_router`), then every API router and the PWA files, and the SPA
+catch-all (`install_spa`) is registered **last** so it never shadows an `/api/*` route.
 
 ## Module map
 
 | Module | Responsibility |
 | --- | --- |
-| `config.py` | Environment-derived process config (port, data dir, render timeout, allowed hosts). Never touches the DB. |
-| `port.py` | Free-port discovery for `python -m vitruvius_hoard`. |
-| `guard.py` | Host/Origin/Fetch-Metadata request guard, installed as ASGI middleware. |
-| `db.py` | SQLite connection (WAL) + ordered, idempotent schema migrations, incl. FTS5 virtual tables and their sync triggers. |
+| `config.py` | Environment-derived process config (port, data dir, render timeout, allowed hosts, embedding backend, local-URL opt-in) through `hoard_link.appconfig`. Never touches the DB. |
+| `db.py` | The ordered, idempotent schema migrations, incl. FTS5 virtual tables and their sync triggers; the connection, lock and transactions are `hoard_link.sqlkit.Database`. |
 | `services.py` | Wires the DB, the browser worker, `hoard_link.Link` and the ingest runner behind one object every router and tool shares; owns the render/critique/tokens/references/sources/settings/status logic. |
-| `browser.py` | The single background Chromium worker (Playwright): capture (screenshot + optional scroll video) and the in-page `PROBE_JS` evaluation. |
+| `browser.py` | The single background Chromium worker (Playwright): capture (screenshot + optional scroll video) and the in-page `PROBE_JS` evaluation. Browser discovery is `hoard_link.web.browser`, every URL, redirect and sub-request is checked with `hoard_link.web.safety` (public hosts only), the video is encoded with `hoard_link.media`. |
 | `lint.py` | 29 deterministic design checks over a probe dict + raw HTML, each returning typed findings; `run_lint()` scores 0-10. |
 | `critique.py` | Merges lint findings with an optional vision-model rubric; robust JSON extraction from the model's answer. |
 | `tokens.py` | Pure-Python OKLCH colour math, ramps, type scale, spacing/radius/shadow/motion tokens, four export formats, the self-contained playground HTML. |
-| `library.py` | FTS5 `bm25` search with citations, rule listing, deterministic brief composition. |
+| `library.py` | FTS5 `bm25` search with citations (`hoard_link.docs.textsearch` / `citations` / `vecmath.rrf`), rule listing, deterministic brief composition. |
 | `references.py` | Reference-gallery capture, Pillow palette extraction, FTS search, tag/font/palette similarity. |
-| `ingest/git.py` | Shallow clone / `pull --ff-only` into `data/sources/<id>`. |
-| `ingest/markdown.py` | Heading-aware chunker with breadcrumbs and a ~1200-char cap. |
+| `ingest/git.py` | Shallow clone / `pull --ff-only` into `data/sources/<id>` through `hoard_link.proc`. |
+| `ingest/markdown.py` | Reshapes `hoard_link.docs.chunking.chunk_markdown` (heading breadcrumbs, ~1200-char cap) into ingest rows. |
 | `ingest/catalog.py` | Loose CSV/JSON → styles/palettes/font_pairings parsers, tolerant of unknown columns. |
 | `ingest/rules.py` | Mines Do/Don't/Avoid/Never/Always bullets into `rules`, guessing area/severity/`check_id`. |
 | `ingest/runner.py` | The one-source-at-a-time background ingest worker; `ingest_source()` is also the synchronous entry point used by `scripts/ingest.py` and by tests. |
-| `dense.py` | Multilingual vectors keyed by text hash + model, background build, cosine top-k, RRF fusion with bm25. |
+| `dense.py` | Multilingual vectors keyed by text hash + model, background build, cosine top-k (`vecmath.topk`). `FamilyEmbedder` asks Borges through `hoard_link.fam_embed` and falls back to the in-process fastembed model; vectors of two models are never mixed. |
 | `agent_tools.py` | The 25-tool MCP/REST catalogue (single source of truth). |
 | `api/*` | Thin FastAPI routers that validate input and call into `Services`. |
 | `hoard_link/` | Vendored family contract: `family.emit/record_call/health_block`, `Link.chat/embed` resolution against Faustus or a loopback model server. |

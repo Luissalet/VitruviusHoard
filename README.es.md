@@ -31,9 +31,11 @@ hecho por una IA".
 - **Biblioteca**: búsqueda de texto completo (SQLite FTS5, ranking `bm25`) sobre los repositorios de skills
   ingeridos, con un rerank vectorial opcional una vez existen embeddings. Cada resultado lleva una cita
   `[vitruvius: fuente/ruta § encabezado]`.
-- **Búsqueda por significado, en cualquier idioma**: un modelo de frases multilingüe (ONNX con fastembed, CPU, ~120 MB,
-  reutilizado de la caché de una app hermana si ya está) calcula un vector por fragmento, indexado por el hash del
-  texto para que reingerir solo calcule lo que cambió; `design_search` fusiona palabras y significado por rango
+- **Búsqueda por significado, en cualquier idioma**: un modelo de frases multilingüe calcula un vector por fragmento,
+  indexado por el hash del texto para que reingerir solo calcule lo que cambió. Los vectores vienen de Borges's Hoard
+  a través del hub de Hoard Link cuando está en marcha (un único modelo para toda la familia) o, si no, de un modelo
+  en el propio proceso (ONNX con fastembed, CPU, ~120 MB); el índice guarda los vectores por nombre de modelo y nunca
+  mezcla dos; `design_search` fusiona palabras y significado por rango
   recíproco, así que «¿cómo hago que los botones parezcan pulsables?» encuentra criterio escrito en inglés. Cada
   resultado dice cómo se encontró (`bm25`, `dense`, `both`).
 - **Briefs de diseño**: una composición determinista de 2-3 estilos que encajan, una paleta, una combinación
@@ -93,7 +95,26 @@ python -m vitruvius_hoard
 
 La app escribe sus datos en `data/` junto a este repositorio (se puede cambiar con `VITRUVIUS_DATA_DIR`), elige
 un puerto libre a partir del `5191` (cámbialo con `VITRUVIUS_PORT`, o fija `PORT_STRICT=1` para exigir ese puerto
-exacto), y escribe `data/mcp-token` y `data/url` al arrancar.
+exacto), y escribe `data/mcp-token` y `data/url` al arrancar. Un segundo `python -m vitruvius_hoard` avisa de la
+instancia que ya corre y sale.
+
+Otras variables: `VITRUVIUS_ALLOWED_HOSTS` (nombres de host extra a los que responde la guarda, `host` o `host:puerto`),
+`VITRUVIUS_ALLOW_LOCAL_URLS=1` (deja que `render_preview`, `reference_add`, `design_lint` y `page_assay` abran páginas
+de localhost o de la red privada, por ejemplo un servidor de desarrollo; las direcciones de metadatos de la nube
+siguen bloqueadas), `VITRUVIUS_EMBED=auto|family|local|fake|none` (de dónde salen los vectores semánticos; `family`
+es solo Borges, `local` solo el modelo del propio proceso) y `VITRUVIUS_MODELS_DIR` (dónde se guarda ese modelo, por
+defecto `data/models`).
+
+### Piezas comunes
+
+La parte de servidor es la biblioteca compartida Hoard Link, copiada en `vitruvius_hoard/hoard_link/` (no se edita
+aquí): guarda de host y origen, manejo de errores, `/api/health`, archivos PWA y SPA, archivos de puerto y de token (el
+token tiene al menos 32 caracteres), lectura de configuración, el envoltorio de SQLite, el enrutador de agente y el
+puente MCP. También son compartidos el descubrimiento del navegador (Chrome o Edge del sistema, Chromium de
+Playwright), la política de seguridad de URLs (solo se abren páginas web públicas), la descarga de páginas para
+`page_assay` (por el servicio web de la familia cuando corre), los metadatos de página, el troceado de markdown, la
+construcción de consultas, las citas, la fusión de rankings, el lanzador de procesos (git, ffmpeg, assay) y el cliente
+de embeddings. `PORT` ya no se lee como alternativa del puerto; usa `VITRUVIUS_PORT`.
 
 ## Configuración MCP
 

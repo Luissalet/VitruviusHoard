@@ -179,7 +179,9 @@ Request:
  "wait_ms": 800, "lint": true, "title": "landing v1"}
 ```
 
-Exactly one of `html`/`url` must be given. Response: a render object (same shape as one item of `GET /api/renders`
+Exactly one of `html`/`url` must be given. A `url` must be a public web page: one that points at this machine, the local
+network or a cloud metadata address is refused with `400` (`VITRUVIUS_ALLOW_LOCAL_URLS=1` lets local and private-network
+pages through); the same rule applies to `url` in `POST /api/lint`, `POST /api/assay` and `POST /api/references`. Response: a render object (same shape as one item of `GET /api/renders`
 above), `201 Created`. On a capture failure `metrics` is `{"error": "no browser", "hint": "..."}` and `lint` is the
 default all-clear shape.
 
