@@ -37,7 +37,10 @@ def renders_list(request: Request, limit: int = Query(30, ge=1, le=200)):
 def renders_create(request: Request, body: RenderBody):
     if not body.html and not body.url:
         raise HTTPException(400, "html or url is required")
-    row = services(request).render(**body.model_dump())
+    try:
+        row = services(request).render(**body.model_dump())
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
     return _strip(row)
 
 
@@ -87,6 +90,8 @@ def lint_route(request: Request, body: LintBody):
         return services(request).lint_html(html=body.html, url=body.url, render_id=body.render_id)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
 
 
 class AssayBody(BaseModel):

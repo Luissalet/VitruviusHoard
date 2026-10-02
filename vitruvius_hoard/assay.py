@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import shutil
 import subprocess
 import sys
 import time
@@ -25,20 +24,22 @@ import uuid
 from pathlib import Path
 from typing import Any, Optional
 
+from .hoard_link import proc
+
 INSTALL_HINT = "pip install assay-ui (in the app's venv) — see https://github.com/awss1i/assay"
 DEFAULT_TIMEOUT_S = 300
 
 
 def available() -> bool:
     """True when the `assay` package is importable by this interpreter or on PATH."""
-    return importlib.util.find_spec("assay") is not None or shutil.which("assay") is not None
+    return importlib.util.find_spec("assay") is not None or proc.which("assay") is not None
 
 
 def _command(folder: Path, entry: str) -> list[str]:
     if importlib.util.find_spec("assay") is not None:
         base = [sys.executable, "-c", "from assay.cli import main; raise SystemExit(main())"]
     else:
-        base = [shutil.which("assay") or "assay"]
+        base = [proc.which("assay") or "assay"]
     return [*base, str(folder), "-e", entry, "--json"]
 
 
@@ -94,8 +95,8 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
     t0 = time.monotonic()
     if runner is None:
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s, cwd=str(folder))
-            code, out, err = proc.returncode, proc.stdout, proc.stderr
+            done = proc.run(cmd, timeout=timeout_s, cwd=folder)  # the whole process tree is killed on a timeout
+            code, out, err = done.returncode, done.stdout, done.stderr
         except subprocess.TimeoutExpired:
             return {"error": "assay timed out", "hint": f"the page kept the browser busy for more than {timeout_s} s", "id": run_id}
         except OSError as error:

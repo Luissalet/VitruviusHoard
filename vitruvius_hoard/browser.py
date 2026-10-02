@@ -5,21 +5,31 @@ job and wait on a threading.Event-backed future with a timeout.
 
 Tests never touch this module's real browser: they inject a ``FakeBrowser``
 (same public interface: ``capture`` and ``probe``) through ``Services``.
+
+Which browser to start (`hoard_link.web.browser`: system Chrome / Edge, Playwright's Chromium wherever it was installed),
+which URLs may be opened (`hoard_link.web.safety`: public hosts only; every redirect and every sub-request the page makes is
+checked too) and how the scroll video is encoded (`hoard_link.media`) are the shared Hoard Link pieces.
 """
 
 from __future__ import annotations
 
-import base64
-import json
+import logging
+import os
 import queue
 import shutil
-import subprocess
 import tempfile
 import threading
 import time
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+from .hoard_link.media import bins as media_bins
+from .hoard_link.media.ffmpeg import FFmpeg
+from .hoard_link.web import browser as web_browser
+from .hoard_link.web import safety
+
+log = logging.getLogger("vitruvius.browser")
 
 # The probe JS: must never throw. Every metric is wrapped in try/catch and
 # missing/failed metrics are simply omitted or null.
@@ -257,11 +267,31 @@ PROBE_JS = r"""
 
 
 def _sync_playwright_available() -> bool:
-    try:
-        import playwright.sync_api  # noqa: F401
-        return True
-    except Exception:
-        return False
+    return web_browser.playwright_installed()
+
+
+def launch_attempts() -> list[tuple[str, dict[str, Any]]]:
+    """Every way to start a browser, best first: the family's channel order (system Chrome / Edge, Playwright's Chromium), then any
+    Chromium found in a Playwright browsers folder and any system browser found on disk (`hoard_link.web.browser`)."""
+    attempts: list[tuple[str, dict[str, Any]]] = []
+    for channel in web_browser.channel_order():
+        attempts.append((channel or "chromium", {"channel": channel} if channel else {}))
+    exe = web_browser.find_chromium()
+    if exe:
+        attempts.append((f"chromium ({Path(exe).parent.parent.name})", {"executable_path": exe}))
+    for path in web_browser.system_browsers():
+        attempts.append((Path(path).name, {"executable_path": path}))
+    return attempts
+
+
+def launch_args() -> list[str]:
+    """Chromium refuses to run as root (containers) without `--no-sandbox`."""
+    return ["--no-sandbox"] if hasattr(os, "geteuid") and os.geteuid() == 0 else []
+
+
+def ffmpeg_path() -> Optional[str]:
+    tool = media_bins.find("ffmpeg")
+    return tool.path if tool else None
 
 
 class Job:
@@ -280,9 +310,12 @@ class BrowserWorker:
     ``{"error": "no browser", "hint": ...}`` instead of raising.
     """
 
-    def __init__(self, data_dir: Path, timeout_s: float = 45.0):
+    def __init__(self, data_dir: Path, timeout_s: float = 45.0, *, profile: str = safety.PUBLIC, resolver: Any = None):
         self.data_dir = Path(data_dir)
         self.timeout_s = timeout_s
+        self.profile = profile  # which hosts a page may reach (`hoard_link.web.safety`): public ones unless the operator opted in
+        self.resolver = resolver  # tests only: a fake DNS
+        self.launched_with: Optional[str] = None
         self._queue: "queue.Queue[Job]" = queue.Queue()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
@@ -314,16 +347,15 @@ class BrowserWorker:
 
         if self._pw is None:
             self._pw = sync_playwright().start()
-        for attempt in (
-            lambda: self._pw.chromium.launch(),
-            lambda: self._pw.chromium.launch(channel="msedge"),
-            lambda: self._pw.chromium.launch(channel="chrome"),
-        ):
+        for name, extra in launch_attempts():
             try:
-                self._browser = attempt()
+                self._browser = self._pw.chromium.launch(args=launch_args(), **extra)
+                self.launched_with = name
+                self._launch_error = None
                 return self._browser
             except Exception as error:  # noqa: BLE001
-                self._launch_error = str(error)
+                self._launch_error = str(error).strip().splitlines()[0][:200] if str(error).strip() else type(error).__name__
+                log.info("browser launch failed (%s): %s", name, self._launch_error)
         return None
 
     def _run(self) -> None:
@@ -347,6 +379,38 @@ class BrowserWorker:
                 self._pw.stop()
             except Exception:  # noqa: BLE001
                 pass
+
+    # -- what a page may reach ---------------------------------------------
+    def url_problem(self, url: Optional[str]) -> Optional[str]:
+        """Why `url` may not be opened (private or loopback host, credentials in the URL, metadata address ...), or None.
+        A host that does not resolve passes: the browser reports its own DNS error."""
+        if not url:
+            return None
+        problem = safety.check_url(url, self.profile, self.resolver)
+        if problem and problem.startswith(safety.UNRESOLVABLE_PREFIX):
+            return None
+        return problem
+
+    def _guard(self, context: Any) -> None:
+        """Refuse every request of the page (redirects, scripts, images, frames) that goes to a host the policy forbids; the
+        verdict per host is kept for the capture."""
+        verdicts: dict[str, Optional[str]] = {}
+
+        def handler(route: Any) -> None:
+            url = route.request.url
+            if url.split(":", 1)[0].lower() not in ("http", "https", "ws", "wss"):
+                route.continue_()  # data:, blob:, about:, file: are not network requests
+                return
+            key = url.split("/")[2].lower() if url.count("/") >= 2 else url.lower()
+            if key not in verdicts:
+                verdicts[key] = self.url_problem(url.replace("wss:", "https:", 1).replace("ws:", "http:", 1))
+            if verdicts[key]:
+                log.info("browser request refused: %s (%s)", url[:120], verdicts[key])
+                route.abort("blockedbyclient")
+            else:
+                route.continue_()
+
+        context.route("**/*", handler)
 
     def _submit(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.start()
@@ -378,11 +442,14 @@ class BrowserWorker:
         out_dir: Path = Path(payload["out_dir"])
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        problem = self.url_problem(url) if html is None else None
+        if problem:
+            return {"error": "This URL cannot be opened.", "hint": problem}
         context = browser.new_context(color_scheme="dark" if dark else "light")
+        self._guard(context)
         page = context.new_page()
         try:
             if html is not None:
-                base_url = payload.get("base_url")
                 page.set_content(html, wait_until="load")
             elif url:
                 try:
@@ -416,7 +483,7 @@ class BrowserWorker:
 
             video_path = None
             poster_path = None
-            if record and shutil.which("ffmpeg"):
+            if record and ffmpeg_path():
                 video_path, poster_path = self._record_video(browser, html, url, dark, out_dir)
 
             return {"files": files, "probe": probe, "video": video_path, "poster": poster_path}
@@ -429,6 +496,7 @@ class BrowserWorker:
             record_video_dir=video_dir, record_video_size={"width": 1440, "height": 900},
             viewport={"width": 1440, "height": 900}, color_scheme="dark" if dark else "light",
         )
+        self._guard(context)
         page = context.new_page()
         try:
             if html is not None:
@@ -462,10 +530,7 @@ class BrowserWorker:
             return None, str(poster)
         mp4_path = out_dir / "scroll.mp4"
         try:
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", str(webm_path), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(mp4_path)],
-                capture_output=True, timeout=60, check=True,
-            )
+            FFmpeg().run(["-i", webm_path, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4_path], timeout=60)
             return str(mp4_path), str(poster)
         except Exception:  # noqa: BLE001
             dest = out_dir / "scroll.webm"
