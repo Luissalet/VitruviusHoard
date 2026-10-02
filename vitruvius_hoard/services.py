@@ -87,8 +87,7 @@ class Services:
         self.ingest_runner = IngestRunner(self.db, self.config, emit=self._emit_event)
 
         from .dense import DenseIndex, default_cache_dir, make_embedder
-        backend = "none" if config.embed_backend == "none" else ("fake" if config.embed_backend == "fake" else "fastembed")
-        self.embedder = make_embedder(backend, config.embed_model, default_cache_dir(config.data_dir))
+        self.embedder = make_embedder(config.embed_backend, config.embed_model, default_cache_dir(config.data_dir))
         self.dense = DenseIndex(self.db, self.embedder, emit=self._emit_event)
 
     def _emit_event(self, type_: str, data: dict[str, Any]) -> None:

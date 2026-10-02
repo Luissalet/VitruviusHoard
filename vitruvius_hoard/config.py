@@ -23,7 +23,7 @@ class Config:
     allowed_hosts: tuple[str, ...] = ()
     data_dir_configured: bool = False
     autostart: bool = True  # start the ingest runner with the app
-    embed_backend: str = "auto"  # auto (fastembed when installed) | fake | none
+    embed_backend: str = "auto"  # auto (Borges through the hub, else the in-process fastembed) | family | local | fake | none
     embed_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     embed_auto: bool = True  # (re)build vectors after an ingest when the model is already on disk
     allow_local_urls: bool = False  # let render / reference_add / page_assay open localhost and private-network pages
