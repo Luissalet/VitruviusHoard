@@ -214,6 +214,27 @@ criterio es de sus autores: esta app solo lo indexa en local. Añade las tuyas c
 | `awesome-web-animation` | [sergey-pimenov/awesome-web-animation](https://github.com/sergey-pimenov/awesome-web-animation) | CC0-1.0 | index |
 | `motion-ui-design` | [fliptheweb/motion-ui-design](https://github.com/fliptheweb/motion-ui-design) | sin declarar (marcada en la UI) | index |
 | `frontend-design-toolkit` | [wilwaldon/Claude-Code-Frontend-Design-Toolkit](https://github.com/wilwaldon/Claude-Code-Frontend-Design-Toolkit) | sin declarar (marcada en la UI) | index |
+| `oil-ui` | [oil-oil/oil-ui](https://github.com/oil-oil/oil-ui) | MIT | criterion |
+| `replica-skill` | [Jakeschincariol/replica-skill](https://github.com/Jakeschincariol/replica-skill) | MIT | workflow |
+| `photo-flipbook-ui` | [HaichaoLihc/create-photo-flipbook-ui](https://github.com/HaichaoLihc/create-photo-flipbook-ui) | MIT para documentación seleccionada; exclusiones de medios/terceros | editorial |
+
+Oil UI aporta dirección artística, alternativas visuales diferenciadas y
+composición del primer viewport. Replica aporta inventarios de pantallas,
+flujos de usuario, matrices de funciones y plantillas de pruebas. Photo Flipbook
+aporta secuencia fotográfica, composición de dobles páginas, posición del pliegue,
+proporciones y el contrato del lector 2D incluido.
+Tras `source_ingest`, consúltalos por fuente con `design_search`; sus guías citadas
+complementan `design_brief`, `render_preview` y `render_compare`.
+Se indexa únicamente el texto seleccionado. No se instalan scripts, el flujo
+comercial Oil UI Pro, modelos photo-search, medios ni plantillas 3D independientes.
+Las fuentes estructuradas también indexan tokens JSON genéricos como pasajes
+citados, incluidos valores anidados; los catálogos de paletas, estilos y fuentes
+conservan su análisis especializado.
+
+Por ejemplo, `design_search(query="gutter", source="photo-flipbook-ui")` recupera
+guías de composición de dobles páginas; `source="replica-skill"` con la consulta
+`"screen inventory"` recupera plantillas de reconocimiento. Son referencias de
+diseño: añadir una fuente no instala un skill externo ni un visor fotográfico.
 
 Las galerías tipo Godly, Lapa Ninja, Curated Design, Minimal Gallery o Siteinspire **no** se rastrean: pega la URL
 de una página que te guste en la Galería (o `reference_add`) y Vitruvius captura esa página por su cuenta.

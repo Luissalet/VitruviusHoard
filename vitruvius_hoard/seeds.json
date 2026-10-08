@@ -1,5 +1,5 @@
 {
-  "_note": "Initial sources for Vitruvius's Hoard. kind=git → shallow clone; only `paths` (globs, relative) are ingested when given. license is what the repo states on 2026-09-24; 'check' = not verified, ingest but flag in the UI.",
+  "_note": "Initial sources for Vitruvius's Hoard. kind=git → shallow clone; only `paths` (globs, relative) are ingested when given. license records the source's declaration when reviewed; 'check' = not verified, ingest but flag in the UI.",
   "sources": [
     {
       "id": "impeccable",
@@ -425,6 +425,37 @@
         "plugins/**/*.md"
       ],
       "note": "Checks that a generated page works by deriving a test plan from the rendered controls; wrapped by the page_assay tool."
+    },
+    {
+      "id": "oil-ui",
+      "kind": "git",
+      "url": "https://github.com/oil-oil/oil-ui",
+      "license": "MIT",
+      "category": "criterion",
+      "tags": ["art-direction", "visual-options", "first-viewport", "layout", "typography", "comparison"],
+      "paths": ["SKILL.md", "README.en.md", "references/*.md"],
+      "note": "Open-source design direction, distinct visual options, layout and comparison guidance. Indexed as references; the commercial Pro workflow is not included. Reviewed 2026-10-05."
+    },
+    {
+      "id": "replica-skill",
+      "kind": "git",
+      "url": "https://github.com/Jakeschincariol/replica-skill",
+      "license": "MIT",
+      "category": "workflow",
+      "tags": ["screen-inventory", "flows", "recon", "feature-matrix", "design-system", "visual-diff", "testing"],
+      "paths": ["README.md", "replica-recon/*.md", "replica-recon/*.csv", "replica-design/*.md", "replica-design/tokens.json", "replica-diff/*.md", "replica-test/*.md"],
+      "structured": true,
+      "note": "Selected recon, design, visual comparison and testing guidance plus screen/feature/test templates. Indexed as references; utility scripts are not installed or executed. Reviewed 2026-10-05."
+    },
+    {
+      "id": "photo-flipbook-ui",
+      "kind": "git",
+      "url": "https://github.com/HaichaoLihc/create-photo-flipbook-ui",
+      "license": "MIT (selected documentation; third-party components and media excluded)",
+      "category": "editorial",
+      "tags": ["photobook", "photo-sequence", "spreads", "gutter", "aspect-ratio", "gallery", "page-turning"],
+      "paths": ["README.md", "skills/create-photo-flipbook-ui/SKILL.md", "skills/create-photo-flipbook-ui/references/book-editing.md", "skills/create-photo-flipbook-ui/references/default-style.md", "skills/create-photo-flipbook-ui/references/spread-generation.md", "skills/create-photo-flipbook-ui/references/photo-library.md"],
+      "note": "Photobook sequencing, spread composition, source associations and the bundled 2D reader contract. Selected text references only; no media, third-party 3D templates, photo-search engine or upstream scripts installed. Reviewed 2026-10-05."
     }
   ],
   "galleries": [
