@@ -176,9 +176,14 @@ def ingest_source(db: Database, config: Any, source: dict[str, Any]) -> dict[str
                             )
                             chunk_count += 1
                     rule_rows.extend(catalog_mod.rows_to_rules(rows, source_id))
-                continue
+                if ext != ".json" or catalog_kind != "table" or not rows:
+                    continue
+                # Non-tabular design tokens and other JSON references still carry
+                # useful values. Preserve the complete object; row chunks truncate
+                # nested dictionaries and can lose late properties like motion.
+                text = json.dumps(json.loads(text), ensure_ascii=False, indent=2)
 
-            if ext not in TEXT_EXTENSIONS and ext not in (".py", ".js", ".ts", ""):
+            if ext not in TEXT_EXTENSIONS and ext not in (".py", ".js", ".ts", "") and not (structured and ext == ".json"):
                 continue
             if ext in (".js", ".ts", "") and looks_minified(text):
                 continue
@@ -186,7 +191,7 @@ def ingest_source(db: Database, config: Any, source: dict[str, Any]) -> dict[str
             result = chunk_markdown(text, default_title=path.stem)
             cur = conn.execute(
                 "INSERT INTO documents(source_id, path, title, kind, lang, bytes, hash, updated_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (source_id, rel, result["title"], _doc_kind(rel), "", size, hashlib.sha1(data).hexdigest(), time.time()),
+                (source_id, rel, result["title"], "catalog" if structured and ext == ".json" else _doc_kind(rel), "", size, hashlib.sha1(data).hexdigest(), time.time()),
             )
             doc_id = cur.lastrowid
             doc_count += 1
