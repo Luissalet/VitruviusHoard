@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
 from .services import Services
+from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
 loop on real Chromium, a design-system (tokens) generator with a playground, and a gallery of captured websites.
@@ -558,6 +559,57 @@ TOOLS: list[Tool] = [
         Empty, ann(True), run_vitruvius_status),
 ]
 
+class MotionSaveArgs(BaseModel):
+    composition: Composition
+    id: Optional[str] = Field(None, pattern=r"^[0-9a-f]{32}$")
+    expected_revision: Optional[int] = Field(None, ge=1)
+
+
+class MotionGetArgs(BaseModel):
+    id: str = Field(..., pattern=r"^[0-9a-f]{32}$")
+    revision: Optional[int] = Field(None, ge=1)
+    format: str = Field("json", pattern="^(json|html)$")
+    at: float = Field(0, ge=0, le=60, allow_inf_nan=False)
+
+
+class MotionRenderArgs(BaseModel):
+    id: str = Field(..., pattern=r"^[0-9a-f]{32}$")
+    revision: Optional[int] = Field(None, ge=1)
+    at: float = Field(1, ge=0, le=60, allow_inf_nan=False)
+    video: bool = False
+
+
+def run_motion_save(services: Services, args: MotionSaveArgs):
+    return MotionStore(services.config.data_dir).save(args.composition, args.id, args.expected_revision)
+
+
+def run_motion_get(services: Services, args: MotionGetArgs):
+    row = MotionStore(services.config.data_dir).get(args.id, args.revision)
+    if args.format == "html":
+        row["html"] = motion_page(Composition.model_validate(row["composition"]), at=args.at)
+    return row
+
+
+def run_motion_render(services: Services, args: MotionRenderArgs):
+    import uuid
+    row = MotionStore(services.config.data_dir).get(args.id, args.revision)
+    composition = Composition.model_validate(row["composition"])
+    if not args.video:
+        return services.render(html=motion_page(composition, at=args.at), title=composition.title, lint=False)
+    export_id = uuid.uuid4().hex
+    output = services.config.renders_dir / export_id
+    result = services.browser._submit("motion", {"composition": composition.model_dump(), "out_dir": str(output)})
+    return {"export_id": export_id, "composition_id": row["id"], "revision": row["revision"], **result,
+            "download": f"/api/renders/{export_id}/files/motion.mp4" if "error" not in result else None}
+
+
+TOOLS.extend([
+    Tool("motion_templates", "Editable motion templates. Plantillas de movimiento.\nKeywords: launch, portrait caption, comparison, anuncios, escenas.", Empty, ann(True), lambda svc, args: {"templates": motion_templates()}),
+    Tool("motion_save", "Save a versioned composition. Guardar composición animada.\nUpdates require expected_revision. Keywords: animación, montaje, motion graphics.", MotionSaveArgs, ann(False, False, False), run_motion_save),
+    Tool("motion_list", "List saved editable motion compositions. Keywords: proyectos, animaciones, motion.", Empty, ann(True), lambda svc, args: {"compositions": MotionStore(svc.config.data_dir).list()}),
+    Tool("motion_get", "Read a composition or export HTML. Leer o exportar animación.\nKeywords: timeline, previsualización, motion, frame seeking.", MotionGetArgs, ann(True), run_motion_get),
+    Tool("motion_render", "Capture motion frames or export silent MP4. Renderizar vídeo.\nChromium and ffmpeg; may take minutes. Keywords: render, vídeo, fotogramas, motion.", MotionRenderArgs, ann(False, False, False), run_motion_render),
+])
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
@@ -566,7 +618,7 @@ def tool_catalog() -> list[dict]:
 
 
 # Results that are the payload itself (a stylesheet, a page, image bytes) and must never be cut to the shared 20 KB cap.
-UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview"})
+UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview", "motion_get"})
 
 
 def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:

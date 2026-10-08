@@ -1,6 +1,7 @@
 // Bilingual UI: Spanish (castellano) or English, chosen from the browser language and switchable (remembered locally).
 const DICT = {
   es: {
+    nav_motion: "Movimiento",
     nav_library: "Biblioteca",
     nav_critique: "Crítica",
     nav_tokens: "Tokens",
@@ -200,6 +201,7 @@ const DICT = {
     empty_hint_ok: "Todo listo.",
   },
   en: {
+    nav_motion: "Motion",
     nav_library: "Library",
     nav_critique: "Critique",
     nav_tokens: "Design system",

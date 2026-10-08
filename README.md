@@ -241,3 +241,7 @@ URL of a page you like into the Gallery (or `reference_add`) and Vitruvius captu
 ## License
 
 MIT — see `LICENSE`.
+
+## Family expansion · 2026-10-04
+
+Motion is an editable scene workbench: text and vector layers, timing, six entrance effects, three aspect ratios and retained revisions. `motion_templates`, `motion_save`, `motion_list`, `motion_get`, `motion_render` share the REST handlers. Preview or export self-contained HTML/SVG; render silent MP4 by seeking every frame in the existing Chromium worker and encoding with FFmpeg. Keep audio/editing in Lumiere. Limits: 60 s, 30 fps, 1920 px and 40 layers per scene. Export requires Chromium and FFmpeg; it does not call a generation model. Original implementation, no NullMotion code copied.

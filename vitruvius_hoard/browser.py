@@ -416,7 +416,8 @@ class BrowserWorker:
         self.start()
         job = Job(kind, payload)
         self._queue.put(job)
-        if not job.event.wait(self.timeout_s):
+        timeout = max(self.timeout_s, 300) if kind == "motion" else self.timeout_s
+        if not job.event.wait(timeout):
             return {"error": "timeout", "hint": f"render job exceeded {self.timeout_s}s"}
         if job.error:
             return {"error": job.error}
@@ -428,6 +429,9 @@ class BrowserWorker:
             return {"error": "no browser", "hint": "python -m playwright install chromium"}
         if job.kind == "capture":
             return self._capture(browser, job.payload)
+        if job.kind == "motion":
+            from .motion import Composition, export_frames
+            return export_frames(browser, Composition.model_validate(job.payload["composition"]), Path(job.payload["out_dir"]))
         return {"error": f"unknown job kind {job.kind}"}
 
     # -- capture ---------------------------------------------------------
