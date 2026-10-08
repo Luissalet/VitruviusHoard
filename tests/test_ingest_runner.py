@@ -78,6 +78,36 @@ def test_ingest_local_missing_path_errors(tmp_path):
     assert status["status"] == "error"
 
 
+def test_nested_design_tokens_are_searchable_without_losing_late_values(tmp_path):
+    from vitruvius_hoard.library import search
+
+    folder = tmp_path / "tokens_source"
+    folder.mkdir()
+    payload = {"color": {"accent": "#2f5bea"},
+               "notes": "Preserve proportions and semantic roles. " * 90,
+               "motion": {"ease": "cubic-bezier(.2,.8,.2,1)", "fast": "120ms"},
+               "labels": {"title": "Álbum de fotografías"}}
+    (folder / "tokens.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (folder / "invalid.json").write_text("{broken", encoding="utf-8")
+    config = make_config(tmp_path)
+    db = Database(config.db_path)
+    db.execute("INSERT INTO sources(id, kind, url, paths, structured, status) VALUES ('tokens', 'local', ?, '[]', 1, 'idle')",
+               (str(folder),))
+    row = dict(db.one("SELECT * FROM sources WHERE id='tokens'"))
+    result = ingest_source(db, config, row)
+    assert result["ok"] and result["docs"] == 1
+    assert result["chunks"] > 1
+    hits = search(db, "cubic-bezier", source="tokens", kind="catalog")
+    assert hits and any("120ms" in h["text"] and "cubic-bezier(.2,.8,.2,1)" in h["text"] for h in hits)
+    assert all("tokens/tokens.json" in h["cite"] for h in hits)
+    assert search(db, "fotografías", source="tokens")
+    texts = "\n".join(r["text"] for r in db.query("SELECT text FROM chunks ORDER BY ordinal"))
+    assert "#2f5bea" in texts and "Álbum de fotografías" in texts
+    assert result["styles"] == result["palettes"] == result["font_pairings"] == 0
+    again = ingest_source(db, config, dict(db.one("SELECT * FROM sources WHERE id='tokens'")))
+    assert again["docs"] == result["docs"] and again["chunks"] == result["chunks"]
+
+
 def test_ingest_url_kind_is_a_noop(tmp_path):
     config = make_config(tmp_path)
     db = Database(config.db_path)
