@@ -7,8 +7,10 @@ import Critique from "./pages/Critique.jsx";
 import Tokens from "./pages/Tokens.jsx";
 import Gallery from "./pages/Gallery.jsx";
 import Settings from "./pages/Settings.jsx";
+import Motion from "./pages/Motion.jsx";
 
 const PAGES = [
+  { path: "motion", key: "nav_motion", icon: "M4 4h16v16H4zM9 8l7 4-7 4z", component: Motion },
   { path: "library", key: "nav_library", icon: "M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V4H6.5A2.5 2.5 0 004 6.5v13z", component: Library },
   { path: "critique", key: "nav_critique", icon: "M9 3H5a2 2 0 00-2 2v4m18 0V5a2 2 0 00-2-2h-4m0 18h4a2 2 0 002-2v-4M3 15v4a2 2 0 002 2h4", component: Critique },
   { path: "tokens", key: "nav_tokens", icon: "M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.7 7.1 17.2l.9-5.5-4-3.9L9.5 7z", component: Tokens },

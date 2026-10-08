@@ -252,3 +252,7 @@ de una página que te guste en la Galería (o `reference_add`) y Vitruvius captu
 ## Licencia
 
 MIT — ver `LICENSE`.
+
+## Ampliación de la familia · 2026-10-04
+
+Movimiento permite editar escenas, textos y figuras, tiempos, seis entradas y tres formatos. `motion_templates`, `motion_save`, `motion_list`, `motion_get` y `motion_render` comparten los handlers REST. Conserva versiones y exporta HTML/SVG o MP4 sin audio con fotogramas calculados y FFmpeg; añade el sonido en Lumiere. Límites: 60 s, 30 fps, 1920 px, 40 elementos por escena. Requiere Chromium y FFmpeg, sin modelo generativo.

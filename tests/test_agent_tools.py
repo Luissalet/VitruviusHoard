@@ -3,8 +3,8 @@ import pytest
 from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME, call_tool, tool_catalog
 
 
-def test_exactly_25_tools():
-    assert len(TOOLS) == 25
+def test_exactly_30_tools():
+    assert len(TOOLS) == 30
 
 
 def test_tool_names_are_unique():
@@ -32,9 +32,9 @@ def test_every_tool_first_line_has_english_and_spanish():
 def test_read_only_hints_correct():
     read_only_names = {"design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
                        "fonts_search", "design_lint", "page_assay", "render_compare", "tokens_get", "tokens_list",
-                       "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status"}
+                       "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get"}
     write_names = {"render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
-                  "reference_add", "reference_delete", "source_add", "source_ingest"}
+                  "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render"}
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
@@ -67,6 +67,10 @@ def test_every_arg_model_validates_empty_or_minimal(services):
                 args[field_name] = "demo"
             elif prop.get("type") == "number":
                 args[field_name] = 1
+        if t.name == 'motion_save':
+            args['composition'] = {'title':'Demo','scenes':[{'name':'Demo','layers':[{'text':'Demo'}]}]}
+        if t.name in ('motion_get','motion_render'):
+            args['id'] = 'a' * 32
         try:
             t.input_model.model_validate(args)
         except Exception as error:  # noqa: BLE001
