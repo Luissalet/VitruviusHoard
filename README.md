@@ -205,6 +205,25 @@ their authors — this app only indexes them locally. Add your own with `source_
 | `awesome-web-animation` | [sergey-pimenov/awesome-web-animation](https://github.com/sergey-pimenov/awesome-web-animation) | CC0-1.0 | index |
 | `motion-ui-design` | [fliptheweb/motion-ui-design](https://github.com/fliptheweb/motion-ui-design) | not stated (flagged in the UI) | index |
 | `frontend-design-toolkit` | [wilwaldon/Claude-Code-Frontend-Design-Toolkit](https://github.com/wilwaldon/Claude-Code-Frontend-Design-Toolkit) | not stated (flagged in the UI) | index |
+| `oil-ui` | [oil-oil/oil-ui](https://github.com/oil-oil/oil-ui) | MIT | criterion |
+| `replica-skill` | [Jakeschincariol/replica-skill](https://github.com/Jakeschincariol/replica-skill) | MIT | workflow |
+| `photo-flipbook-ui` | [HaichaoLihc/create-photo-flipbook-ui](https://github.com/HaichaoLihc/create-photo-flipbook-ui) | MIT for selected documentation; media/third-party exclusions | editorial |
+
+Oil UI adds art direction, distinct visual alternatives and first-viewport
+composition. Replica adds screen inventories, user flows, feature matrices and
+test-plan templates. Photo Flipbook adds photo sequencing, double-page composition,
+gutter placement, image proportions and the bundled 2D reader contract.
+After `source_ingest`, search these by source with `design_search`; their cited
+guidance complements `design_brief`, `render_preview` and `render_compare`.
+Only selected text is indexed locally. Upstream scripts, commercial Oil UI Pro,
+photo-search models, media and separate 3D templates are not installed.
+Structured sources also index generic JSON design tokens as cited passages,
+including nested values; palette/style/font catalogs keep their specialized parsing.
+
+For example, `design_search(query="gutter", source="photo-flipbook-ui")` retrieves
+spread composition guidance, while `source="replica-skill"` with query
+`"screen inventory"` retrieves recon templates. These are design references;
+adding a source does not install an upstream skill or a ready-made photo viewer.
 
 Galleries such as Godly, Lapa Ninja, Curated Design, Minimal Gallery or Siteinspire are **not** scraped: paste the
 URL of a page you like into the Gallery (or `reference_add`) and Vitruvius captures that page itself.
