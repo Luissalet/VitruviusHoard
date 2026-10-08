@@ -50,10 +50,12 @@ def main() -> int:
 
     ids = [args.id] if args.id else [r["id"] for r in db.query("SELECT id FROM sources")]
     total_docs = total_chunks = 0
+    failures = 0
     for source_id in ids:
         row = db.one("SELECT * FROM sources WHERE id = ?", (source_id,))
         if row is None:
             print(f"unknown source: {source_id}", file=sys.stderr)
+            failures += 1
             continue
         print(f"ingesting {source_id} ...")
         result = ingest_source(db, config, dict(row))
@@ -63,10 +65,11 @@ def main() -> int:
             total_chunks += result.get("chunks", 0)
         else:
             print(f"  error: {result.get('error')}", file=sys.stderr)
+            failures += 1
 
     print(f"Done: {total_docs} docs, {total_chunks} chunks across {len(ids)} source(s).")
     db.close()
-    return 0
+    return int(failures > 0)
 
 
 if __name__ == "__main__":
