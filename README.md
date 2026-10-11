@@ -6,7 +6,7 @@ A local frontend-design workbench for the assistant (the Faustus workspace) and 
 - a **library of criterion** ingested from open design-skill repositories (rules, styles, palettes, font
   pairings, motion recipes), searchable with citations;
 - a **render → capture → critique loop** on real Chromium: render HTML or a URL, screenshot it at several
-  widths, run 29 deterministic design-lint checks, and (optionally) get a vision-model critique;
+  widths, run 32 deterministic design-lint checks, and (optionally) get a vision-model critique;
 - a **design-system generator**: pure-Python OKLCH colour ramps, a fluid type scale, spacing/radius/shadow/motion
   tokens, exported as CSS variables, a Tailwind v4 theme, W3C design tokens JSON and a flat JSON, plus a live,
   self-contained playground page;
@@ -41,8 +41,11 @@ before a person ever has to say "this looks AI-generated."
   (fonts, computed colours, headings, contrast pairs, tap-target sizes, animation counts, external libraries).
   Only public web pages are opened: a URL that points at this machine, the local network or a cloud metadata
   address is refused, and the browser blocks the same targets for redirects and for everything the page loads.
-- **Design lint**: 29 deterministic checks (fonts, contrast, layout, motion, accessibility, content, performance,
+- **Design lint**: 32 deterministic checks (fonts, contrast, layout, motion, accessibility, content, performance,
   and several "generic AI palette" detectors) with a stable id, severity, evidence and a concrete fix per finding.
+  Three of them are measured in the browser at every captured width: the page scrolling sideways (with the elements
+  that stick out), text cut off by its own box (an ellipsis or line-clamp counts as intended) and text drawn over
+  text. A critique or lint of a stored render reuses the full measurement and the page's own source.
 - **Critique**: lint findings merged with an optional vision-model rubric (hierarchy, typography, colour, spacing,
   motion, distinctiveness, accessibility, copy), scored 0-10.
 - **Design tokens**: OKLCH ramps (50-950), semantic colours, light/dark surfaces, a fluid type scale, spacing,

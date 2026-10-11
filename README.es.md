@@ -6,7 +6,7 @@ Un taller de diseño de interfaces local, para el asistente (el entorno Faustus)
 - una **biblioteca de criterio** ingerida desde repositorios abiertos de skills de diseño (reglas, estilos,
   paletas, combinaciones tipográficas, recetas de motion), buscable con citas;
 - un **ciclo de render → captura → crítica** sobre Chromium real: renderiza HTML o una URL, la captura a varios
-  anchos, ejecuta 29 comprobaciones deterministas de lint de diseño y, opcionalmente, obtiene una crítica de un
+  anchos, ejecuta 32 comprobaciones deterministas de lint de diseño y, opcionalmente, obtiene una crítica de un
   modelo de visión;
 - un **generador de sistemas de diseño**: rampas de color OKLCH en Python puro, una escala tipográfica fluida,
   tokens de espaciado/radio/sombra/motion, exportados como variables CSS, un tema de Tailwind v4, JSON de design
@@ -45,9 +45,13 @@ hecho por una IA".
   vídeo opcional de scroll de 6 segundos (convertido a MP4 con ffmpeg si está en el `PATH`), y una sonda en la
   propia página (fuentes, colores calculados, encabezados, pares de contraste, tamaño de zonas táctiles, número
   de animaciones, librerías externas).
-- **Lint de diseño**: 29 comprobaciones deterministas (tipografía, contraste, layout, motion, accesibilidad,
+- **Lint de diseño**: 32 comprobaciones deterministas (tipografía, contraste, layout, motion, accesibilidad,
   contenido, rendimiento, y varios detectores de "paleta genérica de IA") con id estable, severidad, evidencia y
   una corrección concreta por hallazgo.
+  Tres se miden en el navegador en cada ancho capturado: la página que se desplaza de lado (con los elementos que
+  sobresalen), el texto cortado por su propia caja (una elipsis o line-clamp cuenta como intencionado) y el texto
+  pintado encima de otro texto. La crítica o el lint de un render guardado reutilizan la medida completa y el
+  código de la página.
 - **Crítica**: los hallazgos del lint combinados con una rúbrica opcional de modelo de visión (jerarquía,
   tipografía, color, espaciado, motion, distintividad, accesibilidad, copy), puntuada de 0 a 10.
 - **Design tokens**: rampas OKLCH (50-950), colores semánticos, superficies claro/oscuro, escala tipográfica
