@@ -521,10 +521,10 @@ def swimlane(d: Diagram) -> Layout:
             out_x = col_x[ra] + col_w[ra] + COL_GAP / 2
             in_x = col_x[rb] - COL_GAP / 2 if rb > 0 else LANE_HEAD + LANE_PAD / 2
             fr = lane_frame[lane_of[e.target] or "lane"]
-            base = fr.y + 6.0
+            base = fr.y + 10.0                              # inside the lane's top padding, clear of the border line
             k = border_use.get(base, 0)
             border_use[base] = k + 1
-            by = base + 5.0 * k
+            by = base + 4.0 * min(k, 2)
             pts = [(a.x + a.w, a.cy), (out_x, a.cy), (out_x, by), (in_x, by), (in_x, b.cy), (b.x, b.cy)]
         pts = _simplify(pts)
         label_at = None
