@@ -56,6 +56,15 @@ export const api = {
   tokensPreview: (id, body) => request("POST", `/api/tokens/${encodeURIComponent(id)}/preview`, { body }),
   tokensPlaygroundUrl: (id, dark) => `/api/tokens/${encodeURIComponent(id)}/playground?dark=${dark ? "true" : "false"}`,
 
+  diagramTypes: (params) => request("GET", "/api/diagrams/types", { params }),
+  diagrams: (limit) => request("GET", "/api/diagrams", { params: { limit } }),
+  diagram: (id) => request("GET", `/api/diagrams/${encodeURIComponent(id)}`),
+  diagramRender: (body) => request("POST", "/api/diagrams", { body }),
+  diagramDelete: (id) => request("DELETE", `/api/diagrams/${encodeURIComponent(id)}`),
+  diagramSvgUrl: (id, mode) => `/api/diagrams/${encodeURIComponent(id)}/${mode}.svg`,
+  diagramBrands: () => request("GET", "/api/diagrams/brands"),
+  diagramBrandOnboard: (body) => request("POST", "/api/diagrams/brands", { body }),
+
   references: (params) => request("GET", "/api/references", { params }),
   referenceAdd: (body) => request("POST", "/api/references", { body }),
   reference: (id) => request("GET", `/api/references/${encodeURIComponent(id)}`),

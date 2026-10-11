@@ -13,7 +13,7 @@ A local frontend-design workbench for the assistant (the Faustus workspace) and 
 - a **reference gallery**: capture a website's desktop and mobile screenshots, a scroll video, its fonts,
   palette and animation libraries, and search them later by tag, vibe or library.
 
-Everything above is exposed both as a small REST API (for its own UI) and as 25 MCP tools (for the assistant),
+Everything above is exposed both as a small REST API (for its own UI) and as 38 MCP tools (for the assistant),
 built from the *same* code, so they can never disagree.
 
 ## Why
@@ -49,6 +49,15 @@ before a person ever has to say "this looks AI-generated."
   radius, shadows and motion tokens (durations, easings, a motion-intensity knob), exported four ways.
 - **Reference gallery**: capture any URL or raw HTML, extract its palette (Pillow quantization), detected
   animation libraries and motion characteristics, and search the gallery later.
+- **Diagrams**: eight types (flowchart, architecture, state, entity-relationship, swimlane, sequence, timeline,
+  gantt), picked pattern first so a small model reads one type card. The model gives structure only; layout is a
+  layered grid with orthogonal routing (long edges run in the gaps, groups keep their own band), drawn as SVG in
+  light and dark from brand roles (paper, ink, muted, accent, surface, border, series). Brand profiles come from a
+  website rendered in the browser, a folder of CSS or token files, a design system or plain colours. Gates check
+  contrast (4.5:1 text, 3:1 lines), overlaps, edges through boxes, labels that do not fit, groups and canvas; an
+  optional browser check keeps a screenshot. Mermaid (flowchart, sequence, state, er, timeline, gantt), Excalidraw
+  and draw.io (plain or compressed) are imported and redrawn with the brand. Limits: eight types, up to 80 nodes;
+  label widths are estimated, not measured with the font.
 - **MCP + REST**: 25 tools behind one token-guarded bridge, plus the identical REST routes the bundled UI uses
   (see `docs/API.md`).
 
@@ -158,6 +167,14 @@ The bridge never opens the database itself: it proxies every call to `POST /api/
 | `source_ingest` | no | Ingest (or re-ingest) one source or every source; runs in the background. |
 | `source_status` | yes | Status of one source's ingest (idle, cloning, ingesting, ready, error). |
 | `vitruvius_status` | yes | Health: browser, ffmpeg, git, library counts, model resolution for vision/chat/embeddings. |
+| `diagram_types` | yes | Pick a diagram: semantic pattern first, then the type; returns only that type's card (fields, rules, example). |
+| `diagram_render` | no | Draw a diagram as SVG in light and dark with brand colours from structure, Mermaid, Excalidraw or draw.io, and run the gates. |
+| `diagram_get` | yes | A saved diagram: structure, gate report and optionally the SVG. |
+| `diagram_list` | yes | Saved diagrams, newest first. |
+| `diagram_delete` | no (destructive) | Delete a saved diagram (only when the user asks). |
+| `diagram_brand_onboard` | no | Save a brand profile from a website, a folder of CSS/tokens, a design system or colours; checks contrast. |
+| `diagram_brands` | yes | Brand profiles saved for diagrams, plus the default roles. |
+| `diagram_brand_delete` | no (destructive) | Delete a brand profile (only when the user asks). |
 
 The assistant is told, in `AGENT_INSTRUCTIONS`, to cite the library with `[vitruvius: ...]`, to iterate with
 `render_preview` → `design_critique` → fix → render again (stopping at score ≥ 8 or after 3 rounds), and to only

@@ -17,6 +17,7 @@ Always cite `[vitruvius: ...]` when quoting the library (design_search, design_b
 Loop: write HTML -> render_preview -> design_critique -> fix -> render again; stop at score >= 8 or after 3 rounds,
 then page_assay it (drives every control in a real browser and reports what does not work).
 Use design_brief before a page from scratch; styles_search / palettes_search / fonts_search for quick lookups.
+Diagrams: diagram_types, then diagram_render (structure, Mermaid, Excalidraw or draw.io); fix failed gates, redraw.
 reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when the user asks."""
 
 
@@ -610,6 +611,9 @@ TOOLS.extend([
     Tool("motion_get", "Read a composition or export HTML. Leer o exportar animación.\nKeywords: timeline, previsualización, motion, frame seeking.", MotionGetArgs, ann(True), run_motion_get),
     Tool("motion_render", "Capture motion frames or export silent MP4. Renderizar vídeo.\nChromium and ffmpeg; may take minutes. Keywords: render, vídeo, fotogramas, motion.", MotionRenderArgs, ann(False, False, False), run_motion_render),
 ])
+from .diagrams.tools import tools as _diagram_tools  # noqa: E402
+
+TOOLS.extend(_diagram_tools(Empty))
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
@@ -618,7 +622,7 @@ def tool_catalog() -> list[dict]:
 
 
 # Results that are the payload itself (a stylesheet, a page, image bytes) and must never be cut to the shared 20 KB cap.
-UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview", "motion_get"})
+UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview", "motion_get", "diagram_render", "diagram_get"})
 
 
 def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:

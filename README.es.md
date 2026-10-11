@@ -14,7 +14,7 @@ Un taller de diseño de interfaces local, para el asistente (el entorno Faustus)
 - una **galería de referencias**: captura una web con sus capturas de escritorio y móvil, un vídeo de scroll, sus
   fuentes, paleta y librerías de animación, y búscalas después por etiqueta, vibe o librería.
 
-Todo lo anterior se expone tanto como una pequeña API REST (para su propia interfaz) como 25 herramientas MCP
+Todo lo anterior se expone tanto como una pequeña API REST (para su propia interfaz) como 38 herramientas MCP
 (para el asistente), construidas desde el *mismo* código, para que nunca puedan discrepar.
 
 ## Por qué
@@ -55,7 +55,17 @@ hecho por una IA".
   exportados de cuatro formas.
 - **Galería de referencias**: captura cualquier URL o HTML en bruto, extrae su paleta (cuantización con Pillow),
   las librerías de animación detectadas y sus características de motion, y búscalas después.
-- **MCP + REST**: 25 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
+- **Diagramas**: ocho tipos (flujo, arquitectura, estados, entidad-relación, carriles, secuencia, cronología,
+  gantt), elegidos primero por patrón para que un modelo pequeño lea una sola ficha. El modelo da solo la
+  estructura; el layout es una rejilla por capas con enrutado ortogonal (las aristas largas van por los huecos y
+  cada grupo tiene su banda), dibujada en SVG claro y oscuro con los roles de la marca (papel, tinta, apagado,
+  acento, superficie, borde, series). Los perfiles de marca salen de una web renderizada en el navegador, de una
+  carpeta de CSS o tokens, de un design system o de colores sueltos. Las comprobaciones miran contraste (4,5:1
+  texto, 3:1 líneas), solapes, aristas que atraviesan cajas, etiquetas que no caben, grupos y lienzo; la
+  comprobación en navegador guarda una captura. Importa Mermaid (flowchart, sequence, state, er, timeline, gantt),
+  Excalidraw y draw.io (normal o comprimido) y los redibuja con la marca. Límites: ocho tipos, hasta 80 nodos; el
+  ancho de las etiquetas se estima, no se mide con la fuente.
+- **MCP + REST**: 38 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
   usa la interfaz incluida (ver `docs/API.md`).
 
 ## Instalación
@@ -167,6 +177,14 @@ ejecución (arrancándola automáticamente si no lo está) usando el token del p
 | `source_ingest` | no | Ingiere (o reingiere) una fuente o todas; se ejecuta en segundo plano. |
 | `source_status` | sí | Estado de la ingesta de una fuente (idle, cloning, ingesting, ready, error). |
 | `vitruvius_status` | sí | Salud: navegador, ffmpeg, git, contadores de la biblioteca, resolución de modelos para visión/chat/embeddings. |
+| `diagram_types` | sí | Elige diagrama: primero el patrón, después el tipo; devuelve solo la ficha de ese tipo (campos, reglas, ejemplo). |
+| `diagram_render` | no | Dibuja un diagrama en SVG claro y oscuro con los colores de la marca desde estructura, Mermaid, Excalidraw o draw.io, y pasa las comprobaciones. |
+| `diagram_get` | sí | Un diagrama guardado: estructura, informe de comprobaciones y, si se pide, el SVG. |
+| `diagram_list` | sí | Diagramas guardados, los últimos primero. |
+| `diagram_delete` | no (destructiva) | Borra un diagrama guardado (solo si el usuario lo pide). |
+| `diagram_brand_onboard` | no | Guarda un perfil de marca desde una web, una carpeta de CSS/tokens, un design system o colores; comprueba el contraste. |
+| `diagram_brands` | sí | Perfiles de marca guardados para diagramas y los roles por defecto. |
+| `diagram_brand_delete` | no (destructiva) | Borra un perfil de marca (solo si el usuario lo pide). |
 
 Al asistente se le indica, en `AGENT_INSTRUCTIONS`, que cite la biblioteca con `[vitruvius: ...]`, que itere con
 `render_preview` → `design_critique` → arreglar → renderizar de nuevo (parando en puntuación ≥ 8 o tras 3
