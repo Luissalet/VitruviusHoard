@@ -8,8 +8,8 @@ def ids_of(result):
 
 
 def test_all_checks_registered_and_ids_match():
-    assert len(CHECKS) == len(CHECK_IDS) == 29
-    assert len(set(CHECK_IDS)) == 29
+    assert len(CHECKS) == len(CHECK_IDS) == 32
+    assert len(set(CHECK_IDS)) == 32
 
 
 def test_clean_probe_triggers_few_or_no_findings():
@@ -122,6 +122,10 @@ def test_layout_hero_three_cards_negative_four_cards():
 def test_layout_no_max_width():
     result = run_lint(default_probe(), "<html><body>no constraint here</body></html>")
     assert "layout.no-max-width" in ids_of(result)
+
+
+def test_layout_no_max_width_says_nothing_without_the_source():
+    assert "layout.no-max-width" not in ids_of(run_lint(default_probe(), ""))
 
 
 def test_layout_no_max_width_negative():
