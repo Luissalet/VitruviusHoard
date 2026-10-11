@@ -201,6 +201,8 @@ def check_layout_hero_three_cards(probe: dict, html: str) -> list[Finding]:
 
 
 def check_layout_no_max_width(probe: dict, html: str) -> list[Finding]:
+    if not html.strip():
+        return []  # a captured URL: its stylesheets were not read, so nothing can be said about max-width
     if "max-width" not in html and "max_width" not in html:
         return [_finding("layout.no-max-width", "layout", "warn", "No max-width constraint found",
                          "The document never sets a max-width, so text can stretch full width on large screens.", None,
@@ -209,12 +211,82 @@ def check_layout_no_max_width(probe: dict, html: str) -> list[Finding]:
 
 
 def check_layout_horizontal_overflow(probe: dict, html: str) -> list[Finding]:
+    if _layout_widths(probe):
+        return []  # measured in the browser: check_layout_sideways_scroll says what really happens
     wide = re.search(r'width:\s*(\d{4,})px', html)
     if wide and int(wide.group(1)) >= 1600 and "overflow-x" not in html:
         return [_finding("layout.horizontal-overflow", "layout", "error", "Possible horizontal overflow",
                          f"A fixed width of {wide.group(1)}px was found with no overflow-x handling.", wide.group(0),
                          "Use relative widths (%, vw, max-width) or add overflow-x handling.")]
     return []
+
+
+def _layout_widths(probe: dict) -> list[tuple[int, dict]]:
+    out = []
+    for key, value in ((probe or {}).get("layout") or {}).items():
+        try:
+            out.append((int(key), value or {}))
+        except (TypeError, ValueError):
+            continue
+    return sorted(out, key=lambda kv: kv[0])
+
+
+def check_layout_sideways_scroll(probe: dict, html: str) -> list[Finding]:
+    out = []
+    for width, m in _layout_widths(probe):
+        px = int(m.get("overflow_px") or 0)
+        if px <= 2:
+            continue
+        culprits = m.get("overflowing") or []
+        named = ", ".join(f"{c.get('el')} (+{c.get('by')}px)" for c in culprits[:3]) or "no single element sticks out"
+        out.append(_finding("layout.sideways-scroll", "layout", "error", f"Page scrolls sideways at {width}px",
+                            f"The page is {m.get('page_width')}px wide in a {width}px viewport; sticking out: {named}.",
+                            {"width": width, "overflow_px": px, "culprits": culprits[:6]},
+                            "Let those elements shrink: max-width:100% on media, min-width:0 on flex and grid children, "
+                            "overflow-wrap:anywhere for long words, or a scrolling box for wide tables and code."))
+    return out
+
+
+def check_layout_clipped_text(probe: dict, html: str) -> list[Finding]:
+    widths: dict[str, list[int]] = {}
+    first: dict[str, dict] = {}
+    for width, m in _layout_widths(probe):
+        for c in m.get("clipped") or []:
+            if c.get("intended"):
+                continue
+            key = f"{c.get('el')}|{c.get('text')}"
+            widths.setdefault(key, []).append(width)
+            first.setdefault(key, c)
+    out = []
+    for key, c in list(first.items())[:8]:
+        at = ", ".join(str(w) for w in widths[key])
+        out.append(_finding("layout.clipped-text", "layout", "warn", f"Text cut off in {c.get('el')}",
+                            f"\"{c.get('text')}...\": {c.get('lines_cut', 0)} line(s) cut at the edge and "
+                            f"{c.get('lines_hidden', 0)} hidden below the box, at {at}px.",
+                            {"widths": widths[key], **{k: c.get(k) for k in ("el", "axis", "lines_cut", "lines_hidden", "hidden_px")}},
+                            "Let the box grow with its text (min-height instead of height), or truncate on purpose with "
+                            "text-overflow: ellipsis or line-clamp and make the full text reachable."))
+    return out
+
+
+def check_layout_text_overlap(probe: dict, html: str) -> list[Finding]:
+    widths: dict[str, list[int]] = {}
+    first: dict[str, dict] = {}
+    for width, m in _layout_widths(probe):
+        for o in m.get("overlaps") or []:
+            key = f"{o.get('a')}|{o.get('a_text')}|{o.get('b')}|{o.get('b_text')}"
+            widths.setdefault(key, []).append(width)
+            first.setdefault(key, o)
+    out = []
+    for key, o in list(first.items())[:8]:
+        at = ", ".join(str(w) for w in widths[key])
+        out.append(_finding("layout.text-overlap", "layout", "warn", "Text drawn over text",
+                            f"\"{o.get('a_text')}\" ({o.get('a')}) and \"{o.get('b_text')}\" ({o.get('b')}) cover "
+                            f"{o.get('share')}% of the smaller one, at {at}px.",
+                            {"widths": widths[key], "a": o.get("a"), "b": o.get("b"), "share": o.get("share"), "at": o.get("at")},
+                            "Give the two elements their own space (normal flow, gap, or a breakpoint that stacks them) "
+                            "instead of absolute positions that collide at this width."))
+    return out
 
 
 def check_type_scale_flat(probe: dict, html: str) -> list[Finding]:
@@ -397,6 +469,9 @@ CHECKS: list[CheckFn] = [
     check_layout_hero_three_cards,
     check_layout_no_max_width,
     check_layout_horizontal_overflow,
+    check_layout_sideways_scroll,
+    check_layout_clipped_text,
+    check_layout_text_overlap,
     check_type_scale_flat,
     check_type_line_length,
     check_motion_no_reduced_motion,
@@ -421,7 +496,8 @@ CHECKS: list[CheckFn] = [
 CHECK_IDS = [
     "font.generic-only", "font.too-many-families", "color.low-contrast", "color.generic-ai-palette-1",
     "color.generic-ai-palette-2", "color.generic-ai-palette-3", "color.purple-blue-gradient",
-    "layout.hero-three-cards", "layout.no-max-width", "layout.horizontal-overflow", "type.scale-flat",
+    "layout.hero-three-cards", "layout.no-max-width", "layout.horizontal-overflow", "layout.sideways-scroll",
+    "layout.clipped-text", "layout.text-overlap", "type.scale-flat",
     "type.line-length", "motion.no-reduced-motion", "motion.everything-animates", "motion.long-durations",
     "motion.linear-easing", "a11y.missing-alt", "a11y.small-targets", "a11y.heading-order", "a11y.no-lang",
     "a11y.no-focus-visible", "content.lorem-ipsum", "content.emoji-icons", "content.placeholder-copy",

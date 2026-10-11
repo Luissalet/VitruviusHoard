@@ -265,6 +265,141 @@ PROBE_JS = r"""
 }
 """
 
+# Layout measured at one viewport width (run after each resize): real sideways scroll with the elements that stick
+# out, text cut by its own box (a line crossing the clipping edge, or whole lines hidden right below it; an ellipsis
+# or line-clamp marks it as intended) and the visible ink of two text elements covering each other.
+LAYOUT_JS = r"""
+() => {
+  const W = window.innerWidth;
+  const sx = window.scrollX, sy = window.scrollY;
+  const doc = document.documentElement;
+  const out = {width: W, page_width: doc.scrollWidth, overflow_px: Math.max(0, doc.scrollWidth - W),
+               overflowing: [], clipped: [], overlaps: []};
+  const label = (el) => {
+    let s = el.localName;
+    if (el.id) s += '#' + el.id;
+    const c = (typeof el.className === 'string' ? el.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    if (c.length) s += '.' + c.join('.');
+    return s;
+  };
+  const words = (el) => (el.innerText || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  const shown = (cs) => cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity || '1') > 0.05;
+  const all = document.body ? Array.from(document.body.querySelectorAll('*')).slice(0, 5000) : [];
+  const styles = new Map();
+  const st = (el) => { let cs = styles.get(el); if (!cs) { cs = getComputedStyle(el); styles.set(el, cs); } return cs; };
+  const hiddenByAncestor = (el) => { for (let p = el; p; p = p.parentElement) { const cs = st(p); if (!shown(cs)) return true; } return false; };
+  const textRects = (el, deep) => {
+    const rects = [];
+    const range = document.createRange();
+    const nodes = deep ? (() => { const a = []; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) a.push(n); return a; })()
+                       : Array.from(el.childNodes).filter(n => n.nodeType === 3);
+    for (const n of nodes) {
+      if (!n.textContent.trim() || !n.parentElement || !shown(st(n.parentElement))) continue;
+      range.selectNodeContents(n);
+      for (const q of range.getClientRects()) if (q.width > 0.5 && q.height > 0.5) rects.push(q);
+    }
+    return rects;
+  };
+
+  // 1. Real sideways scroll: the innermost elements that stick out past the viewport, outside any scrolling or clipping box.
+  if (out.overflow_px > 2) {
+    const clippedX = (el) => { for (let p = el.parentElement; p && p !== document.body && p !== doc; p = p.parentElement) { if (st(p).overflowX !== 'visible') return true; } return false; };
+    const off = [];
+    for (const el of all) {
+      const cs = st(el);
+      if (!shown(cs) || cs.position === 'fixed') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1 || r.right <= W + 2) continue;
+      if (clippedX(el)) continue;
+      off.push({el, r});
+    }
+    const inner = off.filter(a => !off.some(b => b !== a && a.el.contains(b.el)));
+    inner.sort((a, b) => b.r.right - a.r.right);
+    out.overflowing = inner.slice(0, 6).map(({el, r}) => ({el: label(el), text: words(el), width: Math.round(r.width),
+      right: Math.round(r.right + sx), by: Math.round(r.right - W)}));
+  }
+
+  // 2. Text cut by its own box: a line crossing the clipping edge, or whole lines hidden right below it.
+  for (const el of all) {
+    if (out.clipped.length >= 12) break;
+    const cs = st(el);
+    const clipX = cs.overflowX === 'hidden' || cs.overflowX === 'clip';
+    const clipY = cs.overflowY === 'hidden' || cs.overflowY === 'clip';
+    if ((!clipX && !clipY) || hiddenByAncestor(el)) continue;
+    const box = el.getBoundingClientRect();
+    if (box.width < 4 || box.height < 4) continue;
+    const rects = textRects(el, true);
+    if (!rects.length) continue;
+    let crossX = 0, crossY = 0, below = 0;
+    for (const q of rects) {
+      const inX = q.right > box.left && q.left < box.right;
+      if (clipY && inX && q.top < box.bottom - 1 && q.bottom > box.bottom + 1) crossY++;
+      if (clipY && inX && q.top >= box.bottom - 1 && q.top < box.bottom + 4 * Math.max(q.height, 8)) below++;
+      if (clipX && q.top < box.bottom && q.bottom > box.top && q.left < box.right - 1 && q.right > box.right + 1) crossX++;
+    }
+    if (!crossX && !crossY && !below) continue;
+    const intended = cs.textOverflow === 'ellipsis' || (cs.webkitLineClamp && cs.webkitLineClamp !== 'none');
+    out.clipped.push({el: label(el), text: words(el), axis: crossX ? (crossY || below ? 'both' : 'x') : 'y',
+      lines_cut: crossX + crossY, lines_hidden: below, hidden_px: Math.round(crossX ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight),
+      intended: !!intended});
+  }
+
+  // 3. Text over text: the visible ink of two separate text elements covering each other (ink cut by a clipping
+  // ancestor does not count: it is not on screen).
+  const clipCache = new Map();
+  const clipOf = (el) => {
+    if (!el || el === doc) return {l: -Infinity, t: -Infinity, r: Infinity, b: Infinity};
+    if (clipCache.has(el)) return clipCache.get(el);
+    const up = clipOf(el.parentElement);
+    const cs = st(el);
+    let c = up;
+    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
+      const r = el.getBoundingClientRect();
+      c = {l: cs.overflowX !== 'visible' ? Math.max(up.l, r.left) : up.l, r: cs.overflowX !== 'visible' ? Math.min(up.r, r.right) : up.r,
+           t: cs.overflowY !== 'visible' ? Math.max(up.t, r.top) : up.t, b: cs.overflowY !== 'visible' ? Math.min(up.b, r.bottom) : up.b};
+    }
+    clipCache.set(el, c);
+    return c;
+  };
+  const leaves = [];
+  for (const el of all) {
+    if (leaves.length >= 500) break;
+    const cs = st(el);
+    if (!shown(cs)) continue;
+    const c = clipOf(el);
+    const rects = textRects(el, false).map(q => ({left: Math.max(q.left, c.l), right: Math.min(q.right, c.r), top: Math.max(q.top, c.t), bottom: Math.min(q.bottom, c.b)}))
+      .filter(q => q.right - q.left > 0.5 && q.bottom - q.top > 0.5).map(q => ({...q, width: q.right - q.left, height: q.bottom - q.top}));
+    if (!rects.length) continue;
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const q of rects) { l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom); }
+    if (r - l < 2 || b - t < 2 || hiddenByAncestor(el)) continue;
+    leaves.push({el, rects, l, t, r, b});
+  }
+  const inkOverlap = (A, B) => {
+    let area = 0;
+    for (const p of A.rects) for (const q of B.rects) {
+      const w = Math.min(p.right, q.right) - Math.max(p.left, q.left), h = Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top);
+      if (w > 0 && h > 0) area += w * h;
+    }
+    return area;
+  };
+  const inkArea = (A) => A.rects.reduce((s, q) => s + q.width * q.height, 0);
+  for (let i = 0; i < leaves.length && out.overlaps.length < 10; i++) {
+    for (let j = i + 1; j < leaves.length && out.overlaps.length < 10; j++) {
+      const A = leaves[i], B = leaves[j];
+      if (A.r <= B.l || B.r <= A.l || A.b <= B.t || B.b <= A.t) continue;
+      if (A.el.contains(B.el) || B.el.contains(A.el)) continue;
+      const shared = inkOverlap(A, B);
+      const share = shared / Math.max(1, Math.min(inkArea(A), inkArea(B)));
+      if (share < 0.2) continue;
+      out.overlaps.push({a: label(A.el), a_text: words(A.el), b: label(B.el), b_text: words(B.el), share: Math.round(share * 100),
+        at: [Math.round(Math.max(A.l, B.l) + sx), Math.round(Math.max(A.t, B.t) + sy)]});
+    }
+  }
+  return out;
+}
+"""
+
 
 def _sync_playwright_available() -> bool:
     return web_browser.playwright_installed()
@@ -465,8 +600,14 @@ class BrowserWorker:
             page.wait_for_timeout(wait_ms)
 
             files = []
+            layout: dict[str, Any] = {}
             for w in widths:
                 page.set_viewport_size({"width": w, "height": 900})
+                try:
+                    page.wait_for_timeout(120)
+                    layout[str(w)] = page.evaluate(LAYOUT_JS)
+                except Exception as error:  # noqa: BLE001 - a page that breaks the probe still gets its screenshots
+                    layout[str(w)] = {"error": str(error)[:200]}
                 path = out_dir / f"{w}.png"
                 if full_page:
                     # Cap full-page height at 6000px via a clip.
@@ -484,6 +625,8 @@ class BrowserWorker:
                 probe = page.evaluate(PROBE_JS)
             except Exception as error:  # noqa: BLE001
                 probe = {"error": str(error)}
+            if layout:
+                probe["layout"] = layout
 
             video_path = None
             poster_path = None
