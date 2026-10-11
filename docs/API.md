@@ -421,3 +421,22 @@ When assay is not installed or cannot open the page: `{"error": string, "hint": 
 `GET /api/library/embeddings` → `{"backend": "fastembed"|"fake"|"none", "model": string, "state": string, "dim": number, "error": string|null, "chunks": number, "vectors": number, "active": boolean, "build": {"state": "idle"|"queued"|"building"|"ready"|"error", "done": number, "total": number, "error": string|null, "seconds": number|null}}`
 
 `POST /api/library/embeddings` → starts the background build (`{"started": boolean, ...build}`). The tool equivalent is `source_ingest` with `embeddings: true`. Env: `VITRUVIUS_EMBED` (auto|fake|none), `VITRUVIUS_EMBED_MODEL`, `VITRUVIUS_MODELS_DIR`, `VITRUVIUS_EMBED_AUTO` (rebuild after an ingest, default 1).
+
+## Diagrams
+
+### `GET /api/diagrams/types?intent=&type=`
+No arguments: the patterns and the eight types. `intent`: the pattern, the chosen type and its card. `type`: that card.
+
+### `POST /api/diagrams`
+Body as the `diagram_render` tool: `diagram` (structure) or `source` (Mermaid, Excalidraw JSON, draw.io XML) with `format`,
+`profile` (brand profile name or design-system id), `colors`, `modes`, `save`, `browser_check`, `include_svg`.
+Returns `ok`, `failed`, `gates`, `id`, `files` and `svg`. 201.
+
+### `GET /api/diagrams?limit=30` · `GET /api/diagrams/{id}?svg=false` · `DELETE /api/diagrams/{id}`
+List, read (structure, gates, optional SVG) and delete saved diagrams.
+
+### `GET /api/diagrams/{id}/{light|dark}.svg`
+The drawing (`image/svg+xml`).
+
+### `GET /api/diagrams/brands` · `POST /api/diagrams/brands` · `DELETE /api/diagrams/brands/{name}`
+Brand profiles. POST body: `name` and exactly one of `url`, `folder`, `tokens_id`, `colors`.
