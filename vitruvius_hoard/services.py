@@ -269,6 +269,8 @@ class Services:
         metrics = {
             "fonts": (probe.get("fonts") or {}), "colors": probe.get("colors") or [],
             "libs": probe.get("external_libs") or [], "dom_size": probe.get("dom_size"),
+            # the whole probe, so a later critique or lint of this render sees what the render-time lint saw
+            "probe": probe,
         }
         row = {
             "id": render_id, "created_ts": time.time(), "kind": kind, "input_hash": input_hash, "url": url or "",
@@ -293,8 +295,26 @@ class Services:
     def _render_dict(r) -> dict[str, Any]:
         return {"id": r["id"], "created_ts": r["created_ts"], "kind": r["kind"], "input_hash": r["input_hash"],
                "url": r["url"], "title": r["title"], "widths": json.loads(r["widths"] or "[]"), "dark": bool(r["dark"]),
-               "files": json.loads(r["files"] or "[]"), "metrics": json.loads(r["metrics"] or "{}"),
+               "files": json.loads(r["files"] or "[]"),
+               "metrics": {k: v for k, v in json.loads(r["metrics"] or "{}").items() if k != "probe"},  # probe: lint only
                "lint": json.loads(r["lint"] or "{}"), "ms": r["ms"]}
+
+    def _render_lint_inputs(self, render: dict[str, Any]) -> tuple[dict[str, Any], str]:
+        """Probe and HTML to lint a stored render with: the full probe kept at render time (older renders only have the
+        summary metrics) and the page's own source when it was rendered from HTML."""
+        row = self.db.one("SELECT metrics FROM renders WHERE id = ?", (render["id"],))
+        metrics = json.loads(row["metrics"] or "{}") if row else {}
+        if "error" in metrics:
+            return {}, ""
+        probe = metrics.get("probe") if isinstance(metrics.get("probe"), dict) else metrics
+        html = ""
+        source = self.config.renders_dir / render["id"] / "source.html"
+        try:
+            if source.is_file():
+                html = source.read_text(encoding="utf-8")
+        except OSError:
+            html = ""
+        return probe, html
 
     def get_render(self, render_id: str) -> Optional[dict[str, Any]]:
         row = self.db.one("SELECT * FROM renders WHERE id = ?", (render_id,))
@@ -355,8 +375,8 @@ class Services:
             render = self.get_render(render_id)
             if render is None:
                 raise LookupError(f"Unknown render '{render_id}'.")
-            probe = render["metrics"]
-            return lint_mod.run_lint(probe, html or "")
+            probe, source = self._render_lint_inputs(render)
+            return lint_mod.run_lint(probe, html or source)
         if html is None and url is None:
             raise ValueError("lint needs html, url or render_id")
         self.check_url(url)
@@ -405,8 +425,7 @@ class Services:
         if row is None:
             raise LookupError(f"Unknown render '{render_id}'.")
         render = self._render_dict(row)
-        probe = render["metrics"] if "error" not in render["metrics"] else {}
-        html = ""
+        probe, html = self._render_lint_inputs(render)
         images: list[bytes] = []
         if use_vision:
             for f in render["files"]:
