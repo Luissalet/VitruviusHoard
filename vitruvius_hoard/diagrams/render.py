@@ -353,6 +353,14 @@ def gates(d: Diagram, profile: dict, lay: Any) -> list[dict]:
             rect = (r.label_at[0] - w / 2, r.label_at[1] - 9, r.label_at[0] + w / 2, r.label_at[1] + 9)
             labels_on_boxes += [f"'{r.label}' on {b.id}" for b in boxes if _overlap(rect, b.rect())]
     gate("edge_labels_clear", not labels_on_boxes, "edge labels sit off the boxes", labels_on_boxes)
+    on_border = []
+    lane_lines = [f.y for f in lay.frames if f.kind == "lane"] + [f.y + f.h for f in lay.frames if f.kind == "lane"]
+    for r in lay.routes:
+        for (x0, y0), (x1, y1) in zip(r.points, r.points[1:]):
+            if abs(y0 - y1) < 0.01 and abs(x1 - x0) > 8 and any(abs(y0 - ly) < 3 for ly in lane_lines):
+                on_border.append(f"{r.source}->{r.target}")
+                break
+    gate("edge_off_lane_borders", not on_border, "no edge runs along a lane border", on_border)
     xs = [v for b in boxes for v in (b.x, b.x + b.w)] + [x for r in lay.routes for x, _ in r.points]
     ys = [v for b in boxes for v in (b.y, b.y + b.h)] + [y for r in lay.routes for _, y in r.points]
     inside = min(xs) >= 0 and min(ys) >= 0 and max(xs) <= lay.width + 0.5 and max(ys) <= lay.height + 0.5
