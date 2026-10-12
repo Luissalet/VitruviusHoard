@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, StatusPill, LicenseBadge, CopyButton, Tabs, ColorSwatch } from "../components/ui.jsx";
 
 const KINDS = ["skill", "guide", "rule", "catalog", "reference", "readme", "other"];
@@ -90,6 +91,7 @@ function EmbeddingsBar({ t, notify }) {
     try { setSt(await api.embeddings()); } catch (e) { /* older server: no dense search */ }
   };
   useEffect(() => { load(); }, []);
+  useCopilotRefresh(load);
   useEffect(() => {
     if (!st || !["queued", "building"].includes(st.build?.state)) return undefined;
     const timer = setTimeout(load, 2000);
@@ -130,6 +132,7 @@ function SourcesPanel({ t, notify }) {
     }
   };
   useEffect(() => { load(); }, []);
+  useCopilotRefresh(load);
 
   const ingest = async (id) => {
     try {

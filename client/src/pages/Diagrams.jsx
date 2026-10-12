@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { clock } from "../format.js";
 
@@ -103,6 +104,9 @@ export default function Diagrams() {
     }
   }, [notify]);
   useEffect(() => { load(); }, [load]);
+  useCopilotRefresh(load);
+  useCopilotObjects(result?.id ? [{ kind: "diagram", id: result.id }] : []);
+  useCopilotForm("diagram-draft", { initial: { source: SAMPLE, intent: "", profile: "" }, current: { source: text, intent, profile } });
 
   const suggest = async () => {
     try {

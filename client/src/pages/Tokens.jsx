@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ContrastSwatch, ConfirmButton } from "../components/ui.jsx";
 import { clock } from "../format.js";
 
 const STYLE_OPTIONS = ["sharp", "soft", "pill", "flat", "hard-offset"];
+const FORM_DEFAULTS = {
+  name: "", base_color: "#1b2f9e", hue: 233, style: "", vibe: "", mode: "both", motion_intensity: 5,
+  heading_font: "", body_font: "", mono_font: "", radius: "", density: "comfortable",
+};
 const RAMP_STEPS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"];
 
 function download(filename, content, type = "text/plain") {
@@ -207,6 +212,15 @@ export default function Tokens() {
     }
   };
   useEffect(() => { loadSaved(); }, []);
+  useCopilotRefresh(loadSaved);
+  useCopilotObjects(current?.id ? [{ kind: "design-system", id: current.id }] : []);
+  useCopilotForm("design-system-draft", {
+    initial: FORM_DEFAULTS,
+    current: {
+      name, base_color: baseColor, hue, style, vibe, mode, motion_intensity: motionIntensity,
+      heading_font: headingFont, body_font: bodyFont, mono_font: monoFont, radius, density,
+    },
+  });
 
   const generate = async (e) => {
     e.preventDefault();

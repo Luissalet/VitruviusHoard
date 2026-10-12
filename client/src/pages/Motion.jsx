@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../App.jsx';
+import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from '../copilot-hooks.js';
+import { api } from '../api.js';
 
 const normalise = recipe => ({ width: 1280, height: 720, fps: 24, ...structuredClone(recipe) });
 
@@ -12,12 +14,24 @@ async function request(path, body) {
 export default function Motion() {
   const { lang } = useApp(), es = lang === 'es';
   const [recipes, setRecipes] = useState({}), [saved, setSaved] = useState([]), [draft, setDraft] = useState(null), [record, setRecord] = useState(null);
+  const [baseline, setBaseline] = useState(null);
   const [html, setHtml] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [download, setDownload] = useState(null), [dirty, setDirty] = useState(false);
   const refresh = async () => setSaved((await request('')).compositions);
-  useEffect(() => { request('/templates').then(r => { setRecipes(r.templates); setDraft(normalise(r.templates.launch)); }).catch(e => setError(e.message)); refresh().catch(e => setError(e.message)); }, []);
+  useEffect(() => { request('/templates').then(r => { setRecipes(r.templates); const first = normalise(r.templates.launch); setDraft(first); setBaseline(first); }).catch(e => setError(e.message)); refresh().catch(e => setError(e.message)); }, []);
+  // An agent turn may have saved a newer revision: show it in place unless there are unsaved edits (a later save then reports the revision conflict).
+  async function reloadFromAgent() {
+    await refresh();
+    if (!record || dirty) return;
+    const latest = await api.motion(record.id);
+    if (latest.revision === record.revision) return;
+    setRecord(latest); setDraft(latest.composition); setBaseline(latest.composition); setHtml(''); setDownload(null);
+  }
+  useCopilotRefresh(reloadFromAgent);
+  useCopilotObjects(record ? [{ kind: 'motion', id: record.id }] : []);
+  useCopilotForm(record ? 'motion-form' : 'motion-draft', { objectId: record?.id, initial: baseline || {}, current: draft || {} });
   const edit = value => { setDraft(value); setDirty(true); setDownload(null); };
   async function work(fn) { setError(''); setBusy(true); try { await fn(); } catch(e) { setError(e.message); } finally { setBusy(false); } }
-  async function save() { const r = await request('', { composition: draft, ...(record ? { id: record.id, expected_revision: record.revision } : {}) }); setRecord(r); setDirty(false); await refresh(); return r; }
+  async function save() { const r = await request('', { composition: draft, ...(record ? { id: record.id, expected_revision: record.revision } : {}) }); setRecord(r); setBaseline(draft); setDirty(false); await refresh(); return r; }
   function sceneEdit(index, field, value) { edit({ ...draft, scenes: draft.scenes.map((s,i) => i === index ? { ...s, [field]: value } : s) }); }
   function layerEdit(index, layer, field, value) { const s = draft.scenes[index]; sceneEdit(index, 'layers', s.layers.map((l,i) => i === layer ? { ...l, [field]: value } : l)); }
   const label = (a,b) => es ? a : b;
@@ -26,8 +40,8 @@ export default function Motion() {
     <p className="help">{label('Compón escenas, revisa los tiempos y exporta un vídeo. Las versiones anteriores se conservan.', 'Compose scenes, review timing and export a video. Previous versions are kept.')}</p>
     {error && <p role="alert" className="error">{error}</p>}
     <div className="flex flex-wrap gap-3">
-      <label>{label('Punto de partida', 'Starting point')} <select className="field" disabled={busy || dirty} defaultValue="launch" onChange={e => { setDraft(normalise(recipes[e.target.value])); setRecord(null); setHtml(''); setDownload(null); }}>{Object.keys(recipes).map(k => <option key={k} value={k}>{recipes[k].title}</option>)}</select></label>
-      <label>{label('Guardados', 'Saved')} <select className="field" disabled={busy || dirty} value={record?.id || ''} onChange={e => e.target.value && work(async() => { const r = await request('/' + e.target.value); setRecord(r); setDraft(r.composition); setHtml(''); setDownload(null); })}><option value="">{label('Seleccionar', 'Choose')}</option>{saved.map(r => <option key={r.id} value={r.id}>{r.title} · v{r.revision}</option>)}</select></label>
+      <label>{label('Punto de partida', 'Starting point')} <select className="field" disabled={busy || dirty} defaultValue="launch" onChange={e => { const next = normalise(recipes[e.target.value]); setDraft(next); setBaseline(next); setRecord(null); setHtml(''); setDownload(null); }}>{Object.keys(recipes).map(k => <option key={k} value={k}>{recipes[k].title}</option>)}</select></label>
+      <label>{label('Guardados', 'Saved')} <select className="field" disabled={busy || dirty} value={record?.id || ''} onChange={e => e.target.value && work(async() => { const r = await request('/' + e.target.value); setRecord(r); setDraft(r.composition); setBaseline(r.composition); setHtml(''); setDownload(null); })}><option value="">{label('Seleccionar', 'Choose')}</option>{saved.map(r => <option key={r.id} value={r.id}>{r.title} · v{r.revision}</option>)}</select></label>
     </div>
     {draft && <>
       <div className="grid gap-4 lg:grid-cols-[minmax(300px,1fr)_minmax(0,1.4fr)]">
