@@ -76,9 +76,11 @@ hecho por una IA".
 
 Un botón «Faustus» abre el panel de asistente común de la familia sin salir de la app. Faustus guarda las conversaciones
 (también en Faustus Studio), ejecuta el agente con el modelo elegido globalmente y usa las herramientas de esta app. Cada
-turno lleva el render en crítica y el sistema de diseño, diagrama, referencia o composición de motion que haya en pantalla; lo que esté sin guardar en el editor de motion, el generador de sistemas de diseño y la fuente del diagrama. Al terminar un turno, las listas y la vista abierta se refrescan sin perder lo que estuvieras escribiendo.
+turno lleva el render en crítica y el sistema de diseño, diagrama, referencia o composición de motion que haya en pantalla; los borradores completos de esas vistas, el brief, las búsquedas y las fuentes de la biblioteca, la galería y los ajustes de captura. Los valores se capturan antes de leer objetos del servidor. Al terminar un turno, las listas se refrescan sin remontar los formularios. Ajustes guarda sólo los campos cambiados y conserva escritura posterior al envío; Movimiento mantiene pendiente el texto escrito durante Guardar versión.
 El panel lo sirve Hoard Link (`install_spa`) y habla con Faustus a través del relay de la app, así que ningún token llega
 al navegador.
+
+El botón utiliza el icono circular común de Faustus y conserva chat y borrador dentro de diálogos. [Contrato y comprobaciones](docs/FAUSTUS-COPILOT.md).
 
 ## Instalación
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildContext, changedFields, clipText, collectEditor, formSnapshot, isNoObjectId, resolveObjects,
+  buildContext, changedFields, collectEditor, formSnapshot, isNoObjectId, resolveObjects,
 } from "./src/copilot-core.js";
 
 const rows = {
@@ -35,7 +35,7 @@ test("changedFields reports only differing keys, deeply, including cleared value
   assert.deepEqual(changedFields({ a: 1 }, { a: 1 }), {});
 });
 
-test("formSnapshot: edit forms carry object_id, create forms do not, long text is clipped", () => {
+test("formSnapshot: edit forms carry object_id, create forms do not, long drafts stay complete", () => {
   const edit = formSnapshot("motion-form", { objectId: "a1b2", initial: { title: "A", fps: 24 }, current: { title: "B", fps: 24 } });
   assert.deepEqual(edit, { kind: "motion-form", object_id: "a1b2", dirty: true, fields: { title: "B" } });
   const draft = formSnapshot("design-system-draft", { initial: { name: "", mode: "both" }, current: { name: "Ink", mode: "both" } });
@@ -44,9 +44,7 @@ test("formSnapshot: edit forms carry object_id, create forms do not, long text i
   assert.equal(formSnapshot("x", { objectId: "p", initial: { a: 1 }, current: { a: 1 } }).dirty, false);
   const big = formSnapshot("diagram-draft", { initial: { source: "" }, current: { source: "x".repeat(20000) } });
   assert.equal(big.dirty, true);
-  assert.ok(big.fields.source.length < 8100 && big.fields.source.includes("more characters"));
-  assert.equal(clipText("short"), "short");
-  assert.equal(clipText(42), 42);
+  assert.equal(big.fields.source, "x".repeat(20000));
 });
 
 test("collectEditor prefers the last dirty answer and gathers object refs", () => {
@@ -131,8 +129,27 @@ test("window.hoardCopilot: context() never rejects and onTurnEnd fires the refre
     e.detail.provide({ kind: "design-system-draft", dirty: true, fields: { name: "N" } });
     e.detail.provideObjects([{ kind: "design-system", id: "ds_1" }]);   // backend unreachable: dropped, context still resolves
   });
-  assert.deepEqual(await hc.context(), { active_objects: [], view: { editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } } });
+  assert.deepEqual(await hc.context(), { active_objects: [], view: { form_values: [], editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } } });
   target.addEventListener("vitruvius:copilot-updated", () => hits.push(1));
   hc.onTurnEnd();
   assert.equal(hits.length, 1);
+});
+
+test("workspace controls are captured before the native object read finishes", async () => {
+  const target = new EventTarget();
+  const field = { type: "text", tagName: "INPUT", name: "subject", value: "Brief before read", labels: [],
+    getAttribute: () => null, getClientRects: () => [1] };
+  globalThis.window = Object.assign(target, { location: { origin: "http://x.test" },
+    document: { getElementById: () => ({ querySelectorAll: () => [field] }) } });
+  const gate = Promise.withResolvers();
+  globalThis.fetch = async () => { await gate.promise; return { ok: true, text: async () => JSON.stringify({ id: "ds_1", name: "Native system" }) }; };
+  // The installed wrapper remains independent of the current window handle.
+  target.addEventListener("hoard:copilot-context-request", (event) => event.detail.provideObjects([{ kind: "design-system", id: "ds_1" }]));
+  await import("./src/hoard-copilot.js?held-read");
+  const pending = target.hoardCopilot.context();
+  field.value = "Brief after read";
+  gate.resolve();
+  const context = await pending;
+  assert.equal(context.view.form_values[0].value, "Brief before read");
+  assert.equal(context.active_objects[0].object_id, "ds_1");
 });

@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotForm, useCopilotRefresh } from "../copilot-hooks.js";
+import { mergeSettingsForm, settingsForm, settingsPatch } from "../settings-draft.js";
 
 function StatusRow({ label, ok, detail }) {
   return (
@@ -40,37 +42,56 @@ export default function Settings() {
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [visionEnabled, setVisionEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
+  const baseline = useRef({ backendText: "{}", widthsText: "", videoEnabled: true, visionEnabled: true });
+  const draft = useRef({ backendText, widthsText, videoEnabled, visionEnabled });
+  draft.current = { backendText, widthsText, videoEnabled, visionEnabled };
+  const readGeneration = useRef(0);
+  const applySettings = (cfg, previous = baseline.current) => {
+    const next = mergeSettingsForm(previous, draft.current, cfg);
+    baseline.current = settingsForm(cfg);
+    draft.current = next;
+    setSettings(cfg);
+    setBackendText(next.backendText);
+    setWidthsText(next.widthsText);
+    setVideoEnabled(next.videoEnabled);
+    setVisionEnabled(next.visionEnabled);
+  };
 
   const load = async () => {
+    const generation = ++readGeneration.current;
     try {
       const [s, cfg] = await Promise.all([api.status(), api.settings()]);
+      if (generation !== readGeneration.current) return;
       setStatus(s);
-      setSettings(cfg);
-      setBackendText(JSON.stringify(cfg.backend || {}, null, 2));
-      setWidthsText((cfg.widths || [390, 1024, 1440]).join(", "));
-      setVideoEnabled(cfg.video_enabled !== false);
-      setVisionEnabled(cfg.vision_enabled !== false);
+      applySettings(cfg);
     } catch (e) {
       notify(e.message);
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); return () => { ++readGeneration.current; }; }, []);
+  useCopilotRefresh(load);
+  useCopilotForm("settings-form", {
+    initial: { widths: baseline.current.widthsText, video_enabled: baseline.current.videoEnabled, vision_enabled: baseline.current.visionEnabled },
+    current: { widths: widthsText, video_enabled: videoEnabled, vision_enabled: visionEnabled },
+  });
 
   const saveAll = async (e) => {
     e.preventDefault();
-    let backend;
+    const submitted = { ...draft.current };
+    let patch;
     try {
-      backend = JSON.parse(backendText || "{}");
+      patch = settingsPatch(baseline.current, submitted);
       setBackendError(null);
     } catch {
       setBackendError(t("settings_backend_invalid"));
       return;
     }
-    const widths = widthsText.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
+    ++readGeneration.current;
     setBusy(true);
     try {
-      const res = await api.settingsUpdate({ backend, widths: widths.length ? widths : undefined, video_enabled: videoEnabled, vision_enabled: visionEnabled });
-      setSettings(res);
+      const res = await api.settingsUpdate(patch);
+      ++readGeneration.current;
+      applySettings(res, submitted);
       notify(t("saved"));
     } catch (e) {
       notify(e.message);
