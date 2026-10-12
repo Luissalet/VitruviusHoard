@@ -66,6 +66,21 @@ def test_without_a_measurement_the_html_guess_still_works():
     assert run_lint({"layout": {"bad": None, "390": None}}, "")["findings"] is not None  # junk never breaks the lint
 
 
+def test_a_failed_measurement_keeps_the_html_guess_and_a_clean_one_replaces_it():
+    html = "<style>.x{width:1600px}</style>"
+    failed = {"layout": {"390": {"error": "Execution context was destroyed"}, "1440": {"error": "timeout"}}}
+    result = run_lint(failed, html)
+    assert by_id(result, "layout.horizontal-overflow")  # a probe that failed is no evidence the page fits
+    assert not by_id(result, "layout.sideways-scroll")
+    mixed = {"layout": {"390": {"error": "timeout"}, "1440": {"width": 1440, "page_width": 1440, "overflow_px": 0,
+                                                             "overflowing": [], "clipped": [], "overlaps": []}}}
+    result = run_lint(mixed, html)
+    assert not by_id(result, "layout.horizontal-overflow")  # one real measurement takes precedence
+    assert not by_id(result, "layout.sideways-scroll")
+    junk = {"layout": {"390": {"overflow_px": "910"}, "1024": {"overflow_px": True}, "1440": []}}
+    assert by_id(run_lint(junk, html), "layout.horizontal-overflow")
+
+
 def _browser():
     try:
         from playwright.sync_api import sync_playwright
