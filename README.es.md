@@ -72,6 +72,14 @@ hecho por una IA".
 - **MCP + REST**: 38 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
   usa la interfaz incluida (ver `docs/API.md`).
 
+## Panel de Faustus
+
+Un botón «Faustus» abre el panel de asistente común de la familia sin salir de la app. Faustus guarda las conversaciones
+(también en Faustus Studio), ejecuta el agente con el modelo elegido globalmente y usa las herramientas de esta app. Cada
+turno lleva el render en crítica y el sistema de diseño, diagrama, referencia o composición de motion que haya en pantalla; lo que esté sin guardar en el editor de motion, el generador de sistemas de diseño y la fuente del diagrama. Al terminar un turno, las listas y la vista abierta se refrescan sin perder lo que estuvieras escribiendo.
+El panel lo sirve Hoard Link (`install_spa`) y habla con Faustus a través del relay de la app, así que ningún token llega
+al navegador.
+
 ## Instalación
 
 ### Requisitos
