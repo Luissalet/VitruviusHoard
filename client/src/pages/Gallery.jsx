@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
-import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
+import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { fileRelPath } from "../format.js";
 
@@ -141,6 +141,10 @@ export default function Gallery() {
   const [addNote, setAddNote] = useState("");
   const [video, setVideo] = useState(true);
   const [analyze, setAnalyze] = useState(true);
+  useCopilotForm("reference-draft", {
+    initial: { url: "", tags: "", note: "", video: true, analyze: true },
+    current: { url: addUrl, tags: addTags, note: addNote, video, analyze },
+  });
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState(null);
 

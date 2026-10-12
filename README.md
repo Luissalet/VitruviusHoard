@@ -266,8 +266,10 @@ MIT — see `LICENSE`.
 
 A «Faustus» button opens the family's shared assistant panel without leaving the app. Faustus keeps the conversations
 (also listed in Faustus Studio), runs the agent with the globally selected model and uses this app's own tools. Each turn
-carries the render under critique, the design system, diagram, reference or motion composition on screen; unsaved edits of the motion editor, the design-system generator and the diagram source. After a turn the lists and the open view refresh in place, without discarding what you were typing. The
+carries the render under critique and the design system, diagram, reference or motion composition on screen; complete drafts for those views, library briefs/search/source forms, the gallery and capture settings. Values are captured before asynchronous object reads. Turn completion refreshes lists without remounting forms. Settings saves only changed fields and keeps later typing; Motion retains edits entered while Save version is pending. The
 panel comes from Hoard Link (`install_spa`) and talks to Faustus through this app's relay, so no token reaches the browser.
+
+The shared circular Faustus launcher preserves chat and draft inside dialogs. See [the context contract and checks](docs/FAUSTUS-COPILOT.md).
 
 ## Family expansion · 2026-10-04
 

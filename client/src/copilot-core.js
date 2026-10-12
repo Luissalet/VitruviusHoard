@@ -4,8 +4,6 @@ export const CONTEXT_REQUEST = "hoard:copilot-context-request";
 export const REFRESH_EVENT = "vitruvius:copilot-updated";
 
 const NO_OBJECT = new Set(["", "new", "undefined", "null"]);
-const MAX_FIELD_CHARS = 8000;
-const MAX_OBJECTS = 8;
 
 /** True when a reference names no stored object ("new", empty, placeholders). */
 export function isNoObjectId(id) {
@@ -20,17 +18,10 @@ export function changedFields(initial, current) {
   return Object.fromEntries(Object.entries(current || {}).filter(([key, value]) => !same(value, base[key])));
 }
 
-/** Long text (a pasted source, a page) is cut so one turn never carries megabytes. */
-export function clipText(value, max = MAX_FIELD_CHARS) {
-  if (typeof value !== "string" || value.length <= max) return value;
-  return `${value.slice(0, max)}… [${value.length - max} more characters]`;
-}
-
 /** Snapshot a form hands to the copilot. `objectId` is omitted for create forms. */
 export function formSnapshot(kind, { objectId, initial, current } = {}) {
   const fields = changedFields(initial, current);
-  const shown = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, clipText(v)]));
-  return { kind, ...(isNoObjectId(objectId) ? {} : { object_id: String(objectId) }), dirty: Object.keys(fields).length > 0, fields: shown };
+  return { kind, ...(isNoObjectId(objectId) ? {} : { object_id: String(objectId) }), dirty: Object.keys(fields).length > 0, fields };
 }
 
 /** Ask every mounted form and view (they answer synchronously): the last dirty form wins, else the last one; views name the objects they show. */
@@ -65,7 +56,7 @@ export async function resolveObjects(refs, api) {
     const kind = ref && OBJECT_KINDS[ref.kind];
     if (!kind || isNoObjectId(ref.id)) continue;
     const key = `${ref.kind}:${ref.id}`;
-    if (seen.has(key) || wanted.length >= MAX_OBJECTS) continue;
+    if (seen.has(key)) continue;
     seen.add(key);
     wanted.push({ ref, kind });
   }

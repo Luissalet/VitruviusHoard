@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
-import { useCopilotRefresh } from "../copilot-hooks.js";
+import { useCopilotForm, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, StatusPill, LicenseBadge, CopyButton, Tabs, ColorSwatch } from "../components/ui.jsx";
 
 const KINDS = ["skill", "guide", "rule", "catalog", "reference", "readme", "other"];
@@ -15,6 +15,7 @@ function SearchPanel({ t }) {
   const [items, setItems] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  useCopilotForm("library-search", { initial: { query: "", kind: "", source: "", area: "" }, current: { query, kind, source, area } });
 
   const run = async (e) => {
     e?.preventDefault();
@@ -121,6 +122,7 @@ function EmbeddingsBar({ t, notify }) {
 function SourcesPanel({ t, notify }) {
   const [sources, setSources] = useState(null);
   const [form, setForm] = useState({ url: "", id: "", license: "", category: "" });
+  useCopilotForm("source-draft", { initial: { url: "", id: "", license: "", category: "" }, current: form });
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -316,6 +318,10 @@ function BriefPanel({ t }) {
   const [variance, setVariance] = useState(5);
   const [motion, setMotion] = useState(5);
   const [density, setDensity] = useState(5);
+  useCopilotForm("design-brief-draft", {
+    initial: { subject: "", vibe: "", product_type: "", platform: "", mode: "marketing", variance: 5, motion: 5, density: 5 },
+    current: { subject, vibe, product_type: productType, platform, mode, variance, motion, density },
+  });
   const [brief, setBrief] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);

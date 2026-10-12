@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
-import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
+import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, SeverityChip, ScoreDial } from "../components/ui.jsx";
 import { clock, fileRelPath } from "../format.js";
 
@@ -202,6 +202,7 @@ export default function Critique() {
   const [url, setUrl] = useState("");
   const [widths, setWidths] = useState(WIDTHS);
   const [dark, setDark] = useState(false);
+  useCopilotForm("critique-draft", { initial: { html: "", url: "", widths: WIDTHS, dark: false }, current: { html, url, widths, dark } });
   const [render, setRender] = useState(null);
   const [critique, setCritique] = useState(null);
   const [busyRender, setBusyRender] = useState(false);

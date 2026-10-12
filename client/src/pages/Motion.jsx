@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../App.jsx';
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from '../copilot-hooks.js';
 import { api } from '../api.js';
@@ -15,6 +15,8 @@ export default function Motion() {
   const { lang } = useApp(), es = lang === 'es';
   const [recipes, setRecipes] = useState({}), [saved, setSaved] = useState([]), [draft, setDraft] = useState(null), [record, setRecord] = useState(null);
   const [baseline, setBaseline] = useState(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [html, setHtml] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [download, setDownload] = useState(null), [dirty, setDirty] = useState(false);
   const refresh = async () => setSaved((await request('')).compositions);
   useEffect(() => { request('/templates').then(r => { setRecipes(r.templates); const first = normalise(r.templates.launch); setDraft(first); setBaseline(first); }).catch(e => setError(e.message)); refresh().catch(e => setError(e.message)); }, []);
@@ -31,7 +33,7 @@ export default function Motion() {
   useCopilotForm(record ? 'motion-form' : 'motion-draft', { objectId: record?.id, initial: baseline || {}, current: draft || {} });
   const edit = value => { setDraft(value); setDirty(true); setDownload(null); };
   async function work(fn) { setError(''); setBusy(true); try { await fn(); } catch(e) { setError(e.message); } finally { setBusy(false); } }
-  async function save() { const r = await request('', { composition: draft, ...(record ? { id: record.id, expected_revision: record.revision } : {}) }); setRecord(r); setBaseline(draft); setDirty(false); await refresh(); return r; }
+  async function save() { const submitted = draftRef.current; const r = await request('', { composition: submitted, ...(record ? { id: record.id, expected_revision: record.revision } : {}) }); setRecord(r); setBaseline(submitted); setDirty(JSON.stringify(draftRef.current) !== JSON.stringify(submitted)); await refresh(); return r; }
   function sceneEdit(index, field, value) { edit({ ...draft, scenes: draft.scenes.map((s,i) => i === index ? { ...s, [field]: value } : s) }); }
   function layerEdit(index, layer, field, value) { const s = draft.scenes[index]; sceneEdit(index, 'layers', s.layers.map((l,i) => i === layer ? { ...l, [field]: value } : l)); }
   const label = (a,b) => es ? a : b;

@@ -1,0 +1,9 @@
+# Faustus copilot in Vitruvius
+
+Faustus provides the shared chat panel, conversation history, composer drafts and agent execution. Vitruvius contributes the native design tools, real active-object references and current workspace fields through `window.hoardCopilot` and the canonical HoardLink relay.
+
+`view.editor` carries changed fields from motion, design-system, diagram, critique, gallery, library search/source/brief and capture-settings forms. Long drafts are preserved in full. `view.form_values` adds current displayed controls captured before object reads. Password/file/hidden controls and the advanced connection JSON are omitted; connection credentials remain outside the conversation context. Active objects resolve through their native reads; missing/new references are omitted and no project is invented.
+
+Turn completion refreshes lists in place. Settings merges server values with unsaved differences, sends partial updates and preserves typing during Save. Motion preserves edits entered after a version was submitted. The shared launcher retains the conversation and composer draft in native dialogs and follows the application's language.
+
+Private verification for #405 R2: 361 Python tests passed; context/draft tests and frontend build passed. Actual shared-panel turns retained an8,455-character Mermaid draft including its final marker and a pending library brief. A normal turn performed lookup_tools→native tokens_generate, created a saved system, refreshed the list and retained a different pending system name. Held settings and motion saves retained later edits and subsequent saves persisted them. Native MCP38/catalog/status and canonical conversation readbacks verify these results. The provider was simulated without GPU or production-data mutation; this verifies integration rather than global-model autonomy.
