@@ -23,7 +23,7 @@ def test_manifest_matches_code():
 
 def test_manifest_has_only_allowed_top_level_keys():
     manifest = json.loads((ROOT / "faustus-plugin.json").read_text(encoding="utf-8"))
-    allowed = {"schema", "id", "name", "purpose", "capabilities", "placeholders", "defaults", "app", "mcp", "notes"}
+    allowed = {"schema", "id", "name", "purpose", "capabilities", "placeholders", "defaults", "app", "mcp", "notes", "x-family"}
     assert set(manifest.keys()) <= allowed
 
 

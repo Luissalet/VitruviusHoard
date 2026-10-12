@@ -262,6 +262,13 @@ URL of a page you like into the Gallery (or `reference_add`) and Vitruvius captu
 
 MIT — see `LICENSE`.
 
+## Faustus panel
+
+A «Faustus» button opens the family's shared assistant panel without leaving the app. Faustus keeps the conversations
+(also listed in Faustus Studio), runs the agent with the globally selected model and uses this app's own tools. Each turn
+carries the render under critique, the design system, diagram, reference or motion composition on screen; unsaved edits of the motion editor, the design-system generator and the diagram source. After a turn the lists and the open view refresh in place, without discarding what you were typing. The
+panel comes from Hoard Link (`install_spa`) and talks to Faustus through this app's relay, so no token reaches the browser.
+
 ## Family expansion · 2026-10-04
 
 Motion is an editable scene workbench: text and vector layers, timing, six entrance effects, three aspect ratios and retained revisions. `motion_templates`, `motion_save`, `motion_list`, `motion_get`, `motion_render` share the REST handlers. Preview or export self-contained HTML/SVG; render silent MP4 by seeking every frame in the existing Chromium worker and encoding with FFmpeg. Keep audio/editing in Lumiere. Limits: 60 s, 30 fps, 1920 px and 40 layers per scene. Export requires Chromium and FFmpeg; it does not call a generation model. Original implementation, no NullMotion code copied.
