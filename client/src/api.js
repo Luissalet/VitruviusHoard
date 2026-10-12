@@ -71,6 +71,9 @@ export const api = {
   referenceDelete: (id) => request("DELETE", `/api/references/${encodeURIComponent(id)}`),
   referenceFileUrl: (id, name) => `/api/references/${encodeURIComponent(id)}/files/${name}`,
 
+  motions: () => request("GET", "/api/motions"),
+  motion: (id) => request("GET", `/api/motions/${encodeURIComponent(id)}`),
+
   settings: () => request("GET", "/api/settings"),
   settingsUpdate: (body) => request("PUT", "/api/settings", { body }),
 };
