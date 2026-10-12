@@ -131,7 +131,7 @@ test("window.hoardCopilot: context() never rejects and onTurnEnd fires the refre
     e.detail.provide({ kind: "design-system-draft", dirty: true, fields: { name: "N" } });
     e.detail.provideObjects([{ kind: "design-system", id: "ds_1" }]);   // backend unreachable: dropped, context still resolves
   });
-  assert.deepEqual(await hc.context(), { active_objects: [], editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } });
+  assert.deepEqual(await hc.context(), { active_objects: [], view: { editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } } });
   target.addEventListener("vitruvius:copilot-updated", () => hits.push(1));
   hc.onTurnEnd();
   assert.equal(hits.length, 1);
