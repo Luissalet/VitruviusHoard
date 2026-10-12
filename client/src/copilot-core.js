@@ -89,7 +89,7 @@ export async function resolveObjects(refs, api) {
  *  - ask: `(detail) => void` that dispatches the context request to the mounted forms and views
  */
 export async function buildContext({ api, ask }) {
-  const out = {};
+  const out = { active_objects: [] }; // possibly empty: overrides the launcher's guesses from the URL
   let editor;
   let refs = [];
   try {
@@ -101,7 +101,7 @@ export async function buildContext({ api, ask }) {
   // The pages take no id from the route (`#/tokens` is the page, not an object), so only the objects a view reports count.
   try {
     const objects = await resolveObjects(refs, api);
-    if (objects.length) out.active_objects = objects;
+    out.active_objects = objects; // possibly empty: overrides the launcher's guesses from the URL
   } catch { /* no objects */ }
 
   if (editor) out.editor = editor;
