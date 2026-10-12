@@ -107,16 +107,16 @@ test("create forms are reported with no object and no API call", async () => {
   const ctx = await buildContext({ api: makeApi(calls), ask: ({ provide }) => {
     provide(formSnapshot("motion-draft", { initial: { title: "Nuevo proyecto" }, current: { title: "Teaser" } }));
   } });
-  assert.deepEqual(ctx, { editor: { kind: "motion-draft", dirty: true, fields: { title: "Teaser" } } });
+  assert.deepEqual(ctx, { active_objects: [], editor: { kind: "motion-draft", dirty: true, fields: { title: "Teaser" } } });
   assert.deepEqual(calls, []);
 });
 
 test("a failing form or a rejecting API leaves context resolved", async () => {
   const down = { render: () => Promise.reject(new Error("down")) };
   const ctx = await buildContext({ api: down, ask: ({ provideObjects }) => { provideObjects([{ kind: "render", id: "rnd_1" }]); throw new Error("form"); } });
-  assert.deepEqual(ctx, {});
-  assert.deepEqual(await buildContext({ api: {}, ask: noForms }), {});
-  assert.deepEqual(await buildContext({ api: {}, ask: undefined }), {});
+  assert.deepEqual(ctx, { active_objects: [] });
+  assert.deepEqual(await buildContext({ api: {}, ask: noForms }), { active_objects: [] });
+  assert.deepEqual(await buildContext({ api: {}, ask: undefined }), { active_objects: [] });
 });
 
 test("window.hoardCopilot: context() never rejects and onTurnEnd fires the refresh event", async () => {
@@ -131,7 +131,7 @@ test("window.hoardCopilot: context() never rejects and onTurnEnd fires the refre
     e.detail.provide({ kind: "design-system-draft", dirty: true, fields: { name: "N" } });
     e.detail.provideObjects([{ kind: "design-system", id: "ds_1" }]);   // backend unreachable: dropped, context still resolves
   });
-  assert.deepEqual(await hc.context(), { editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } });
+  assert.deepEqual(await hc.context(), { active_objects: [], editor: { kind: "design-system-draft", dirty: true, fields: { name: "N" } } });
   target.addEventListener("vitruvius:copilot-updated", () => hits.push(1));
   hc.onTurnEnd();
   assert.equal(hits.length, 1);
