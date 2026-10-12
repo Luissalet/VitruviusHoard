@@ -18,14 +18,21 @@ export default function Motion() {
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const [html, setHtml] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [download, setDownload] = useState(null), [dirty, setDirty] = useState(false);
+  const stateRef = useRef({ record, draft, dirty });
+  stateRef.current = { record, draft, dirty };
   const refresh = async () => setSaved((await request('')).compositions);
   useEffect(() => { request('/templates').then(r => { setRecipes(r.templates); const first = normalise(r.templates.launch); setDraft(first); setBaseline(first); }).catch(e => setError(e.message)); refresh().catch(e => setError(e.message)); }, []);
   // An agent turn may have saved a newer revision: show it in place unless there are unsaved edits (a later save then reports the revision conflict).
   async function reloadFromAgent() {
+    const before = stateRef.current;
     await refresh();
-    if (!record || dirty) return;
-    const latest = await api.motion(record.id);
-    if (latest.revision === record.revision) return;
+    const changed = () => {
+      const now = stateRef.current;
+      return !before.record || now.record?.id !== before.record.id || now.dirty || now.draft !== before.draft;
+    };
+    if (changed()) return;
+    const latest = await api.motion(before.record.id);
+    if (changed() || latest.revision <= stateRef.current.record.revision) return;
     setRecord(latest); setDraft(latest.composition); setBaseline(latest.composition); setHtml(''); setDownload(null);
   }
   useCopilotRefresh(reloadFromAgent);
