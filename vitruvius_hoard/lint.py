@@ -222,10 +222,18 @@ def check_layout_horizontal_overflow(probe: dict, html: str) -> list[Finding]:
 
 
 def _layout_widths(probe: dict) -> list[tuple[int, dict]]:
+    """Widths the browser really measured. An entry the probe could not fill
+    (`{"error": ...}` from the capture, or junk) is no evidence that the page
+    fits, so it is left out and the HTML guess can still speak."""
     out = []
     for key, value in ((probe or {}).get("layout") or {}).items():
+        if not isinstance(value, dict) or value.get("error"):
+            continue
+        px = value.get("overflow_px")
+        if isinstance(px, bool) or not isinstance(px, (int, float)):
+            continue
         try:
-            out.append((int(key), value or {}))
+            out.append((int(key), value))
         except (TypeError, ValueError):
             continue
     return sorted(out, key=lambda kv: kv[0])
