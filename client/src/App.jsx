@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { api } from "./api.js";
 import { initialLang, makeT, saveLang } from "./i18n.js";
 import { Icon } from "./components/ui.jsx";
+import { useCopilotRefresh } from "./copilot-hooks.js";
 import Library from "./pages/Library.jsx";
 import Critique from "./pages/Critique.jsx";
 import Tokens from "./pages/Tokens.jsx";
@@ -77,6 +78,8 @@ export default function App() {
     const timer = setInterval(refresh, 15000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  useCopilotRefresh(refresh);
 
   const notify = useCallback((message) => setToast(message), []);
   const value = useMemo(() => ({ health, refresh, notify, t, lang }), [health, refresh, notify, t, lang]);

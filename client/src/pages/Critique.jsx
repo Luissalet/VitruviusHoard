@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, SeverityChip, ScoreDial } from "../components/ui.jsx";
 import { clock, fileRelPath } from "../format.js";
 
@@ -218,6 +219,8 @@ export default function Critique() {
     }
   };
   useEffect(() => { loadHistory(); }, []);
+  useCopilotRefresh(loadHistory);
+  useCopilotObjects(render ? [{ kind: "render", id: render.id }] : []);
 
   const toggleWidth = (w) => {
     setWidths((prev) => (prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w].sort((a, b) => a - b)));

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
+import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { fileRelPath } from "../format.js";
 
@@ -152,6 +153,8 @@ export default function Gallery() {
     }
   };
   useEffect(() => { load(); }, []);
+  useCopilotRefresh(load);
+  useCopilotObjects(openId ? [{ kind: "reference", id: openId }] : []);
 
   const runFilter = (e) => {
     e.preventDefault();
