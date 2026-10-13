@@ -135,3 +135,36 @@ def test_app_render_retains_source_context(services):
         assert context == {"id": project["id"], "revision": project["revision"], "source_sha256": project["source_sha256"]}
     finally:
         services.app_projects.stop(project["id"])
+
+
+def test_browser_fields_can_share_form_member_names(tmp_path):
+    import os
+    if os.environ.get("VITRUVIUS_BROWSER_TESTS") != "1":
+        pytest.skip("Set VITRUVIUS_BROWSER_TESTS=1 to run the real browser flow")
+    from playwright.sync_api import sync_playwright, expect
+    names = ["title", "elements", "querySelector", "addEventListener", "dataset", "namedItem"]
+    projects = AppProjects(tmp_path)
+    try:
+        project = projects.create("Form member fields", fields=[{"name": name, "label": name, "type": "text"} for name in names])
+        preview = projects.preview(project["id"])
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True, args=["--disable-gpu", "--use-angle=swiftshader"])
+            try:
+                page = browser.new_page()
+                page.goto(preview["url"] + "/records")
+                for name in names:
+                    page.get_by_label(name, exact=True).fill("value " + name)
+                page.get_by_role("button", name="Add record", exact=True).click()
+                expect(page.get_by_role("heading", name="value title", exact=True)).to_be_visible()
+                page.get_by_label("elements", exact=True).fill("updated elements")
+                page.get_by_role("button", name="Save changes", exact=True).click()
+                expect(page.get_by_label("elements", exact=True)).to_have_value("updated elements")
+                _, raw = request(preview["url"] + "/api/records")
+                rows = json.loads(raw)["records"]
+                assert len(rows) == 1
+                assert rows[0]["elements"] == "updated elements"
+                assert all(rows[0][name] == "value " + name for name in names if name != "elements")
+            finally:
+                browser.close()
+    finally:
+        projects.close()
