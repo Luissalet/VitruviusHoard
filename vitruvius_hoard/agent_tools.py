@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Literal, Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
 from .services import Services
+from .app_projects import templates as app_templates
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -163,6 +164,45 @@ class ReferenceAddArgs(BaseModel):
     note: str = Field("", max_length=2000)
     video: bool = True
     analyze: bool = True
+
+
+class AppCreateArgs(BaseModel):
+    name: str
+    template: str = "work-board"
+    description: str = ""
+    accent: Optional[str] = None
+    fields: Optional[list[dict]] = None
+
+
+class AppIdArgs(BaseModel):
+    id: str = ""
+    revision: Optional[str] = None
+
+
+class AppUpdateArgs(BaseModel):
+    id: str = ""
+    files: dict[str, str]
+    expected_revision: str
+
+
+class AppPreviewArgs(AppIdArgs):
+    operation: Literal["start", "stop"] = "start"
+
+
+class AppExportArgs(AppIdArgs):
+    include_data: bool = False
+
+
+class AppRenderArgs(AppIdArgs):
+    widths: Optional[list[int]] = None
+
+
+class AppCallArgs(BaseModel):
+    id: str = ""
+    operation: Literal["list", "get", "create", "update", "delete"]
+    data: Optional[dict] = None
+    record_id: Optional[str] = None
+    query: str = ""
 
 
 class CollectionImportArgs(BaseModel):
@@ -530,6 +570,24 @@ TOOLS: list[Tool] = [
         "Delete a generated design system (only when the user asks). Eliminar design system.\n"
         "Sinónimos: borrar tokens, eliminar sistema de diseño.",
         TokensDeleteArgs, ann(False, True, True), run_tokens_delete),
+    Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
+        Empty, ann(True), lambda services, args: {"templates": app_templates()}),
+    Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
+        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump()), capped=False),
+    Tool("app_project_list", "List application projects, saved revisions and owned preview state. Listar aplicaciones.",
+        Empty, ann(True), lambda services, args: {"projects": services.app_projects.list()}, capped=False),
+    Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
+        AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
+    Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
+        AppUpdateArgs, ann(False, False, True), lambda services, args: services.app_projects.update(args.id, args.files, args.expected_revision), capped=False),
+    Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
+        AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
+    Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
+        AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
+    Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
+        AppRenderArgs, ann(False, False, True), lambda services, args: services.app_project_render(args.id, args.revision, args.widths)),
+    Tool("app_project_call", "Use a project's typed record API: list, get, create, update or delete. Operar datos de aplicación.",
+        AppCallArgs, ann(False, True, True), lambda services, args: services.app_project_call(args.id, args.operation, args.data, args.record_id, args.query)),
     Tool("reference_collections", "List imported local reference collections and their counts. Colecciones de referencias.",
         Empty, ann(True), lambda services, args: {"collections": services.reference_collections()}),
     Tool("reference_import_collection", "Import a local snapshot collection into the gallery. Importar colección local.\nRetains provenance and reuses identical versions; no source HTML is executed.",

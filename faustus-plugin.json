@@ -34,7 +34,11 @@
     "excalidraw-import",
     "drawio-import",
     "reference-collections",
-    "original-html-patterns"
+    "original-html-patterns",
+    "application-projects",
+    "standalone-application-export",
+    "typed-application-actions",
+    "owned-local-previews"
   ],
   "placeholders": [
     "VITRUVIUS_DIR",

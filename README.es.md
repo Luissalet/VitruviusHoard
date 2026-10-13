@@ -298,3 +298,9 @@ La galería incorpora colecciones de capturas locales mediante su formulario o `
 Aplicar patrones conserva el borrador del editor hasta pulsar **Restaurar borrador** o salir de la página. Las tarjetas importadas muestran colección, origen y estado de licencia.
 
 Aplicaciones sucesivas de patrones conservan cada borrador intermedio en una pila durante la visita; restaurar los recupera en orden inverso. Los metadatos de procedencia estructurados se muestran como texto y conservan su JSON original.
+
+## Proyectos de aplicaciones completas
+
+Aplicaciones crea proyectos propios de tablero de trabajo, biblioteca de referencias e inventario, con páginas, estructura, CSS, JavaScript y servidor Python editables. Las rutas se descubren por archivos, incluidas páginas con parámetros; las API JSON y acciones de servidor validan los tipos declarados. SQLite conserva los datos al cambiar la fuente o reiniciar la vista previa. Las declaraciones TypeScript y el cliente anotado describen los contratos del punto de partida. El ZIP autónomo funciona con la biblioteca estándar de Python, sin requerir Vitruvius ni otro framework. La exportación opcional de datos usa una copia SQLite en línea.
+
+Herramientas nativas: `app_templates`, `app_project_create`, `app_project_list`, `app_project_get`, `app_project_update`, `app_project_preview`, `app_project_export`, `app_project_render`, `app_project_call`. Leer y editar devuelve los archivos completos. Los cambios de archivos independientes se combinan; si se modifica el mismo archivo, se conserva la fuente actual y se informa del conflicto. Vista previa y exportación usan una revisión capturada. Las capturas entran en el historial y ciclo de crítica existente. Los cambios de esquema o código personalizados pertenecen al proyecto; estas aplicaciones no certifican adaptadores de nube ni todos los renderizadores de componentes.
