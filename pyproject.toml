@@ -32,6 +32,9 @@ vitruvius-hoard = "vitruvius_hoard.__main__:main"
 [tool.setuptools.packages.find]
 include = ["vitruvius_hoard*"]
 
+[tool.setuptools.package-data]
+vitruvius_hoard = ["static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

@@ -38,7 +38,9 @@
     "application-projects",
     "standalone-application-export",
     "typed-application-actions",
-    "owned-local-previews"
+    "owned-local-previews",
+    "owned-functional-page-checker",
+    "explicit-page-behavior-criteria"
   ],
   "placeholders": [
     "VITRUVIUS_DIR",

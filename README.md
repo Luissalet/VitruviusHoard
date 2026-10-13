@@ -117,7 +117,7 @@ host/origin guard, error handlers, `/api/health`, PWA files and SPA fallback, po
 least 32 characters), config readers, the SQLite wrapper, the agent router and the MCP bridge. Browser discovery
 (system Chrome / Edge, Playwright's Chromium), the URL safety policy, page fetching for `page_assay` (through the
 family web service when it runs), page metadata, markdown chunking, query building, citations, rank fusion, the
-process runner (git, ffmpeg, assay) and the embedding client are shared too. `PORT` is no longer read as a port
+process runner (git, ffmpeg, the owned page checker) and the embedding client are shared too. `PORT` is no longer read as a port
 fallback; use `VITRUVIUS_PORT`.
 
 ## MCP setup
@@ -154,7 +154,8 @@ The bridge never opens the database itself: it proxies every call to `POST /api/
 | `render_preview` | no | Render HTML or a URL in Chromium, screenshot at widths, run lint. |
 | `design_lint` | yes | Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). |
 | `design_critique` | no | Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. |
-| `page_assay` | yes | Functional check of a generated page in a real browser: does every control work? Runs [assay](https://github.com/awss1i/assay) (`pip install assay-ui`) — no tests written, no model. |
+| `page_check` | yes | Check page controls in a real browser with the incorporated Vitruvius checker. Optional explicit `criteria` verify requested behavior; automatic coverage cannot establish every intended outcome. No model or external checker CLI. |
+| `page_assay` | yes | Historical alias of `page_check`, preserving existing calls and saved reports. |
 | `render_compare` | yes | Pixel-diff two renders at a given width: percent changed + a diff image. |
 | `tokens_generate` | no | Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. |
 | `tokens_get` | yes | Get a generated design system in json, css, tailwind or w3c format; the json carries `roles` too. |
@@ -290,3 +291,5 @@ Successive pattern applications retain every intermediate editor draft in a stac
 Applications creates original work-board, reference-library and inventory projects with editable pages, layout, CSS, JavaScript and Python server source. Filesystem routes include parameter pages; JSON record APIs and server actions validate the declared data types. SQLite data survives source changes and preview restarts. The generated TypeScript declarations and annotated client describe the starter's contracts. A standalone ZIP runs with Python's standard library; it does not require the workbench or a third-party framework. Optional data export uses an online SQLite snapshot.
 
 Native tools: `app_templates`, `app_project_create`, `app_project_list`, `app_project_get`, `app_project_update`, `app_project_preview`, `app_project_export`, `app_project_render`, `app_project_call`. Source reads and updates return complete file content. Disjoint file changes merge; conflicting edits preserve the existing source and report the affected file. Preview and export use a captured source revision. Capture enters the existing render history and critique workflow. Custom schema/code edits remain the project's responsibility; the starter is an editable application, not a claim of supported cloud adapters or a replacement for all component renderers.
+
+In **Critique → Expected result after clicking**, enter a control selector and the text expected after clicking it. The browser submits the same explicit criterion as the API/MCP. A passed report describes the cases exercised, rather than certifying all intended page behavior.

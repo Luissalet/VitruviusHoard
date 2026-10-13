@@ -400,7 +400,7 @@ class Services:
 
     # ---------------- functional check (assay) ----------------
     def assay_page(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,
-                   path: Optional[str] = None, timeout_s: int = 300) -> dict[str, Any]:
+                   path: Optional[str] = None, timeout_s: int = 300, criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
         if render_id:
             source = self.config.renders_dir / render_id / "source.html"
             if not source.is_file():
@@ -411,7 +411,7 @@ class Services:
             html = self._fetch_page(url)
         if html is None and not path:
             raise ValueError("page_assay needs html, url, render_id or a local path")
-        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner)
+        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner, criteria=criteria)
         self._emit_event("vitruvius.assay.done", {"id": result.get("id"), "works": result.get("works"), "failed": result.get("failed")})
         return result
 

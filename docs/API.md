@@ -403,15 +403,15 @@ an unknown tool, `400` on an argument validation error.
 PWA installability files; the client does not need to call these directly.
 
 
-## POST /api/assay — functional check with assay
+## POST /api/page-check and POST /api/assay
 
-Request: `{"html"?: string, "url"?: string, "render_id"?: string, "path"?: string, "timeout_s"?: number (30-900, default 300)}` — exactly one page source.
+Request: `{"html"?: string, "url"?: string, "render_id"?: string, "path"?: string, "timeout_s"?: number (30-900, default 300), "criteria"?: [object]}` — one page source. The owned `page_check` MCP operation and historical `page_assay` alias use the same service. Each optional criterion has `id`, `what`, `acts`, `expect` and `control`; for example `{"id":"counter","what":"counter increases","acts":[{"click":"#inc"}],"expect":{"want":"1"},"control":"#inc"}`.
 
 Response (200): `{"id": string, "works": boolean, "planned": number, "passed": number, "failed": number, "surface": [{"kind": string, "label": string, "selector": string, "enabled": boolean}], "failing": [{"id": string, "what": string, "detail": string, "measured": string, "acts": [object]}], "cases_sample": [{"id": string, "what": string, "outcome": "passed"|"failed"}], "ms": number, "folder": string, "entry": string, "exit_code": number}`
 
-When assay is not installed or cannot open the page: `{"error": string, "hint": string}` with status 200 (the UI shows the hint). 404 for a render without a saved source; 400 without a page source.
+The measuring/planning/execution core is incorporated in `functional_check`, with its MIT notice and pinned distribution hashes. No Assay package or external CLI is used. Response also includes `engine` and `unchecked`; unchecked cases do not imply `works=true`. Successful automatic coverage describes only its measured cases; required behavior can be supplied through explicit criteria. A missing browser dependency or a page that cannot be opened returns `{"error": string, "hint": string}` with status 200 (the UI shows the hint). 404 for a render without saved source; 400 without a page source.
 
-`GET /api/status` gains `"assay": boolean` (installed or not).
+`GET /api/status` retains `"assay": boolean` for the incorporated checker's browser dependency.
 
 
 ## Dense search (multilingual vectors)

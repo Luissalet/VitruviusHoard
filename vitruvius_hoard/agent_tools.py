@@ -96,6 +96,7 @@ class AssayArgs(BaseModel):
     render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
     timeout_s: int = Field(300, ge=30, le=900)
+    criteria: list[dict[str, Any]] = Field(default_factory=list, description="Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.")
 
 
 class CritiqueArgs(BaseModel):
@@ -351,7 +352,7 @@ def run_design_lint(services: Services, args: LintArgs) -> dict:
 def run_page_assay(services: Services, args: AssayArgs) -> dict:
     if not (args.html or args.url or args.render_id or args.path):
         raise ValueError("page_assay needs html, url, render_id or path")
-    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s)
+    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s, criteria=args.criteria)
 
 
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
@@ -539,9 +540,9 @@ TOOLS: list[Tool] = [
         "Sinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
         CritiqueArgs, ann(False, False, False), run_design_critique),
     Tool("page_assay",
-        "Functional check of a page in a real browser: does every control work? No tests needed. ¿Funciona la página?\n"
-        "Runs assay (pip install assay-ui): measures every control, derives a test plan, drives it and reports contradictions\n"
-        "(dead buttons, `undefined` shown, a control answering differently to the same input). Takes ~15-60 s.\n"
+        "Check observable page behavior in a real browser. Comprobar controles de una página.\n"
+        "Uses Vitruvius's incorporated page checker: measures controls, derives a test plan, drives it and reports contradictions\n"
+        "Explicit criteria verify requested effects; generic coverage cannot infer every intended effect. Takes ~15-60 s.\n"
         "Sinónimos: probar la página, comprobar botones, test funcional, assay, ¿funciona?, smoke test de UI.",
         AssayArgs, ann(True, False, False), run_page_assay),
     Tool("render_compare",
@@ -691,6 +692,8 @@ TOOLS.extend([
 from .diagrams.tools import tools as _diagram_tools  # noqa: E402
 
 TOOLS.extend(_diagram_tools(Empty))
+TOOLS.append(Tool("page_check", "Measure and test a page using Vitruvius's incorporated browser checker. Comprobar controles de una página.\nAccepts HTML, URL, a captured render or a local path. Reports actual cases, measurements and failures without a model or external application.",
+                  AssayArgs, ann(True, False, False), run_page_assay))
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
