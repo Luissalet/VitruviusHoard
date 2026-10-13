@@ -284,3 +284,9 @@ The gallery imports local snapshot collections through `reference_import_collect
 Applying a pattern retains the editor draft until **Restore draft** is used or the page is left. Imported cards show collection, origin and license status.
 
 Successive pattern applications retain every intermediate editor draft in a stack for this page visit; restore recovers them in reverse order. Structured provenance metadata is rendered as text without discarding the original JSON.
+
+## Complete application projects
+
+Applications creates original work-board, reference-library and inventory projects with editable pages, layout, CSS, JavaScript and Python server source. Filesystem routes include parameter pages; JSON record APIs and server actions validate the declared data types. SQLite data survives source changes and preview restarts. The generated TypeScript declarations and annotated client describe the starter's contracts. A standalone ZIP runs with Python's standard library; it does not require the workbench or a third-party framework. Optional data export uses an online SQLite snapshot.
+
+Native tools: `app_templates`, `app_project_create`, `app_project_list`, `app_project_get`, `app_project_update`, `app_project_preview`, `app_project_export`, `app_project_render`, `app_project_call`. Source reads and updates return complete file content. Disjoint file changes merge; conflicting edits preserve the existing source and report the affected file. Preview and export use a captured source revision. Capture enters the existing render history and critique workflow. Custom schema/code edits remain the project's responsibility; the starter is an editable application, not a claim of supported cloud adapters or a replacement for all component renderers.

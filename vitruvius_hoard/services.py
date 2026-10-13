@@ -21,6 +21,7 @@ from . import references as references_mod
 from . import reference_collections, design_patterns
 from . import tokens as tokens_mod
 from .browser import BrowserWorker
+from .app_projects import AppProjects
 from .config import Config
 from .db import Database
 from .hoard_link import fam_web
@@ -72,6 +73,8 @@ class Services:
         write_url(config)
         self.db = Database(config.db_path)
 
+        self.app_projects = AppProjects(config.data_dir)
+        self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")
         self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s, profile=config.url_profile)
 
         if link is not None:
@@ -106,12 +109,17 @@ class Services:
     # ---------------- lifecycle ----------------
     def start(self) -> None:
         self.browser.start()
+        if self.app_browser is not self.browser:
+            self.app_browser.start()
         if self._ingest_autostart:
             self.ingest_runner.start()
 
     def stop(self) -> None:
         self.ingest_runner.stop()
+        self.app_projects.close()
         self.browser.stop()
+        if self.app_browser is not self.browser:
+            self.app_browser.stop()
         if self._link is not None:
             try:
                 self.link_sync.close()
@@ -241,14 +249,15 @@ class Services:
     # ---------------- renders ----------------
     def render(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: Optional[list[int]] = None,
               full_page: bool = True, dark: bool = False, wait_ms: int = 800, lint: bool = True,
-              record: bool = False, title: str = "") -> dict[str, Any]:
+              record: bool = False, title: str = "", _browser=None, _app_project=None) -> dict[str, Any]:
         if not html and not url:
             raise ValueError("render needs html or url")
-        self.check_url(url)
+        if _browser is None:
+            self.check_url(url)
         t0 = time.monotonic()
         render_id = uuid.uuid4().hex[:12]
         out_dir = self.config.renders_dir / render_id
-        capture = self.browser.capture(html=html, url=url, widths=widths, full_page=full_page, dark=dark,
+        capture = (_browser or self.browser).capture(html=html, url=url, widths=widths, full_page=full_page, dark=dark,
                                        wait_ms=wait_ms, record=record, out_dir=out_dir)
         ms = (time.monotonic() - t0) * 1000
         if html is not None:
@@ -273,6 +282,9 @@ class Services:
             # the whole probe, so a later critique or lint of this render sees what the render-time lint saw
             "probe": probe,
         }
+        if _app_project is not None:
+            metrics["app_project"] = _app_project
+
         row = {
             "id": render_id, "created_ts": time.time(), "kind": kind, "input_hash": input_hash, "url": url or "",
             "title": title, "widths": widths or [390, 1024, 1440], "dark": dark, "files": files, "metrics": metrics,
@@ -502,6 +514,43 @@ class Services:
         render = self.render(html=html, widths=[390, 1024, 1440], full_page=True, dark=dark, title=f"tokens:{tokens_id}")
         self.db.execute("UPDATE design_systems SET preview_render_id = ? WHERE id = ?", (render["id"], tokens_id))
         return render
+
+    # ---------------- application projects ----------------
+    def app_project_render(self, id, revision=None, widths=None):
+        preview = self.app_projects.preview(id, revision)
+        project = self.app_projects.get(id, preview["revision"])
+        context = {"id": id, "revision": preview["revision"], "source_sha256": project["source_sha256"]}
+        result = self.render(url=preview["url"], widths=widths or [390, 1440], title=project["name"], _browser=self.app_browser, _app_project=context)
+        result["app_project"] = context
+        return result
+
+    def app_project_call(self, id, operation, data=None, record_id=None, query=""):
+        import urllib.request
+        import urllib.error
+        from urllib.parse import quote, urlencode
+        preview = self.app_projects.preview(id)
+        if operation == "list":
+            path, method, body = "/api/records?" + urlencode({"q": query}), "GET", None
+        elif operation == "get":
+            if not record_id:
+                raise ValueError("record_id is required")
+            path, method, body = "/api/records/" + quote(record_id, safe=""), "GET", None
+        elif operation in ("create", "update", "delete"):
+            if operation != "create" and not record_id:
+                raise ValueError("record_id is required")
+            path, method = "/actions/" + operation, "POST"
+            body = dict(data or {})
+            if record_id:
+                body["id"] = record_id
+        else:
+            raise ValueError("Unknown application operation")
+        request = urllib.request.Request(preview["url"] + path, method=method, data=json.dumps(body).encode("utf-8") if body is not None else None, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=self.config.render_timeout_s) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            payload = json.loads(error.read())
+            raise ValueError(payload.get("error", str(error))) from error
 
     # ---------------- references ----------------
     def reference_add(self, **kwargs) -> dict[str, Any]:

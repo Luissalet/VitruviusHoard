@@ -1,0 +1,7 @@
+# Vitruvius product context
+
+Vitruvius is the local frontend-design workbench in the Hoard family. Its users are Luis and assistants working through native API/MCP and the common Faustus panel. It combines a criterion library, reference gallery, editable HTML and motion studies, browser rendering, lint/critique, tokens, diagrams and now complete application-source projects. Planning/model calls use the configured global Sparks; creating and running the original source starters needs no model.
+
+The Applications surface extends the existing Operate interface. Its task is create a source project, edit files, start an actual local preview, inspect a render and export independent source, while retaining data and earlier source revisions. Preserve existing navigation, components, theme, language switch and copilot. Source files and ordinary local application behavior lead the work; no new marketing identity or feature slogans.
+
+Luis explicitly authorizes autonomous decisions and asks for useful capabilities from reference projects to be implemented as native code, detached from their names/APIs/future compatibility. Farm.js is research evidence; its CLI, MCP and repository are not product dependencies. Original project sources remain editable, and the output uses Python standard library with HTML/CSS/JavaScript and generated type declarations. Claims are limited to tested workflows; do not claim universal compiler, renderer or cloud parity.

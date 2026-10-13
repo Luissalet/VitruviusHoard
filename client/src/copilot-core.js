@@ -41,6 +41,7 @@ export function collectEditor(dispatch) {
 
 // One entry per object kind the views can show: the client API call that reads it and how its title is spelled.
 export const OBJECT_KINDS = {
+  app_project: { get: (api, id) => api.appProject(id), title: (row) => row.name, url: (row) => `#/projects/${row.id}` },
   render: { get: (api, id) => api.render(id), title: (r) => r.title || r.url, url: "#/critique" },
   "design-system": { get: (api, id) => api.tokensGet(id), title: (r) => r.name, url: "#/tokens" },
   diagram: { get: (api, id) => api.diagram(id), title: (r) => r.title || r.type, url: "#/diagrams" },
@@ -66,7 +67,7 @@ export async function resolveObjects(refs, api) {
       if (!row || typeof row !== "object") return null;
       const id = String(row.id ?? "");
       if (!id || id !== String(ref.id)) return null;
-      return { kind: ref.kind, object_id: id, title: String(kind.title(row) || id), url: kind.url };
+      return { kind: ref.kind, object_id: id, title: String(kind.title(row) || id), url: typeof kind.url === "function" ? kind.url(row) : kind.url };
     } catch { return null; }
   }));
   return found.filter(Boolean);
