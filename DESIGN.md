@@ -249,7 +249,7 @@ not additional implemented theme tokens; primitive values remain in the frontmat
 - Progressive disclosure for local import and pattern generation.
 - Collection, origin and license status visible on each imported reference card.
 - Generated source, explicit application and HTML download are separate actions.
-- Applying a pattern retains the first editor draft during the current editing session.
+- Each pattern application retains the current HTML on a draft stack during the current editing session.
 - Existing URL/HTML, Render, Critique, functional assay, history and Faustus copilot remain available.
 
 ## Colors
@@ -342,14 +342,24 @@ collection name, origin domain (or local-file label), and license or No declared
 not permission inferred from a screenshot. The existing detail drawer keeps the full URL, source revision,
 notes, palette, fonts, libraries and related patterns.
 
+Structured JSON provenance remains structured in storage and API responses. License and source revision
+values are converted to JSON text for display when they are not strings; related-pattern arrays render
+each value as text, and other structured related-pattern values render as JSON. The card shows the license
+text with the complete value in its title attribute, while the drawer shows the extended provenance.
+Missing license values and strings marked unknown retain No declared license. Structured metadata does
+not become a React child object or require flattening the original stored values.
+
 ### Pattern disclosure, generated source and draft notice
 
 The selector exposes eight original studies with literal text and a six-digit hex accent parameter.
 Generate source only prepares a complete editable HTML document. Use this source in the editor is the
-primary action; Download HTML is a separate secondary action. The first explicit application saves the
-previous HTML, including an empty draft. Later applications retain that first saved value. Restore draft
-returns it and clears the saved slot. This is page-component state, retained until restoration or leaving
-the page; it is not persistent history or a general undo stack. Generation never overwrites the editor.
+primary action; Download HTML is a separate secondary action. Every explicit application atomically
+saves the current HTML, including an empty draft, on a stack and replaces the editor source. Restore draft
+returns the most recently saved HTML and removes that entry; repeated restoration walks back through
+the earlier applications. For example, A → apply → edit B → apply → restore returns B, then A.
+The inline status reports the retained-draft count with singular/plural text. This is page-component
+state, retained until restoration or leaving the page; it is not persistent history or a general edit-undo
+stack. Generation never overwrites the editor.
 
 The existing editor then runs Render, optional Critique with vision and the functional assay, with its
 widths/dark-mode controls and render history. The new forms keep the existing copilot draft context.
@@ -369,12 +379,18 @@ widths/dark-mode controls and render history. The new forms keep the existing co
 
 ### Evidence and scope
 
-This record follows visual source 69acd07 and subsequent test-only commit 1480030. Evidence is in
+This record follows source a5ff31e (R3), with the earlier record committed in 451928c. Evidence is in
 `D:/LocalAI/research-inbox/referencias-vitruvius-20261013`: editor/gallery desktop/mobile `*-r2.png`,
 the eight `r2/<pattern>-1440.png` and `r2/<pattern>-390.png` studies, and their browser receipt.
 The receipt records eight control passes without page errors or overflow at those study widths.
-The final finish verdict resolves four material fixes and says ship for that scope; it does not certify
-the whole app or replace functional review. The collection's 100 captured references are private source
+R3 adds `editor-stack-r3.png` and `gallery-structured-r3.png` for intermediate draft recovery and JSON
+provenance. The eight generated HTML sources are unchanged from R2, so their captures remain applicable.
+`finish-verdict-r3.md` resolves these two additional fixes and says ship for that scope over the earlier
+four resolved R2 fixes; it does not certify the whole app or replace functional review. The author's
+379-test suite includes the real browser regression `test_browser_structured_provenance_and_draft_history`
+(opt-in `VITRUVIUS_BROWSER_TESTS=1`), which checks the exact B/A restoration and structured Gallery/Drawer
+provenance. These are author/functional-review results, not independent execution by this documenter.
+The collection's 100 captured references are private source
 evidence, not 100 newly implemented interactive pages. Historical source render metadata does not prove
 every original control or audio function works. No arbitrary custom palette is certified by this record.
 
@@ -384,12 +400,13 @@ every original control or audio function works. No arbitrary custom palette is c
 - **Do** use the existing Hoard theme and native disclosure/form controls for additions to these surfaces.
 - **Do** keep collection, origin and license status visible beside every imported card's title and tags.
 - **Do** keep generation, explicit application, restoration and HTML download as separate actions.
-- **Do** preserve the first saved HTML draft, including an empty draft, for the current editor visit.
+- **Do** retain every pre-application HTML value, including empty drafts, and restore in reverse order during the current editor visit.
+- **Do** display structured provenance as JSON text while preserving its original structure in storage and API responses.
 - **Do** keep the generated source editable and route it through the existing render/critique/assay workflow.
 
 ### Don't:
 - **Don't** promote a study's palette, geometry or font choice into a new app-wide visual identity.
 - **Don't** replace editor HTML when asynchronous source generation completes.
-- **Don't** describe the saved-draft slot as persistence across navigation or a general undo history.
+- **Don't** describe the application draft stack as persistence across navigation or a general edit-undo history.
 - **Don't** hide unknown licensing behind tags or claim a source screenshot licenses its implementation.
 - **Don't** turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification.

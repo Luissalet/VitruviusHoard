@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T17:22:54.341546+00:00",
+  "generatedAt": "2026-10-13T17:50:11.296163+00:00",
   "title": "Design System: Vitruvius's Hoard — extension 501",
   "extensions": {
     "colorMeta": {
@@ -263,9 +263,9 @@
     {
       "name": "Imported reference card",
       "kind": "card",
-      "description": "Visible collection, origin and license status. Preview uses a neutral placeholder, not a private screenshot.",
-      "html": "<button class=\"ds-reference\" type=\"button\"><div class=\"ds-poster\" aria-hidden=\"true\"></div><div class=\"ds-reference-content\"><div class=\"ds-reference-title\">Reference title</div><div class=\"ds-reference-provenance\"><p>Collection name · source.example</p><p>No declared license</p></div><span class=\"ds-chip\">editorial</span></div></button>",
-      "css": ".ds-reference{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:block;width:100%;padding:0;text-align:left;background:var(--hoard-surface,#1a1d26);border:1px solid var(--hoard-border,#333845);border-radius:var(--hoard-radius-lg,10px);overflow:hidden;cursor:pointer;transition:border-color .16s}.ds-reference:hover{border-color:var(--hoard-border-hover,#555b6d)}.ds-reference:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px;}.ds-poster{aspect-ratio:16/10;background:var(--hoard-elevated,#232731)}.ds-reference-content{padding:12px}.ds-reference-title{font-size:13px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ds-reference-provenance{margin-top:8px;font-size:12px;color:var(--hoard-text-muted,#b4b7be)}.ds-reference-provenance p{margin:0;overflow-wrap:anywhere;line-height:1.55}.ds-chip{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--hoard-radius-sm,6px);background:var(--hoard-elevated,#232731);color:var(--hoard-text-muted,#b4b7be);white-space:nowrap}.ds-chip-accent{background:var(--hoard-accent-soft,rgba(106,140,237,.14));color:var(--hoard-accent,#6a8ced)}@media(prefers-reduced-motion:reduce){.ds-chip,.ds-chip-accent,.ds-poster,.ds-reference,.ds-reference-content,.ds-reference-provenance,.ds-reference-title{transition:none!important;animation:none!important}}",
+      "description": "Visible collection, origin and license status, with structured license rendered as JSON text. Preview uses a neutral placeholder, not a private screenshot.",
+      "html": "<button class=\"ds-reference\" type=\"button\"><div class=\"ds-poster\" aria-hidden=\"true\"></div><div class=\"ds-reference-content\"><div class=\"ds-reference-title\">Reference title</div><div class=\"ds-reference-provenance\"><p>Collection name · source.example</p><p class=\"ds-reference-license\" title=\"{&quot;spdx&quot;:&quot;MIT&quot;}\">{&quot;spdx&quot;:&quot;MIT&quot;}</p></div><span class=\"ds-chip\">editorial</span></div></button>",
+      "css": ".ds-reference{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:block;width:100%;padding:0;text-align:left;background:var(--hoard-surface,#1a1d26);border:1px solid var(--hoard-border,#333845);border-radius:var(--hoard-radius-lg,10px);overflow:hidden;cursor:pointer;transition:border-color .16s}.ds-reference:hover{border-color:var(--hoard-border-hover,#555b6d)}.ds-reference:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px;}.ds-poster{aspect-ratio:16/10;background:var(--hoard-elevated,#232731)}.ds-reference-content{padding:12px}.ds-reference-title{font-size:13px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ds-reference-provenance{margin-top:8px;font-size:12px;color:var(--hoard-text-muted,#b4b7be)}.ds-reference-provenance p{margin:0;overflow-wrap:anywhere;line-height:1.55}.ds-chip{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--hoard-radius-sm,6px);background:var(--hoard-elevated,#232731);color:var(--hoard-text-muted,#b4b7be);white-space:nowrap}.ds-chip-accent{background:var(--hoard-accent-soft,rgba(106,140,237,.14));color:var(--hoard-accent,#6a8ced)}.ds-reference-license{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}@media(prefers-reduced-motion:reduce){.ds-chip,.ds-chip-accent,.ds-poster,.ds-reference,.ds-reference-content,.ds-reference-provenance,.ds-reference-title{transition:none!important;animation:none!important}}",
       "refersTo": "reference-card"
     },
     {
@@ -279,8 +279,8 @@
     {
       "name": "Retained draft status",
       "kind": "custom",
-      "description": "Inline restore action above HTML editor; state lasts for the current page visit.",
-      "html": "<div class=\"ds-draft\" role=\"status\"><span>Source applied. Your draft is retained during this edit.</span><button class=\"ds-restore\" type=\"button\">Restore draft</button></div>",
+      "description": "Inline retained-draft count and restore action above the editor. Every apply pushes current HTML; restore pops the last value. State lasts for the current page visit.",
+      "html": "<div class=\"ds-draft\" role=\"status\"><span>Source applied. 2 drafts retained during this edit.</span><button class=\"ds-restore\" type=\"button\">Restore draft</button></div>",
       "css": ".ds-draft{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.ds-draft span{font-size:12px;color:var(--hoard-text-muted,#b4b7be)}.ds-restore{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border:1px solid var(--hoard-border,#333845);border-radius:var(--hoard-radius,8px);background:transparent;font-weight:600;line-height:18px;cursor:pointer;white-space:nowrap;transition:background .16s,border-color .16s;}.ds-restore:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-restore:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px;}.ds-restore:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-draft,.ds-restore{transition:none!important;animation:none!important}}"
     }
   ],
@@ -291,7 +291,7 @@
       "Progressive disclosure for local import and pattern generation.",
       "Collection, origin and license status visible on each imported reference card.",
       "Generated source, explicit application and HTML download are separate actions.",
-      "Applying a pattern retains the first editor draft during the current editing session.",
+      "Each pattern application retains the current HTML on a draft stack during the current editing session.",
       "Existing URL/HTML, Render, Critique, functional assay, history and Faustus copilot remain available."
     ],
     "rules": [],
@@ -299,13 +299,14 @@
       "Do use the existing Hoard theme and native disclosure/form controls for additions to these surfaces.",
       "Do keep collection, origin and license status visible beside every imported card's title and tags.",
       "Do keep generation, explicit application, restoration and HTML download as separate actions.",
-      "Do preserve the first saved HTML draft, including an empty draft, for the current editor visit.",
+      "Do retain every pre-application HTML value, including empty drafts, and restore in reverse order during the current editor visit.",
+      "Do display structured provenance as JSON text while preserving its original structure in storage and API responses.",
       "Do keep the generated source editable and route it through the existing render/critique/assay workflow."
     ],
     "donts": [
       "Don't promote a study's palette, geometry or font choice into a new app-wide visual identity.",
       "Don't replace editor HTML when asynchronous source generation completes.",
-      "Don't describe the saved-draft slot as persistence across navigation or a general undo history.",
+      "Don't describe the application draft stack as persistence across navigation or a general edit-undo history.",
       "Don't hide unknown licensing behind tags or claim a source screenshot licenses its implementation.",
       "Don't turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification."
     ]
