@@ -5,12 +5,16 @@ import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { fileRelPath } from "../format.js";
 
+function metadataText(value) {
+  return value == null ? "" : typeof value === "string" ? value : JSON.stringify(value);
+}
+
 function ReferenceCard({ ref, t, onOpen, es }) {
   const collection = ref.analysis?.collection;
   let origin = "";
   try { origin = new URL(ref.url).hostname; } catch { origin = es ? "Archivo local" : "Local file"; }
-  const license = collection?.license;
-  const licenseLabel = !license || /no license|unknown|sin licencia/i.test(license)
+  const license = metadataText(collection?.license);
+  const licenseLabel = !license || (typeof collection?.license === "string" && /no license|unknown|sin licencia/i.test(license))
     ? (es ? "Sin licencia declarada" : "No declared license") : license;
   const [hover, setHover] = useState(false);
   const poster = ref.files?.poster || ref.files?.desktop;
@@ -135,9 +139,9 @@ function Drawer({ id, t, onClose, onDeleted }) {
           <h3 className="font-semibold">{ref.analysis.collection.name}</h3>
           <p>{ref.analysis.collection.key}</p>
           {ref.url && <a href={ref.url} target="_blank" rel="noreferrer" className="break-all">{ref.url}</a>}
-          {ref.analysis.collection.source_revision && <p className="help break-all">Revision: {ref.analysis.collection.source_revision}</p>}
-          {ref.analysis.collection.license && <p className="help">License: {ref.analysis.collection.license}</p>}
-          {!!ref.analysis.collection.related_patterns?.length && <p className="help">Patterns: {ref.analysis.collection.related_patterns.join(", ")}</p>}
+          {ref.analysis.collection.source_revision && <p className="help break-all">Revision: {metadataText(ref.analysis.collection.source_revision)}</p>}
+          {ref.analysis.collection.license && <p className="help">License: {metadataText(ref.analysis.collection.license)}</p>}
+          {ref.analysis.collection.related_patterns != null && <p className="help">Patterns: {Array.isArray(ref.analysis.collection.related_patterns) ? ref.analysis.collection.related_patterns.map(metadataText).join(", ") : metadataText(ref.analysis.collection.related_patterns)}</p>}
         </div>}
         {ref.note && <p className="help mb-4">{ref.note}</p>}
 

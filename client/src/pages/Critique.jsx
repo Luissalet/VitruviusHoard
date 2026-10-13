@@ -199,13 +199,12 @@ function AssayView({ assay, t }) {
 
 export default function Critique() {
   const { t, notify, lang } = useApp();
-  const [html, setHtml] = useState("");
-  const [savedDraft, setSavedDraft] = useState(null);
-  const applyPattern = (source) => {
-    if (savedDraft === null) setSavedDraft(html);
-    setHtml(source);
-  };
-  const restoreDraft = () => { setHtml(savedDraft); setSavedDraft(null); };
+  const [draft, setDraft] = useState({ html: "", previous: [] });
+  const html = draft.html;
+  const setHtml = (value) => setDraft((current) => ({ ...current, html: value }));
+  const applyPattern = (source) => setDraft((current) => ({ html: source, previous: [...current.previous, current.html] }));
+  const restoreDraft = () => setDraft((current) => current.previous.length
+    ? { html: current.previous.at(-1), previous: current.previous.slice(0, -1) } : current);
   const [url, setUrl] = useState("");
   const [widths, setWidths] = useState(WIDTHS);
   const [dark, setDark] = useState(false);
@@ -296,8 +295,8 @@ export default function Critique() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
           <PatternPicker onApply={applyPattern} />
-          {savedDraft !== null && <div className="flex gap-3 items-center flex-wrap mb-4" role="status">
-            <span className="help">{lang === "es" ? "Fuente aplicada. Tu borrador está guardado durante esta edición." : "Source applied. Your draft is retained during this edit."}</span>
+          {draft.previous.length > 0 && <div className="flex gap-3 items-center flex-wrap mb-4" role="status">
+            <span className="help">{lang === "es" ? `Fuente aplicada. ${draft.previous.length} ${draft.previous.length === 1 ? "borrador guardado" : "borradores guardados"} durante esta edición.` : `Source applied. ${draft.previous.length} ${draft.previous.length === 1 ? "draft retained" : "drafts retained"} during this edit.`}</span>
             <button type="button" className="btn" onClick={restoreDraft}>{lang === "es" ? "Restaurar borrador" : "Restore draft"}</button>
           </div>}
           <div className="panel">
