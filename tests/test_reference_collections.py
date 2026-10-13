@@ -71,3 +71,44 @@ def test_native_api(client, tmp_path):
     assert client.get("/api/references", params={"before": "bad"}).status_code == 400
     assert len(client.get("/api/design-patterns").json()["patterns"]) == 8
     assert client.post("/api/design-patterns/generate", json={"id": "elastic", "text": "á 👩‍🚀"}).json()["html"]
+
+
+def test_deleted_reference_can_be_reimported_without_overwriting_assets(services, tmp_path):
+    path, _ = manifest(tmp_path, 1)
+    first = services.reference_import_collection(str(path))
+    id = first["references"][0]["id"]
+    asset = services.reference_file_path(id, "desktop.png")
+    original = asset.read_bytes()
+    services.reference_delete(id)
+    assert services.reference_import_collection(str(path))["imported"] == 1
+    assert asset.read_bytes() == original
+    services.reference_delete(id)
+    asset.write_bytes(b"modified saved material")
+    result = services.reference_import_collection(str(path))
+    assert result["imported"] == 0 and len(result["errors"]) == 1
+    assert asset.read_bytes() == b"modified saved material"
+
+
+def test_database_failure_cleans_only_new_files(services, tmp_path, monkeypatch):
+    import sqlite3
+    path, _ = manifest(tmp_path, 1)
+    original_execute = services.db.execute
+    def fail_insert(sql, *args):
+        if sql.startswith("INSERT INTO references_t"):
+            raise sqlite3.OperationalError("injected insert failure")
+        return original_execute(sql, *args)
+    monkeypatch.setattr(services.db, "execute", fail_insert)
+    result = services.reference_import_collection(str(path))
+    assert result["imported"] == 0 and len(result["errors"]) == 1
+    assert not list(services.config.references_dir.iterdir())
+    assert services.reference_search() == []
+
+
+def test_malformed_entry_does_not_abort_following_valid_entries(services, tmp_path):
+    path, data = manifest(tmp_path, 3)
+    data["entries"][0]["files"] = ["invalid"]
+    data["entries"][1]["metadata"] = ["invalid"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    result = services.reference_import_collection(str(path))
+    assert result["imported"] == 1 and len(result["errors"]) == 2
+    assert result["references"][0]["key"] == "2"
