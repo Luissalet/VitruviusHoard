@@ -65,6 +65,10 @@ export const api = {
   diagramBrands: () => request("GET", "/api/diagrams/brands"),
   diagramBrandOnboard: (body) => request("POST", "/api/diagrams/brands", { body }),
 
+  referenceCollections: () => request("GET", "/api/reference-collections"),
+  referenceImportCollection: (body) => request("POST", "/api/reference-collections/import", { body }),
+  designPatterns: () => request("GET", "/api/design-patterns"),
+  designPattern: (body) => request("POST", "/api/design-patterns/generate", { body }),
   references: (params) => request("GET", "/api/references", { params }),
   referenceAdd: (body) => request("POST", "/api/references", { body }),
   reference: (id) => request("GET", `/api/references/${encodeURIComponent(id)}`),

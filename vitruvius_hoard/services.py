@@ -18,6 +18,7 @@ from . import critique as critique_mod
 from . import library as library_mod
 from . import lint as lint_mod
 from . import references as references_mod
+from . import reference_collections, design_patterns
 from . import tokens as tokens_mod
 from .browser import BrowserWorker
 from .config import Config
@@ -511,6 +512,21 @@ class Services:
 
     def reference_search(self, **kwargs) -> list[dict[str, Any]]:
         return references_mod.search(self.db, **kwargs)
+
+    def reference_page(self, **kwargs):
+        return references_mod.page(self.db, **kwargs)
+
+    def reference_collections(self):
+        return reference_collections.collections(self.db)
+
+    def reference_import_collection(self, path):
+        return reference_collections.import_collection(self.db, self.config, path)
+
+    def design_patterns(self):
+        return design_patterns.catalogue()
+
+    def design_pattern(self, **kwargs):
+        return design_patterns.generate(**kwargs)
 
     def reference_get(self, ref_id: str) -> Optional[dict[str, Any]]:
         return references_mod.get(self.db, ref_id)

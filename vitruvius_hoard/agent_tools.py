@@ -165,7 +165,19 @@ class ReferenceAddArgs(BaseModel):
     analyze: bool = True
 
 
+class CollectionImportArgs(BaseModel):
+    path: str = Field(..., min_length=1, description="Local path to a portable reference collection JSON manifest.")
+
+
+class DesignPatternArgs(BaseModel):
+    id: str
+    text: str = "FORM / FIELD"
+    accent: str = Field("#e36a39", pattern="^#[0-9a-fA-F]{6}$")
+
+
 class ReferenceSearchArgs(BaseModel):
+    collection: Optional[str] = None
+    before: Optional[str] = None
     query: Optional[str] = Field(None, max_length=200)
     tags: Optional[list[str]] = None
     vibe: Optional[str] = Field(None, max_length=120)
@@ -394,8 +406,7 @@ def run_reference_add(services: Services, args: ReferenceAddArgs) -> dict:
 
 
 def run_reference_search(services: Services, args: ReferenceSearchArgs) -> dict:
-    items = services.reference_search(query=args.query, tags=args.tags, vibe=args.vibe, lib=args.lib, limit=args.limit)
-    return {"count": len(items), "references": items}
+    return services.reference_page(**args.model_dump())
 
 
 def run_reference_get(services: Services, args: ReferenceIdArgs) -> dict:
@@ -519,6 +530,14 @@ TOOLS: list[Tool] = [
         "Delete a generated design system (only when the user asks). Eliminar design system.\n"
         "Sinónimos: borrar tokens, eliminar sistema de diseño.",
         TokensDeleteArgs, ann(False, True, True), run_tokens_delete),
+    Tool("reference_collections", "List imported local reference collections and their counts. Colecciones de referencias.",
+        Empty, ann(True), lambda services, args: {"collections": services.reference_collections()}),
+    Tool("reference_import_collection", "Import a local snapshot collection into the gallery. Importar colección local.\nRetains provenance and reuses identical versions; no source HTML is executed.",
+        CollectionImportArgs, ann(False, False, True), lambda services, args: services.reference_import_collection(args.path), capped=False),
+    Tool("design_patterns", "List eight original editable HTML design studies. Patrones de diseño propios.",
+        Empty, ann(True), lambda services, args: {"patterns": services.design_patterns()}),
+    Tool("design_pattern", "Generate editable standalone HTML from an original pattern. Generar patrón propio.\nLiteral text and accent colour; use render_preview, page_assay and design_critique to check the source.",
+        DesignPatternArgs, ann(True), lambda services, args: services.design_pattern(**args.model_dump()), capped=False),
     Tool("reference_add",
         "Capture a website into the reference gallery: screenshots, video, fonts, palette. Guardar referencia.\n"
         "Desktop+mobile capture, optional 6s scroll video, Pillow palette, detected libs/motion, optional vision vibe tagging.\n"
@@ -527,7 +546,7 @@ TOOLS: list[Tool] = [
     Tool("reference_search",
         "Search the reference gallery by text, tags, vibe or library. Buscar referencias.\n"
         "Sinónimos: buscar referencias, galería, por tag, por vibe, por librería.",
-        ReferenceSearchArgs, ann(True), run_reference_search),
+        ReferenceSearchArgs, ann(True), run_reference_search, capped=False),
     Tool("reference_get",
         "Get one reference's full detail (files, palette, fonts, motion, analysis). Ver referencia.\n"
         "Sinónimos: detalle de referencia, ver captura.",

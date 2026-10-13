@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import time
@@ -166,31 +167,52 @@ def delete(db: Database, ref_id: str) -> bool:
     return cur.rowcount > 0
 
 
-def search(db: Database, *, query: Optional[str] = None, tags: Optional[list[str]] = None,
-          vibe: Optional[str] = None, lib: Optional[str] = None, limit: int = 12) -> list[dict[str, Any]]:
-    rows: list[Any]
-    if query:
-        tokens = re.findall(r"[A-Za-z0-9_]+", query)
-        fts = " OR ".join(f'"{t}"' for t in tokens) if tokens else ""
-        if fts:
-            rows = db.query(
-                "SELECT r.* FROM references_fts f JOIN references_t r ON r.rowid = f.rowid WHERE references_fts MATCH ? ORDER BY r.created_ts DESC LIMIT ?",
-                (fts, limit * 3),
-            )
-        else:
-            rows = db.query("SELECT * FROM references_t ORDER BY created_ts DESC LIMIT ?", (limit * 3,))
+def page(db: Database, *, query=None, tags=None, vibe=None, lib=None,
+         collection=None, before=None, limit=12):
+    if limit < 1 or limit > 100:
+        raise ValueError("limit must be between 1 and 100")
+    cursor = None
+    if before:
+        try:
+            cursor = json.loads(base64.urlsafe_b64decode(before.encode()).decode())
+            if not isinstance(cursor, list) or len(cursor) != 2 or not isinstance(cursor[0], (int, float)) or not isinstance(cursor[1], str):
+                raise ValueError()
+        except (ValueError, TypeError, UnicodeError) as error:
+            raise ValueError("Invalid reference cursor") from error
+    tokens = re.findall(r"[^\W]+", query or "", re.UNICODE)
+    if tokens:
+        rows = db.query(
+            "SELECT r.* FROM references_fts f JOIN references_t r ON r.rowid=f.rowid "
+            "WHERE references_fts MATCH ? ORDER BY r.created_ts DESC, r.id DESC",
+            (" OR ".join(f'"{token}"' for token in tokens),))
     else:
-        rows = db.query("SELECT * FROM references_t ORDER BY created_ts DESC LIMIT ?", (limit * 3,))
+        rows = db.query("SELECT * FROM references_t ORDER BY created_ts DESC, id DESC")
+    wanted = {tag.casefold() for tag in tags or []}
+    items = []
+    for row in rows:
+        if cursor and (row["created_ts"], row["id"]) >= tuple(cursor):
+            continue
+        item = _row_to_dict(row)
+        if wanted and not wanted.intersection(tag.casefold() for tag in item["tags"]):
+            continue
+        if vibe and vibe.casefold() not in item["vibe"].casefold():
+            continue
+        if lib and lib.casefold() not in [value.casefold() for value in item["libs"]]:
+            continue
+        if collection and item["analysis"].get("collection", {}).get("id") != collection:
+            continue
+        items.append(item)
+        if len(items) > limit:
+            break
+    next_before = None
+    if len(items) > limit:
+        last = items[limit - 1]
+        next_before = base64.urlsafe_b64encode(json.dumps([last["created_ts"], last["id"]]).encode()).decode()
+    return {"count": min(len(items), limit), "references": items[:limit], "next_before": next_before}
 
-    items = [_row_to_dict(r) for r in rows]
-    if tags:
-        wanted = set(t.lower() for t in tags)
-        items = [it for it in items if wanted & set(t.lower() for t in it["tags"])]
-    if vibe:
-        items = [it for it in items if vibe.lower() in (it["vibe"] or "").lower()]
-    if lib:
-        items = [it for it in items if lib.lower() in [l.lower() for l in it["libs"]]]
-    return items[:limit]
+
+def search(db: Database, **kwargs) -> list[dict[str, Any]]:
+    return page(db, **kwargs)["references"]
 
 
 def similar(db: Database, ref_id: str, limit: int = 6) -> list[dict[str, Any]]:

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import PatternPicker from "../components/PatternPicker.jsx";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
@@ -288,6 +289,7 @@ export default function Critique() {
       <h1 className="text-[20px] font-semibold">{t("nav_critique")}</h1>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
+          <PatternPicker onApply={setHtml} />
           <div className="panel">
             <div>
               <label className="label" htmlFor="critique-html">{t("critique_html")}</label>
@@ -319,7 +321,7 @@ export default function Critique() {
                 {t("critique_dark")}
               </label>
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 flex-wrap mt-4">
               <button type="button" className="btn btn-primary" onClick={doRender} disabled={busyRender || (!html.trim() && !url.trim())}>
                 {busyRender ? t("critique_rendering") : t("critique_render")}
               </button>
