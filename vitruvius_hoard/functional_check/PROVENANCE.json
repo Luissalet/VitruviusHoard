@@ -1,0 +1,44 @@
+{
+  "source": "https://github.com/awss1i/assay",
+  "installed_distribution": "assay-ui",
+  "source_version": "0.1.4",
+  "license_expression": "MIT",
+  "source_files": [
+    {
+      "file": "browser.py",
+      "source_sha256": "d304f0f583b4b27dcbaaba56e7036bc909f6fb633732c316f82bdbdddd941c31",
+      "incorporated_sha256": "d304f0f583b4b27dcbaaba56e7036bc909f6fb633732c316f82bdbdddd941c31"
+    },
+    {
+      "file": "qa.py",
+      "source_sha256": "aa5fd406f65d5b0367c7b79c66e0bf5988af23b4f67cb54c1e68ce8d42e2f4dc",
+      "incorporated_sha256": "104c18951b7ae4bde37c4c44f32491c0e733c8b16845bc154b762707f46d67ae"
+    },
+    {
+      "file": "report.py",
+      "source_sha256": "40a14e490326be73eeb372ced64b674c6666a8864c82b213603511b14897a2b0",
+      "incorporated_sha256": "c265b8b525ebd05d50da4b62c671ca28bb95fa565203aa9ea19b6b9180a0a9dc"
+    },
+    {
+      "file": "run.py",
+      "source_sha256": "5f60290811e95f26961fb7bde1f937f768d2255377e2b568d1802f313c950e86",
+      "incorporated_sha256": "e3865fd16986a05597eaaef8757453c70c9ce2779e3128e068e979adcab08e0e"
+    },
+    {
+      "file": "surface.py",
+      "source_sha256": "6d18cc5552b2bb6399141ff67eb2fff4a0f4937ecc2c002f59e19a87ac16c2b5",
+      "incorporated_sha256": "d55c286e23b3b4ec979fcc9d6b41f939a33c7c5baf1d272f672b1beaf24d9652"
+    },
+    {
+      "file": "tint.py",
+      "source_sha256": "7250b8c28b783f511b60d515ca1135fd4150248cc074120f2b6babf5f6f8ef0f",
+      "incorporated_sha256": "7250b8c28b783f511b60d515ca1135fd4150248cc074120f2b6babf5f6f8ef0f"
+    }
+  ],
+  "notice_sha256": "23aa56274ce1e8230eb1f25368b937f1cecfdc52abeb57996c694b4b7b16560c",
+  "changes": [
+    "Incorporated measuring/planning/execution/reporting core",
+    "Own imports and worker protocol",
+    "Shared existing browser selection; no external CLI or source checkout"
+  ]
+}

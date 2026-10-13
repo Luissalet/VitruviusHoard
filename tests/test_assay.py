@@ -1,4 +1,4 @@
-"""page_assay: the assay CLI wrapper, with the subprocess faked."""
+"""Historical page_assay facade over the incorporated functional worker."""
 import json
 
 import pytest
@@ -66,10 +66,10 @@ def test_run_reports_non_json_and_non_page_outputs(tmp_path):
     assert r["error"] == "assay could not check this page"
 
 
-def test_run_without_assay_installed_says_how_to_install(tmp_path, monkeypatch):
+def test_run_without_browser_library_reports_its_actual_dependency(tmp_path, monkeypatch):
     monkeypatch.setattr(assay, "available", lambda: False)
     r = assay.run(tmp_path, html="<p>x</p>")
-    assert r["error"] == "assay is not installed" and "assay-ui" in r["hint"]
+    assert r["error"] == "page checker browser dependency is not installed" and "Playwright" in r["hint"]
 
 
 def test_page_assay_tool_and_route(client):

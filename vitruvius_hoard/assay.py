@@ -1,14 +1,13 @@
-"""Functional check of a generated page with `assay` (pip install assay-ui).
+"""Functional page checking through Vitruvius's incorporated browser engine.
 
-The design lint says whether a page *looks* right; assay says whether it
-*works*: it opens the page in a real browser, measures every control it
-finds, works out a test plan from the rendered interface (no tests written,
-no model) and reports contradictions — a button that does nothing, a value
-shown as `undefined`, a control that answers differently to the same input.
+The checker opens a page in a real browser and derives observable cases
+from its controls. Optional explicit criteria verify requested behavior.
+Generic coverage alone cannot infer every intended button effect; failed
+and unchecked cases remain visible. No model is used.
 
-This module only wraps the CLI: the page is written to
+This compatibility facade owns the worker boundary: the page is written to
 ``data/assay/<id>/index.html`` (or an existing local folder/page is used),
-``assay <folder> --json`` runs in a subprocess with a hard timeout, and the
+the incorporated Python worker runs in a subprocess with the existing timeout, and the
 JSON run is reduced to what an assistant needs: did it work, what failed,
 what the page offers. Nothing here needs assay at import time.
 """
@@ -26,20 +25,17 @@ from typing import Any, Optional
 
 from .hoard_link import proc
 
-INSTALL_HINT = "pip install assay-ui (in the app's venv) — see https://github.com/awss1i/assay"
+INSTALL_HINT = "The page checker is incorporated in Vitruvius; its Playwright browser dependency must be installed."
 DEFAULT_TIMEOUT_S = 300
 
 
 def available() -> bool:
-    """True when the `assay` package is importable by this interpreter or on PATH."""
-    return importlib.util.find_spec("assay") is not None or proc.which("assay") is not None
+    """True when the incorporated worker's browser library is available."""
+    return importlib.util.find_spec("playwright") is not None
 
 
 def _command(folder: Path, entry: str) -> list[str]:
-    if importlib.util.find_spec("assay") is not None:
-        base = [sys.executable, "-c", "from assay.cli import main; raise SystemExit(main())"]
-    else:
-        base = [proc.which("assay") or "assay"]
+    base = [sys.executable, str(Path(__file__).with_name("functional_check") / "worker.py")]
     return [*base, str(folder), "-e", entry, "--json"]
 
 
@@ -83,15 +79,21 @@ def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
 
 
 def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = None,
-        timeout_s: int = DEFAULT_TIMEOUT_S, runner: Any = None) -> dict[str, Any]:
+        timeout_s: int = DEFAULT_TIMEOUT_S, runner: Any = None, criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
     """Run assay on a page and return the reduced result (never raises for a failed page).
 
     `runner(cmd, timeout_s) -> (returncode, stdout, stderr)` can be injected by tests.
     """
     if not available() and runner is None:
-        return {"error": "assay is not installed", "hint": INSTALL_HINT}
+        return {"error": "page checker browser dependency is not installed", "hint": INSTALL_HINT}
     folder, entry, run_id = prepare(data_dir, html=html, path=path)
     cmd = _command(folder, entry)
+    if criteria:
+        criterion_dir = data_dir / "assay" / run_id
+        criterion_dir.mkdir(parents=True, exist_ok=True)
+        criterion_path = criterion_dir / "criteria.json"
+        criterion_path.write_text(json.dumps(criteria, ensure_ascii=False), encoding="utf-8")
+        cmd.extend(["--criteria", str(criterion_path)])
     t0 = time.monotonic()
     if runner is None:
         try:
@@ -115,6 +117,8 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
         tail = (err or "").strip().splitlines()[-2:]
         return {"error": "assay could not check this page", "hint": " | ".join(tail) or "not a page assay can open", "id": run_id, "ms": ms}
     result = reduce_run(payload)
+    result["engine"] = payload.get("engine", "Vitruvius page checker")
+    result["unchecked"] = int(payload.get("unchecked", 0))
     result.update({"id": run_id, "ms": ms, "folder": str(folder), "entry": entry, "exit_code": code})
     return result
 

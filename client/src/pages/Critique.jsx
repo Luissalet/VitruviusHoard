@@ -174,7 +174,7 @@ function AssayView({ assay, t }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-[13px] font-semibold">{t("assay_title")}</h3>
         <span className={`chip ${assay.works ? "chip-ok" : "chip-danger"}`}>
-          {assay.works ? t("assay_works") : t("assay_broken")} · {assay.passed}/{assay.planned}
+          {assay.unchecked ? t("assay_unchecked") : assay.works ? t("assay_works") : t("assay_broken")} · {assay.passed}/{assay.planned}
         </span>
       </div>
       <div className="help mt-1">{t("assay_surface")}: {(assay.surface || []).map((s) => `${s.kind} “${s.label || s.selector}”`).join(", ") || "—"}</div>
@@ -215,6 +215,8 @@ export default function Critique() {
   const [busyCritique, setBusyCritique] = useState(false);
   const [assay, setAssay] = useState(null);
   const [busyAssay, setBusyAssay] = useState(false);
+  const [checkControl, setCheckControl] = useState("");
+  const [checkText, setCheckText] = useState("");
   const [history, setHistory] = useState(null);
 
   const loadHistory = async () => {
@@ -254,10 +256,19 @@ export default function Critique() {
 
   const doAssay = async () => {
     if (!html.trim() && !url.trim()) return;
+    if (!!checkControl.trim() !== !!checkText.trim()) {
+      notify(t("assay_expect_pair"));
+      return;
+    }
     setBusyAssay(true);
     setAssay(null);
     try {
       const body = html.trim() ? { html } : { url };
+      if (checkControl.trim()) body.criteria = [{
+        id: "requested-click-result", what: checkText.trim(),
+        acts: [{ click: checkControl.trim() }], expect: { want: checkText.trim() },
+        control: checkControl.trim(),
+      }];
       setAssay(await api.assay(body));
     } catch (e) {
       notify(e.message);
@@ -330,6 +341,15 @@ export default function Critique() {
                 {t("critique_dark")}
               </label>
             </div>
+            <details className="mt-3">
+              <summary className="text-[13px] cursor-pointer">{t("assay_expect")}</summary>
+              <div className="grid gap-3 md:grid-cols-2 mt-2">
+                <div><label className="label" htmlFor="check-control">{t("assay_control")}</label>
+                  <input id="check-control" className="field" placeholder="#save" value={checkControl} onChange={(e) => setCheckControl(e.target.value)} /></div>
+                <div><label className="label" htmlFor="check-text">{t("assay_expected_text")}</label>
+                  <input id="check-text" className="field" value={checkText} onChange={(e) => setCheckText(e.target.value)} /></div>
+              </div>
+            </details>
             <div className="flex gap-2 flex-wrap mt-4">
               <button type="button" className="btn btn-primary" onClick={doRender} disabled={busyRender || (!html.trim() && !url.trim())}>
                 {busyRender ? t("critique_rendering") : t("critique_render")}

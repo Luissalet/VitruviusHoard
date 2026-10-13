@@ -137,7 +137,7 @@ token tiene al menos 32 caracteres), lectura de configuración, el envoltorio de
 puente MCP. También son compartidos el descubrimiento del navegador (Chrome o Edge del sistema, Chromium de
 Playwright), la política de seguridad de URLs (solo se abren páginas web públicas), la descarga de páginas para
 `page_assay` (por el servicio web de la familia cuando corre), los metadatos de página, el troceado de markdown, la
-construcción de consultas, las citas, la fusión de rankings, el lanzador de procesos (git, ffmpeg, assay) y el cliente
+construcción de consultas, las citas, la fusión de rankings, el lanzador de procesos (git, ffmpeg, comprobador propio) y el cliente
 de embeddings. `PORT` ya no se lee como alternativa del puerto; usa `VITRUVIUS_PORT`.
 
 ## Configuración MCP
@@ -175,7 +175,8 @@ ejecución (arrancándola automáticamente si no lo está) usando el token del p
 | `render_preview` | no | Renderiza HTML o una URL en Chromium, captura a varios anchos, ejecuta el lint. |
 | `design_lint` | sí | Comprobaciones deterministas de diseño sobre HTML/URL (tipografía, contraste, motion, a11y, patrones genéricos de IA). |
 | `design_critique` | no | Critica una página renderizada: puntuación 0-10, hallazgos con arreglos, usando lint + modelo de visión local. |
-| `page_assay` | sí | Comprobación funcional de una página generada en un navegador real: ¿funciona cada control? Ejecuta [assay](https://github.com/awss1i/assay) (`pip install assay-ui`), sin tests escritos ni modelo. |
+| `page_check` | sí | Comprueba los controles de una página en un navegador real con el motor incorporado de Vitruvius. Los `criteria` opcionales verifican comportamientos solicitados; la cobertura automática no certifica todas las intenciones. Sin modelo ni CLI externo. |
+| `page_assay` | sí | Alias histórico de `page_check`: conserva las llamadas existentes y los informes guardados. |
 | `render_compare` | sí | Diferencia de píxeles entre dos renders a un ancho dado: porcentaje cambiado + imagen de diferencia. |
 | `tokens_generate` | no | Genera un sistema de diseño: paletas OKLCH, escala tipográfica, espaciado, tokens de motion. |
 | `tokens_get` | sí | Obtiene un sistema de diseño generado en formato json, css, tailwind o w3c; el json incluye también `roles`. |
@@ -304,3 +305,5 @@ Aplicaciones sucesivas de patrones conservan cada borrador intermedio en una pil
 Aplicaciones crea proyectos propios de tablero de trabajo, biblioteca de referencias e inventario, con páginas, estructura, CSS, JavaScript y servidor Python editables. Las rutas se descubren por archivos, incluidas páginas con parámetros; las API JSON y acciones de servidor validan los tipos declarados. SQLite conserva los datos al cambiar la fuente o reiniciar la vista previa. Las declaraciones TypeScript y el cliente anotado describen los contratos del punto de partida. El ZIP autónomo funciona con la biblioteca estándar de Python, sin requerir Vitruvius ni otro framework. La exportación opcional de datos usa una copia SQLite en línea.
 
 Herramientas nativas: `app_templates`, `app_project_create`, `app_project_list`, `app_project_get`, `app_project_update`, `app_project_preview`, `app_project_export`, `app_project_render`, `app_project_call`. Leer y editar devuelve los archivos completos. Los cambios de archivos independientes se combinan; si se modifica el mismo archivo, se conserva la fuente actual y se informa del conflicto. Vista previa y exportación usan una revisión capturada. Las capturas entran en el historial y ciclo de crítica existente. Los cambios de esquema o código personalizados pertenecen al proyecto; estas aplicaciones no certifican adaptadores de nube ni todos los renderizadores de componentes.
+
+En **Crítica → Resultado esperado al pulsar**, indica el selector del control y el texto que debe aparecer tras pulsarlo. El navegador envía el mismo criterio explícito que la API/MCP. Un informe aprobado describe los casos comprobados, sin certificar todas las intenciones de la página.
