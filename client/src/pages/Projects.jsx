@@ -108,7 +108,7 @@ export default function Projects({ param }) {
   };
   const capture = async () => {
     const id = project.id; setBusy("render");
-    try { const result = await api.appProjectRender(id, { revision: project.selected_revision, widths: [390, 1440] }); if (currentId.current === id) { setRender(result); loadProject(id, project.selected_revision); } }
+    try { const result = await api.appProjectRender(id, { revision: project.selected_revision, widths: [390, 1440] }); if (currentId.current === id) setRender(result); }
     catch (error) { notify(error.message); }
     finally { setBusy(""); }
   };
@@ -128,7 +128,7 @@ export default function Projects({ param }) {
       <aside className="panel">
         <h2 className="font-semibold mb-3">{es ? "Proyectos" : "Projects"}</h2>
         {!projects.length && <p className="help">{es ? "Crea una aplicación para empezar." : "Create an application to begin."}</p>}
-        <div className="flex flex-col gap-2">{projects.map((item) => <a key={item.id} className="btn text-left break-words" href={`#/projects/${item.id}`} aria-current={item.id === param ? "page" : undefined}>{item.name}</a>)}</div>
+        <div className="flex flex-col gap-2">{projects.map((item) => <a key={item.id} className={`btn text-left break-words ${item.id === param ? "btn-active" : ""}`} href={`#/projects/${item.id}`} aria-current={item.id === param ? "page" : undefined}>{item.name}</a>)}</div>
       </aside>
       {!project ? <Empty>{es ? "Selecciona un proyecto para editarlo y probarlo." : "Select a project to edit and test it."}</Empty> : <div className="min-w-0 flex flex-col gap-4">
         <div className="panel">

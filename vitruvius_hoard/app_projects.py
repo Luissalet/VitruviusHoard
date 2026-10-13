@@ -51,7 +51,7 @@ def starter_files(name, template="work-board", description="", accent=None, fiel
         typed = " | ".join(_literal(choice) for choice in field["choices"]) if kind == "choice" else {"text": "string", "number": "number", "boolean": "boolean"}[kind]
         properties.append(f'  {_literal(field["name"])}{"" if field.get("required", True) else "?"}: {typed};')
     contracts = "export interface RecordInput {\n" + "\n".join(properties) + "\n}\nexport interface AppRecord extends RecordInput { id: string; }\nexport type AppRoute = '/' | '/records' | `/records/${string}`;\n"
-    css = f":root{{--accent:{colour};color-scheme:light}}" + """*{box-sizing:border-box}body{margin:0;background:#f4f3ed;color:#222d30;font:16px/1.6 system-ui,sans-serif}header,main,footer{max-width:1100px;margin:auto;padding:24px clamp(20px,5vw,56px)}header{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid #c8cec9}nav{display:flex;gap:24px}a{color:#234a61;text-underline-offset:4px}h1{overflow-wrap:anywhere;font:clamp(34px,5vw,64px)/1.1 Georgia,serif;margin:16px 0}h2{font:28px/1.2 Georgia,serif;margin:32px 0 16px}p{max-width:65ch}section{margin-top:28px}button,input,select{font:inherit;min-height:44px}button{border:1px solid #233e3c;background:#e3eae2;color:#213c37;padding:8px 18px;cursor:pointer}input,select{width:100%;border:1px solid #8a9992;padding:8px;background:#fff;color:#222d30}input[type=checkbox]{width:22px;height:22px;min-height:22px}label{overflow-wrap:anywhere;display:flex;flex-direction:column;gap:6px}#record-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));align-items:end;gap:16px;margin:24px 0}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:#fff}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d2d9d3;padding:12px;overflow-wrap:anywhere}th{font-size:13px;font-weight:600;letter-spacing:.03em}td:first-child{font-weight:600}.search{display:flex;gap:12px;flex-wrap:wrap}.search label{flex:1;min-width:min(220px,100%)}.empty{padding:20px;background:#e8eee7}#status{min-height:24px;color:#234a61}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:4px}::selection{background:#c9ddce;color:#182923}@media(max-width:600px){header{display:block}nav{margin-top:12px}th,td{padding:9px;font-size:14px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}"""
+    css = f":root{{--accent:{colour};color-scheme:light}}" + """*{box-sizing:border-box}body{margin:0;background:#f4f3ed;color:#222d30;font:16px/1.6 system-ui,sans-serif}header,main,footer{max-width:1100px;margin:auto;padding:24px clamp(20px,5vw,56px)}header{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid #c8cec9}nav{display:flex;gap:24px}a{color:#234a61;text-underline-offset:4px}h1{overflow-wrap:anywhere;font:clamp(34px,5vw,64px)/1.1 Georgia,serif;margin:16px 0}h2{font:28px/1.2 Georgia,serif;margin:32px 0 16px}p{max-width:65ch}section{margin-top:28px}button,input,select{font:inherit;min-height:44px}button{border:1px solid #233e3c;background:#e3eae2;color:#213c37;padding:8px 18px;cursor:pointer}input,select{width:100%;border:1px solid #8a9992;padding:8px;background:#fff;color:#222d30}input[type=checkbox]{width:22px;height:22px;min-height:22px}label{overflow-wrap:anywhere;display:flex;flex-direction:column;gap:6px}#record-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));align-items:end;gap:16px;margin:24px 0}.table-wrap{overflow-x:auto}table{width:100%;min-width:560px;border-collapse:collapse;background:#fff}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d2d9d3;padding:12px;overflow-wrap:anywhere}th{overflow-wrap:normal;white-space:nowrap;font-size:13px;font-weight:600;letter-spacing:.03em}td:first-child{font-weight:600}.search{display:flex;gap:12px;flex-wrap:wrap}.search label{flex:1;min-width:min(220px,100%)}.empty{padding:20px;background:#e8eee7}#status{min-height:24px;color:#234a61}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:4px}::selection{background:#c9ddce;color:#182923}@media(max-width:600px){header{display:block}nav{margin-top:12px}th,td{padding:9px;font-size:14px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}"""
     if template == "reference-library":
         css += "body{background:#eee8dd}header{border-bottom:2px solid #6b583a}h1{font-style:italic}table{background:#faf7ef}"
     elif template == "inventory":
@@ -78,24 +78,24 @@ export const recordPath = (id) => `/records/${encodeURIComponent(id)}`;
 const form = document.querySelector('#record-form');
 const status = document.querySelector('#status');
 const dirty = new Set();
-if (form) for (const event of ['input', 'change']) form.addEventListener(event, e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) dirty.add(e.target.name); });
+if (form) for (const event of ['input', 'change']) EventTarget.prototype.addEventListener.call(form, event, e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) dirty.add(e.target.name); });
 if (form instanceof HTMLFormElement && status) {
-  form.addEventListener('submit', async (event) => {
+  EventTarget.prototype.addEventListener.call(form, 'submit', async (event) => {
     event.preventDefault();
-    const button = form.querySelector('button');
+    const button = Element.prototype.querySelector.call(form, 'button');
     if (button) button.disabled = true;
     try {
-      const spec = {fields: JSON.parse(form.dataset.fields || '[]')};
+      const spec = {fields: JSON.parse(Element.prototype.getAttribute.call(form, 'data-fields') || '[]')};
       const values = Object.fromEntries(spec.fields.map(field => {
-        const input = form.elements.namedItem(field.name);
+        const input = HTMLFormControlsCollection.prototype.namedItem.call(Object.getOwnPropertyDescriptor(HTMLFormElement.prototype, 'elements').get.call(form), field.name);
         if (!(input instanceof HTMLInputElement || input instanceof HTMLSelectElement)) throw new Error('Missing field: '+field.name);
         return [field.name, field.type === 'boolean' ? input instanceof HTMLInputElement && input.checked : field.type === 'number' ? Number(input.value) : input.value];
       }));
-      const id = form.dataset.id;
+      const id = Element.prototype.getAttribute.call(form, 'data-id');
       const captured = JSON.stringify(values);
       const row = id ? await updateRecord(id, Object.fromEntries(Object.entries(values).filter(([name]) => dirty.has(name)))) : await createRecord(values);
-      form.dataset.id = row.id;
-      const now = Object.fromEntries(spec.fields.map(field => { const input = form.elements.namedItem(field.name); return [field.name, input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? field.type === 'boolean' ? input instanceof HTMLInputElement && input.checked : field.type === 'number' ? Number(input.value) : input.value : null]; }));
+      Element.prototype.setAttribute.call(form, 'data-id', row.id);
+      const now = Object.fromEntries(spec.fields.map(field => { const input = HTMLFormControlsCollection.prototype.namedItem.call(Object.getOwnPropertyDescriptor(HTMLFormElement.prototype, 'elements').get.call(form), field.name); return [field.name, input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? field.type === 'boolean' ? input instanceof HTMLInputElement && input.checked : field.type === 'number' ? Number(input.value) : input.value : null]; }));
       if (JSON.stringify(now) === captured) location.assign(recordPath(row.id));
       else status.textContent = 'Submitted values saved. Your newer edits are still here.';
     } catch (error) { status.textContent = error instanceof Error ? error.message : String(error); }
