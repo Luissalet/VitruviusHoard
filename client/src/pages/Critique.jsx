@@ -200,6 +200,12 @@ function AssayView({ assay, t }) {
 export default function Critique() {
   const { t, notify, lang } = useApp();
   const [html, setHtml] = useState("");
+  const [savedDraft, setSavedDraft] = useState(null);
+  const applyPattern = (source) => {
+    if (savedDraft === null) setSavedDraft(html);
+    setHtml(source);
+  };
+  const restoreDraft = () => { setHtml(savedDraft); setSavedDraft(null); };
   const [url, setUrl] = useState("");
   const [widths, setWidths] = useState(WIDTHS);
   const [dark, setDark] = useState(false);
@@ -289,7 +295,11 @@ export default function Critique() {
       <h1 className="text-[20px] font-semibold">{t("nav_critique")}</h1>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
-          <PatternPicker onApply={setHtml} />
+          <PatternPicker onApply={applyPattern} />
+          {savedDraft !== null && <div className="flex gap-3 items-center flex-wrap mb-4" role="status">
+            <span className="help">{lang === "es" ? "Fuente aplicada. Tu borrador está guardado durante esta edición." : "Source applied. Your draft is retained during this edit."}</span>
+            <button type="button" className="btn" onClick={restoreDraft}>{lang === "es" ? "Restaurar borrador" : "Restore draft"}</button>
+          </div>}
           <div className="panel">
             <div>
               <label className="label" htmlFor="critique-html">{t("critique_html")}</label>
