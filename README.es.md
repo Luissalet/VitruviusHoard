@@ -296,3 +296,5 @@ La galería incorpora colecciones de capturas locales mediante su formulario o `
 `design_patterns` ofrece ocho estudios HTML originales: retícula editorial, paisaje SVG por capas, letras elásticas, dibujo radial, constelaciones, semitonos, pulsos y tarjeta prismática. `design_pattern` genera HTML autónomo con texto literal y color. En **Crítica → Patrones HTML propios**, genera la fuente y llévala al editor existente para editar, descargar, capturar y ejecutar el ensayo funcional. Generar no sustituye automáticamente un borrador pendiente. Los patrones funcionan sin bibliotecas externas ni modelo generativo. Las capturas conservan procedencia histórica como material de investigación; no son dependencias de otros productos.
 
 Aplicar patrones conserva el borrador del editor hasta pulsar **Restaurar borrador** o salir de la página. Las tarjetas importadas muestran colección, origen y estado de licencia.
+
+Aplicaciones sucesivas de patrones conservan cada borrador intermedio en una pila durante la visita; restaurar los recupera en orden inverso. Los metadatos de procedencia estructurados se muestran como texto y conservan su JSON original.

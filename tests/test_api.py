@@ -212,3 +212,75 @@ def test_spa_catch_all_serves_index(client):
 def test_spa_unknown_api_returns_404_json(client):
     r = client.get("/api/does-not-exist")
     assert r.status_code == 404
+def test_browser_structured_provenance_and_draft_history(tmp_path):
+    """Opt-in real browser regression for blank gallery and lost intermediate edits."""
+    import json
+    import os
+    import re
+    import socket
+    import threading
+    import time
+
+    import pytest
+    import uvicorn
+    from PIL import Image
+    from playwright.sync_api import expect, sync_playwright
+    from conftest import make_services
+    from vitruvius_hoard.main import create_app
+
+    if os.environ.get("VITRUVIUS_BROWSER_TESTS") != "1":
+        pytest.skip("Set VITRUVIUS_BROWSER_TESTS=1 to run the real browser flow")
+    snapshot = tmp_path / "snapshot.png"
+    Image.new("RGB", (16, 12), "orange").save(snapshot)
+    manifest = tmp_path / "collection.json"
+    manifest.write_text(json.dumps({"format": "vitruvius-reference-collection/v1", "id": "structured", "name": "Structured collection",
+        "entries": [{"key": "one", "title": "Structured reference", "files": {"desktop": snapshot.name},
+                     "metadata": {"license": {"spdx": "MIT"}, "source_revision": {"tag": "v1"}, "related_patterns": {"primary": "editorial"}}}]}), encoding="utf-8")
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    port = listener.getsockname()[1]
+    svc = make_services(tmp_path, port=port)
+    svc.reference_import_collection(str(manifest))
+    server = uvicorn.Server(uvicorn.Config(create_app(svc.config, svc), log_level="error"))
+    thread = threading.Thread(target=lambda: server.run(sockets=[listener]), daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 10
+        while not server.started and thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(.01)
+        assert server.started
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True, args=["--disable-gpu", "--use-angle=swiftshader"])
+            try:
+                page = browser.new_page()
+                errors = []
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                page.goto(f"http://127.0.0.1:{port}/#/gallery")
+                expect(page.get_by_role("heading", name="Gallery", exact=True)).to_be_visible()
+                expect(page.get_by_text('{"spdx":"MIT"}', exact=True)).to_be_visible()
+                page.get_by_role("button", name=re.compile("Structured reference")).click()
+                expect(page.get_by_text('Revision: {"tag":"v1"}', exact=True)).to_be_visible()
+                expect(page.get_by_text('Patterns: {"primary":"editorial"}', exact=True)).to_be_visible()
+                page.goto(f"http://127.0.0.1:{port}/#/critique")
+                editor = page.get_by_label("HTML", exact=True)
+                editor.fill("<h1>Draft A</h1>")
+                page.get_by_text("Original HTML patterns", exact=True).click()
+                page.get_by_role("button", name="Generate source", exact=True).click()
+                page.get_by_role("button", name="Use this source in the editor", exact=True).click()
+                editor.fill("<h1>Intermediate draft B</h1>")
+                page.get_by_label("Pattern", exact=True).select_option("elastic")
+                page.get_by_role("button", name="Generate source", exact=True).click()
+                expect(page.get_by_role("status").first).to_contain_text("Elastic lettering")
+                page.get_by_role("button", name="Use this source in the editor", exact=True).click()
+                page.get_by_role("button", name="Restore draft", exact=True).click()
+                expect(editor).to_have_value("<h1>Intermediate draft B</h1>")
+                page.get_by_role("button", name="Restore draft", exact=True).click()
+                expect(editor).to_have_value("<h1>Draft A</h1>")
+                assert not errors
+            finally:
+                browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+        listener.close()
+
