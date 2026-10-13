@@ -60,7 +60,9 @@ def import_collection(db, config, path: str):
                 raise ValueError(f"Duplicate entry key: {key}")
             keys.add(key)
             assets, hashes = {}, {}
-            files = entry.get("files") or {}
+            files = entry.get("files", {})
+            if not isinstance(files, dict):
+                raise ValueError("files must be an object")
             if not files.get("desktop"):
                 raise ValueError("Entry needs a desktop snapshot")
             for kind in ("desktop", "mobile"):
@@ -75,16 +77,17 @@ def import_collection(db, config, path: str):
                     raise ValueError(f"Unsupported snapshot format: {kind}")
                 assets[f"{kind}.{extension}"] = data
                 hashes[kind] = hashlib.sha256(data).hexdigest()
-            metadata = entry.get("metadata") or {}
+            metadata = entry.get("metadata", {})
             if not isinstance(metadata, dict):
                 raise ValueError("metadata must be an object")
             provenance = {**metadata, "id": collection_id, "name": name, "key": key, "snapshot_sha256": hashes}
             # Metadata edits are versions too: never silently reuse an old description.
             identity = json.dumps({"collection": collection_id, "entry": entry, "snapshots": hashes}, sort_keys=True, ensure_ascii=False)
             ref_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:32]
+            was_new = False
             with db.tx():
                 if db.one("SELECT id FROM references_t WHERE id = ?", (ref_id,)):
-                    result["reused"] += 1
+                    pass
                 else:
                     stage = root / (".import-" + uuid.uuid4().hex)
                     stage.mkdir()
@@ -95,10 +98,14 @@ def import_collection(db, config, path: str):
                     palette = extract_palette(str(stage / next(f for f in assets if f.startswith("desktop."))), n=8)
                     destination = root / ref_id
                     if destination.exists():
-                        raise ValueError(f"Unindexed snapshot folder already exists: {ref_id}")
-                    stage.rename(destination)
-                    stage = None
-                    published = destination
+                        # Reference deletion retains assets. Restore its index only
+                        # when those original snapshots still match, without overwriting.
+                        if not destination.is_dir() or any((destination / filename).read_bytes() != data for filename, data in assets.items()):
+                            raise ValueError(f"Saved snapshot differs from the collection: {ref_id}")
+                    else:
+                        stage.rename(destination)
+                        stage = None
+                        published = destination
                     db.execute(
                         "INSERT INTO references_t(id,created_ts,url,title,description,tags,note,vibe,files,palette,fonts,libs,motion,analysis) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         (ref_id, time.time(), entry.get("url", ""), entry.get("title", key), entry.get("description", ""),
@@ -106,7 +113,8 @@ def import_collection(db, config, path: str):
                          json.dumps(palette), json.dumps(entry.get("fonts", [])), json.dumps(entry.get("libs", [])),
                          json.dumps(entry.get("motion", {})), json.dumps({"collection": provenance}, ensure_ascii=False)),
                     )
-                    result["imported"] += 1
+                    was_new = True
+            result["imported" if was_new else "reused"] += 1
             published = None
             result["references"].append({"key": key, "id": ref_id})
         except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as error:
