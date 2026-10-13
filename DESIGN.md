@@ -1,3 +1,78 @@
+---
+name: "Vitruvius's Hoard"
+description: "Existing Hoard workbench: reference collections and editable HTML patterns"
+colors:
+  primary: "#6a8ced"
+  primary-hover: "#8ea8f1"
+  primary-ink: "#12151c"
+  primary-soft: "rgba(106, 140, 237, 0.14)"
+  neutral-bg: "#13161d"
+  neutral-surface: "#1a1d26"
+  neutral-elevated: "#232731"
+  neutral-border: "#333845"
+  neutral-border-hover: "#555b6d"
+  neutral-text: "#e1e4ec"
+  neutral-muted: "#b4b7be"
+  neutral-dim: "#9b9ea6"
+typography:
+  headline:
+    fontFamily: "Cinzel, Iowan Old Style, Charter, Georgia, Liberation Serif, Noto Serif, Times New Roman, serif"
+    fontSize: "30px"
+    fontWeight: 700
+    lineHeight: 1.2
+  body:
+    fontFamily: "Source Sans 3, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Liberation Sans, Arial, sans-serif"
+    fontSize: "14px"
+    lineHeight: 1.55
+  label:
+    fontSize: "12px"
+    fontWeight: 600
+  code:
+    fontFamily: "Cascadia Mono, Consolas, ui-monospace, monospace"
+    fontSize: "12px"
+rounded:
+  sm: "6px"
+  md: "8px"
+  lg: "10px"
+spacing:
+  field: "7px 10px"
+  button: "7px 14px"
+  panel: "16px"
+  reference-content: "12px"
+  gallery-gap: "14px"
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-ink}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.button}"
+  button-primary-hover:
+    backgroundColor: "{colors.primary-hover}"
+  button-secondary:
+    backgroundColor: "transparent"
+    textColor: "{colors.neutral-text}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.button}"
+  field:
+    backgroundColor: "{colors.neutral-surface}"
+    textColor: "{colors.neutral-text}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.field}"
+  panel:
+    backgroundColor: "{colors.neutral-surface}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.panel}"
+  reference-card:
+    backgroundColor: "{colors.neutral-surface}"
+    rounded: "{rounded.lg}"
+    padding: "0"
+  chip:
+    backgroundColor: "{colors.neutral-elevated}"
+    textColor: "{colors.neutral-muted}"
+    rounded: "{rounded.sm}"
+    padding: "2px 8px"
+---
+
 # Vitruvius's Hoard — architecture & design system
 
 ## Architecture
@@ -148,3 +223,173 @@ catch-all (`install_spa`) is registered **last** so it never shadows an `/api/*`
 3. Exported at 1254² (`app-icon.png`), 512²/192² (`client/public/icon-*.png`), and a multi-size `favicon.ico`.
 4. Unlike the sibling apps (which recolour a shared family dragon illustration), Vitruvius's glyph is drawn
    directly with Pillow — there is no dragon source image to vendor for this app.
+
+# Extension record: collections, patterns and editor (2026-10-13, task 501)
+
+## Overview
+
+**Creative North Star: "Existing Hoard workbench"**
+
+This record preserves the incumbent Operate interface: dark tonal surfaces, serif page headings,
+one blue accent, native form controls and explicit task actions. The new collection importer belongs
+in Gallery; the eight original HTML patterns belong above the existing Critique editor. Imported
+reference imagery and generated studies are the work being inspected, not a replacement app identity.
+
+The frontmatter and this extension record describe the current shell used by these additions.
+The earlier architecture and design notes above are retained without a general refresh; their old
+palette, generated font-pairing examples and tool counts are not the authority for this extension.
+The implemented sources and matching captures are authoritative. No new visual world or approved
+composition was established for task 501.
+
+The `.impeccable/design.json` sidecar records eight drop-in shell component previews, existing motion,
+shadow and breakpoint extensions, and the same narrative. Its derived tonal strips are preview aids,
+not additional implemented theme tokens; primitive values remain in the frontmatter.
+
+**Key Characteristics:**
+- Progressive disclosure for local import and pattern generation.
+- Collection, origin and license status visible on each imported reference card.
+- Generated source, explicit application and HTML download are separate actions.
+- Applying a pattern retains the first editor draft during the current editing session.
+- Existing URL/HTML, Render, Critique, functional assay, history and Faustus copilot remain available.
+
+## Colors
+
+### Primary
+- **Workbench blue** (`primary`): the existing app accent for the apply-source action and Render.
+- **Hover blue** (`primary-hover`): the existing brighter hover state for primary actions.
+- **Accent ink** (`primary-ink`): dark text on primary action backgrounds.
+- **Soft blue** (`primary-soft`): the existing accent chip treatment, including reference font metadata.
+
+### Neutral
+- **Deep ground** (`neutral-bg`): the page background around editor and gallery groups.
+- **Panel charcoal** (`neutral-surface`): disclosure panels, fields and reference cards.
+- **Raised charcoal** (`neutral-elevated`): metadata chips and secondary hover states.
+- **Quiet borders** (`neutral-border`, `neutral-border-hover`): component separation and hover feedback.
+- **Reading text** (`neutral-text`), **supporting text** (`neutral-muted`) and **field hints**
+  (`neutral-dim`): the existing text hierarchy.
+
+Generated studies have their own document-local palettes. Their default accent is editable;
+it does not replace the shell accent. Elastic lettering keeps dark reading text on its pale ground
+and uses the custom accent as an underline. Imported screenshots retain their source appearance.
+
+## Typography
+
+The shell uses the shared serif stack for page headings and shared sans stack for form/body text.
+The frontmatter records the stacks, not a guarantee that their first font is installed.
+HTML editing retains the app's Cascadia/Consolas monospace stack. Labels and supporting metadata
+stay compact; imported cards use a semibold title (13px) and supporting provenance (12px).
+
+Generated studies are independent editable documents: their common body is system sans (16px/1.5),
+with Georgia headings in the Canvas studies and prismatic card. Common headings are fluid;
+literal user text, including graphemes and HTML-like strings, remains text. Explanations follow
+the title or sit beside a control; the new studies have no ornamental serials or upper kickers.
+
+## Layout
+
+The existing shell keeps its sidebar at desktop widths (220px from the shared theme) and horizontally
+scrollable section navigation on smaller screens. At the shell's medium breakpoint (768px), main
+padding changes from 16px to 32px horizontally. The Critique editor/history composition becomes
+two columns at 1024px, with a 1.4:1 ratio and a 24px gap; below it, history follows the editor.
+
+Pattern controls are vertically ordered: pattern, text, color and generation. Ready-source actions
+wrap beneath them. The saved-draft status and Restore draft button sit immediately above the HTML
+field. Collection import uses a native disclosure; its path field and import action wrap. Existing
+URL capture remains above it, and search/tag/vibe/library/collection filters remain below it.
+
+Gallery cards use an auto-fill grid with a 240px minimum column and a 14px gap, becoming one column
+in the supplied mobile capture. Thumbnails use a fixed 16:10 viewport with cover cropping; reference
+detail images retain their intrinsic ratio. The collection list loads 60 entries per cursor page,
+with Load more references after the grid. Filtering applies across the collection, not just loaded cards.
+
+Generated study content is constrained to 1100px with fluid padding (`clamp(20px,5vw,64px)`).
+Canvas/SVG geometry scales to the available width. The editorial spread stacks below 650px;
+its shape is then capped at 250px. Controls wrap rather than forcing a wider viewport.
+
+## Elevation & Depth
+
+The extension uses the existing flat panels, border separation and tonal hierarchy. Reference cards
+do not acquire a new drop shadow. The existing detail drawer remains a fixed right-hand panel
+(`min(560px,100vw)`) over a dark scrim; toast depth uses the shared shadow. These shell treatments
+are separate from document-local effects such as the landscape frame and prismatic card shadow.
+
+Motion in the shell retains its brief state transitions (160ms for buttons/cards) and reduced-motion
+override. The studies keep their own explicit controls: replay, pause/resume, sliders, reset and
+reduced-motion alternatives. A pulse is a graphic wave study; it is not an audio generator.
+
+## Shapes
+
+Use the incumbent rounded rectangles: 8px buttons/fields, 10px panels/cards, and 6px chips.
+The reference card clips its thumbnail at the card boundary and places metadata in a 12px inset.
+Disclosure panels retain the same border, radius and 16px padding as ordinary panels. Geometry
+inside generated documents belongs to that study and must not become a new global component rule.
+
+## Components
+
+### Local collection disclosure and import receipt
+
+A native details/summary group adds a labeled manifest path and a secondary Import button.
+During import the button is disabled and names the busy state. The inline status reports the collection,
+new/reused counts and per-entry errors. The normal manifest format is
+`vitruvius-reference-collection/v1`; it copies captured images and metadata into private reference storage.
+Repeating identical entries reuses versions; changed metadata or image content creates a new reference
+version while previous material remains. This flow does not execute or incorporate third-party HTML.
+
+### Collection filter, cursor action and reference card
+
+The collection select lists names and stored-version counts alongside existing filters. Cursor loading
+retains applied filters and appends results. Each imported card keeps its title, image and tags and adds
+collection name, origin domain (or local-file label), and license or No declared license. This is provenance,
+not permission inferred from a screenshot. The existing detail drawer keeps the full URL, source revision,
+notes, palette, fonts, libraries and related patterns.
+
+### Pattern disclosure, generated source and draft notice
+
+The selector exposes eight original studies with literal text and a six-digit hex accent parameter.
+Generate source only prepares a complete editable HTML document. Use this source in the editor is the
+primary action; Download HTML is a separate secondary action. The first explicit application saves the
+previous HTML, including an empty draft. Later applications retain that first saved value. Restore draft
+returns it and clears the saved slot. This is page-component state, retained until restoration or leaving
+the page; it is not persistent history or a general undo stack. Generation never overwrites the editor.
+
+The existing editor then runs Render, optional Critique with vision and the functional assay, with its
+widths/dark-mode controls and render history. The new forms keep the existing copilot draft context.
+
+### Original editable studies
+
+| Pattern | Material and real controls | Export |
+| --- | --- | --- |
+| Editorial grid | Heading-scale slider, asymmetric grid and geometric shape | HTML |
+| Layered landscape | Own layered SVG, pointer parallax, depth slider and recenter | HTML |
+| Elastic lettering | Grapheme-aware spans, replay and spacing slider | HTML |
+| Radial drawing | Initially blank Canvas, pointer drawing, sector slider and clear | HTML, PNG drawing |
+| Constellation map | SVG points, click/Enter/Space connections, clear and status | HTML, SVG drawing |
+| Halftone field | Procedural Canvas dots with distance slider | HTML, PNG field |
+| Pulse study | Canvas wave, frequency/amplitude sliders and pause/resume | HTML |
+| Prismatic card | CSS perspective, pointer tilt, rotation slider and reset | HTML |
+
+### Evidence and scope
+
+This record follows visual source 69acd07 and subsequent test-only commit 1480030. Evidence is in
+`D:/LocalAI/research-inbox/referencias-vitruvius-20261013`: editor/gallery desktop/mobile `*-r2.png`,
+the eight `r2/<pattern>-1440.png` and `r2/<pattern>-390.png` studies, and their browser receipt.
+The receipt records eight control passes without page errors or overflow at those study widths.
+The final finish verdict resolves four material fixes and says ship for that scope; it does not certify
+the whole app or replace functional review. The collection's 100 captured references are private source
+evidence, not 100 newly implemented interactive pages. Historical source render metadata does not prove
+every original control or audio function works. No arbitrary custom palette is certified by this record.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** use the existing Hoard theme and native disclosure/form controls for additions to these surfaces.
+- **Do** keep collection, origin and license status visible beside every imported card's title and tags.
+- **Do** keep generation, explicit application, restoration and HTML download as separate actions.
+- **Do** preserve the first saved HTML draft, including an empty draft, for the current editor visit.
+- **Do** keep the generated source editable and route it through the existing render/critique/assay workflow.
+
+### Don't:
+- **Don't** promote a study's palette, geometry or font choice into a new app-wide visual identity.
+- **Don't** replace editor HTML when asynchronous source generation completes.
+- **Don't** describe the saved-draft slot as persistence across navigation or a general undo history.
+- **Don't** hide unknown licensing behind tags or claim a source screenshot licenses its implementation.
+- **Don't** turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification.
