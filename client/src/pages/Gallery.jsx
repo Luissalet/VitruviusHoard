@@ -5,7 +5,13 @@ import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { fileRelPath } from "../format.js";
 
-function ReferenceCard({ ref, t, onOpen }) {
+function ReferenceCard({ ref, t, onOpen, es }) {
+  const collection = ref.analysis?.collection;
+  let origin = "";
+  try { origin = new URL(ref.url).hostname; } catch { origin = es ? "Archivo local" : "Local file"; }
+  const license = collection?.license;
+  const licenseLabel = !license || /no license|unknown|sin licencia/i.test(license)
+    ? (es ? "Sin licencia declarada" : "No declared license") : license;
   const [hover, setHover] = useState(false);
   const poster = ref.files?.poster || ref.files?.desktop;
   const video = ref.files?.video;
@@ -34,6 +40,10 @@ function ReferenceCard({ ref, t, onOpen }) {
       </div>
       <div className="p-3">
         <div className="font-semibold text-[13px] truncate">{ref.title || ref.url}</div>
+        {collection && <div className="help mt-2">
+          <p className="break-words">{collection.name} · {origin}</p>
+          <p className="truncate" title={license || licenseLabel}>{licenseLabel}</p>
+        </div>}
         <div className="flex flex-wrap gap-1 mt-2">
           {(ref.tags || []).map((tag) => <span key={tag} className="chip">{tag}</span>)}
         </div>
@@ -285,7 +295,7 @@ export default function Gallery() {
       {items?.length === 0 && <Empty>{t("gallery_no_results")}</Empty>}
       {!!items?.length && (
         <div className="grid-cards">
-          {items.map((ref) => <ReferenceCard key={ref.id} ref={ref} t={t} onOpen={setOpenId} />)}
+          {items.map((ref) => <ReferenceCard key={ref.id} ref={ref} t={t} es={es} onOpen={setOpenId} />)}
         </div>
       )}
 

@@ -36,3 +36,5 @@ Import a manifest from **Gallery → Import local collection**, `POST /api/refer
 Open **Critique → Original HTML patterns**. Generate a source, then use the apply button to place it in the editor, or download it as HTML. Generating alone never replaces the editor's current draft. Existing Render, critique and functional assay controls operate on the edited source. The studies demonstrate concrete composition and interaction techniques; they do not simulate financial, acoustic or scientific measurements.
 
 Available patterns: `editorial`, `diorama`, `elastic`, `symmetry`, `constellation`, `halftone`, `pulse`, `holographic`. Drawing and halftone export PNG; constellation mapping exports SVG. Motion studies respect the reduced-motion preference, with explicit controls for replay or playback where applicable.
+
+Applying a pattern retains the editor draft until **Restore draft** is used or the page is left. Imported cards show collection, origin and license status.
