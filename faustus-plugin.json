@@ -32,7 +32,9 @@
     "diagram-brand-profiles",
     "mermaid-import",
     "excalidraw-import",
-    "drawio-import"
+    "drawio-import",
+    "reference-collections",
+    "original-html-patterns"
   ],
   "placeholders": [
     "VITRUVIUS_DIR",

@@ -288,3 +288,9 @@ MIT — ver `LICENSE`.
 ## Ampliación de la familia · 2026-10-04
 
 Movimiento permite editar escenas, textos y figuras, tiempos, seis entradas y tres formatos. `motion_templates`, `motion_save`, `motion_list`, `motion_get` y `motion_render` comparten los handlers REST. Conserva versiones y exporta HTML/SVG o MP4 sin audio con fotogramas calculados y FFmpeg; añade el sonido en Lumiere. Límites: 60 s, 30 fps, 1920 px, 40 elementos por escena. Requiere Chromium y FFmpeg, sin modelo generativo.
+
+## Colecciones de referencias y patrones propios
+
+La galería incorpora colecciones de capturas locales mediante su formulario o `reference_import_collection`. El manifiesto JSON `vitruvius-reference-collection/v1` contiene `id`, `name` y `entries`: cada entrada incluye `key`, `title`, `tags`, `files.desktop` y, opcionalmente, `files.mobile`, `url`, `note` y `metadata`. Las rutas de imágenes son relativas al manifiesto. Se copian a la galería; repetir el mismo contenido reutiliza la versión, y cambiar contenido o metadatos crea otra. Los errores individuales se muestran y admiten reintento. No se ejecuta HTML de las referencias. `reference_collections` enumera las colecciones y `reference_search` acepta `collection` y el cursor `before` para recorrerlas completas. Los filtros se aplican antes de paginar.
+
+`design_patterns` ofrece ocho estudios HTML originales: retícula editorial, paisaje SVG por capas, letras elásticas, dibujo radial, constelaciones, semitonos, pulsos y tarjeta prismática. `design_pattern` genera HTML autónomo con texto literal y color. En **Crítica → Patrones HTML propios**, genera la fuente y llévala al editor existente para editar, descargar, capturar y ejecutar el ensayo funcional. Generar no sustituye automáticamente un borrador pendiente. Los patrones funcionan sin bibliotecas externas ni modelo generativo. Las capturas conservan procedencia histórica como material de investigación; no son dependencias de otros productos.
