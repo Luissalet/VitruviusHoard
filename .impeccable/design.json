@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T17:50:11.296163+00:00",
-  "title": "Design System: Vitruvius's Hoard — extension 501",
+  "generatedAt": "2026-10-13T19:40:45.108681+00:00",
+  "title": "Design System: Vitruvius's Hoard — extensions 501 and 504",
   "extensions": {
     "colorMeta": {
       "primary": {
@@ -217,6 +217,14 @@
       {
         "name": "editorial-document-stack",
         "value": "650px"
+      },
+      {
+        "name": "applications-workspace-columns",
+        "value": "1024px"
+      },
+      {
+        "name": "starter-header-stack",
+        "value": "600px"
       }
     ]
   },
@@ -282,33 +290,75 @@
       "description": "Inline retained-draft count and restore action above the editor. Every apply pushes current HTML; restore pops the last value. State lasts for the current page visit.",
       "html": "<div class=\"ds-draft\" role=\"status\"><span>Source applied. 2 drafts retained during this edit.</span><button class=\"ds-restore\" type=\"button\">Restore draft</button></div>",
       "css": ".ds-draft{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.ds-draft span{font-size:12px;color:var(--hoard-text-muted,#b4b7be)}.ds-restore{font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;color:var(--hoard-text,#e1e4ec);display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border:1px solid var(--hoard-border,#333845);border-radius:var(--hoard-radius,8px);background:transparent;font-weight:600;line-height:18px;cursor:pointer;white-space:nowrap;transition:background .16s,border-color .16s;}.ds-restore:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-restore:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px;}.ds-restore:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-draft,.ds-restore{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Selected application project",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Existing active-button treatment marks the displayed project; only that link has aria-current. Requires the project route to open real source.",
+      "html": "<a class=\"ds-project-selected\" href=\"#/projects/example\" aria-current=\"page\">Inventario de materiales</a>",
+      "css": ".ds-project-selected{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border:1px solid var(--hoard-accent,#6a8ced);border-radius:var(--hoard-radius,8px);background:var(--hoard-accent,#6a8ced);color:var(--hoard-accent-ink,#12151c);font-family:var(--hoard-font-sans,'Source Sans 3',system-ui,sans-serif);font-size:13px;font-weight:600;line-height:18px;text-align:left;white-space:nowrap;overflow-wrap:break-word;text-decoration:none;cursor:pointer;transition:background .16s,border-color .16s}.ds-project-selected:hover{background:var(--hoard-accent-strong,#8ea8f1);border-color:var(--hoard-accent-strong,#8ea8f1)}.ds-project-selected:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}@media(prefers-reduced-motion:reduce){.ds-project-selected{transition:none!important;animation:none!important}}"
+    },
+    {
+      "name": "Starter table in a scroll region",
+      "kind": "custom",
+      "description": "Document-local inventory table with three sample rows. Minimum width and intact headers keep narrow previews readable through horizontal scrolling; no record API is executed by this snippet.",
+      "html": "<div class=\"ds-starter-table-wrap\"><table class=\"ds-starter-table\"><thead><tr><th>Item</th><th>Quantity</th><th>Location</th><th>Open</th></tr></thead><tbody><tr><td>Tinta negra</td><td>3</td><td>Armario 1</td><td><a href=\"#record-1\">Open record</a></td></tr><tr><td>Papel de algodón</td><td>24</td><td>Estante A</td><td><a href=\"#record-2\">Open record</a></td></tr><tr><td>Cartulina azul</td><td>12.5</td><td>Mesa 2</td><td><a href=\"#record-3\">Open record</a></td></tr></tbody></table></div>",
+      "css": ".ds-starter-table-wrap{max-width:100%;overflow-x:auto;font:16px/1.6 system-ui,sans-serif;color:#222d30}.ds-starter-table{width:100%;min-width:560px;border-collapse:collapse;background:#fff;border-top:3px solid #286c56}.ds-starter-table th,.ds-starter-table td{text-align:left;vertical-align:top;border-bottom:1px solid #d2d9d3;padding:12px;overflow-wrap:anywhere}.ds-starter-table th{overflow-wrap:normal;white-space:nowrap;font-size:13px;font-weight:600;letter-spacing:.03em}.ds-starter-table td:first-child{font-weight:600}.ds-starter-table a{color:#234a61;text-underline-offset:4px}.ds-starter-table a:focus-visible{outline:3px solid #286c56;outline-offset:4px}@media(max-width:600px){.ds-starter-table th,.ds-starter-table td{padding:9px;font-size:14px}}@media(prefers-reduced-motion:reduce){.ds-starter-table-wrap{scroll-behavior:auto}}"
     }
   ],
   "narrative": {
     "northStar": "Existing Hoard workbench",
-    "overview": "This record preserves the incumbent Operate interface: dark tonal surfaces, serif page headings,\none blue accent, native form controls and explicit task actions. The new collection importer belongs\nin Gallery; the eight original HTML patterns belong above the existing Critique editor. Imported\nreference imagery and generated studies are the work being inspected, not a replacement app identity.\n\nThe frontmatter and this extension record describe the current shell used by these additions.\nThe earlier architecture and design notes above are retained without a general refresh; their old\npalette, generated font-pairing examples and tool counts are not the authority for this extension.\nThe implemented sources and matching captures are authoritative. No new visual world or approved\ncomposition was established for task 501.\n\nThe `.impeccable/design.json` sidecar records eight drop-in shell component previews, existing motion,\nshadow and breakpoint extensions, and the same narrative. Its derived tonal strips are preview aids,\nnot additional implemented theme tokens; primitive values remain in the frontmatter.",
+    "overview": "This record preserves the incumbent Operate interface: dark tonal surfaces, serif page headings,\none blue accent, native form controls and explicit task actions. The new collection importer belongs\nin Gallery; the eight original HTML patterns belong above the existing Critique editor. Imported\nreference imagery and generated studies are the work being inspected, not a replacement app identity.\n\nThe frontmatter and this extension record describe the current shell used by these additions.\nThe earlier architecture and design notes above are retained without a general refresh; their old\npalette, generated font-pairing examples and tool counts are not the authority for this extension.\nThe implemented sources and matching captures are authoritative. No new visual world or approved\ncomposition was established for task 501.\n\nThe `.impeccable/design.json` sidecar records eight drop-in shell component previews, existing motion,\nshadow and breakpoint extensions, and the same narrative. Its derived tonal strips are preview aids,\nnot additional implemented theme tokens; primitive values remain in the frontmatter.\n\nApplications extends the same Operate shell with complete editable source projects. The workbench\nkeeps its dark tonal surfaces, serif page heading, compact sans controls, monospace source field,\nlanguage switch and common Faustus launcher. A running application is a separate document inside\nthe preview, with its own editable styling; it does not establish a replacement workbench identity.\nPRODUCT.md and `.impeccable/briefs/applications.md` fix this extension of the incumbent world.\nThere is no new approved composition or visual-world contract.\n\nThis record adds Applications to the system recorded for task 501, whose tokens, components and\nearlier evidence remain intact. The sidecar adds a selected-project example and a contained table\nexample to its eight existing previews. Their HTML/CSS illustrate observed states, not a working\nproject server or authenticated production application. Derived tonal strips remain preview aids.",
     "keyCharacteristics": [
       "Progressive disclosure for local import and pattern generation.",
       "Collection, origin and license status visible on each imported reference card.",
       "Generated source, explicit application and HTML download are separate actions.",
       "Each pattern application retains the current HTML on a draft stack during the current editing session.",
-      "Existing URL/HTML, Render, Critique, functional assay, history and Faustus copilot remain available."
+      "Existing URL/HTML, Render, Critique, functional assay, history and Faustus copilot remain available.",
+      "Creation stays available in a native disclosure, closed around an existing project.",
+      "The selected project has visible accent treatment and a matching current-page attribute.",
+      "Source revisions, preview lifecycle, capture, file saving and ZIP export have explicit actions.",
+      "Unsaved source drafts are keyed by project, source revision and file during the Applications visit.",
+      "Editable starter documents retain readable table columns through local horizontal scrolling."
     ],
-    "rules": [],
+    "rules": [
+      {
+        "name": "The Selected Project Rule",
+        "body": "The project currently displayed is visibly marked with the existing\nactive-button treatment and `aria-current=\"page\"`; the other project links keep their secondary state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Contained Table Rule",
+        "body": "Both overview and records pages wrap their tables in a horizontal\nscroll region. Tables retain a useful minimum width (560px); headers do not break within words.\nAt narrow widths, the table scrolls inside the application rather than widening the outer document.\nThe initial visible crop does not mean offscreen columns or Open record links have been removed.",
+        "section": "layout"
+      }
+    ],
     "dos": [
       "Do use the existing Hoard theme and native disclosure/form controls for additions to these surfaces.",
       "Do keep collection, origin and license status visible beside every imported card's title and tags.",
       "Do keep generation, explicit application, restoration and HTML download as separate actions.",
       "Do retain every pre-application HTML value, including empty drafts, and restore in reverse order during the current editor visit.",
       "Do display structured provenance as JSON text while preserving its original structure in storage and API responses.",
-      "Do keep the generated source editable and route it through the existing render/critique/assay workflow."
+      "Do keep the generated source editable and route it through the existing render/critique/assay workflow.",
+      "Do reuse the incumbent shell theme, native controls and visible selected-project state in Applications.",
+      "Do keep source revision, running preview revision and exported revision explicit.",
+      "Do preserve newer drafts and later selections when asynchronous operations complete.",
+      "Do retain source revisions separately from the evolving SQLite records.",
+      "Do keep narrow tables horizontally scrollable inside their document, with intact header labels.",
+      "Do keep file saving, preview start/stop, capture and standalone export as separate actions."
     ],
     "donts": [
       "Don't promote a study's palette, geometry or font choice into a new app-wide visual identity.",
       "Don't replace editor HTML when asynchronous source generation completes.",
       "Don't describe the application draft stack as persistence across navigation or a general edit-undo history.",
       "Don't hide unknown licensing behind tags or claim a source screenshot licenses its implementation.",
-      "Don't turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification."
+      "Don't turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification.",
+      "Don't promote an editable starter's palette, display face or geometry into a new workbench identity.",
+      "Don't describe page-visit source drafts as persistent storage or confuse them with the HTML restore stack.",
+      "Don't imply that selecting earlier source also restores earlier data.",
+      "Don't claim production authentication, schema migration or cloud/rendering parity from the starter output.",
+      "Don't turn two visual fixes, author test results or earlier receipts into independent core approval or whole-app certification."
     ]
   }
 }

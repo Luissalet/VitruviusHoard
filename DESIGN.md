@@ -410,3 +410,206 @@ every original control or audio function works. No arbitrary custom palette is c
 - **Don't** describe the application draft stack as persistence across navigation or a general edit-undo history.
 - **Don't** hide unknown licensing behind tags or claim a source screenshot licenses its implementation.
 - **Don't** turn source metadata, screenshot counts or the scoped finish verdict into whole-app certification.
+
+# Extension record: application projects (2026-10-13, task 504)
+
+## Overview
+
+**Creative North Star: "Existing Hoard workbench"**
+
+Applications extends the same Operate shell with complete editable source projects. The workbench
+keeps its dark tonal surfaces, serif page heading, compact sans controls, monospace source field,
+language switch and common Faustus launcher. A running application is a separate document inside
+the preview, with its own editable styling; it does not establish a replacement workbench identity.
+PRODUCT.md and `.impeccable/briefs/applications.md` fix this extension of the incumbent world.
+There is no new approved composition or visual-world contract.
+
+This record adds Applications to the system recorded for task 501, whose tokens, components and
+earlier evidence remain intact. The sidecar adds a selected-project example and a contained table
+example to its eight existing previews. Their HTML/CSS illustrate observed states, not a working
+project server or authenticated production application. Derived tonal strips remain preview aids.
+
+**Key Characteristics:**
+- Creation stays available in a native disclosure, closed around an existing project.
+- The selected project has visible accent treatment and a matching current-page attribute.
+- Source revisions, preview lifecycle, capture, file saving and ZIP export have explicit actions.
+- Unsaved source drafts are keyed by project, source revision and file during the Applications visit.
+- Editable starter documents retain readable table columns through local horizontal scrolling.
+
+## Colors
+
+Applications uses the existing frontmatter palette. Selection uses workbench blue with accent ink,
+matching the primary-button treatment and its brighter hover state. Panels, fields, source and help
+text use the existing neutral hierarchy. Disabled actions retain the shared reduced-opacity state.
+
+**The Selected Project Rule.** The project currently displayed is visibly marked with the existing
+active-button treatment and `aria-current="page"`; the other project links keep their secondary state.
+
+The three starters have document-local grounds and accents: work board uses warm paper (`#f4f3ed`)
+with a blue accent (`#355c7d`), reference library uses warm parchment (`#eee8dd`) with a brown accent
+(`#6b583a`), and inventory uses pale green (`#eaf0ed`) with a green accent (`#286c56`). Their common
+reading text is dark (`#222d30`), links are blue (`#234a61`) and form fields are white. These are editable
+starter defaults, not new global shell tokens. Reference-library tables use a warm light surface;
+inventory tables carry a green top border. Changing a project's CSS changes only that application.
+
+## Typography
+
+The Applications page follows the shared heading override (30px serif, weight 700), even though the
+component requests a smaller utility size. Project headings are compact semibold sans (16px).
+Labels/help stay at 12px, controls at 13px and editable source uses the existing 12px monospace stack.
+Project-name headings can break across lines. Form fields retain native input/select/textarea behavior.
+
+Starter body text uses system sans (16px/1.6). Work-board and reference-library primary headings
+use fluid Georgia (`clamp(34px,5vw,64px)`/1.1); reference-library headings are italic. Inventory has its
+own fluid system-sans primary heading (`clamp(32px,5vw,58px)`, weight 650). Common section headings
+are Georgia (28px/1.2), paragraphs are limited to 65ch and table headers are compact semibold text.
+Header labels stay on one line; table cell content can wrap. These document-local styles remain
+editable examples and do not replace the shell typography.
+
+## Layout
+
+The existing desktop sidebar and mobile horizontal section navigation remain. Inside Applications,
+the project list and workspace form two columns at 1024px: a 240px list and a flexible workspace,
+with a 20px gap. Below that breakpoint they stack. The workspace has a zero minimum width so its
+preview and source editor fit the available column. Creation fields use two columns from 768px;
+otherwise they stack. Action groups wrap. Native creation disclosure opens for the initial empty
+state; an existing project keeps it available above the working area without dominating that area.
+
+The selected project header holds revision, preview and capture actions. A running preview follows
+in a full-width iframe (560px high), then the file/source panel, export controls and capture receipt.
+The iframe uses the actual owned local preview URL. It is not an image standing in for application
+behavior. Source textareas resize vertically; file/revision selects and explicit labels remain visible.
+
+Starter headers, main content and footers are constrained to 1100px, with fluid horizontal insets
+(`clamp(20px,5vw,56px)`) and 24px vertical padding. Headers wrap, then stack below 600px.
+Record forms use a responsive grid with a 220px preferred minimum column and a 16px gap; search
+controls wrap. Buttons and ordinary inputs/selects have a 44px minimum height; checkboxes retain
+their native compact geometry.
+
+**The Contained Table Rule.** Both overview and records pages wrap their tables in a horizontal
+scroll region. Tables retain a useful minimum width (560px); headers do not break within words.
+At narrow widths, the table scrolls inside the application rather than widening the outer document.
+The initial visible crop does not mean offscreen columns or Open record links have been removed.
+
+## Elevation & Depth
+
+Applications retains flat, bordered shell panels and tonal state feedback. Selection introduces no
+new shadow vocabulary. Shell state transitions and reduced-motion behavior remain the existing ones.
+The preview's pale document ground is separate from the dark shell; starter tables and forms use
+borders and surface contrast rather than new elevation effects. Starter focus uses an accent outline
+(3px, offset 4px); shell controls retain the shared focus treatment.
+
+## Shapes
+
+The workspace reuses the existing rounded buttons/fields and panel borders. The preview frame has
+its existing rounded boundary; project links use the shared button silhouette. Starter forms and
+tables use simple squared borders. Those document-local rectangles are not a replacement for the
+shell's established radii.
+
+## Components
+
+### Creation disclosure and selected project
+
+The form contains name, starting point and description with native labels; Create is unavailable
+while busy or the name is blank. The three starting points are work board, reference library and
+inventory. Empty list/workspace states give the next action. The project list links to the selected
+project, marks only that id active, and preserves the visible name. The earlier sections/functions,
+language switching and the common Faustus launcher remain available.
+
+### Source, revision and retained drafts
+
+Each starter begins with fourteen complete editable text files: `project.json`, `server.py`,
+`layout.html`, three pages (`pages/index.html`, `pages/records/index.html`, `pages/records/[id].html`),
+three assets (`assets/style.css`, `assets/api.js`, `assets/client.js`), `contracts.d.ts`, `tsconfig.json`,
+`Dockerfile`, `LICENSE` and `README.md`. The runtime serves filesystem HTML routes, JSON record APIs
+and create/update/delete actions. The schema declares text, number, boolean and choice fields;
+generated declarations and the annotated API client describe those contracts.
+
+The file selector includes retained drafts and marks unsaved files with an asterisk. Saving the
+current file creates a retained source revision; data remains separate in SQLite. Drafts survive
+file, revision and project switches within this mounted page. Async responses preserve newer draft
+text and later selections. Save retains other unsaved file values when moving to the new revision.
+Adding a file prepares a draft path; saving performs the actual source update. Concurrent independent
+file edits merge, while same-file conflicts preserve existing source and report the affected path.
+This Applications draft map is distinct from task 501's HTML application/restore stack and is not
+durable draft persistence across leaving the page or a general undo history.
+
+### Owned preview, capture and standalone export
+
+Open preview starts a real local Python process from a captured source revision. The workbench owns
+that preview process and exposes Stop preview; changing the preview revision replaces only that
+project's owned preview. The revision selector can inspect earlier source without erasing it. Status
+distinguishes a preview of the selected revision from one showing another revision, and provides
+Open in another tab. SQLite records persist through source edits and preview restarts; inspecting
+an earlier source revision does not roll the database back. Data can evolve while a render runs.
+
+Capture uses the existing render pipeline at 390px and 1440px and enters Critique history. A returned
+capture publishes its receipt without replacing the user's later source selection. Export captures
+source/revision bytes independently of preview; its optional data copy uses an online SQLite snapshot.
+The resulting ZIP contains standalone source that runs with Python's standard library, native
+HTML/CSS/JavaScript and no workbench or reference-framework runtime. Download identifies its exported
+revision. The Dockerfile is editable output, not evidence of tested cloud deployment.
+
+### Record form, status and errors
+
+The starter server validates declared field types and rejects invalid input. Record forms expose
+create/edit/delete and search/navigation with native controls; the inline live status shows server
+errors. If edits arrive during submit, accepted values save while newer form text remains visible.
+Valid field names that match form members (`elements`, `querySelector`, `addEventListener`, `dataset`,
+`namedItem`, `title`) are read through native prototype APIs, without banning those names.
+Workbench failures use the existing notification path; busy buttons name their current operation.
+These behaviors describe source and reported functional evidence, not screenshots of every error,
+loading, empty, export or conflict state.
+
+### Evidence and scope
+
+This extension reads frozen R2 source `f52496376c763b14278e30018b581c2776146836`, specifically
+`client/src/pages/Projects.jsx`, shared shell CSS, `vitruvius_hoard/app_projects.py` and its runtime.
+Evidence lives at `D:/LocalAI/research-inbox/vitruvius-apps-20261013`. The valid `recapture-r2/`
+workspace and inventory captures have fresh contexts, three records, a visible document beginning
+and `scrollY: 0`: desktop 1280×900 and mobile 390×844, with preview widths 736px and 358px.
+The first R2 recapture attempt with a blank iframe was discarded and is not counted as evidence.
+
+`finish-verdict-r2.md` says SHIP only for two visual corrections: visible selected-project treatment
+and readable table columns/headers inside horizontal scrolling. It retains R1's scope limits and
+does not approve the core or certify other starters/states. At this documentation checkpoint,
+independent functional review has approved submission R2 with a CAS vote against revision 2.
+`D:/LocalAI/research-inbox/referencias-core504-review-20261013/REVIEW-504-R2.md` records 29 independent
+area tests passing with the real-browser six-name regression, the two unchanged R1 reproductions
+now passing, and native R2 MCP (51 tools, three calls) with fourteen exported files matching exact
+UTF-8 source bytes. This candidate approval does not claim Main integration/activation.
+
+The author's R2 submission reports 389 tests passing with `VITRUVIUS_BROWSER_TESTS=1`, including
+real Edge create/edit checks for the six form-member names, plus a passing build. The capture-race
+receipt records selection B and source B surviving the completed capture of A. Earlier R1 receipts
+record native MCP's 51-tool catalogue, project CRUD, retained data/drafts, exact exported source bytes,
+an independently started extracted ZIP and TypeScript checking. Those earlier results are not
+relabelled as fresh R2 executions. This documenter inspected code and supplied captures, and did
+not repeat the browser, detector, context or functional suites.
+
+The generated server is an ordinary local HTTP application without accounts/authentication. Editable
+schema/client changes and production infrastructure belong to the exported project; no automatic
+schema migration, production authentication, universal component renderer, cloud adapter, RSC,
+streaming/compiler parity or benchmark superiority is established. Creating/running a starter needs
+no model; global Sparks, model services and GPUs are outside this feature's preview lifecycle.
+
+Not canonized: starter palettes, geometry and inventory's system-sans display heading remain local
+editable details; the latter does not establish a system-display-face rule for future shell surfaces.
+Uncaptured states and scoped SHIP are not promoted into universal quality or functional guarantees.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** reuse the incumbent shell theme, native controls and visible selected-project state in Applications.
+- **Do** keep source revision, running preview revision and exported revision explicit.
+- **Do** preserve newer drafts and later selections when asynchronous operations complete.
+- **Do** retain source revisions separately from the evolving SQLite records.
+- **Do** keep narrow tables horizontally scrollable inside their document, with intact header labels.
+- **Do** keep file saving, preview start/stop, capture and standalone export as separate actions.
+
+### Don't:
+- **Don't** promote an editable starter's palette, display face or geometry into a new workbench identity.
+- **Don't** describe page-visit source drafts as persistent storage or confuse them with the HTML restore stack.
+- **Don't** imply that selecting earlier source also restores earlier data.
+- **Don't** claim production authentication, schema migration or cloud/rendering parity from the starter output.
+- **Don't** turn two visual fixes, author test results or earlier receipts into independent core approval or whole-app certification.
