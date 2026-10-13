@@ -112,3 +112,20 @@ def test_malformed_entry_does_not_abort_following_valid_entries(services, tmp_pa
     result = services.reference_import_collection(str(path))
     assert result["imported"] == 1 and len(result["errors"]) == 2
     assert result["references"][0]["key"] == "2"
+
+
+def test_late_transaction_failure_does_not_report_an_import(services, tmp_path, monkeypatch):
+    import sqlite3
+    from contextlib import contextmanager
+    path, _ = manifest(tmp_path, 1)
+    original_tx = services.db.tx
+    @contextmanager
+    def fail_after_body():
+        with original_tx():
+            yield
+            raise sqlite3.OperationalError("injected late transaction failure")
+    monkeypatch.setattr(services.db, "tx", fail_after_body)
+    result = services.reference_import_collection(str(path))
+    assert result["imported"] == 0 and result["reused"] == 0 and len(result["errors"]) == 1
+    assert result["references"] == [] and services.reference_search() == []
+    assert not list(services.config.references_dir.iterdir())
