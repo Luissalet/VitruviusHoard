@@ -85,6 +85,8 @@ export default function Diagrams() {
   const [text, setText] = useState(SAMPLE);
   const [intent, setIntent] = useState("");
   const [card, setCard] = useState(null);
+  const [catalogue, setCatalogue] = useState({ types: {}, patterns: {} });
+  const [kind, setKind] = useState("");
   const [profile, setProfile] = useState("");
   const [brands, setBrands] = useState([]);
   const [systems, setSystems] = useState([]);
@@ -95,7 +97,8 @@ export default function Diagrams() {
 
   const load = useCallback(async () => {
     try {
-      const [b, s, r] = await Promise.all([api.diagramBrands(), api.tokensList(50), api.diagrams(20)]);
+      const [b, s, r, c] = await Promise.all([api.diagramBrands(), api.tokensList(50), api.diagrams(20), api.diagramTypes({})]);
+      setCatalogue({ types: c.types || {}, patterns: c.patterns || {} });
       setBrands(b.profiles || []);
       setSystems(s.design_systems || []);
       setRecent(r.diagrams || []);
@@ -111,6 +114,18 @@ export default function Diagrams() {
   const suggest = async () => {
     try {
       setCard(await api.diagramTypes({ intent }));
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+
+  const chooseKind = async (value) => {
+    setKind(value);
+    if (!value) return;
+    try {
+      const got = await api.diagramTypes({ type: value });
+      const pattern = catalogue.patterns[got.pattern];
+      setCard({ type: value, question: pattern ? pattern.question : "", card: got });
     } catch (e) {
       notify(e.message);
     }
@@ -156,6 +171,13 @@ export default function Diagrams() {
                        placeholder={t("dg_intent_ph")} onKeyDown={(e) => e.key === "Enter" && suggest()} />
               </div>
               <button type="button" className="btn btn-sm" onClick={suggest}>{t("dg_suggest")}</button>
+              <div>
+                <label className="label" htmlFor="dg-type">{t("dg_type")}</label>
+                <select id="dg-type" className="field" value={kind} onChange={(e) => chooseKind(e.target.value)}>
+                  <option value="">{t("dg_type_any")}</option>
+                  {Object.keys(catalogue.types).map((k) => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
             </div>
             {card && card.card && (
               <div className="text-[12px] flex flex-col gap-1">
