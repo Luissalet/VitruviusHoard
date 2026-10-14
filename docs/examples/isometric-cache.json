@@ -1,0 +1,197 @@
+{
+  "type": "isometric",
+  "title": "Set-associative cache",
+  "figure": 3,
+  "hint": "The index picks the drawer",
+  "readout": "HIT  SET 2  WAY 1",
+  "pieces": [
+    {
+      "id": "base",
+      "kind": "slab",
+      "plan": {
+        "x": 0,
+        "y": 0,
+        "w": 210,
+        "d": 150
+      },
+      "z": 0,
+      "h": 6,
+      "tone": "lo",
+      "details": [
+        "screws",
+        "ticks"
+      ]
+    },
+    {
+      "id": "side-l",
+      "kind": "slab",
+      "plan": {
+        "x": 20,
+        "y": 14,
+        "w": 5,
+        "d": 90
+      },
+      "z": 6,
+      "h": 76
+    },
+    {
+      "id": "side-r",
+      "kind": "slab",
+      "plan": {
+        "x": 185,
+        "y": 14,
+        "w": 5,
+        "d": 90
+      },
+      "z": 6,
+      "h": 76
+    },
+    {
+      "id": "top",
+      "kind": "slab",
+      "plan": {
+        "x": 20,
+        "y": 14,
+        "w": 170,
+        "d": 90
+      },
+      "z": 82,
+      "h": 5,
+      "details": [
+        "seam"
+      ]
+    },
+    {
+      "id": "set-0",
+      "kind": "slab",
+      "plan": {
+        "x": 25,
+        "y": 16,
+        "w": 160,
+        "d": 86,
+        "corner": 2
+      },
+      "z": 6,
+      "h": 14,
+      "tone": "hi",
+      "lit": false,
+      "label": "SET 0",
+      "face": "left"
+    },
+    {
+      "id": "pull-0",
+      "kind": "slab",
+      "plan": {
+        "x": 140,
+        "y": 102,
+        "w": 30,
+        "d": 3
+      },
+      "z": 11,
+      "h": 4
+    },
+    {
+      "id": "set-1",
+      "kind": "slab",
+      "plan": {
+        "x": 25,
+        "y": 16,
+        "w": 160,
+        "d": 86,
+        "corner": 2
+      },
+      "z": 26,
+      "h": 14,
+      "tone": "hi",
+      "lit": false,
+      "label": "SET 1",
+      "face": "left"
+    },
+    {
+      "id": "pull-1",
+      "kind": "slab",
+      "plan": {
+        "x": 140,
+        "y": 102,
+        "w": 30,
+        "d": 3
+      },
+      "z": 31,
+      "h": 4
+    },
+    {
+      "id": "set-2",
+      "kind": "slab",
+      "plan": {
+        "x": 25,
+        "y": 42,
+        "w": 160,
+        "d": 86,
+        "corner": 2
+      },
+      "z": 46,
+      "h": 14,
+      "tone": "hi",
+      "lit": true,
+      "label": "SET 2 HIT",
+      "face": "left"
+    },
+    {
+      "id": "pull-2",
+      "kind": "slab",
+      "plan": {
+        "x": 140,
+        "y": 128,
+        "w": 30,
+        "d": 3
+      },
+      "z": 51,
+      "h": 4
+    },
+    {
+      "id": "set-3",
+      "kind": "slab",
+      "plan": {
+        "x": 25,
+        "y": 16,
+        "w": 160,
+        "d": 86,
+        "corner": 2
+      },
+      "z": 66,
+      "h": 14,
+      "tone": "hi",
+      "lit": false,
+      "label": "SET 3",
+      "face": "left"
+    },
+    {
+      "id": "pull-3",
+      "kind": "slab",
+      "plan": {
+        "x": 140,
+        "y": 102,
+        "w": 30,
+        "d": 3
+      },
+      "z": 71,
+      "h": 4
+    },
+    {
+      "id": "index",
+      "kind": "cylinder",
+      "plan": {
+        "cx": 150,
+        "cy": 59,
+        "r": 18
+      },
+      "z": 87,
+      "h": 6,
+      "details": [
+        "knurl",
+        "ticks"
+      ],
+      "label": "IDX"
+    }
+  ]
+}

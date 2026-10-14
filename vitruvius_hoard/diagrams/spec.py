@@ -12,7 +12,17 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-DiagramType = Literal["flowchart", "architecture", "state", "er", "swimlane", "sequence", "timeline", "gantt"]
+DiagramType = Literal["flowchart", "architecture", "state", "er", "swimlane", "sequence", "timeline", "gantt", "isometric"]
+PieceKind = Literal["slab", "plate", "cylinder", "post", "ring", "coil"]
+PIECE_ALIASES = {"box": "slab", "block": "slab", "drawer": "slab", "panel": "plate", "base": "plate", "floor": "plate", "disc": "cylinder",
+                 "disk": "cylinder", "drum": "cylinder", "knob": "cylinder", "pin": "post", "rod": "post", "column": "post",
+                 "pillar": "post", "spring": "coil", "dial": "ring", "tube": "ring"}
+MAX_PIECES = 150
+ROUND_KINDS = ("cylinder", "post", "ring", "coil")
+RECT_KINDS = ("slab", "plate")
+DEFAULT_H = {"slab": 8.0, "plate": 1.5, "cylinder": 8.0, "post": 12.0, "ring": 3.0, "coil": 12.0}
+DETAIL_KINDS = {"ticks": ("slab", "plate", "cylinder", "ring"), "seam": ("slab", "cylinder", "post"), "knurl": ("cylinder",),
+                "screws": ("slab", "plate"), "groove": ("slab", "plate")}
 
 
 class Field_(BaseModel):
@@ -78,6 +88,81 @@ class Task(BaseModel):
         return self
 
 
+class Plan(BaseModel):
+    """Where a piece stands on the floor: a rectangle {x,y,w,d} or a circle {cx,cy,r}."""
+
+    x: Optional[float] = Field(None, ge=-5000, le=5000)
+    y: Optional[float] = Field(None, ge=-5000, le=5000)
+    w: Optional[float] = Field(None, le=5000)
+    d: Optional[float] = Field(None, le=5000)
+    cx: Optional[float] = Field(None, ge=-5000, le=5000)
+    cy: Optional[float] = Field(None, ge=-5000, le=5000)
+    r: Optional[float] = Field(None, le=2500)
+    r2: Optional[float] = Field(None, le=2500, description="ring: radius of the hole.")
+    corner: Optional[float] = Field(None, ge=0, le=500, description="Rounded corner radius of a rectangle.")
+
+
+class Piece(BaseModel):
+    id: str = Field(..., min_length=1, max_length=60)
+    kind: PieceKind = "slab"
+    plan: Plan
+    z: float = Field(0.0, ge=-5000, le=5000, description="Height of the bottom face above the floor.")
+    h: Optional[float] = Field(None, le=5000, description="Height of the piece (default by kind).")
+    tone: Literal["lo", "mid", "hi"] = "mid"
+    lit: bool = Field(False, description="The one piece the reader should watch. Only one in the figure.")
+    label: str = Field("", max_length=24, description="Short text engraved on a face.")
+    face: Literal["auto", "top", "left", "right"] = Field("auto", description="Where the label goes.")
+    turns: float = Field(6.0, description="coil: number of turns.")
+    details: list[Literal["ticks", "seam", "knurl", "screws", "groove"]] = Field(default_factory=list, max_length=5)
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def _alias(cls, value):
+        return PIECE_ALIASES.get(str(value).lower().strip(), str(value).lower().strip())
+
+    @field_validator("label")
+    @classmethod
+    def _one_line(cls, value):
+        return " ".join(value.split())
+
+    @model_validator(mode="after")
+    def _shape(self):
+        p, who = self.plan, f"piece '{self.id}' ({self.kind})"
+        if self.kind in RECT_KINDS:
+            if None in (p.x, p.y, p.w, p.d):
+                raise ValueError(f"{who} needs plan {{x, y, w, d}}")
+            if p.w <= 0 or p.d <= 0:
+                raise ValueError(f"{who}: plan w and d must be above 0")
+            if p.corner is not None and p.corner > min(p.w, p.d) / 2:
+                raise ValueError(f"{who}: plan corner cannot exceed half the shorter side")
+        else:
+            if None in (p.cx, p.cy, p.r):
+                raise ValueError(f"{who} needs plan {{cx, cy, r}} (a circle)")
+            if p.r <= 0:
+                raise ValueError(f"{who}: plan r must be above 0")
+            if self.kind == "ring" and p.r2 is not None and not 0 < p.r2 < p.r:
+                raise ValueError(f"{who}: plan r2 (the hole) must be above 0 and below r")
+        if self.h is None:
+            self.h = DEFAULT_H[self.kind]
+        if self.h <= 0:
+            raise ValueError(f"{who}: h must be above 0")
+        if self.kind == "coil" and not 0.5 <= self.turns <= 40:
+            raise ValueError(f"{who}: turns must be between 0.5 and 40")
+        if self.label and self.kind in ("ring", "coil", "post"):
+            raise ValueError(f"{who}: a {self.kind} cannot carry a label; engrave it on a slab, plate or cylinder")
+        for detail in self.details:
+            if self.kind not in DETAIL_KINDS[detail]:
+                raise ValueError(f"{who}: detail '{detail}' only applies to {', '.join(DETAIL_KINDS[detail])}")
+        return self
+
+    def footprint(self) -> tuple[float, float, float, float]:
+        """Bounding box on the floor: x0, y0, x1, y1."""
+        p = self.plan
+        if self.kind in RECT_KINDS:
+            return (p.x, p.y, p.x + p.w, p.y + p.d)
+        return (p.cx - p.r, p.cy - p.r, p.cx + p.r, p.cy + p.r)
+
+
 class Diagram(BaseModel):
     type: DiagramType
     title: str = Field("", max_length=120)
@@ -90,6 +175,12 @@ class Diagram(BaseModel):
     events: list[Event] = Field(default_factory=list, max_length=40)
     tasks: list[Task] = Field(default_factory=list, max_length=60)
     unit: str = Field("d", max_length=12, description="gantt: label of the time unit on the axis.")
+    pieces: list[Piece] = Field(default_factory=list, description="isometric: the parts of the object (up to 150).")
+    figure: int = Field(1, ge=1, le=99, description="isometric: the figure number in the frame ('Fig 3').")
+    hint: str = Field("", max_length=40, description="isometric: one short line at the bottom left of the frame.")
+    readout: str = Field("", max_length=24, description="isometric: one short value at the bottom right of the frame.")
+    azimuth: float = Field(45.0, ge=10, le=80, description="isometric: camera turn around the vertical, degrees.")
+    elevation: float = Field(30.0, ge=15, le=60, description="isometric: camera height, degrees.")
 
     @field_validator("nodes")
     @classmethod
@@ -123,6 +214,19 @@ class Diagram(BaseModel):
             raise ValueError("a timeline needs events")
         if self.type == "gantt" and not self.tasks:
             raise ValueError("a gantt needs tasks")
+        if self.type == "isometric":
+            if not self.pieces:
+                raise ValueError("an isometric needs pieces")
+            if len(self.pieces) > MAX_PIECES:
+                raise ValueError(f"an isometric takes at most {MAX_PIECES} pieces (got {len(self.pieces)}); merge small parts")
+            seen: set[str] = set()
+            for pc in self.pieces:
+                if pc.id in seen:
+                    raise ValueError(f"piece id '{pc.id}' appears twice")
+                seen.add(pc.id)
+            lit = [pc.id for pc in self.pieces if pc.lit]
+            if len(lit) > 1:
+                raise ValueError(f"only one piece can be lit (the one to watch); lit now: {', '.join(lit)}")
         return self
 
 
@@ -146,7 +250,13 @@ PATTERNS: dict[str, tuple[str, list[str], list[str]]] = {
                    ["timeline", "history", "milestones", "dates", "cronología", "historia", "hitos", "fechas", "línea de tiempo"]),
     "schedule": ("What runs when, for how long, in parallel?", ["gantt"],
                  ["gantt", "schedule", "plan", "roadmap", "sprint", "calendario", "planificación", "hoja de ruta", "duración"]),
+    "mechanism": ("How does it work, explained as one physical object you could build?", ["isometric"],
+                  ["mechanism", "how it works", "how does it work", "explain with an object", "explain as an object", "explain it as a machine",
+                   "isometric", "isometry", "mecanismo", "cómo funciona", "como funciona", "explica con un objeto", "explícalo con un objeto",
+                   "explícalo como una máquina", "isométrico", "isométrica", "isometrico", "isometrica", "figura técnica"]),
 }
+
+from .examples import CHEST as CHEST_EXAMPLE  # noqa: E402
 
 CARDS: dict[str, dict] = {
     "flowchart": {"pattern": "process", "use": "Steps and decisions in order. Up to ~25 nodes; split bigger flows.",
@@ -194,6 +304,17 @@ CARDS: dict[str, dict] = {
               "rules": ["start/end are numbers on one axis (days from the start).", "Lanes group tasks by team or phase."],
               "example": {"type": "gantt", "unit": "d", "tasks": [{"label": "Design", "start": 0, "end": 5, "lane": "UX"},
                                                                    {"label": "Build", "start": 4, "end": 14, "lane": "Dev"}]}},
+    "isometric": {"pattern": "mechanism", "use": "One idea explained as one working object (a chest of drawers, a lock, a gauge) drawn as an isometric "
+                                                "technical figure with a frame: Fig n, title, hint and a readout. Not boxes and arrows.",
+                  "fields": "pieces[{id, kind: slab|plate|cylinder|post|ring|coil, plan: {x,y,w,d} or {cx,cy,r}, z, h, tone: lo|mid|hi, lit, label, "
+                            "face: auto|top|left|right, details[ticks|seam|knurl|screws|groove]}], title, hint, readout, figure",
+                  "rules": ["Invent a real object whose parts ARE the concept (drawers for sets, pins for a key, a spring for a limit).",
+                            "x and y are the floor, z is up; a piece stands on z = (z + h) of the one below it. Same height + crossing plan = error.",
+                            "Tones: base lo, structure mid, the subject hi, and exactly ONE piece lit: true (the part to watch).",
+                            "8 to 40 pieces. kind slab/plate use plan {x,y,w,d} (corner optional); cylinder/post/ring/coil use {cx,cy,r}.",
+                            "Words only as short label on a face (max 24 chars) and in title (about 30), hint (40) and readout (24). No arrows, no leader lines.",
+                            "details: ticks (ruler on a slab edge, dial on a round top), seam, knurl (cylinder), screws, groove. Keep a ring's hole empty."],
+                  "example": CHEST_EXAMPLE},
 }
 
 
