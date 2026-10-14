@@ -59,16 +59,30 @@ hecho por una IA".
   exportados de cuatro formas.
 - **Galería de referencias**: captura cualquier URL o HTML en bruto, extrae su paleta (cuantización con Pillow),
   las librerías de animación detectadas y sus características de motion, y búscalas después.
-- **Diagramas**: ocho tipos (flujo, arquitectura, estados, entidad-relación, carriles, secuencia, cronología,
-  gantt), elegidos primero por patrón para que un modelo pequeño lea una sola ficha. El modelo da solo la
+- **Diagramas**: nueve tipos (flujo, arquitectura, estados, entidad-relación, carriles, secuencia, cronología,
+  gantt, isométrico), elegidos primero por patrón para que un modelo pequeño lea una sola ficha. El modelo da solo la
   estructura; el layout es una rejilla por capas con enrutado ortogonal (las aristas largas van por los huecos y
   cada grupo tiene su banda), dibujada en SVG claro y oscuro con los roles de la marca (papel, tinta, apagado,
   acento, superficie, borde, series). Los perfiles de marca salen de una web renderizada en el navegador, de una
   carpeta de CSS o tokens, de un design system o de colores sueltos. Las comprobaciones miran contraste (4,5:1
   texto, 3:1 líneas), solapes, aristas que atraviesan cajas, etiquetas que no caben, grupos y lienzo; la
   comprobación en navegador guarda una captura. Importa Mermaid (flowchart, sequence, state, er, timeline, gantt),
-  Excalidraw y draw.io (normal o comprimido) y los redibuja con la marca. Límites: ocho tipos, hasta 80 nodos; el
-  ancho de las etiquetas se estima, no se mide con la fuente.
+  Excalidraw y draw.io (normal o comprimido) y los redibuja con la marca. Límites: nueve tipos, hasta 80 nodos
+  (150 piezas en isométrico); el ancho de las etiquetas se estima, no se mide con la fuente.
+- **Diagramas isométricos**: el tipo `isometric` explica una idea como un objeto que funciona dibujado como figura
+  técnica isométrica (un cajetín de cajones para una caché, una cerradura, un calibre) en vez de cajas y flechas. El
+  modelo escribe piezas paramétricas (`slab`, `plate`, `cylinder`, `post`, `ring`, `coil`) con su planta en el suelo
+  (`{x,y,w,d}` o `{cx,cy,r}`), `z`, `h`, un tono (`lo`, `mid`, `hi`), una sola pieza `lit`, una `label` corta grabada
+  opcional y detalles (`ticks`, `seam`, `knurl`, `screws`, `groove`); el código pone la cámara (acimut 45° y elevación
+  30° por defecto, configurables), las caras visibles en cuatro tonos, el orden de pintado de atrás adelante y un marco
+  con `Fig n`, título, pista y lectura. Los tonos salen del perfil de marca, en claro y oscuro; la pieza lit toma el
+  acento. Comprobaciones: contraste y tamaño de las etiquetas, sólidos que se interpenetran a la misma altura, una sola
+  pieza lit, todo dentro del marco y lejos de su texto, un orden sin conflictos y **line ends** (cada marca, costura y
+  ranura debe terminar en otro trazo, un punto o un contorno). `browser_check` la captura a 1440 y 390 de ancho en claro
+  y oscuro. Ejemplo con su JSON: `docs/examples/isometric-cache.json` y los dibujos
+  [claro](docs/examples/isometric-cache-light.svg) y [oscuro](docs/examples/isometric-cache-dark.svg)
+  (`python scripts/make_isometric_example.py`). Límites: 150 piezas, marco fijo de 640 x 420, nada dentro del hueco de
+  un anillo, resorte solo en vertical; el ajuste del texto sobre una cara se estima, no se mide con la fuente.
 - **MCP + REST**: 38 herramientas detrás de un único puente protegido por token, más las rutas REST idénticas que
   usa la interfaz incluida (ver `docs/API.md`).
 
@@ -192,8 +206,8 @@ ejecución (arrancándola automáticamente si no lo está) usando el token del p
 | `source_ingest` | no | Ingiere (o reingiere) una fuente o todas; se ejecuta en segundo plano. |
 | `source_status` | sí | Estado de la ingesta de una fuente (idle, cloning, ingesting, ready, error). |
 | `vitruvius_status` | sí | Salud: navegador, ffmpeg, git, contadores de la biblioteca, resolución de modelos para visión/chat/embeddings. |
-| `diagram_types` | sí | Elige diagrama: primero el patrón, después el tipo; devuelve solo la ficha de ese tipo (campos, reglas, ejemplo). |
-| `diagram_render` | no | Dibuja un diagrama en SVG claro y oscuro con los colores de la marca desde estructura, Mermaid, Excalidraw o draw.io, y pasa las comprobaciones. |
+| `diagram_types` | sí | Elige diagrama: primero el patrón, después el tipo (nueve, con isométrico); devuelve solo la ficha de ese tipo (campos, reglas, ejemplo). |
+| `diagram_render` | no | Dibuja un diagrama en SVG claro y oscuro con los colores de la marca desde estructura (o piezas isométricas), Mermaid, Excalidraw o draw.io, y pasa las comprobaciones. |
 | `diagram_get` | sí | Un diagrama guardado: estructura, informe de comprobaciones y, si se pide, el SVG. |
 | `diagram_list` | sí | Diagramas guardados, los últimos primero. |
 | `diagram_delete` | no (destructiva) | Borra un diagrama guardado (solo si el usuario lo pide). |
@@ -284,7 +298,7 @@ de una página que te guste en la Galería (o `reference_add`) y Vitruvius captu
 
 ## Licencia
 
-MIT — ver `LICENSE`.
+MIT — ver `LICENSE`. El código de terceros portado o incluido conserva su aviso en `THIRD_PARTY_NOTICES.md`.
 
 ## Ampliación de la familia · 2026-10-04
 

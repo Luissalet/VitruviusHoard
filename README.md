@@ -52,15 +52,29 @@ before a person ever has to say "this looks AI-generated."
   radius, shadows and motion tokens (durations, easings, a motion-intensity knob), exported four ways.
 - **Reference gallery**: capture any URL or raw HTML, extract its palette (Pillow quantization), detected
   animation libraries and motion characteristics, and search the gallery later.
-- **Diagrams**: eight types (flowchart, architecture, state, entity-relationship, swimlane, sequence, timeline,
-  gantt), picked pattern first so a small model reads one type card. The model gives structure only; layout is a
+- **Diagrams**: nine types (flowchart, architecture, state, entity-relationship, swimlane, sequence, timeline,
+  gantt, isometric), picked pattern first so a small model reads one type card. The model gives structure only; layout is a
   layered grid with orthogonal routing (long edges run in the gaps, groups keep their own band), drawn as SVG in
   light and dark from brand roles (paper, ink, muted, accent, surface, border, series). Brand profiles come from a
   website rendered in the browser, a folder of CSS or token files, a design system or plain colours. Gates check
   contrast (4.5:1 text, 3:1 lines), overlaps, edges through boxes, labels that do not fit, groups and canvas; an
   optional browser check keeps a screenshot. Mermaid (flowchart, sequence, state, er, timeline, gantt), Excalidraw
-  and draw.io (plain or compressed) are imported and redrawn with the brand. Limits: eight types, up to 80 nodes;
-  label widths are estimated, not measured with the font.
+  and draw.io (plain or compressed) are imported and redrawn with the brand. Limits: nine types, up to 80 nodes
+  (150 pieces for isometric); label widths are estimated, not measured with the font.
+- **Isometric diagrams**: the `isometric` type explains an idea as one working object drawn as an isometric technical
+  figure (a chest of drawers for a cache, a lock, a gauge) instead of boxes and arrows. The model writes parametric
+  pieces (`slab`, `plate`, `cylinder`, `post`, `ring`, `coil`) with a plan on the floor (`{x,y,w,d}` or `{cx,cy,r}`),
+  `z`, `h`, a tone (`lo`, `mid`, `hi`), one `lit` piece, an optional short engraved `label` and details (`ticks`,
+  `seam`, `knurl`, `screws`, `groove`); code does the camera (azimuth 45° and elevation 30° by default, both
+  configurable), the visible faces in four tones, the back-to-front painter's order and a frame with `Fig n`, title,
+  hint and readout. Tones come from the brand profile, light and dark; the lit piece takes the accent. Gates: label
+  contrast and size, solids that interpenetrate at the same height, one lit piece, everything inside the frame and
+  clear of its text, an order without conflicts, and **line ends** (every tick, seam and groove must end on another
+  stroke, a dot or an outline). `browser_check` captures it at 1440 and 390 wide in light and dark. Example with spec
+  JSON: `docs/examples/isometric-cache.json` and its [light](docs/examples/isometric-cache-light.svg) and
+  [dark](docs/examples/isometric-cache-dark.svg) drawings (`python scripts/make_isometric_example.py`). Limits: 150
+  pieces, a fixed 640 x 420 frame, no pieces inside a ring's hole, coil along the vertical only; text on a face is
+  estimated for fit, not measured with the font.
 - **MCP + REST**: 25 tools behind one token-guarded bridge, plus the identical REST routes the bundled UI uses
   (see `docs/API.md`).
 
@@ -171,8 +185,8 @@ The bridge never opens the database itself: it proxies every call to `POST /api/
 | `source_ingest` | no | Ingest (or re-ingest) one source or every source; runs in the background. |
 | `source_status` | yes | Status of one source's ingest (idle, cloning, ingesting, ready, error). |
 | `vitruvius_status` | yes | Health: browser, ffmpeg, git, library counts, model resolution for vision/chat/embeddings. |
-| `diagram_types` | yes | Pick a diagram: semantic pattern first, then the type; returns only that type's card (fields, rules, example). |
-| `diagram_render` | no | Draw a diagram as SVG in light and dark with brand colours from structure, Mermaid, Excalidraw or draw.io, and run the gates. |
+| `diagram_types` | yes | Pick a diagram: semantic pattern first, then the type (nine, isometric included); returns only that type's card (fields, rules, example). |
+| `diagram_render` | no | Draw a diagram as SVG in light and dark with brand colours from structure (or isometric pieces), Mermaid, Excalidraw or draw.io, and run the gates. |
 | `diagram_get` | yes | A saved diagram: structure, gate report and optionally the SVG. |
 | `diagram_list` | yes | Saved diagrams, newest first. |
 | `diagram_delete` | no (destructive) | Delete a saved diagram (only when the user asks). |
@@ -261,7 +275,7 @@ URL of a page you like into the Gallery (or `reference_add`) and Vitruvius captu
 
 ## License
 
-MIT — see `LICENSE`.
+MIT — see `LICENSE`. Third-party code that is ported or bundled keeps its notice in `THIRD_PARTY_NOTICES.md`.
 
 ## Faustus panel
 
