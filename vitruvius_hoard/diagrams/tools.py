@@ -14,18 +14,18 @@ from . import DEFAULT_PROFILE, Diagram, DiagramStore, ProfileStore, catalogue, f
 
 class DiagramTypesArgs(BaseModel):
     intent: str = Field("", max_length=400, description="What the diagram should show; returns the pattern, the type and only that type's card.")
-    type: str = Field("", max_length=30, description="A type name: returns its card (fields, rules, example).")
+    type: str = Field("", max_length=30, description="A type name (flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric): returns its card (fields, rules, example).")
 
 
 class DiagramRenderArgs(BaseModel):
-    diagram: Optional[dict[str, Any]] = Field(None, description="Structure: {type, title, direction, nodes, edges, groups, messages, events, tasks}. See diagram_types.")
+    diagram: Optional[dict[str, Any]] = Field(None, description="Structure: {type, title, direction, nodes, edges, groups, messages, events, tasks}; type isometric takes {pieces, title, hint, readout, figure} instead. See diagram_types.")
     source: str = Field("", max_length=200_000, description="Instead of diagram: Mermaid text, an Excalidraw scene (JSON) or a draw.io file (XML).")
     format: Literal["auto", "mermaid", "excalidraw", "drawio"] = "auto"
     profile: str = Field("", max_length=60, description="Brand profile name (diagram_brands), a design-system id (tokens_list) or empty for the neutral default.")
     colors: Optional[dict[str, Any]] = Field(None, description="Inline roles over the profile: paper, ink, muted, accent, surface, border, series (flat = light, or {light:{}, dark:{}}).")
     modes: list[Literal["light", "dark"]] = Field(default_factory=lambda: ["light", "dark"])
     save: bool = Field(True, description="Keep it (id, /api/diagrams/<id>/<mode>.svg).")
-    browser_check: bool = Field(False, description="Also open it in the real browser and keep a screenshot (render id).")
+    browser_check: bool = Field(False, description="Also open it in the real browser and keep a screenshot (render id). Isometric: 1440 and 390 wide, in light and dark.")
     include_svg: bool = Field(True, description="Return the SVG text.")
 
     @model_validator(mode="after")
@@ -90,9 +90,35 @@ def run_diagram_types(services, args: DiagramTypesArgs) -> dict:
     return catalogue()
 
 
-def _page(svg_text: str, dark: bool) -> str:
+def _page(svg_text: str, dark: bool, fluid: bool = False) -> str:
     bg = "#11151c" if dark else "#ffffff"
-    return f"<!doctype html><html><head><meta charset='utf-8'><title>diagram</title></head><body style='margin:0;background:{bg}'>{svg_text}</body></html>"
+    # a fluid page shrinks the drawing to the viewport (the isometric figure is checked at 1440 and 390 wide)
+    style = "svg{display:block;max-width:100%;height:auto}" if fluid else ""
+    return (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>diagram</title><style>{style}</style></head><body style='margin:0;background:{bg}'>{svg_text}</body></html>")
+
+
+ISOMETRIC_WIDTHS = [1440, 390]
+
+
+def _browser_check(services, diagram: Diagram, result: dict, label: str) -> dict:
+    """Open the drawing in the real browser and keep screenshots; the isometric figure at two widths in both modes."""
+    if diagram.type == "isometric":
+        renders = {}
+        for mode in [m for m in ("light", "dark") if m in result["svg"]]:
+            renders[mode] = services.render(html=_page(result["svg"][mode], mode == "dark", fluid=True), widths=ISOMETRIC_WIDTHS,
+                                            full_page=True, lint=False, dark=mode == "dark", title=f"diagram:{label}:{mode}")
+        first = next(iter(renders.values()))
+        return {"render_id": first["id"], "renders": {m: r["id"] for m, r in renders.items()}, "widths": ISOMETRIC_WIDTHS,
+                "files": [f"/api/renders/{r['id']}/files/{f}" if isinstance(f, str) else f for r in renders.values()
+                          for f in r.get("files") or []],
+                "error": next(((r.get("metrics") or {}).get("error") for r in renders.values() if (r.get("metrics") or {}).get("error")), None)}
+    mode = "light" if "light" in result["svg"] else next(iter(result["svg"]))
+    render = services.render(html=_page(result["svg"][mode], mode == "dark"), widths=[1280], full_page=True, lint=False,
+                             title=f"diagram:{label}")
+    return {"render_id": render["id"], "files": [f"/api/renders/{render['id']}/files/{f}" if isinstance(f, str) else f
+                                                  for f in render.get("files") or []],
+            "error": (render.get("metrics") or {}).get("error")}
 
 
 def run_diagram_render(services, args: DiagramRenderArgs) -> dict:
@@ -110,12 +136,7 @@ def run_diagram_render(services, args: DiagramRenderArgs) -> dict:
         out["id"] = meta["id"]
         out["files"] = {m: f"/api/diagrams/{meta['id']}/{m}.svg" for m in result["svg"]}
     if args.browser_check:
-        mode = "light" if "light" in result["svg"] else next(iter(result["svg"]))
-        render = services.render(html=_page(result["svg"][mode], mode == "dark"), widths=[1280], full_page=True, lint=False,
-                                 title=f"diagram:{out.get('id', diagram.type)}")
-        out["browser"] = {"render_id": render["id"], "files": [f"/api/renders/{render['id']}/files/{f}" if isinstance(f, str) else f
-                                                                for f in render.get("files") or []],
-                          "error": (render.get("metrics") or {}).get("error")}
+        out["browser"] = _browser_check(services, diagram, result, out.get("id", diagram.type))
     if args.include_svg:
         out["svg"] = result["svg"]
     if not result["ok"]:
@@ -174,13 +195,14 @@ def tools(empty_model) -> list[Tool]:
     return [
         Tool("diagram_types",
              "Pick a diagram: pattern first, then type; returns only that type's card. Elegir tipo de diagrama.\n"
-             "8 types: flowchart, architecture, state, er, swimlane, sequence, timeline, gantt.\n"
-             "Sinónimos: diagrama, esquema, flujo, arquitectura, secuencia, entidad relación, cronología, gantt.",
+             "9 types: flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric (an idea as one object).\n"
+             "Sinónimos: diagrama, esquema, flujo, arquitectura, secuencia, cronología, gantt, isométrico, cómo funciona, mecanismo.",
              DiagramTypesArgs, ann(True), run_diagram_types),
         Tool("diagram_render",
              "Draw a diagram as SVG with brand colours, light and dark, and check it. Dibujar diagrama.\n"
              "You give structure (or Mermaid / Excalidraw / draw.io); layout and orthogonal routing are code. Gates: contrast,\n"
-             "overlaps, edges through boxes, labels that do not fit, groups, canvas. Sinónimos: diagrama, dibujar, redibujar mermaid.",
+             "overlaps, edges through boxes, labels that do not fit, groups, canvas. Type isometric: pieces of one object, solids\n"
+             "and line-end gates. Sinónimos: diagrama, dibujar, redibujar mermaid, figura isométrica, objeto isométrico.",
              DiagramRenderArgs, ann(False, idempotent=False), run_diagram_render),
         Tool("diagram_get", "A saved diagram: structure, gates, optionally the SVG. Leer diagrama.\nSinónimos: abrir diagrama, svg.",
              DiagramIdArgs, ann(True), run_diagram_get),

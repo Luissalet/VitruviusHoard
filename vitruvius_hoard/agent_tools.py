@@ -18,7 +18,7 @@ Always cite `[vitruvius: ...]` when quoting the library (design_search, design_b
 Loop: write HTML -> render_preview -> design_critique -> fix -> render again; stop at score >= 8 or after 3 rounds,
 then page_assay it (drives every control in a real browser and reports what does not work).
 Use design_brief before a page from scratch; styles_search / palettes_search / fonts_search for quick lookups.
-Diagrams: diagram_types, then diagram_render (structure, Mermaid, Excalidraw or draw.io); fix failed gates, redraw.
+Diagrams: diagram_types, then diagram_render (structure, Mermaid, Excalidraw, draw.io; isometric = one object); fix gates.
 reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when the user asks."""
 
 
