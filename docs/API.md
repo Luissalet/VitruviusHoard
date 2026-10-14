@@ -425,12 +425,37 @@ The measuring/planning/execution core is incorporated in `functional_check`, wit
 ## Diagrams
 
 ### `GET /api/diagrams/types?intent=&type=`
-No arguments: the patterns and the eight types. `intent`: the pattern, the chosen type and its card. `type`: that card.
+No arguments: the patterns and the nine types (`isometric` included, pattern `mechanism`). `intent`: the pattern, the chosen type and its card. `type`: that card.
 
 ### `POST /api/diagrams`
 Body as the `diagram_render` tool: `diagram` (structure) or `source` (Mermaid, Excalidraw JSON, draw.io XML) with `format`,
 `profile` (brand profile name or design-system id), `colors`, `modes`, `save`, `browser_check`, `include_svg`.
-Returns `ok`, `failed`, `gates`, `id`, `files` and `svg`. 201.
+Returns `ok`, `failed`, `gates`, `id`, `files` and `svg`. 201. With `browser_check`, `browser` has the `render_id` and
+`files`; an isometric diagram is captured at 1440 and 390 wide in light and dark (`browser.widths`, `browser.renders`
+per mode).
+
+#### Type `isometric`
+`diagram` is `{"type": "isometric", "title", "figure", "hint", "readout", "azimuth", "elevation", "pieces": [...]}`.
+`figure` 1-99 is the `Fig n` of the frame, `hint` (40 chars) and `readout` (24) are the short bottom lines, `azimuth`
+10-80 (default 45) and `elevation` 15-60 (default 30) place the camera. Each piece:
+`{id, kind, plan, z, h, tone, lit, label, face, turns, details}`.
+
+| kind | plan | notes |
+|---|---|---|
+| `slab` | `{x, y, w, d, corner?}` | block with rounded corners, default `h` 8 |
+| `plate` | `{x, y, w, d, corner?}` | thin slab, default `h` 1.5 |
+| `cylinder` | `{cx, cy, r}` | default `h` 8 |
+| `post` | `{cx, cy, r}` | thin cylinder, default `h` 12 |
+| `ring` | `{cx, cy, r, r2?}` | hollow cylinder; keep the hole empty |
+| `coil` | `{cx, cy, r}` | vertical spring, `turns` 0.5-40 |
+
+`z` is the height of the bottom face (a piece stands on `z + h` of the one below), `tone` is `lo` (base), `mid`
+(structure) or `hi` (the subject), `lit` marks the one piece to watch (at most one), `label` (24 chars, slab, plate or
+cylinder) is engraved on `face` (`auto`, `top`, `left`, `right`), and `details` is any of `ticks`, `seam`, `knurl`
+(cylinder), `screws` and `groove` (slab, plate). Aliases such as `box`, `disc`, `pin` or `spring` are accepted for the
+kinds. Up to 150 pieces; a wrong shape comes back as a 400 (`ValueError` in the tool) that names the piece and what it needs. Gates
+(`one_lit`, `no_interpenetration`, `depth_order`, `label_size`, `label_fits`, `label_contrast_*`, `frame_text_fit`,
+`inside_canvas`, `line_ends` plus the profile contrast gates) are in `gates`; the frame is 640 x 420. Example: `docs/examples/isometric-cache.json`.
 
 ### `GET /api/diagrams?limit=30` · `GET /api/diagrams/{id}?svg=false` · `DELETE /api/diagrams/{id}`
 List, read (structure, gates, optional SVG) and delete saved diagrams.
