@@ -16,6 +16,7 @@ from typing import Any, Optional
 
 from ..tokens import contrast_ratio, roles_of
 from .layout import FONT, LINE_H, MARGIN, PAD_X, PAD_Y, Box, Layout, layered, swimlane, text_width
+from . import isometric
 from .spec import Diagram
 
 DEFAULT = {
@@ -261,6 +262,8 @@ def _gantt_svg(d: Diagram, g: dict, p: dict) -> list[str]:
 
 
 def layout_of(d: Diagram) -> Any:
+    if d.type == "isometric":
+        return isometric.layout(d)
     if d.type == "swimlane":
         return swimlane(d)
     if d.type in ("flowchart", "architecture", "state", "er"):
@@ -272,6 +275,8 @@ def svg(d: Diagram, profile: dict, mode: str = "light", lay: Any = None) -> str:
     p = profile[mode]
     font = profile.get("font") or FONT_STACK
     lay = lay if lay is not None else layout_of(d)
+    if d.type == "isometric":
+        return isometric.svg(d, profile, mode, lay, font)
     if isinstance(lay, Layout):
         width, height, body = lay.width, lay.height, _graph_svg(d, lay, p)
     else:
@@ -313,6 +318,8 @@ def gates(d: Diagram, profile: dict, lay: Any) -> list[dict]:
         bad += [f"series {i} {contrast_ratio(c, p['paper']):.2f}:1 < 3:1" for i, c in enumerate(p["series"][:4])
                 if contrast_ratio(c, p["paper"]) < 3.0]
         gate(f"contrast_{mode}", not bad, "text 4.5:1, lines and accents 3:1" if not bad else "; ".join(bad))
+    if d.type == "isometric":
+        return out + isometric.gates(d, profile, lay)
     if not isinstance(lay, Layout):
         width, height = lay["width"], lay["height"]
         if d.type == "gantt":
