@@ -92,7 +92,7 @@ const draft = (name, fallback = "") =>
 const attr = (name, fallback = "") => escape(draft(name, fallback));
 
 async function api(path, body, method) {
-  const response = await fetch("/api" + path, {
+  const response = await fetch("/theseus/api" + path, {
     method: method || (body === undefined ? "GET" : "POST"),
     headers: {
       "X-Hoard-Request": "1",
