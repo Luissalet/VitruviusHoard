@@ -1,0 +1,161 @@
+{
+  "task": 933,
+  "status": "PASS",
+  "receipts": [
+    {
+      "full_receipt": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\installed-close-cas4-final.json",
+      "full_receipt_sha256": "d3bc8d0c33ba311b431ca0b542378a9eeb1b71cb14f4aeef872cc85b8b34ebe5",
+      "result": {
+        "status": "PASS",
+        "case": "933",
+        "cwd": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed",
+        "real_factories": [
+          {
+            "module": "design",
+            "failed_off": 2,
+            "effective_close": 3,
+            "duplicate_on_rejected": true
+          },
+          {
+            "module": "babel",
+            "failed_off": 2,
+            "effective_close": 3,
+            "duplicate_on_rejected": true
+          },
+          {
+            "module": "theseus",
+            "failed_off": 2,
+            "effective_close": 3,
+            "duplicate_on_rejected": true
+          }
+        ],
+        "generic_retained_and_cancel_join": true,
+        "installed_stdio_cold_exact_schemas": 110,
+        "wheel": {
+          "bytes": 5536932,
+          "sha256": "c1491f9c48fb42d882bf95baea34849d8ae3bf75f74bdccc3621bdcf4f80e385",
+          "members": 1575
+        },
+        "product_import_count": 191
+      }
+    },
+    {
+      "full_receipt": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\installed-cas4-final.json",
+      "full_receipt_sha256": "dc8c22776addf0f7d0194baa387be741a385b6f0ed0931a9f0921c9ee3ee7d09",
+      "result": {
+        "status": "PASS",
+        "cwd": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed",
+        "target": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas4-final",
+        "profile": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\profile-cas4-final",
+        "cold_catalog": 110,
+        "installed_default_external": true,
+        "wheel": {
+          "sha256": "c1491f9c48fb42d882bf95baea34849d8ae3bf75f74bdccc3621bdcf4f80e385",
+          "bytes": 5536932,
+          "members": 1575,
+          "inventory_sha256": "c93bf555eb721e8fe9c36dcf6ae01e325f2e6ca3064e5b63a240e6e9765a1bf5"
+        },
+        "real_builds_exact": {
+          "design": 6,
+          "babel": 22,
+          "native_analysis": 555
+        },
+        "initial": {
+          "modules": [
+            {
+              "module": "design",
+              "state": "off",
+              "enabled": false,
+              "automatic": false,
+              "active_requests": 0
+            },
+            {
+              "module": "babel",
+              "state": "off",
+              "enabled": false,
+              "automatic": false,
+              "active_requests": 0
+            },
+            {
+              "module": "theseus",
+              "state": "off",
+              "enabled": false,
+              "automatic": false,
+              "active_requests": 0
+            }
+          ],
+          "theseus_status": "Existing capabilities; development incomplete and paused by Luis due to usage."
+        },
+        "ui_assets": [
+          {
+            "url": "/design/assets/index-BH4gysai.js",
+            "bytes": 344000,
+            "sha256": "b482ddf480c0c0e6251f2949966e3802fa0faa7fd5da8fb8ded4db3e86e790ca"
+          },
+          {
+            "url": "/design/assets/index-RosVPaKQ.css",
+            "bytes": 41468,
+            "sha256": "89f9a469325af88788e96dde9ba8f4a7a3a57e093f0e883ffdd1a4be37442e0b"
+          },
+          {
+            "url": "/design/api/copilot/launcher.js",
+            "bytes": 21910,
+            "sha256": "bceeaf16eae7f5bcfc578e2498ea6adb5ff77fd758b7fd1926460b3d9fc5ae6d"
+          },
+          {
+            "url": "/babel/assets/index-VGfNMryZ.js",
+            "bytes": 311330,
+            "sha256": "524ad62c26c788e0e39008f0b746a3943d723318a1e0d48b04d6d5054b1ed408"
+          },
+          {
+            "url": "/babel/assets/index-B0_qlTIm.css",
+            "bytes": 45103,
+            "sha256": "b31c7c40b6c36b6511990ab29315a46df86fe059a35f81bcf4bef97527984500"
+          },
+          {
+            "url": "/babel/api/copilot/launcher.js",
+            "bytes": 21906,
+            "sha256": "b4962469261f63b420d8edb19b8d7a12b74f02cacf2dcc9fcc5b88f960615ecd"
+          },
+          {
+            "url": "/theseus/static/hoard-theme.css",
+            "bytes": 25153,
+            "sha256": "ca2f97a50742248d4ab00ee52701f59313ad8bdc47932bd2333c8736694f0e7a"
+          },
+          {
+            "url": "/theseus/static/app.css",
+            "bytes": 12607,
+            "sha256": "cddde1d18f2014bee77e9e9b1aa29b6339409b0c0eb556d62e251d4f79121432"
+          },
+          {
+            "url": "/theseus/static/app.js",
+            "bytes": 95476,
+            "sha256": "201fac657c54325c56803f844b7fc0ad2abda97e453644415bfc01b8a22c9446"
+          },
+          {
+            "url": "/theseus/api/copilot/launcher.js",
+            "bytes": 21914,
+            "sha256": "3ceb49b0b82e79587310c45b955dffff004ff9943eccad287c7e3bb8f4cbf425"
+          }
+        ],
+        "roundtrip": {
+          "project_id": "cba0735807204ff5",
+          "source_revision": "6ce0ff8478f9f64b5fb1",
+          "source_sha256": "6ce0ff8478f9f64b5fb1dac7b72be0628b18de7011856d95a6e9f56bb1bc222c",
+          "environment_id": "env-f7459d4f0b48",
+          "native_project_id": "110153b7d582449ba7881ffd7e9dc558",
+          "artifact_id": "ddedba56b5b347d69bd785a24232cbaf",
+          "file": ".",
+          "tree_sha256": "3895fdaab937cf7b6a53fb35a8b4ffc0fd8a436f9438c3b1766f4f108fc07bca",
+          "job_id": "6d64253293a049069eeb18ab8629d859",
+          "retained_sha256": "13d4ae05a9e1b6bb92fc25a6e72dcdbf99bb1b9f94a84883df1792ae98efcd1e",
+          "historical_references": 5
+        },
+        "on_off_on_closed": true,
+        "installed_stdio_cold": 110,
+        "product_import_count": 7
+      }
+    }
+  ],
+  "source_resources_exact": 1569
+}

@@ -220,11 +220,10 @@ def create_app(data=None, port=5217, recover=True):
 
     @asynccontextmanager
     async def lifespan(app):
-        yield
-        import asyncio
-        await asyncio.to_thread(sessions.shutdown)
-        await asyncio.to_thread(comparisons.shutdown)
-        await asyncio.to_thread(comparisons.frida_sessions.shutdown)
+        try:
+            yield
+        finally:
+            await app.state.shutdown()
 
     app = FastAPI(title="Theseus's Hoard", lifespan=lifespan)
     app.state.store = store
@@ -232,6 +231,8 @@ def create_app(data=None, port=5217, recover=True):
     app.state.binary_sessions = sessions
     app.state.workflow = workflow
     app.state.evidence = evidence
+    from vitruvius_hoard.software.cleanup import Shutdown
+    app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
     install_copilot(app, "theseus", str(store.directory), app_name="Theseus's Hoard")
     install_guard(app, port_getter=lambda: port, allowed_env="THESEUS_ALLOWED_HOSTS", strict_ports=True)
 
