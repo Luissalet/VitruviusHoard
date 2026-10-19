@@ -128,6 +128,7 @@ def create_app(runtime=None):
     app.mount('/workbench',StaticFiles(directory=HERE/'web'))
     app.mount('/theme',StaticFiles(directory=ROOT/'hoard_link/ui'))
     @app.get('/icon.png')
+    @app.get('/icon-192.png')
     async def icon(): return FileResponse(ROOT/'vitruvius_hoard/static/icon-192.png')
     for name,module in runtime.modules.items(): app.mount('/'+name,module)
     return app
