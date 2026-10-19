@@ -1,0 +1,4215 @@
+[
+  {
+    "name": "design_search",
+    "description": "Search the design library: rules, skills, styles, motion recipes with citations. Busca criterio de diseño.\nKeywords (bm25) fused with multilingual meaning (a Spanish question finds English criterion) over the ingested\ndesign-skill repos; every hit carries a `[vitruvius: source/path § heading]` cite and how it matched.\nSinónimos: buscar, criterio, reglas de diseño, motion, tipografía, contraste, biblioteca.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Document kind: skill, guide, rule, catalog, reference, readme, other.",
+          "title": "Kind"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only this source id.",
+          "title": "Source"
+        },
+        "area": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rule area: typography, color, layout, motion, a11y, forms, performance, content.",
+          "title": "Area"
+        },
+        "limit": {
+          "default": 8,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "auto",
+          "description": "auto = keywords + multilingual meaning when the vectors exist; bm25 = keywords only; dense = meaning only.",
+          "pattern": "^(auto|hybrid|bm25|dense)$",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "SearchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_brief",
+    "description": "Design brief for a page/app: style, palette, fonts, rules, motion, anti-patterns. Brief de diseño.\nDeterministic composition (2-3 styles, one palette, one font pairing, rules by area, anti-patterns, checklist), all cited.\nSinónimos: brief, dirección de arte, vibe, paleta, tipografía, para una landing, para una app.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "subject": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "vibe": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vibe"
+        },
+        "product_type": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Type"
+        },
+        "platform": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Platform"
+        },
+        "mode": {
+          "default": "marketing",
+          "pattern": "^(marketing|product)$",
+          "title": "Mode",
+          "type": "string"
+        },
+        "knobs": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knobs"
+        },
+        "use_model": {
+          "default": false,
+          "title": "Use Model",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "subject"
+      ],
+      "title": "BriefArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_rules",
+    "description": "List design rules by area (typography, color, layout, motion, a11y, forms). Reglas de diseño.\nFilter by area/severity/source; rules with a check_id are enforced deterministically by design_lint.\nSinónimos: reglas, buenas prácticas, do and don't, checklist.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "area": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "pattern": "^(info|warn|error)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "limit": {
+          "default": 30,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "RulesArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "styles_search",
+    "description": "Find UI styles (glass, brutalist, swiss, aurora...) with tokens and when to use them. Estilos de UI.\nCatalog lookup over the ingested style library (colors, typography, effects, best_for, avoid).\nSinónimos: estilo visual, brutalist, glassmorphism, swiss, aurora, retro-futurista.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "limit": {
+          "default": 10,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "StylesSearchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "palettes_search",
+    "description": "Find catalogued colour palettes by name or product type. Buscar paletas de color.\nReads the palettes table (role/hex pairs) ingested from the catalog source.\nSinónimos: paleta, colores, esquema de color.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "product_type": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Type"
+        },
+        "limit": {
+          "default": 10,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "PalettesSearchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "fonts_search",
+    "description": "Find catalogued font pairings by mood or query. Buscar combinaciones de tipografías.\nReads the font_pairings table (heading/body/mono, mood, Google Fonts URL).\nSinónimos: tipografía, fuente, pareja de fuentes, mood tipográfico.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "mood": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mood"
+        },
+        "limit": {
+          "default": 10,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "FontsSearchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "render_preview",
+    "description": "Render HTML or a URL in Chromium, screenshot at widths, run lint. Renderiza y captura.\nReturns render id, absolute file paths, size, lint summary and metrics (fonts, colours, libs). Never returns image bytes unless include_images=true. A page already written to disk goes as path, not pasted into html.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.",
+          "title": "Path"
+        },
+        "widths": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Widths",
+          "type": "array"
+        },
+        "full_page": {
+          "default": true,
+          "title": "Full Page",
+          "type": "boolean"
+        },
+        "dark": {
+          "default": false,
+          "title": "Dark",
+          "type": "boolean"
+        },
+        "wait_ms": {
+          "default": 800,
+          "maximum": 20000,
+          "minimum": 0,
+          "title": "Wait Ms",
+          "type": "integer"
+        },
+        "lint": {
+          "default": true,
+          "title": "Lint",
+          "type": "boolean"
+        },
+        "include_images": {
+          "default": false,
+          "title": "Include Images",
+          "type": "boolean"
+        },
+        "title": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "title": "RenderArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_lint",
+    "description": "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n29 checks with stable ids; each finding has area, severity, evidence and a concrete fix.\nSinónimos: lint, revisar diseño, patrones genéricos de IA, contraste, accesibilidad.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.",
+          "title": "Path"
+        },
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Render Id"
+        }
+      },
+      "title": "LintArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_critique",
+    "description": "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\nMerges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy).\nSinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Render Id"
+        },
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.",
+          "title": "Path"
+        },
+        "focus": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus"
+        },
+        "use_vision": {
+          "default": true,
+          "title": "Use Vision",
+          "type": "boolean"
+        }
+      },
+      "title": "CritiqueArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "page_assay",
+    "description": "Check observable page behavior in a real browser. Comprobar controles de una página.\nUses Vitruvius's incorporated page checker: measures controls, derives a test plan, drives it and reports contradictions\nExplicit criteria verify requested effects; generic coverage cannot infer every intended effect. Takes ~15-60 s.\nSinónimos: probar la página, comprobar botones, test funcional, assay, ¿funciona?, smoke test de UI.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The page to check (a complete HTML document).",
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A URL whose HTML is downloaded and checked as a single page.",
+          "title": "Url"
+        },
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A previous render_preview of raw HTML (its saved source is reused).",
+          "title": "Render Id"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file or a folder holding index.html.",
+          "title": "Path"
+        },
+        "timeout_s": {
+          "default": 300,
+          "maximum": 900,
+          "minimum": 30,
+          "title": "Timeout S",
+          "type": "integer"
+        },
+        "criteria": {
+          "description": "Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Criteria",
+          "type": "array"
+        }
+      },
+      "title": "AssayArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "render_compare",
+    "description": "Pixel-diff two renders at a given width: percent changed + a diff image. Comparar dos renders.\nSinónimos: comparar, diff visual, antes y después.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "render_a": {
+          "maxLength": 40,
+          "title": "Render A",
+          "type": "string"
+        },
+        "render_b": {
+          "maxLength": 40,
+          "title": "Render B",
+          "type": "string"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "maximum": 4000,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        }
+      },
+      "required": [
+        "render_a",
+        "render_b"
+      ],
+      "title": "CompareArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "tokens_generate",
+    "description": "Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. Genera design system.\nPure-Python OKLCH ramps (50-950), fluid type scale, spacing/radius/shadow/motion tokens, four export formats.\nSinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "base_color": {
+          "anyOf": [
+            {
+              "maxLength": 10,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Color"
+        },
+        "hue": {
+          "anyOf": [
+            {
+              "maximum": 360,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hue"
+        },
+        "style": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Radius/shadow style (sharp, soft, pill, flat, hard-offset) or a catalog style name such as 'brutalism', 'glassmorphism', 'swiss'.",
+          "title": "Style"
+        },
+        "vibe": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vibe"
+        },
+        "mode": {
+          "default": "both",
+          "pattern": "^(light|dark|both)$",
+          "title": "Mode",
+          "type": "string"
+        },
+        "knobs": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knobs"
+        },
+        "fonts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fonts"
+        },
+        "radius": {
+          "anyOf": [
+            {
+              "maxLength": 20,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Radius"
+        },
+        "density": {
+          "anyOf": [
+            {
+              "pattern": "^(compact|comfortable|spacious)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Density"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "TokensGenerateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "tokens_get",
+    "description": "Get a generated design system in json, css, tailwind or w3c format. Obtener design system.\nThe json format also carries `roles`: colours per mode, font families and radii (other apps read these). Sinónimos: exportar tokens, css variables, tailwind theme, w3c tokens.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "format": {
+          "default": "json",
+          "pattern": "^(json|css|tailwind|w3c)$",
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "TokensGetArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "tokens_list",
+    "description": "List generated design systems. Listar design systems.\nEach carries its `roles` (colours, fonts, radii); compact=true returns only that. Sinónimos: listar tokens, sistemas guardados.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 30,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "compact": {
+          "default": false,
+          "description": "Only id, name, created_ts and the colour/font/radius roles (no CSS or Tailwind text).",
+          "title": "Compact",
+          "type": "boolean"
+        }
+      },
+      "title": "TokensListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "tokens_preview",
+    "description": "Render the design system's live playground and lint it. Previsualizar design system.\nSinónimos: preview, playground, ver el sistema de diseño.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "dark": {
+          "default": false,
+          "title": "Dark",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "TokensPreviewArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "tokens_delete",
+    "description": "Delete a generated design system (only when the user asks). Eliminar design system.\nSinónimos: borrar tokens, eliminar sistema de diseño.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "TokensDeleteArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_templates",
+    "description": "List original full application starters. Plantillas de aplicaciones completas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_create",
+    "description": "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "template": {
+          "default": "work-board",
+          "title": "Template",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "accent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accent"
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fields"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AppCreateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_list",
+    "description": "List application projects, saved revisions and owned preview state. Listar aplicaciones.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_get",
+    "description": "Read a complete application source revision. Leer archivos y revisión de aplicación.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "title": "AppIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_update",
+    "description": "Save selected source files as a retained project revision. Editar archivos de aplicación.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "files": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Files",
+          "type": "object"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "files",
+        "expected_revision"
+      ],
+      "title": "AppUpdateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_preview",
+    "description": "Start or stop this project's owned local preview. Previsualizar aplicación.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "operation": {
+          "default": "start",
+          "enum": [
+            "start",
+            "stop"
+          ],
+          "title": "Operation",
+          "type": "string"
+        }
+      },
+      "title": "AppPreviewArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_export",
+    "description": "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "include_data": {
+          "default": false,
+          "title": "Include Data",
+          "type": "boolean"
+        }
+      },
+      "title": "AppExportArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_render",
+    "description": "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "widths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Widths"
+        }
+      },
+      "title": "AppRenderArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_call",
+    "description": "Use a project's typed record API: list, get, create, update or delete. Operar datos de aplicación.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "list",
+            "get",
+            "create",
+            "update",
+            "delete"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "data": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        },
+        "query": {
+          "default": "",
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation"
+      ],
+      "title": "AppCallArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_collections",
+    "description": "List imported local reference collections and their counts. Colecciones de referencias.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_import_collection",
+    "description": "Import a local snapshot collection into the gallery. Importar colección local.\nRetains provenance and reuses identical versions; no source HTML is executed.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "description": "Local path to a portable reference collection JSON manifest.",
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "CollectionImportArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_patterns",
+    "description": "List eight original editable HTML design studies. Patrones de diseño propios.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_pattern",
+    "description": "Generate editable standalone HTML from an original pattern. Generar patrón propio.\nLiteral text and accent colour; use render_preview, page_assay and design_critique to check the source.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "text": {
+          "default": "FORM / FIELD",
+          "title": "Text",
+          "type": "string"
+        },
+        "accent": {
+          "default": "#e36a39",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Accent",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DesignPatternArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_add",
+    "description": "Capture a website into the reference gallery: screenshots, video, fonts, palette. Guardar referencia.\nDesktop+mobile capture, optional 6s scroll video, Pillow palette, detected libs/motion, optional vision vibe tagging.\nSinónimos: guardar web, referencia visual, galería, inspiración.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Note",
+          "type": "string"
+        },
+        "video": {
+          "default": true,
+          "title": "Video",
+          "type": "boolean"
+        },
+        "analyze": {
+          "default": true,
+          "title": "Analyze",
+          "type": "boolean"
+        }
+      },
+      "title": "ReferenceAddArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_search",
+    "description": "Search the reference gallery by text, tags, vibe or library. Buscar referencias.\nSinónimos: buscar referencias, galería, por tag, por vibe, por librería.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "collection": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Collection"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "vibe": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vibe"
+        },
+        "lib": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lib"
+        },
+        "limit": {
+          "default": 12,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "ReferenceSearchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_get",
+    "description": "Get one reference's full detail (files, palette, fonts, motion, analysis). Ver referencia.\nSinónimos: detalle de referencia, ver captura.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ReferenceIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "reference_delete",
+    "description": "Delete a reference from the gallery (only when the user asks). Eliminar referencia.\nSinónimos: borrar referencia, quitar de la galería.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ReferenceIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "sources_list",
+    "description": "List every ingested design-criterion source and its status. Listar fuentes.\nSinónimos: fuentes, repos ingeridos, estado de ingesta.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "source_add",
+    "description": "Add a new source to ingest: a git repo, a local folder or a single page URL. Añadir fuente.\nOnly when the user asks to add a new source; call source_ingest afterwards to actually ingest it.\nSinónimos: añadir repositorio, nueva fuente, importar skill.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "url": {
+          "description": "Git URL, local folder path, or a single page URL.",
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "kind": {
+          "default": "git",
+          "pattern": "^(git|local|url)$",
+          "title": "Kind",
+          "type": "string"
+        },
+        "license": {
+          "default": "",
+          "maxLength": 80,
+          "title": "License",
+          "type": "string"
+        },
+        "category": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Category",
+          "type": "string"
+        },
+        "paths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paths"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "structured": {
+          "default": false,
+          "title": "Structured",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "SourceAddArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "source_ingest",
+    "description": "Ingest (or re-ingest) one source or every source; runs in the background. Ingerir fuente.\nembeddings=true (re)builds the multilingual vectors (CPU, about a minute for the whole library).\nSinónimos: ingerir, actualizar fuente, reindexar, clonar de nuevo.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "all": {
+          "default": false,
+          "title": "All",
+          "type": "boolean"
+        },
+        "embeddings": {
+          "default": false,
+          "description": "(Re)build the multilingual vectors (so Spanish questions find English criterion); alone = only that.",
+          "title": "Embeddings",
+          "type": "boolean"
+        }
+      },
+      "title": "SourceIngestArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "source_status",
+    "description": "Status of one source's ingest (idle, cloning, ingesting, ready, error). Estado de una fuente.\nSinónimos: estado de ingesta, progreso, error de clonado.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "SourceStatusArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "vitruvius_status",
+    "description": "Health: browser, ffmpeg, git, library counts, model resolution for vision/chat/embeddings. Estado del sistema.\nSinónimos: estado, salud, ¿funciona el navegador?, modelos disponibles.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_templates",
+    "description": "Editable motion templates. Plantillas de movimiento.\nKeywords: launch, portrait caption, comparison, anuncios, escenas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_save",
+    "description": "Save a versioned composition. Guardar composición animada.\nUpdates require expected_revision. Keywords: animación, montaje, motion graphics.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "Composition": {
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Title",
+              "type": "string"
+            },
+            "width": {
+              "default": 1280,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 720,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Height",
+              "type": "integer"
+            },
+            "fps": {
+              "default": 24,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Fps",
+              "type": "integer"
+            },
+            "scenes": {
+              "items": {
+                "$ref": "#/$defs/Scene"
+              },
+              "maxItems": 30,
+              "minItems": 1,
+              "title": "Scenes",
+              "type": "array"
+            }
+          },
+          "required": [
+            "title",
+            "scenes"
+          ],
+          "title": "Composition",
+          "type": "object"
+        },
+        "Layer": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "default": "text",
+              "enum": [
+                "text",
+                "rect",
+                "circle",
+                "line"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "text": {
+              "default": "",
+              "maxLength": 1000,
+              "title": "Text",
+              "type": "string"
+            },
+            "x": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Y",
+              "type": "number"
+            },
+            "width": {
+              "default": 0.8,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Width",
+              "type": "number"
+            },
+            "height": {
+              "default": 0.15,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Height",
+              "type": "number"
+            },
+            "size": {
+              "default": 56,
+              "maximum": 300,
+              "minimum": 8,
+              "title": "Size",
+              "type": "integer"
+            },
+            "color": {
+              "default": "#f5f0df",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Color",
+              "type": "string"
+            },
+            "effect": {
+              "default": "rise",
+              "enum": [
+                "none",
+                "fade",
+                "rise",
+                "slide",
+                "scale",
+                "reveal"
+              ],
+              "title": "Effect",
+              "type": "string"
+            },
+            "delay": {
+              "default": 0,
+              "maximum": 59,
+              "minimum": 0,
+              "title": "Delay",
+              "type": "number"
+            },
+            "enter": {
+              "default": 0.6,
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "title": "Enter",
+              "type": "number"
+            }
+          },
+          "title": "Layer",
+          "type": "object"
+        },
+        "Scene": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            },
+            "duration": {
+              "default": 3,
+              "maximum": 30,
+              "minimum": 0.2,
+              "title": "Duration",
+              "type": "number"
+            },
+            "background": {
+              "default": "#0b1130",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Background",
+              "type": "string"
+            },
+            "layers": {
+              "items": {
+                "$ref": "#/$defs/Layer"
+              },
+              "maxItems": 40,
+              "minItems": 1,
+              "title": "Layers",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "layers"
+          ],
+          "title": "Scene",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "composition": {
+          "$ref": "#/$defs/Composition"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "expected_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Revision"
+        }
+      },
+      "required": [
+        "composition"
+      ],
+      "title": "MotionSaveArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_list",
+    "description": "List saved editable motion compositions. Keywords: proyectos, animaciones, motion.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_get",
+    "description": "Read a composition or export HTML. Leer o exportar animación.\nKeywords: timeline, previsualización, motion, frame seeking.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "format": {
+          "default": "json",
+          "pattern": "^(json|html)$",
+          "title": "Format",
+          "type": "string"
+        },
+        "at": {
+          "default": 0,
+          "maximum": 60,
+          "minimum": 0,
+          "title": "At",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "MotionGetArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_render",
+    "description": "Capture motion frames or export silent MP4. Renderizar vídeo.\nChromium and ffmpeg; may take minutes. Keywords: render, vídeo, fotogramas, motion.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "at": {
+          "default": 1,
+          "maximum": 60,
+          "minimum": 0,
+          "title": "At",
+          "type": "number"
+        },
+        "video": {
+          "default": false,
+          "title": "Video",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "MotionRenderArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_types",
+    "description": "Pick a diagram: pattern first, then type; returns only that type's card. Elegir tipo de diagrama.\n9 types: flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric (an idea as one object).\nSinónimos: diagrama, esquema, flujo, arquitectura, secuencia, cronología, gantt, isométrico, cómo funciona, mecanismo.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "intent": {
+          "default": "",
+          "description": "What the diagram should show; returns the pattern, the type and only that type's card.",
+          "maxLength": 400,
+          "title": "Intent",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "description": "A type name (flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric): returns its card (fields, rules, example).",
+          "maxLength": 30,
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "DiagramTypesArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_render",
+    "description": "Draw a diagram as SVG with brand colours, light and dark, and check it. Dibujar diagrama.\nYou give structure (or Mermaid / Excalidraw / draw.io); layout and orthogonal routing are code. Gates: contrast,\noverlaps, edges through boxes, labels that do not fit, groups, canvas. Type isometric: pieces of one object, solids\nand line-end gates. Sinónimos: diagrama, dibujar, redibujar mermaid, figura isométrica, objeto isométrico.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "diagram": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Structure: {type, title, direction, nodes, edges, groups, messages, events, tasks}; type isometric takes {pieces, title, hint, readout, figure} instead. See diagram_types.",
+          "title": "Diagram"
+        },
+        "source": {
+          "default": "",
+          "description": "Instead of diagram: Mermaid text, an Excalidraw scene (JSON) or a draw.io file (XML).",
+          "maxLength": 200000,
+          "title": "Source",
+          "type": "string"
+        },
+        "format": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "mermaid",
+            "excalidraw",
+            "drawio"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "profile": {
+          "default": "",
+          "description": "Brand profile name (diagram_brands), a design-system id (tokens_list) or empty for the neutral default.",
+          "maxLength": 60,
+          "title": "Profile",
+          "type": "string"
+        },
+        "colors": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inline roles over the profile: paper, ink, muted, accent, surface, border, series (flat = light, or {light:{}, dark:{}}).",
+          "title": "Colors"
+        },
+        "modes": {
+          "items": {
+            "enum": [
+              "light",
+              "dark"
+            ],
+            "type": "string"
+          },
+          "title": "Modes",
+          "type": "array"
+        },
+        "save": {
+          "default": true,
+          "description": "Keep it (id, /api/diagrams/<id>/<mode>.svg).",
+          "title": "Save",
+          "type": "boolean"
+        },
+        "browser_check": {
+          "default": false,
+          "description": "Also open it in the real browser and keep a screenshot (render id). Isometric: 1440 and 390 wide, in light and dark.",
+          "title": "Browser Check",
+          "type": "boolean"
+        },
+        "include_svg": {
+          "default": true,
+          "description": "Return the SVG text.",
+          "title": "Include Svg",
+          "type": "boolean"
+        }
+      },
+      "title": "DiagramRenderArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_get",
+    "description": "A saved diagram: structure, gates, optionally the SVG. Leer diagrama.\nSinónimos: abrir diagrama, svg.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "include_svg": {
+          "default": false,
+          "title": "Include Svg",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DiagramIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_list",
+    "description": "Saved diagrams, newest first. Lista de diagramas.\nSinónimos: mis diagramas, historial.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 30,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "DiagramListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_delete",
+    "description": "Delete a saved diagram. Borrar diagrama.\nOnly when the user asks.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "include_svg": {
+          "default": false,
+          "title": "Include Svg",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DiagramIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_brand_onboard",
+    "description": "Save a brand profile for diagrams from a website, a folder of CSS/tokens, a design system or colours. Marca.\nReads paper, ink, muted, accent, surface, border and series; derives the other mode; checks contrast.\nSinónimos: perfil de marca, colores corporativos, branding, onboard brand.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "default": "",
+          "description": "A website: rendered in the real browser, colours read from what it shows.",
+          "maxLength": 2000,
+          "title": "Url",
+          "type": "string"
+        },
+        "folder": {
+          "default": "",
+          "description": "A local folder with CSS / token files (custom properties, tokens JSON).",
+          "maxLength": 1000,
+          "title": "Folder",
+          "type": "string"
+        },
+        "tokens_id": {
+          "default": "",
+          "description": "A design system made with tokens_generate.",
+          "maxLength": 40,
+          "title": "Tokens Id",
+          "type": "string"
+        },
+        "colors": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Roles given directly (paper, ink, muted, accent, surface, border, series).",
+          "title": "Colors"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "BrandOnboardArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_brands",
+    "description": "Brand profiles saved for diagrams, plus the default roles. Perfiles de marca.\nSinónimos: marcas, paletas de diagramas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_brand_delete",
+    "description": "Delete a brand profile. Borrar perfil de marca.\nOnly when the user asks.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "BrandNameArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "page_check",
+    "description": "Measure and test a page using Vitruvius's incorporated browser checker. Comprobar controles de una página.\nAccepts HTML, URL, a captured render or a local path. Reports actual cases, measurements and failures without a model or external application.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The page to check (a complete HTML document).",
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A URL whose HTML is downloaded and checked as a single page.",
+          "title": "Url"
+        },
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A previous render_preview of raw HTML (its saved source is reused).",
+          "title": "Render Id"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file or a folder holding index.html.",
+          "title": "Path"
+        },
+        "timeout_s": {
+          "default": 300,
+          "maximum": 900,
+          "minimum": 30,
+          "title": "Timeout S",
+          "type": "integer"
+        },
+        "criteria": {
+          "description": "Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Criteria",
+          "type": "array"
+        }
+      },
+      "title": "AssayArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "docs_libraries",
+    "description": "List indexed libraries, exact versions and project environments (libraries, librerías, versión, entornos)\n\nWhat Babel has indexed (exact versions), the registered environments (project\ninterpreters / node_modules folders; default_for says which one answers Python or\nTypeScript when env is omitted) and recent background jobs. Use it to find an env id, or to follow a docset install / dependency\nindexing job. Installed packages that are not listed yet are indexed automatically\nthe first time api_lookup or api_check_code needs them.\n\nArgs:\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    env: environment id or project path; limits libraries to that environment.\n    limit: libraries per page (default 15, max 200). offset: for the next page.\n\nReturns: {libraries: [{id, ecosystem, name, version, env, status, entries}], total,\n    has_more, next_offset, environments: [{id, label, python, default, ...}],\n    jobs: [{id, kind, status, progress, message}]}.\nKeywords: list libraries, what is installed, which version, environments, job progress,\n    listar librerias, que hay instalado, que version tengo, entornos, progreso\n",
+    "inputSchema": {
+      "properties": {
+        "ecosystem": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ecosystem"
+        },
+        "env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Env"
+        },
+        "limit": {
+          "default": 15,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        }
+      },
+      "title": "docs_librariesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_search",
+    "description": "Search installed APIs and docs by words (search docs, buscar función, cómo se hace, documentación)\n\nRanked full-text search over indexed APIs, offline docsets and markdown docs.\nUse it when you know roughly what you need but not the exact name (\"read a csv\",\n\"retry on timeout\"); then call api_lookup on the qualname you pick, or docs_read on a\nsection id. Only searches what is already indexed.\n\nArgs:\n    query: words or an identifier; camelCase/snake_case/dotted names match by parts.\n    library: one library name, e.g. \"pandas\" or a docset name.\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    kind: \"module\", \"class\", \"function\", \"method\", \"attribute\", \"property\" or \"section\".\n    env: environment id or project path.\n    limit: default 8, max 50.\n\nReturns: {results: [{id, qualname, kind, library, signature, summary, score}], count,\n    truncated, did_you_mean?}. Signatures and summaries are cut at 200 characters.\nKeywords: search docs, find function, how do I, which function, buscar documentacion,\n    como se hace, que funcion, encontrar funcion\n",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "title": "Query",
+          "type": "string"
+        },
+        "library": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Library"
+        },
+        "ecosystem": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ecosystem"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Env"
+        },
+        "limit": {
+          "default": 8,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "docs_searchArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "api_lookup",
+    "description": "Exact signature of an installed API (signature, firma, parámetros, documentación, versión instalada)\n\nParameters (with defaults and which are required), return type, docstring and\nsource location of one dotted symbol, from the version installed in the\nenvironment - e.g. \"pandas.DataFrame.merge\", \"httpx.Client\", \"json.dumps\", or\n\"react.useState\" for a node_modules package. Use it before calling any API you are not\nsure about. Indexes the package on first use (local, no network; can take seconds).\n\nArgs:\n    symbol: fully dotted path starting with the import name.\n    env: environment id, project folder path, or omitted for the default environment.\n    library: optional library name to disambiguate.\n\nReturns: found=true -> {id, qualname, kind, signature, params: [{name, kind, annotation,\n    default, required, description}], returns, summary, doc (first 1500 chars),\n    doc_truncated, members (for modules/classes), library, source}. Use docs_read(id)\n    for the rest of a long doc. found=false -> {certain, suggestions: [real names],\n    message}; certain=false means the name may still exist at runtime.\nKeywords: signature, parameters, arguments, api lookup, what does it take, return type,\n    firma, parametros, argumentos, que recibe, que devuelve, existe esta funcion\n",
+    "inputSchema": {
+      "properties": {
+        "symbol": {
+          "title": "Symbol",
+          "type": "string"
+        },
+        "env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Env"
+        },
+        "library": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Library"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "title": "api_lookupArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "api_check_code",
+    "description": "Check code for hallucinated or misused APIs of installed versions (check code, comprobar código, validar)\n\nStatically checks a snippet against the libraries installed in the environment:\nunknown modules/attributes (hallucinated or removed APIs), unexpected keyword arguments,\ntoo many positional arguments, missing required arguments, deprecated calls. Never runs\nthe code. Run it on code you wrote before showing it; fix errors, re-check.\n\nArgs:\n    code: the source (a whole file or a snippet; imports must be included).\n    env: environment id, project folder path, or omitted for the default environment.\n    language: \"python\" (full checks) or \"typescript\" (v1: named imports only).\n\nReturns: {ok, findings: [{line, col, severity, code, symbol, message, suggestion}],\n    checked, unchecked, libraries}. ok is false only for errors. severity \"warning\" =\n    not a declared member but the class/module creates names dynamically, or deprecated.\n    Babel stays silent on anything it cannot prove (dynamic code, unknown types,\n    try/except ImportError, hasattr guards); those count in 'unchecked'.\nKeywords: check code, validate code, hallucinated api, does this exist, wrong arguments,\n    verify snippet, comprobar codigo, revisar codigo, validar, existe, alucinacion\n",
+    "inputSchema": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Env"
+        },
+        "language": {
+          "default": "python",
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "api_check_codeArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_read",
+    "description": "Read the full text of one doc entry by id, in chunks (read docs, leer documentación, seguir leyendo)\n\nOne entry is a docset page section, a markdown section or a long docstring. Ids come from docs_search results and from\napi_lookup (field id).\n\nArgs:\n    id: the entry id, passed back exactly.\n    offset: character offset to continue from (use next_offset).\n    max_chars: chunk size, default 4000, max 20000.\n\nReturns: {found, qualname, library, text, offset, total_chars, has_more, next_offset}.\nKeywords: read doc, full documentation, read more, continue, leer documentacion,\n    seguir leyendo, documentacion completa\n",
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "max_chars": {
+          "default": 4000,
+          "title": "Max Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "docs_readArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_add_environment",
+    "description": "Register a project folder or venv so its packages can be checked (register project, registrar proyecto)\n\nAccepts a project folder (its .venv/venv/env and node_modules, also in frontend/,\nweb/, client/ or ui/, are detected), a python/python.exe interpreter, or a\nnode_modules folder. The most recently registered project becomes the default env\n(per language: Python checks never default to a node_modules-only env). Registering\nagain is harmless and makes it the default again.\n\nArgs:\n    path: absolute path to the project folder, interpreter or node_modules.\n    index_dependencies: also index the project's direct dependencies (from\n        pyproject.toml / requirements*.txt) in a background job.\n\nReturns: {environment: {id, label, python, ...}, dependency_job_id, dependencies, message}.\nKeywords: register project, add environment, use this project, index project,\n    registrar proyecto, anadir entorno, indexar proyecto, usar este proyecto\n",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "index_dependencies": {
+          "default": true,
+          "title": "Index Dependencies",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "docs_add_environmentArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_catalog",
+    "description": "List downloadable offline docsets; uses internet (docset catalogue, catálogo, documentación offline)\n\nLanguage references and frameworks: python, javascript, react, css, rust... Reaches\nthe internet (the public\nDevDocs catalogue). Use before docs_install_docset to get the exact slug.\n\nArgs:\n    query: filter by name or slug, e.g. \"python\" or \"react\".\n    limit: default 10, max 50.\n\nReturns: {results: [{slug, name, version, db_size_kb}], count, total, truncated}.\nKeywords: docset catalogue, offline docs, available documentation, download docs,\n    catalogo de documentacion, documentacion sin conexion, que documentacion hay\n",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "default": "",
+          "title": "Query",
+          "type": "string"
+        },
+        "limit": {
+          "default": 10,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "docs_catalogArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_install_docset",
+    "description": "Download and index one offline docset in background (install docs, instalar documentación, descargar)\n\nTakes a slug from docs_catalog (e.g. \"python~3.13\"). Reaches the internet. Runs as a background job and returns at once;\nfollow it with docs_libraries (jobs) and search it with docs_search when done.\n\nArgs:\n    slug: the exact slug from docs_catalog.\n\nReturns: {job_id, status, slug, message}.\nKeywords: install docset, download documentation, offline docs, instalar documentacion,\n    descargar documentacion\n",
+    "inputSchema": {
+      "properties": {
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "slug"
+      ],
+      "title": "docs_install_docsetArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_index_folder",
+    "description": "Index a folder of Markdown docs for search (index folder, indexar carpeta, documentación del proyecto)\n\nIndexes .md/.mdx/.rst/.txt files (a project's docs/ folder, a cloned docs\nrepository) by heading, so docs_search and docs_read can use it.\nDependency, VCS and build folders are skipped; at most 2000 files.\n\nArgs:\n    path: absolute path to the folder.\n    name: library name to show and filter by; defaults to the folder name.\n\nReturns: {id, name, status, entry_count, note, hint}.\nKeywords: index folder, index markdown, project docs, indexar carpeta,\n    indexar documentacion, documentacion del proyecto\n",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "docs_index_folderArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "docs_check_locales",
+    "description": "Check JSON locale keys and placeholders (comprobar traducciones, translation audit)\n\nReads `<locale>.json` files in one directory. Nested objects become dotted keys.\nCompares each target locale against source_locale; complex ICU-style messages\nare counted as unchecked rather than claimed valid. Never edits a catalogue.\n\nArgs:\n    path: absolute path to the directory containing en.json, es.json, etc.\n    source_locale: source file stem, default en.\n    offset: finding offset for the next page.\n    limit: findings per page, at most 100.\n\nReturns: {source_locale, locales, source_keys, total, unchecked_messages,\n    findings: [{locale, key, kind, expected?, actual?}], truncated,\n    has_more, next_offset}.\nKeywords: translation audit, localization keys, placeholder mismatch, i18n,\n    comprobar traducciones, claves faltantes, variables de traducción, idiomas\n",
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "source_locale": {
+          "default": "en",
+          "title": "Source Locale",
+          "type": "string"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "default": 50,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "docs_check_localesArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "module": "babel"
+  },
+  {
+    "name": "theseus_runtime_catalog",
+    "description": "Discover explicit runtime observation operations, target selection, side effects and installed clients. Separate from execution-free static analysis.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_runtime_start",
+    "description": "Run an explicitly selected Android, instrumentation, V8 Inspector or browser CDP operation in a project. ADB requires an exact serial; Frida requires a selected device, PID/argv or live project session; Inspector requires an explicit endpoint and exact target ID. Inspector/CDP metadata never evaluates, pauses or closes the target; script text, page DOM/listeners, completed response bodies and PNG are explicit choices. Device actions and instrumentation scripts can change their targets. Captures are historical, not behavioral equivalence; cancellation cannot undo effects. Remote tokens are ephemeral and excluded from recordings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "project_id",
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_projects",
+    "description": "List local reverse engineering projects, including archived ones.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_project_create",
+    "description": "Create an inspection project with its question. Crear expediente local.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_project_read",
+    "description": "Read project, evidence, editable specification, scenarios and comparisons.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_project_update",
+    "description": "Edit a project question/name or archive and restore it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_artifact_add",
+    "description": "Inspect a local file or directory without executing it: Python, JS, HAR, source maps, ZIP, ASAR, PE and SQLite. Artefacto, binario, imports, funciones.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_artifact_read",
+    "description": "Read the mechanical inspection and its recorded content hash.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_artifact_excerpt",
+    "description": "Read bytes or an archive member at a cited location; reports whether source changed.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "member": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_artifact_image",
+    "description": "Read a registered PNG with its exact recorded SHA-256; MCP returns native image content and identity metadata. No target or URL is accessed.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_finding_add",
+    "description": "Save an observed fact at an artifact location; interpretation is separate. Pass source_sha256 from a newer excerpt/analysis when citing that version; source_refs preserves all artifact identities in a comparison. Evidencia y observacion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "observation": {
+          "type": "string"
+        },
+        "interpretation": {
+          "type": "string"
+        },
+        "source_sha256": {
+          "type": "string"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "side": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "sha256"
+            ]
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id",
+        "location",
+        "observation"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_specification_write",
+    "description": "Save the editable behavior specification, citing finding IDs and separating unknowns.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_scenario_save",
+    "description": "Save or revise explicit local reference/candidate command arrays and shared input. No shell interpolation. Escenario diferencial.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "definition": {
+          "type": "object",
+          "properties": {
+            "reference": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "candidate": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "stdin": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "text",
+                "json"
+              ]
+            },
+            "timeout_seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "expected_stdout": {},
+            "expected_exit_code": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "reference",
+            "candidate"
+          ],
+          "additionalProperties": false
+        },
+        "scenario_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "name",
+        "definition"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_comparison_start",
+    "description": "Run saved scenarios as a recoverable background comparison. Returns a job ID; read it until finished. Compara original y reconstruccion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "scenario_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_job_read",
+    "description": "Read background analysis/comparison progress, retained sources, frozen inputs, program hashes and diagnostics.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_job_cancel",
+    "description": "Stop owned host clients of an active analysis or comparison. Completed observations can remain; cancellation does not undo target-side effects.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_project_export",
+    "description": "Export a project JSON record with evidence and reproducible comparison receipts. Artifact paths reference originals.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_local_engines",
+    "description": "Discover installed local free binary analysis engines and JDK. No hosted service.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_analysis",
+    "description": "Analyze a local binary with installed Ghidra: retained native project, functions, pseudocode and call edges. Does not execute the binary. Returns a job ID for theseus_job_read. Descompilar, desensamblar, funciones.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_function_read",
+    "description": "Read one decompiled function with its callees, callers, address and artifact hash, without loading the entire analysis into context.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "address"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_analysis_catalog",
+    "description": "Discover native local analysis operations, parameter schemas and installed engine availability.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_analysis_start",
+    "description": "Start a native static analysis of a project artifact. Discover the operation and parameters through theseus_analysis_catalog. Returns a persistent job; never executes target code.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id",
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_analysis_records",
+    "description": "Search and page retained analysis records by section and name, without loading the complete document. Omit limit for the default page; null returns all headers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "section": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "job_id",
+        "section"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_analysis_record",
+    "description": "Read one complete retained analysis record with its source artifact hash, including CIL instructions and physical byte offsets.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "section": {
+          "type": "string"
+        },
+        "record_key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "section",
+        "record_key"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_catalog",
+    "description": "Discover the native binary session operations and default parameter objects. The incorporated engine supports Ghidra assembly, types, xrefs, memory, high-p-code and retained annotations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_sessions",
+    "description": "List persistent native binary sessions in a project and their actual connection state.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_open",
+    "description": "Open a native local binary session. options may select analysis_job_id to reopen a retained project; language_id/compiler_spec_id; or raw=true with explicit language_id/base_address. Returns a background job/session ID. Does not execute target code.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "artifact_id": {
+          "type": "string"
+        },
+        "options": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "project_id",
+        "artifact_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_call",
+    "description": "Run a discovered native engine operation in an open session. Returns a persistent job; read theseus_job_read and its analysis record sections. Annotations change only the saved analysis database, preserving source bytes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "session_id",
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_close",
+    "description": "Close a native binary session and save its retained analysis project. Returns a background close job.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_binary_compare",
+    "description": "Compare selected functions from two open native sessions, including exact referenced data bytes. Normalize only proven decoder address fields; unresolved boundaries remain unknown. Returns a persistent job, not a behavioral equivalence proof.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "reference_session_id": {
+          "type": "string"
+        },
+        "candidate_session_id": {
+          "type": "string"
+        },
+        "reference_procedure": {
+          "type": "string"
+        },
+        "candidate_procedure": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference_session_id",
+        "candidate_session_id",
+        "reference_procedure",
+        "candidate_procedure"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_workflow_read",
+    "description": "Read reconstruction obligations, unresolved questions, evidence freshness, behavior handoffs and oracle sensitivity results. Completion is derived from observations, not an editable pass flag.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_claim_save",
+    "description": "Create or revise a behavior obligation or unknown with finding/scenario dependencies and owner. Unknown resolution keeps evidence links. Obligaciones y preguntas abiertas.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "obligation",
+            "unknown"
+          ]
+        },
+        "statement": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenario_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolution": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "kind",
+        "statement"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_handoff_create",
+    "description": "Freeze the current behavior specification and claims for a builder workspace. Reader findings and original paths remain separate from the builder document. Does not generate or copy source code.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "builder_directory": {
+          "type": "string"
+        },
+        "finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "builder_directory"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_handoff_read",
+    "description": "Read a saved immutable handoff; builder_only returns only the behavior document, without reader findings/artifact paths.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "handoff_id": {
+          "type": "string"
+        },
+        "builder_only": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id",
+        "handoff_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_oracle_selftest",
+    "description": "Run deliberately wrong local candidates against saved reference scenarios. Retains each input and observation, reports detected and surviving defects; an invalid reference or timeout cannot certify sensitivity.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "candidate": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expected_exit_code": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name",
+              "candidate"
+            ]
+          }
+        },
+        "scenario_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "variants"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_reconstruction_verify",
+    "description": "Run saved differential scenarios linked to an immutable behavior handoff. Each retry preserves the original handoff identity and complete observations; a newer specification is explicitly reported.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "handoff_id": {
+          "type": "string"
+        },
+        "scenario_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "handoff_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_evidence_export",
+    "description": "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_evidence_import",
+    "description": "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bundle": {
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bundle"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  }
+]

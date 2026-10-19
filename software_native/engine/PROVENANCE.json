@@ -1,0 +1,2361 @@
+{
+  "license": "MIT",
+  "source": "https://github.com/morluto/rea",
+  "revision": "4f7b5fb6023ce2ec449561782d09e3c7e5ac7c7b",
+  "selected_roots": [
+    "bridge/ghidra/ReaGhidraAnalysisOptions.java",
+    "bridge/ghidra/ReaGhidraApplySeeds.java",
+    "bridge/ghidra/ReaGhidraBridge.java",
+    "bridge/ghidra/ReaGhidraBundleActivator.java",
+    "bridge/ghidra/ReaGhidraExtensions.java",
+    "bridge/ghidra/ReaGhidraMipsSoftFloat.java",
+    "bridge/ghidra/ReaGhidraNoReturnFix.java",
+    "bridge/ghidra/ReaGhidraPrepareCom.java",
+    "bridge/ghidra/ReaGhidraPrepareRaw.java",
+    "bridge/nativeaot/NativeAotDirectory.java",
+    "bridge/nativeaot/NativeAotExtension.java",
+    "bridge/nativeaot/NativeAotMethodConventions.java",
+    "bridge/nativeaot/NativeAotTypeMetadata.java",
+    "src/application/javascript/JavaScriptArtifactReconstruction.ts",
+    "src/application/native/NativeValueTrace.ts",
+    "src/artifacts/apple/AppleAssetCatalogAnalysis.ts",
+    "src/artifacts/apple/DylibResolutionReader.ts",
+    "src/artifacts/apple/InterfaceBuilderAnalysis.ts",
+    "src/artifacts/apple/KeyedArchiveReader.ts",
+    "src/artifacts/apple/MachoLoadCommandReader.ts",
+    "src/artifacts/apple/NibArchive.ts",
+    "src/artifacts/extraction/ArtifactExtraction.ts",
+    "src/artifacts/inventory/ArtifactInventory.ts",
+    "src/domain/android/androidApplication.ts",
+    "src/domain/apple/appleApplication.ts",
+    "src/domain/harmony/harmonyApplication.ts",
+    "src/domain/javascript/javascriptApplicationVersionComparison.ts",
+    "src/domain/javascript/javascriptExportShapeComparison.ts",
+    "src/domain/javascript/javascriptFeatureTrace.ts",
+    "src/domain/javascript/javascriptSemanticQuery.ts",
+    "src/domain/javascript/sourceToBundleComparison.ts",
+    "src/domain/managed/managedNativeVerification.ts",
+    "src/domain/managed/managedReconstruction.ts",
+    "src/dotnet/ManagedArtifactInspector.ts",
+    "src/dotnet/ManagedMemberInspector.ts",
+    "src/dotnet/ManagedNativeBoundaryInspector.ts",
+    "src/electron/ElectronFuseReader.ts",
+    "src/evm/EvmBytecodeCarrier.ts",
+    "src/evm/SolidityMetadata.ts",
+    "src/flutter/DartElf.ts",
+    "src/flutter/ElfBuildId.ts",
+    "src/flutter/FlutterPayloadScan.ts",
+    "src/go/GoBinaryImage.ts",
+    "src/go/GoModuleText.ts",
+    "src/native/AppleDispatchMetadata.ts",
+    "src/native/AppleSwiftVtables.ts",
+    "src/native/pe/PeResourceParser.ts",
+    "src/rust/RustBinaryImage.ts",
+    "src/wasm/WabtInterface.ts",
+    "src/wasm/WabtWat.ts"
+  ],
+  "dependencies": [
+    "@babel/parser",
+    "@babel/types",
+    "@electron/asar",
+    "@jridgewell/trace-mapping",
+    "@xmldom/xmldom",
+    "@zip.js/zip.js",
+    "canonicalize",
+    "cborg",
+    "diff",
+    "node:buffer",
+    "node:child_process",
+    "node:crypto",
+    "node:events",
+    "node:fs",
+    "node:fs/promises",
+    "node:module",
+    "node:os",
+    "node:path",
+    "node:stream",
+    "node:stream/promises",
+    "node:string_decoder",
+    "node:timers/promises",
+    "node:url",
+    "node:util",
+    "node:util/types",
+    "node:v8",
+    "node:zlib",
+    "parse5",
+    "plist",
+    "saxes",
+    "semver",
+    "zod"
+  ],
+  "files": [
+    {
+      "path": "bridge/ghidra/TheseusGhidraAnalysisOptions.java",
+      "original_path": "bridge/ghidra/ReaGhidraAnalysisOptions.java",
+      "upstream_sha256": "14200fb685d88c91b38f955ad360fe2e11b9a83a53cc69f87fd229c2e784e936",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraApplySeeds.java",
+      "original_path": "bridge/ghidra/ReaGhidraApplySeeds.java",
+      "upstream_sha256": "27892a70bf0fbc72d1edc9bf070ddb21268f8d0e4edea074164488e68f45d51a",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraBridge.java",
+      "original_path": "bridge/ghidra/ReaGhidraBridge.java",
+      "upstream_sha256": "c94ffaf92684916613fed4288bbfc7a7fcbfdeefd80bc00ec4d505253a27c43f",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraBundleActivator.java",
+      "original_path": "bridge/ghidra/ReaGhidraBundleActivator.java",
+      "upstream_sha256": "3e1fb42dc9b87c117dafd99bcec9cb51b3f0c9f0e7a2e9d4abd1f73ed7c0240e",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraExtensions.java",
+      "original_path": "bridge/ghidra/ReaGhidraExtensions.java",
+      "upstream_sha256": "23ed86c0f1c2144f8f0371398ba946883fa1607643b04c9eb02c883b3d4f4dfa",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraMipsSoftFloat.java",
+      "original_path": "bridge/ghidra/ReaGhidraMipsSoftFloat.java",
+      "upstream_sha256": "5bb12cdedb4586576570fe781eeef47b554e8f255433246673ba714b6f48d375",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraNoReturnFix.java",
+      "original_path": "bridge/ghidra/ReaGhidraNoReturnFix.java",
+      "upstream_sha256": "ceae3f352e96e8e0cebc4c2d66fa261a3732104eb1a2f84a32a6fc35a7281785",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraPrepareCom.java",
+      "original_path": "bridge/ghidra/ReaGhidraPrepareCom.java",
+      "upstream_sha256": "5a95ad24b70fe7430e1b3717781624faafdea47c463507f3245e7f22eb3cde46",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/ghidra/TheseusGhidraPrepareRaw.java",
+      "original_path": "bridge/ghidra/ReaGhidraPrepareRaw.java",
+      "upstream_sha256": "e858b93df3c23f1407fb79ad2abe20f05c52687ba5d082ccefb824ece92a3953",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/nativeaot/NativeAotDirectory.java",
+      "original_path": "bridge/nativeaot/NativeAotDirectory.java",
+      "upstream_sha256": "364f4f065926a4ad9b4c95f32772ebf782ed470c0432326f265b8a59d695e0fd",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/nativeaot/NativeAotExtension.java",
+      "original_path": "bridge/nativeaot/NativeAotExtension.java",
+      "upstream_sha256": "60fb33851bfd7c27e1b3f2ee287d89aa355605d3314118efecf5e37bf7186202",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/nativeaot/NativeAotMethodConventions.java",
+      "original_path": "bridge/nativeaot/NativeAotMethodConventions.java",
+      "upstream_sha256": "2d4ec9a5b5825dbe1f4409cc60bcab325f3e1305302385e74bb9ac6cff620ae1",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "bridge/nativeaot/NativeAotTypeMetadata.java",
+      "original_path": "bridge/nativeaot/NativeAotTypeMetadata.java",
+      "upstream_sha256": "798828b2c4c3d2ae3d7cf510e3053c7fd67100419363bcd02997b48016a70192",
+      "native_adaptation": "Script/class references renamed TheseusGhidra; engine implementation evolves inside Theseus"
+    },
+    {
+      "path": "src/application/AnalysisProvider.ts",
+      "upstream_sha256": "49b08753bb0e1dd2a5fdb94f9a1b8cbead059a13db9631594a32a75c55c59445"
+    },
+    {
+      "path": "src/application/EnhancedToolTypes.ts",
+      "upstream_sha256": "b90f3ae559e35ecdb4a73a03018a671a8357c9026c26619feee01a47c7a38cf3"
+    },
+    {
+      "path": "src/application/InvestigationProviders.ts",
+      "upstream_sha256": "7d4e7262d1b1a467e4cbd1ad74406582a0b8ee494cf31697a519f1c2e6fbcc69"
+    },
+    {
+      "path": "src/application/ProgressReporter.ts",
+      "upstream_sha256": "6ece66fb7f258e989c6ce4ef3c6a653201d63b28f42c1708c118c67b230c16eb"
+    },
+    {
+      "path": "src/application/SourceLimitations.ts",
+      "upstream_sha256": "d641a50fc8a98361d65825f211958dd05af439005ae8c9fb1d5cc36c04f8ff95"
+    },
+    {
+      "path": "src/application/TypeScriptEmittedSourceCandidates.ts",
+      "upstream_sha256": "e5057b2befd3a58cb7f78868ef094706650983f0b66ee89850dc89a4eda96ead"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryAnalysis.ts",
+      "upstream_sha256": "b703955e8018ddf30e0eccac6a65a5b7e88f320bcd1d31c6768270b3dcf1a745"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraph.ts",
+      "upstream_sha256": "21879ac1750600de5e0cda758420b844350222046ff03cb0de9649e3ad9dc0b0"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraphCallPaths.ts",
+      "upstream_sha256": "80693f3ad7617a9e0c70081383a3acb2e211175aa31c79bed83eba2cd4790219"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraphContext.ts",
+      "upstream_sha256": "6589134de243daf9d5d7ef265ba605aad67737310ce452cbc5eb89a80dc2a64e"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraphIpc.ts",
+      "upstream_sha256": "ece1c5cd217664bd64ef78afe994fb8910fe4389482c714047b42964fb90026e"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraphNative.ts",
+      "upstream_sha256": "92f57627cce09e7f98a69cc561e1c6e780be22d9d625c145da6466763ec9d5b0"
+    },
+    {
+      "path": "src/application/javascript/ElectronBoundaryGraphWindows.ts",
+      "upstream_sha256": "89944e933ce00dd36777fe826423bfb7f5eb556f2e272f816d220ac7a90154ad"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptAnalysisControl.ts",
+      "upstream_sha256": "7eb112b5441f7f196d6a7bb7d295d9a71b0ac56c2f9bfb8eaad5ad9d3dda7488"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptApplicationEvidence.ts",
+      "upstream_sha256": "2f020d624ef7a83715062db5be4a602f256545bd2ad3e94d8367d68802a3b230"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptApplicationEvidenceGraph.ts",
+      "upstream_sha256": "d15434867314ddbc6d12e1470b09c0710950cfa4eae50b4b144d52229314a91b"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactAnalysis.ts",
+      "upstream_sha256": "5d81ae90644478e3e04e28b2bb869cb6eb2ac1c3626772aa9df04646d2c85596"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactAnalysisTypes.ts",
+      "upstream_sha256": "bb512f26ebf4ac231a9406612b024d6574bd5df43ff696763d95a29476154f12"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphAccumulator.ts",
+      "upstream_sha256": "e2539272473d647f5757e42b6696011e59b1fd5e60f6211c1b67eb07fcf86fbf"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphBuilder.ts",
+      "upstream_sha256": "bda842dee620f6a800bf8b7733128c8e059a8f5b1ca95282ff4a1af0156991f9"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphBundlers.ts",
+      "upstream_sha256": "7567ce375aa2b9022d12f8e4445e744faf3884e67ab0877e879e7839ac6366c7"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphContext.ts",
+      "upstream_sha256": "b1e486b5b29f15466b033464780fc57d5619506aad94f4c5053e1882c4bd30d2"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphDocuments.ts",
+      "upstream_sha256": "e21bb2d081fe0838a5a46b67f4b6d545f0b952b43901d2699978149966923e7e"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphEvidence.ts",
+      "upstream_sha256": "4ac2d6c95011ee6a86ef79b3477557fd296df1ebb84e57ebb3d359848ca92cc3"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphFindings.ts",
+      "upstream_sha256": "c593f3c2b93fbf858c3c79299b3ae21b580ca1fdb50967e46b6b140d69f0fad2"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactGraphStructure.ts",
+      "upstream_sha256": "0f0b680fac46f660a34bdb2b11fdaca0c56a5a04477bb6e3e8b3631e9c132f92"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactPathResolution.ts",
+      "upstream_sha256": "62d291ccedcd1e5751c3dff27702c072aabd9e48129b497217ffe6ba8325c803"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactReconstruction.ts",
+      "upstream_sha256": "909fdebfadff98359ff118b1354225b15c10a8c1208fec711ddea1cbb3f549fe"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptArtifactReconstructionInput.ts",
+      "upstream_sha256": "97ac77344a6a71c085bae06e2ec139c2e2b1ed18ae6685ad2963ee42b5363c79"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptJsonModules.ts",
+      "upstream_sha256": "f7133b2a414e6f0bdb83113f945c673c908f376eed74ff310a15df68a8c14766"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptModuleRelationships.ts",
+      "upstream_sha256": "21839200aca9884874a1e84c6888deeb887c0d58e15cfa583403c4594c4684be"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphAsyncProjection.ts",
+      "upstream_sha256": "1f68e4c327cc532117637140809a7d1a917e07e93e1fee86100cb12d6823bc85"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphBuilder.ts",
+      "upstream_sha256": "872225bfaac895b056779232b51d894484f7ad68116797d01ef2afd7bd740e60"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphChildProcessProjection.ts",
+      "upstream_sha256": "fe7708ce97a64a180edd8c6891943b670d77dc7febdf9c7696458e0c15d25b41"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphConstruction.ts",
+      "upstream_sha256": "8b35267382e9ea3a68ac0a85a92798b4559d5b1c9be7d3acefff44c5b7927988"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphDataProjection.ts",
+      "upstream_sha256": "7ff3e494618b74373fa477e59ccb9271b18b88109f6a5fcd9e329518f85e460e"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphElectronProjection.ts",
+      "upstream_sha256": "3cb12e31caeb96341ded3fc2564b814675a5cd8d66f059de9d29aba926d88a5e"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphEvidence.ts",
+      "upstream_sha256": "42f35746e532b46fc7d3d9332d925849058686991a7f554369cd413cfbc4c931"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphFingerprintProjection.ts",
+      "upstream_sha256": "8689f640987d7767bfefb81902a9db12fc14edc0d3c3c7ac4d097658cea0c2ac"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphFlowProjection.ts",
+      "upstream_sha256": "c5724c1e5b1ae74a8fc5768bacb2d50bfd83d1b791f7e6c47e0fe9a605aa9ed5"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphObjectProjection.ts",
+      "upstream_sha256": "bd96d9a8d9585626d44a2bb6efc0333c72965c4b0438117c7916f5a613b5bfb3"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphProjection.ts",
+      "upstream_sha256": "774311405d7a9f4cc248449ff159ca31bdf55d009b0936aff608ebdaae789008"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphResourceProjection.ts",
+      "upstream_sha256": "2cdf873a52349563da75e4b046ad70c43d30478c2c4fb93855a6b20872bf09e6"
+    },
+    {
+      "path": "src/application/javascript/JavaScriptSemanticGraphValueProjection.ts",
+      "upstream_sha256": "895a224d23309715713c974310bbc83dc08badfcf67add01e72cffb1f7f952ac"
+    },
+    {
+      "path": "src/application/native/NativeValueTrace.ts",
+      "upstream_sha256": "4479aa26f4cdb79286bebbc92d96e2775c61b2d887c10a7b0c59c9e6ac476679"
+    },
+    {
+      "path": "src/artifacts/AnalysisCleanupLease.ts",
+      "upstream_sha256": "9fe43203b1b8ebda8d6dbee2affe35769ad9fdcb40d5a62900ba42f946ed6c68"
+    },
+    {
+      "path": "src/artifacts/ArtifactFileOperation.ts",
+      "upstream_sha256": "8f126d574adca8b9cecff75cbe9d44e9d4e68259be04579acb9e43dd08ed511d"
+    },
+    {
+      "path": "src/artifacts/ArtifactHash.ts",
+      "upstream_sha256": "1ccd356ce51ad6717b8cde2e7ff3dd001f82819d35777463775f7a48494af91e"
+    },
+    {
+      "path": "src/artifacts/ArtifactPaths.ts",
+      "upstream_sha256": "196c12fedcdf628a99ad2e59272fe40f777d6336690aab98378baac8e35d07b3"
+    },
+    {
+      "path": "src/artifacts/ArtifactReader.ts",
+      "upstream_sha256": "633fabe47e1678c48a70bd2c1211548c33b9324ff0e6a1454dfc0349877b1482"
+    },
+    {
+      "path": "src/artifacts/ArtifactResourceScope.ts",
+      "upstream_sha256": "8f91fa8d4c0f8c9273949458cc5bed3f6956f85324ef3e9aae3174d0d7d32bc1"
+    },
+    {
+      "path": "src/artifacts/AsarArtifactReader.ts",
+      "upstream_sha256": "47223e9143def1dff24008d30e5cec3f29ef0dd273f77599adfda2f7213d0613"
+    },
+    {
+      "path": "src/artifacts/AsarEntryStream.ts",
+      "upstream_sha256": "18363ae81acf9ba95d496c45fcc72fc879514927514d775a82aab9147e3eacbe"
+    },
+    {
+      "path": "src/artifacts/AsarHeader.ts",
+      "upstream_sha256": "ac3c151c84bb2323cdc167e92365e6103485094b42c9deeaa781d1da908d501e"
+    },
+    {
+      "path": "src/artifacts/AsarListing.ts",
+      "upstream_sha256": "a87360aaeeddf0411df118fa9a055abfbc1d5ff889b4e3b6209b9ddbb5073225"
+    },
+    {
+      "path": "src/artifacts/DirectoryArtifactReader.ts",
+      "upstream_sha256": "08343cf62545d9c6859fb9bcbd21559f9043ae9113be7b67c40173cc23e58d72"
+    },
+    {
+      "path": "src/artifacts/MachOSliceArtifactReader.ts",
+      "upstream_sha256": "11fa4cf2cad35536536d49f19c4abda1bcc9442187c82f967fde1c11be95e9ed"
+    },
+    {
+      "path": "src/artifacts/NativeDmgArtifactReader.ts",
+      "upstream_sha256": "5a1cb3c5819f8402b90969b13b1b12b046323c9871ccf8fcacc978aa8e7bf618"
+    },
+    {
+      "path": "src/artifacts/NativeDmgOwnership.ts",
+      "upstream_sha256": "3723ba451eb46aabfb0c8eeee91126a6c5076d3f385e4336f5ce861240ce781b"
+    },
+    {
+      "path": "src/artifacts/OrderedReads.ts",
+      "upstream_sha256": "58631c6cd0f729cdec04d0fd4ee99f5549b8fd64c6a2a04b9c547aed88223ec5"
+    },
+    {
+      "path": "src/artifacts/SafeOutputTree.ts",
+      "upstream_sha256": "6881ba4792531d1de8a28c30920e97bf0d48be65e1775f098208e58d8890c273"
+    },
+    {
+      "path": "src/artifacts/SafeOutputTreeCleanup.ts",
+      "upstream_sha256": "eee46316bf1b32e45a82a393376ba35db877b676bbdd7d3e5d88f504144ebf26"
+    },
+    {
+      "path": "src/artifacts/SafeOutputTreeCreationFailure.ts",
+      "upstream_sha256": "c2015608f69b6aed8795626ae0122089f43935f804b35e77dd23b677b26ffd6e"
+    },
+    {
+      "path": "src/artifacts/SafeOutputTreeIdentity.ts",
+      "upstream_sha256": "3613fb0a95fb62d4bd78c6e21f33c2f536e1e69db41c817897064281505052c8"
+    },
+    {
+      "path": "src/artifacts/SafeOutputTreeReadback.ts",
+      "upstream_sha256": "06997f0f6581222590ee4555f7d63f18283feafd0b9df47bef8b56cc5e218d75"
+    },
+    {
+      "path": "src/artifacts/StreamBytes.ts",
+      "upstream_sha256": "af717ba28133a48c0bb95c415aab7432c221a3e1fbf73277d981d49059cae32a"
+    },
+    {
+      "path": "src/artifacts/ZipArtifactReader.ts",
+      "upstream_sha256": "8218caa14de14ec191bfb2c77b4215d125e961cc56ee1a743c9146d4972be260"
+    },
+    {
+      "path": "src/artifacts/apple/AppleAssetCatalogAnalysis.ts",
+      "upstream_sha256": "9075557bc715a8b8c79a099f19a8588f13674332265c93b82a45616f76ed4b13"
+    },
+    {
+      "path": "src/artifacts/apple/DylibFileAccess.ts",
+      "upstream_sha256": "8214478820124f1eaa48d09a367f6be22435b38e822fbec3685105920d4db9e4"
+    },
+    {
+      "path": "src/artifacts/apple/DylibResolutionReader.ts",
+      "upstream_sha256": "b25e13e569f22e38a12fa2561e393e62aab763e6032ab883eb87221302cd05dc"
+    },
+    {
+      "path": "src/artifacts/apple/InterfaceBuilderAnalysis.ts",
+      "upstream_sha256": "1512038bd09a882f70ff515a1dd41fa7e3eb4ec3b6a66fb285cacd1451e5cdd3"
+    },
+    {
+      "path": "src/artifacts/apple/InterfaceBuilderDecodeBudget.ts",
+      "upstream_sha256": "6702cbe46828cb8c8276469094827e5de566c184c0d3499f855b2dc492410d90"
+    },
+    {
+      "path": "src/artifacts/apple/KeyedArchiveReader.ts",
+      "upstream_sha256": "85f67891aee4298e3da6d568c8896d691ea3381258c68862a47f98d372ccf8b4"
+    },
+    {
+      "path": "src/artifacts/apple/MachoLoadCommandReader.ts",
+      "upstream_sha256": "7fc0d8eb934a13778c2f07eb4601203867171e8b0f48fee61c5fd749ad2da6a3"
+    },
+    {
+      "path": "src/artifacts/apple/NibArchive.ts",
+      "upstream_sha256": "ccd2361f65d8a47a255cda7ffb00c9aa9680413896acf0ab01ba5ffc386c9822"
+    },
+    {
+      "path": "src/artifacts/apple/NibViewHierarchy.ts",
+      "upstream_sha256": "5734e7f6b7551eb72115a233a7f55ce7041ff1c65099fd44208435248a0ec8f1"
+    },
+    {
+      "path": "src/artifacts/apple/PlistNumberLiterals.ts",
+      "upstream_sha256": "c9942f64d9abb246ff3fe4b391a79b49a0b63aa24cea5c71975587a6a459d058"
+    },
+    {
+      "path": "src/artifacts/extraction/ArtifactExtraction.ts",
+      "upstream_sha256": "58323a1c60c8ff83901c0ba2f4e2eeb3bd0760ad9b029455cc98af502db02df7"
+    },
+    {
+      "path": "src/artifacts/hostExecutableMarking.ts",
+      "upstream_sha256": "311f1204b2106c74e032239f0901eda56a388b66d037845249d1f408bd0c9497"
+    },
+    {
+      "path": "src/artifacts/inventory/ArtifactGraphConstruction.ts",
+      "upstream_sha256": "6892f9765bf5c685c002478459783bad23a9620ed78cd5c906620bc7030c3595"
+    },
+    {
+      "path": "src/artifacts/inventory/ArtifactInventory.ts",
+      "upstream_sha256": "bcc5eab51f753133e01a8008c5ca52aa5f342103aee0f38b1db27e6379a571d9"
+    },
+    {
+      "path": "src/artifacts/inventory/classify.ts",
+      "upstream_sha256": "98a291a03910d580fed5b19f272fb9a95f63178a25770451ffc1031a1a70b97f"
+    },
+    {
+      "path": "src/artifacts/inventory/hashStableRootArtifact.ts",
+      "upstream_sha256": "ace3c1a891bf89fff0783f36a1159103e60fd169892da42fb03540f27bd2df9c"
+    },
+    {
+      "path": "src/artifacts/inventory/reader.ts",
+      "upstream_sha256": "55113c7c9e9f50e2055f0d44148c42c01ddcd7b23ccbaf87d5f8ffae2d683807"
+    },
+    {
+      "path": "src/artifacts/inventory/scanCanonical.ts",
+      "upstream_sha256": "c71cac672818331fdc2b3e223c24dab6a74abaac3f92307a212f93bff83e50af"
+    },
+    {
+      "path": "src/artifacts/inventory/scanReader.ts",
+      "upstream_sha256": "7d8122c4472357d6996fc8cff0e0ddd9c104eb311c28e0f3666fe0bcc184676b"
+    },
+    {
+      "path": "src/artifacts/inventory/types.ts",
+      "upstream_sha256": "0f37f1470116635b87407ec48eecb07b69a75628f1adc0c0522583690cb504b0"
+    },
+    {
+      "path": "src/artifacts/javascript/JavaScriptArtifactFiles.ts",
+      "upstream_sha256": "5bee6623fbafd8533711e9509a073f87830867c82fbaef1f55287802fe737f04"
+    },
+    {
+      "path": "src/artifacts/javascript/JavaScriptArtifactReader.ts",
+      "upstream_sha256": "dc2f98e39dd0117e454b4da896bd46f5ec49ff5a68ec22723fe44a2127504156"
+    },
+    {
+      "path": "src/artifacts/javascript/JavaScriptSourceAnalysis.ts",
+      "upstream_sha256": "ae9bf4a9e7c03a8f88a5c5be123ec24197f9ecd29a80c158b028268cf380d1df"
+    },
+    {
+      "path": "src/artifacts/readArtifactFileChunks.ts",
+      "upstream_sha256": "0f19793347bebdd8004d2fc4ce3c5908c2ad6c416f7e0f828b36c524b45ae1d0"
+    },
+    {
+      "path": "src/config/providerStartupTimeout.ts",
+      "upstream_sha256": "8ef9d4595769dd19a8d15b79a53177f370311a8617999eaf2c509eaaa79c150a"
+    },
+    {
+      "path": "src/contracts/analysisDetail.ts",
+      "upstream_sha256": "b14ce5d4b8d5548ea360b26c6eeb7bbbee9efc68804d3a25c180fb33872e0e1c"
+    },
+    {
+      "path": "src/contracts/analysisSearchContract.ts",
+      "upstream_sha256": "313a4e946f8a2cdaac87d583e5c0ce9ee7bba2290bf7eeffa5c027d064504c9b"
+    },
+    {
+      "path": "src/contracts/artifactComparisonExample.ts",
+      "upstream_sha256": "6f94e3a0df09f320277048e764c118d408771f8ce0b8c869f25becb8c0efd27d"
+    },
+    {
+      "path": "src/contracts/artifactToolContracts.ts",
+      "upstream_sha256": "9bfb31c1ee3b1be2e44c145550ed103d34332b582917b70b964ca566b6feae17"
+    },
+    {
+      "path": "src/contracts/enhancedInputs.ts",
+      "upstream_sha256": "f1326881478f43e82dda9b3c445d7e68c929512f2c0452b595f420ff5844dc18"
+    },
+    {
+      "path": "src/contracts/errorSchemas.ts",
+      "upstream_sha256": "ccf33834c0799d500554d1d2bce08ca91a023bf5d7ec7f4f7009f9fb6a601a76"
+    },
+    {
+      "path": "src/contracts/functionComparisonExample.ts",
+      "upstream_sha256": "87b88d4153dab1ebf347b8a8cb5103a83725bad4e46a069c39d9fcad028c7406"
+    },
+    {
+      "path": "src/contracts/functionInstructionContract.ts",
+      "upstream_sha256": "022a33362adae18ed100d1ddf892f374b10fad847a74777d8145ca626e739b19"
+    },
+    {
+      "path": "src/contracts/hopperMemoryContracts.ts",
+      "upstream_sha256": "3ab78aa122bd3e934bbfeb04eaea3ecb1c6b7ba88bde75a9538457a1063b21ce"
+    },
+    {
+      "path": "src/contracts/investigationExamples.ts",
+      "upstream_sha256": "7dd6f7c547d3c4250c6c8c4d7b2bc0eec3185b133085227227b95de6fbfbaebe"
+    },
+    {
+      "path": "src/contracts/managed/managedToolContracts.ts",
+      "upstream_sha256": "315aa3d452327b9c382227bedd08dcdf87df6f4ad7b2ba707166945588efc81e"
+    },
+    {
+      "path": "src/contracts/native/nativeToolContracts.ts",
+      "upstream_sha256": "b0495a7771b8f95636726a5975653539c76fb29878291ee9cfcb724701ec4960"
+    },
+    {
+      "path": "src/contracts/officialToolContracts.ts",
+      "upstream_sha256": "4d11ba22eec7a76048bcabcaeb0a7421d0c9e7a13f8b954622e0c38918b8b144"
+    },
+    {
+      "path": "src/contracts/providerSelection.ts",
+      "upstream_sha256": "dee1f9e16bb6b5324e6d3cd7bc5526e0177878320e06f569d93f9861cb4adc3c"
+    },
+    {
+      "path": "src/contracts/toolContractExamples.ts",
+      "upstream_sha256": "4e2ce793074c99fb96357bce1b6cf26d832f5a8c68c8ce06c7977d2fa0524407"
+    },
+    {
+      "path": "src/contracts/toolContractHelpers.ts",
+      "upstream_sha256": "21cc3daf079f3db274622e9bb6226b63590b164a066474350018e3d801dda4b5"
+    },
+    {
+      "path": "src/contracts/toolContractTypes.ts",
+      "upstream_sha256": "45ee2c139f82fda31a78816b1dd6f4a82ab857d2ff27acc51020b47b01cfd34e"
+    },
+    {
+      "path": "src/contracts/toolEffects.ts",
+      "upstream_sha256": "c175da43c091fa308f04b3b2771dd6f7599660ecd05688aea35a2906dd39d356"
+    },
+    {
+      "path": "src/contracts/toolOutputSchemaGroups.ts",
+      "upstream_sha256": "e371b4bcd0434976590e3e28489acaedf8576fbdbb35a568c3fe9be905f87dd8"
+    },
+    {
+      "path": "src/contracts/toolOutputSchemaPrimitives.ts",
+      "upstream_sha256": "baa71d50b71c3423c8e620feaf8745ab627eec43240803ec5ce259b94d16370b"
+    },
+    {
+      "path": "src/contracts/unknownContractExamples.ts",
+      "upstream_sha256": "2ff2cb1d184d85e99fe03db3fe137dd4449cefbce900a344cc2fd05ae4e44c31"
+    },
+    {
+      "path": "src/domain/adb/adbDeviceAnalysis.ts",
+      "upstream_sha256": "5afb5614ff42b5a19ecbd77c60835ac67df3109eefce9598fb304af55a8f67e6"
+    },
+    {
+      "path": "src/domain/analysisErrorBase.ts",
+      "upstream_sha256": "ecb2b598484ca3d92403a43c1b551ad31e844147ef2874ab7f97b26dcda599ef"
+    },
+    {
+      "path": "src/domain/analysisErrorCleanup.ts",
+      "upstream_sha256": "c6862f21862caf3dbc068393dd67a7c8d56bca9d63214867318d3a306f49e7f6"
+    },
+    {
+      "path": "src/domain/analysisErrorCore.ts",
+      "upstream_sha256": "61c4533e8140eb884a715ca35fa01f13a7cde6a70da9b8c976ad5de06e27aa48"
+    },
+    {
+      "path": "src/domain/analysisErrorPresentation.ts",
+      "upstream_sha256": "e2506e927a671e8dc40ae0fe2d92834a3225c5087bc67d35fa5d6db41d9d2108"
+    },
+    {
+      "path": "src/domain/analysisErrorProjection.ts",
+      "upstream_sha256": "ebdafb79892ff95837d33bdfee6526450a70634caf16ac806f6405b8d5a1d72f"
+    },
+    {
+      "path": "src/domain/analysisProfile.ts",
+      "upstream_sha256": "cd091457ef6919163084034b6a3502c7f1c6ab1080cb616317902c6bbe03f6c0"
+    },
+    {
+      "path": "src/domain/analysisView/WebNetworkApiSurfaceAccumulator.ts",
+      "upstream_sha256": "ebb13cced052297da024da7748ed36660fe3c73d6f53732761edf5d00cd05e74"
+    },
+    {
+      "path": "src/domain/analysisView/analysisView.ts",
+      "upstream_sha256": "983219c143347d3ecfe0536e9ca3c97ad9a678de29aba1316bf81b31d4fc92e3"
+    },
+    {
+      "path": "src/domain/analysisView/analysisViewCoverage.ts",
+      "upstream_sha256": "2b56f95897ae4a7c33613de07a4ef5f76c2dc9339bdbbc4ff4838a3504b550b0"
+    },
+    {
+      "path": "src/domain/analysisView/analysisViewDataAdmission.ts",
+      "upstream_sha256": "4c3ffcbc21ac5221265a4318c8e0eb5668e9123c34da41f785403fc4cb71e0b6"
+    },
+    {
+      "path": "src/domain/analysisView/analysisViewErrors.ts",
+      "upstream_sha256": "4e18979839110f6cc05d10485d609f270cd1d39539aec16706ffee634d0366c7"
+    },
+    {
+      "path": "src/domain/analysisView/analysisViewParent.ts",
+      "upstream_sha256": "4aa434622881bd0db798c89e64d943f8d1ee87ea331eb8809848f7bfc9ced67a"
+    },
+    {
+      "path": "src/domain/analysisView/analysisViewText.ts",
+      "upstream_sha256": "fe6fa7ee916322202bec1394e38857e381b92bce3d0835721ebbd21085dacd22"
+    },
+    {
+      "path": "src/domain/analysisView/androidPackageView.ts",
+      "upstream_sha256": "adb4ee1d46895df1ce7629972b84080d7a00a3c70f840994a5a7d0bbc8db3ebc"
+    },
+    {
+      "path": "src/domain/analysisView/artifactInventoryView.ts",
+      "upstream_sha256": "2f747fcb7df7d038320a64334b9572027c067f3f5df9bc3698b9e24cf8c45bfc"
+    },
+    {
+      "path": "src/domain/analysisView/binaryLayoutView.ts",
+      "upstream_sha256": "72a79b2fde4b6d55513a6b872f93431c2806fc6565c765a6dfa2a7e33467bd44"
+    },
+    {
+      "path": "src/domain/analysisView/dartAotView.ts",
+      "upstream_sha256": "d3be2beb60afd6adb93ecb9c243629bfef5d1e7cc34cead5ef01c0536ab00c3f"
+    },
+    {
+      "path": "src/domain/analysisView/evmInterfaceView.ts",
+      "upstream_sha256": "ae937acbf76e164f94955fd03409b2c6cbfef91e81fccdd85d2dc09a8274b946"
+    },
+    {
+      "path": "src/domain/analysisView/interfaceBuilderView.ts",
+      "upstream_sha256": "457cf81cbc979dea8885baca9bec92397ad63e5e81bde40673b5af752f1d29ac"
+    },
+    {
+      "path": "src/domain/analysisView/javascriptApplicationCoverage.ts",
+      "upstream_sha256": "1601b4f04062eb49e16fd8de817a45fd3962dae56bc619f0516a887a3b8f4089"
+    },
+    {
+      "path": "src/domain/analysisView/javascriptApplicationView.ts",
+      "upstream_sha256": "2f248e5e02522d83457b16188bb57936655650f1226ce2897615f1ba3a7ed8d2"
+    },
+    {
+      "path": "src/domain/analysisView/javascriptFactsView.ts",
+      "upstream_sha256": "8d793aa63b4462de5f933dffad0c24ad53700af0acd87c0e5f8d4ee181585a5d"
+    },
+    {
+      "path": "src/domain/analysisView/javascriptModuleReferences.ts",
+      "upstream_sha256": "934f502d14e68676f2c8189452ba8be801f4c5312138ddd5d75a03047d930cf4"
+    },
+    {
+      "path": "src/domain/analysisView/machoView.ts",
+      "upstream_sha256": "5b9fc409ce220e4a151aaf0da27944899c8a7b4d5ca1b3cdf1f45bbfedee04b6"
+    },
+    {
+      "path": "src/domain/analysisView/managedArtifactView.ts",
+      "upstream_sha256": "e3fb4e4d04b0ac8575768c0538727fbc4f8e942903789d8ff9375c3357d0dc41"
+    },
+    {
+      "path": "src/domain/analysisView/managedMemberView.ts",
+      "upstream_sha256": "a3f3fb8c3d5a7261843dc8b0424b68c6f80c68b6f26d3bc7643507e9e612485f"
+    },
+    {
+      "path": "src/domain/analysisView/nativeFunctionView.ts",
+      "upstream_sha256": "1c4a5a9a2cdeced8100047b196b4ccb071961b14f286a6bb329c7aa1a50c12c1"
+    },
+    {
+      "path": "src/domain/analysisView/pcapCaptureView.ts",
+      "upstream_sha256": "ae5341f2eb1bbe6992afc28ab50ac89ddbed109d2ecb0a81133734661a7172f9"
+    },
+    {
+      "path": "src/domain/analysisView/qlogCaptureView.ts",
+      "upstream_sha256": "f82ec63e65545412a431ecb7a8c2280aa797c072ea38db9c14e62cd872e0b2d2"
+    },
+    {
+      "path": "src/domain/analysisView/wasmArtifactView.ts",
+      "upstream_sha256": "5f4fd3162a5b4789bb436848769952fe8d33ed5013baded6afdc451b6cee5edf"
+    },
+    {
+      "path": "src/domain/analysisView/webNetworkApiSurfaceView.ts",
+      "upstream_sha256": "b4d3b1abf100b07f0fa4d343643714e951f836619580476195662a57efb31920"
+    },
+    {
+      "path": "src/domain/analysisView/webNetworkCaptureView.ts",
+      "upstream_sha256": "94b58f9e1fc0ef8c0490aef61080ed2aebb09a0b2aa343b1cf05ffd8cfcd17c4"
+    },
+    {
+      "path": "src/domain/android/androidAnalysis.ts",
+      "upstream_sha256": "9ed60f776cb5e0a9515f2c5fcab914487a14eccaeda9b09b03ac0d158e52cb4c"
+    },
+    {
+      "path": "src/domain/android/androidApplication.ts",
+      "upstream_sha256": "f360d71f33a813dc478da654b3b9d11bb06817571f91a2c1e2849253fd74a0a4"
+    },
+    {
+      "path": "src/domain/android/androidPartialObservation.ts",
+      "upstream_sha256": "66c5ed9bc31635dc87057c135ca0e940d74aab701775c613db4ccd462762c197"
+    },
+    {
+      "path": "src/domain/apple/appleApplication.ts",
+      "upstream_sha256": "a3718067f1eac06f9290406c2e8003ad4ec30ae70ce6fbb0d2c7aa96ed6bc613"
+    },
+    {
+      "path": "src/domain/apple/appleArchiveFormat.ts",
+      "upstream_sha256": "5b334ccc3bea63d415367b6923e393966d0aca84f22eb09f01a0d0d9b702bbfd"
+    },
+    {
+      "path": "src/domain/apple/appleAssetCatalog.ts",
+      "upstream_sha256": "1196c20da7183b5d0f6658a2f2cd48327ef3b5760e01c3708a791ce13bc21fd8"
+    },
+    {
+      "path": "src/domain/apple/appleBundleAnatomy.ts",
+      "upstream_sha256": "cabdb8ea99d42fb4d8512f4448384662eede7c4258d5b445aa9a0c45345942eb"
+    },
+    {
+      "path": "src/domain/apple/dyldEnvironment.ts",
+      "upstream_sha256": "fd06a1ec02cb88e79e1d693abb303d92338f4ac67b03d6d8a6f259affa27bbe9"
+    },
+    {
+      "path": "src/domain/apple/dyldPaths.ts",
+      "upstream_sha256": "212912375e24520c65de2f52870a3cafed0b51de705830b39106938ec2e26fce"
+    },
+    {
+      "path": "src/domain/apple/dylibResolution.ts",
+      "upstream_sha256": "dfd9d06270f54c56aa1858e3e81c7206d1e4545b6386c7ee71bcd20fd7086cd8"
+    },
+    {
+      "path": "src/domain/apple/dylibResolutionFindings.ts",
+      "upstream_sha256": "b534b218d20f67a8dccfde5d377f26d2c4f7040aef4743b6695292a6dd3c3e72"
+    },
+    {
+      "path": "src/domain/apple/interfaceBuilderGraph.ts",
+      "upstream_sha256": "ae656cba9f700fdbf580a84f66beb1f02d1eb148f28377e2843eaeef5a28e1a8"
+    },
+    {
+      "path": "src/domain/apple/interfaceBuilderKeyedArchive.ts",
+      "upstream_sha256": "28a79bd5c265a4fb484b0db6344807a44790dab334deb47dafcb6985937ef44f"
+    },
+    {
+      "path": "src/domain/apple/jvmClassFile.ts",
+      "upstream_sha256": "c3a45dcb4a970d3e569986648d7d7764e12ad4a6f7c05761bc9c982c37744d71"
+    },
+    {
+      "path": "src/domain/apple/keyedArchive.ts",
+      "upstream_sha256": "065e90386cacafd7f82b09a36ca4856c689a40eec8e2d176df1d9978f54a866e"
+    },
+    {
+      "path": "src/domain/apple/machoContainer.ts",
+      "upstream_sha256": "a99782a467dac5584309236cc6ff09ab9d5c09497616314cc1b8914340e9b808"
+    },
+    {
+      "path": "src/domain/apple/machoCpuIdentity.ts",
+      "upstream_sha256": "8fcce29606d9ad83acdc83ba481db4820daeaf1f9a74f2089e8d3b87e7fa756a"
+    },
+    {
+      "path": "src/domain/apple/plistNumbers.ts",
+      "upstream_sha256": "19843cdbfbf272635255c1d1664b9033b6bacca52e06a6bc3be91337b6f45c3d"
+    },
+    {
+      "path": "src/domain/apple/plistValue.ts",
+      "upstream_sha256": "e19417a777de9a22512d6b054f64ca3e4a0601563549cd11efa9555e708893b7"
+    },
+    {
+      "path": "src/domain/artifactComparison.ts",
+      "upstream_sha256": "06cec1421c65c16565d6c48976a5fe46938548fbd2b3a993176a94af228cd217"
+    },
+    {
+      "path": "src/domain/artifactDecompressionBudget.ts",
+      "upstream_sha256": "dc3024987c4adcdfe05323f3cae0958af82d81eeeec29cfef5fa707297004b46"
+    },
+    {
+      "path": "src/domain/artifactGraph.ts",
+      "upstream_sha256": "e992a242dd72cdf35e8339300386875f576d8eff6599f9e3dd495ada1c5803ff"
+    },
+    {
+      "path": "src/domain/artifactIdentity.ts",
+      "upstream_sha256": "7a4d5d24e8bd5eb72796df930fe385e8e321bfe591958f1ce7c791a987e56333"
+    },
+    {
+      "path": "src/domain/artifactInspection.ts",
+      "upstream_sha256": "72733848bc9e22f9cb21d8f9ad06785e16fac38ca583b8f7865522f5457304fb"
+    },
+    {
+      "path": "src/domain/artifactIntegrityPolicy.ts",
+      "upstream_sha256": "c53a0233f1c7dd42f250a3a7b6d13e49fe009602ba5c082c7741e3aeb2e1a590"
+    },
+    {
+      "path": "src/domain/artifactInventoryEvidence.ts",
+      "upstream_sha256": "0f70fcd7b3950723d1dd6f1bfc0088f45fada98a1b3a35f80a98ab40cd623862"
+    },
+    {
+      "path": "src/domain/artifactInventorySnapshot.ts",
+      "upstream_sha256": "40e4343ffae4af5361f059ab7d6c80cc48e6086f5a6791de5e3d62470ac1e495"
+    },
+    {
+      "path": "src/domain/artifactOperationError.ts",
+      "upstream_sha256": "3436d3418bc8e9ee8b0b3fff255666a402984803f8cde71a32e423d30bf93d6d"
+    },
+    {
+      "path": "src/domain/artifactPartialObservation.ts",
+      "upstream_sha256": "e28dd8f4d7bd8520825721aca6918ad213a1bd2a17b64cc44d83c40e847f34c3"
+    },
+    {
+      "path": "src/domain/artifactPathSyntax.ts",
+      "upstream_sha256": "d0d6c0efc5d0a94716249b01674fec9763088c071e070439eb6cce81571ac207"
+    },
+    {
+      "path": "src/domain/binaryTargetTypes.ts",
+      "upstream_sha256": "2c3c029cdd48a52bcea1520d4ffdd738739d4c0c16aa1bd3ef86b7a04a87c930"
+    },
+    {
+      "path": "src/domain/bridgeCandidateProjection.ts",
+      "upstream_sha256": "5aa3aba6536da2f8849b409f4b7c3c799efed6e0a12dedd8d7a93cb1e178c04d"
+    },
+    {
+      "path": "src/domain/browserCompleteness.ts",
+      "upstream_sha256": "c412e93424c3ee8d85920558ae97ed9e1b1dd04c5b79dfe157ff271c2bfc91a9"
+    },
+    {
+      "path": "src/domain/browserNetworkEvidence.ts",
+      "upstream_sha256": "1480094ceb702baddcec14b61bee2f7e039bc7296f1c3103effb1bc78f0ab86d"
+    },
+    {
+      "path": "src/domain/browserObservation.ts",
+      "upstream_sha256": "1e4ed617e877b3afbe755d5b865cda3bc0d79ba4f698f246cf9d4e4e3344d749"
+    },
+    {
+      "path": "src/domain/browserObservationError.ts",
+      "upstream_sha256": "47c67a6dbdcaf96b6f480281e4b144505ce448eeab1781a1946ce8aa9599ff9b"
+    },
+    {
+      "path": "src/domain/browserObservationErrors.ts",
+      "upstream_sha256": "15d179b6aad70f985909478c70b686febd2255b32287c2b197059b0439032ed0"
+    },
+    {
+      "path": "src/domain/browserObservationSchemas.ts",
+      "upstream_sha256": "0e4b38d407b544b0c0335d9b7a622c4e21355483762ed8f61a0ca398b7a8a5c6"
+    },
+    {
+      "path": "src/domain/browserScenarioCapture.ts",
+      "upstream_sha256": "8e544a2a4ca07226bbd8e6d5e1ee461025219220bc75610eb60c1f524892e510"
+    },
+    {
+      "path": "src/domain/browserScenarioCaptureLimits.ts",
+      "upstream_sha256": "28d5b8d2a8a7de99b64c37ec64a52cd4ca439dcafc5a7ae392120cfd7510302d"
+    },
+    {
+      "path": "src/domain/browserScenarioCaptureValues.ts",
+      "upstream_sha256": "fbb8cf9816c3ef519372881971db51525d6c5668b861539cc68a81a7691cfd7a"
+    },
+    {
+      "path": "src/domain/bundleComparison.ts",
+      "upstream_sha256": "9ee32c322ab335576c9a0055341915ab4a6be5993d500ddf943835abf37751de"
+    },
+    {
+      "path": "src/domain/callPathSchemas.ts",
+      "upstream_sha256": "566c0bf6c82cbe79cc1df77ce44b30b6a04035c0fd5f330892764a10ce80fa11"
+    },
+    {
+      "path": "src/domain/canonicalDigest.ts",
+      "upstream_sha256": "9d1ca03e3994cca139a69f7b510aea51777ea1f67b7e5ee9e2d7adf1935b8284"
+    },
+    {
+      "path": "src/domain/canonicalJsonDigestSteps.ts",
+      "upstream_sha256": "b6f2d0ec8659fec8a7747a84994cb4c2b17ffc1771f5be2a0520c17b5da053f3"
+    },
+    {
+      "path": "src/domain/canonicalOrdering.ts",
+      "upstream_sha256": "0dd709b38c66d5e6e008c5120d41d8788a9e45fc6a403748b66f1e57a1e106bb"
+    },
+    {
+      "path": "src/domain/changedBehavior.ts",
+      "upstream_sha256": "28798a8edcc61377c98137d5aafacb0c253d6f42a80de6b43574e31f54fdcee0"
+    },
+    {
+      "path": "src/domain/compactStringIdentity.ts",
+      "upstream_sha256": "e240ceccd57d005b0cbfffa0030f4d7cdda90e25b2d0188fd7fc929f1f2ffc2c"
+    },
+    {
+      "path": "src/domain/comparisonSemantics.ts",
+      "upstream_sha256": "6a9c186f8401aa89869172831003779b1bdb1a02a7372000330b5c950c52b5c2"
+    },
+    {
+      "path": "src/domain/comparisonSourceEvidence.ts",
+      "upstream_sha256": "52e0607ab2211550f9ab1faf935ec41352cb4b6a48733ee3c3d0a92f32df33f8"
+    },
+    {
+      "path": "src/domain/comparisonStatus.ts",
+      "upstream_sha256": "70694d72deace32608a33172d7e5a48292991ab180bd80a43a97020580fb4eee"
+    },
+    {
+      "path": "src/domain/configurationErrors.ts",
+      "upstream_sha256": "93cfb880ab7cc3951c91107377e723a165bcb3bac69cf4b13c9207f6a2d27907"
+    },
+    {
+      "path": "src/domain/digests.ts",
+      "upstream_sha256": "94e86b9d1c4488cd5fa94cf80121fb3a21bbc0dc9ce0cef38bd1113ec2ac5f40"
+    },
+    {
+      "path": "src/domain/dosCom.ts",
+      "upstream_sha256": "8e2b0bc95dc3e759045b230ea443d69d3022a1f5b69bf8b6bee2fa8d772c75a4"
+    },
+    {
+      "path": "src/domain/dosMz.ts",
+      "upstream_sha256": "98d8c77ad745c8ab89f1349049e3b53a19f6b1d2f3fd23b2dd2c267507c4da86"
+    },
+    {
+      "path": "src/domain/electron/electronFuses.ts",
+      "upstream_sha256": "882793db3cf919e1a64e0cdbe6ad94cb074ddd7cee4ffa12d10d4373b417203e"
+    },
+    {
+      "path": "src/domain/elfFixedHeader.ts",
+      "upstream_sha256": "61640306804f0788d9b622a51b0154c22c2ebab9f1e77823fc5a788bf83440f2"
+    },
+    {
+      "path": "src/domain/emptyArraySchema.ts",
+      "upstream_sha256": "ebbc623c4f0b7f4222d3743078000fc33dc9184bb26ce96f3d124e3eb87b4509"
+    },
+    {
+      "path": "src/domain/evidence.ts",
+      "upstream_sha256": "4a92eedd48d416e37f9eacfae8d1296cc8bdc1c5d4a63840ce7d097eb959fb42"
+    },
+    {
+      "path": "src/domain/evidenceBundle.ts",
+      "upstream_sha256": "e0daab738dbbbda38d4d1f15faedb8571cd1afaccdc3972b0bddc32870bfc3e2"
+    },
+    {
+      "path": "src/domain/evidenceErrors.ts",
+      "upstream_sha256": "0257a3dc1aaebbabec6694f3bebd18d35ec0864f649c8bd06c3b8dc759b2294d"
+    },
+    {
+      "path": "src/domain/evidenceRecordSummary.ts",
+      "upstream_sha256": "5bafe4187357e02d3d94a812de4e0dc3a751a9219208d9a281faf0f6a7d2a5a1"
+    },
+    {
+      "path": "src/domain/evm/evmInterface.ts",
+      "upstream_sha256": "b3e1a19b2c24eea516fd6e430822a6f74979f8e09a96fd0ef730dbf4f2e614f4"
+    },
+    {
+      "path": "src/domain/evm/solidityMetadata.ts",
+      "upstream_sha256": "ba07507046ab0e961bc18c669f9ad192891c5b786c13b35a28c6bb6b47d404eb"
+    },
+    {
+      "path": "src/domain/fileSnapshotObservation.ts",
+      "upstream_sha256": "72e307106964cbfe0f7218af99f646024e0120e895b9bef51149e09af8557e13"
+    },
+    {
+      "path": "src/domain/firmware/firmwareAnalysis.ts",
+      "upstream_sha256": "a7ecb9ba28610a4f5266fe68f894a0071f533dc5fdf11be644084a2dbc1053c6"
+    },
+    {
+      "path": "src/domain/fixedTupleSchema.ts",
+      "upstream_sha256": "97f5afff68f960667ab93d09dbdcfb37e084c3cd35bc4985efa74c1c835d4d64"
+    },
+    {
+      "path": "src/domain/flutter/flutterBuildAnalysis.ts",
+      "upstream_sha256": "fb7a7855ad0c3316d706f7edcdb979e96db74ba3631e4f6d67bed91a19cec783"
+    },
+    {
+      "path": "src/domain/functionCallCoverage.ts",
+      "upstream_sha256": "0f4dda42e4faff684a1c9d714c6eb1d875206ea0e946c3e304bedc0d51db76b8"
+    },
+    {
+      "path": "src/domain/functionComparison.ts",
+      "upstream_sha256": "59974f2e1be581891f98835db979e9b34389a3ddec79aa758f46c1fb9af34817"
+    },
+    {
+      "path": "src/domain/functionComparisonDimensions.ts",
+      "upstream_sha256": "cb865d888c19645656493d1b8cba31851ca8f0409bf616994929f327e3974134"
+    },
+    {
+      "path": "src/domain/functionComparisonNormalization.ts",
+      "upstream_sha256": "aaa625af8079329e36de39470cfbfc826d319e99a84763ed0bc4a8c4a778d208"
+    },
+    {
+      "path": "src/domain/functionComparisonResults.ts",
+      "upstream_sha256": "0ff66f3f9580eaaf1deba6ad8edc8c668cbf86ebc65490c40db3af28fa4610a1"
+    },
+    {
+      "path": "src/domain/functionComparisonSchemas.ts",
+      "upstream_sha256": "0802bafe1e7be7b58cb3b7660b5b8d31dec5035b0d1f7d247688b433b2d6c82a"
+    },
+    {
+      "path": "src/domain/functionDossierEvidence.ts",
+      "upstream_sha256": "7790146747a623216821b25e7d3b62e75f0498c5c39cf850f0ded2f7af911452"
+    },
+    {
+      "path": "src/domain/go/goBinary.ts",
+      "upstream_sha256": "c21e7d03163863fbccec7fad3470ad6ff1fddd2bd697aeb50b083687ac8de79c"
+    },
+    {
+      "path": "src/domain/harmony/harmonyApplication.ts",
+      "upstream_sha256": "3c980e036c4fc62b03dddfdfbd649b71a0296bea3fd6fe71058d97ceb4a68c4f"
+    },
+    {
+      "path": "src/domain/hopperErrors.ts",
+      "upstream_sha256": "948db50e16b90bf53055784fc62c47629afc2cf27956c731dc6313423562f1f9"
+    },
+    {
+      "path": "src/domain/hopperStartupFailure.ts",
+      "upstream_sha256": "52202e225b329872595c7dcbefa5fc472de4ee12c1365b6eb40935cf6feae3d8"
+    },
+    {
+      "path": "src/domain/hopperValues.ts",
+      "upstream_sha256": "8a7c770b0a0a01b9887ccf03ea160a83f5694c3ba23835d7d849b37c48930a75"
+    },
+    {
+      "path": "src/domain/immutableJson.ts",
+      "upstream_sha256": "ca9f7a274917aa632762be4cbbfe4ed2ea496bcb408e90042dc0ad4498358cc9"
+    },
+    {
+      "path": "src/domain/inputIssueProjection.ts",
+      "upstream_sha256": "476b57829c52b670a5e65db07a465a4371c184d1007840a586efbe030a07276a"
+    },
+    {
+      "path": "src/domain/javascript/electronActiveObservation.ts",
+      "upstream_sha256": "868d126480785898008a6d7de75cbcbb273eca1185d27c0decb72bdbd5a3630c"
+    },
+    {
+      "path": "src/domain/javascript/electronObservation.ts",
+      "upstream_sha256": "6f9e82e138e360ae16359ece9e37163b29cdc1a3c80b460b3973f7a0e8b92391"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysis.ts",
+      "upstream_sha256": "76f4ce81e932705a03fd9f4077e2a7a9b515e71965f36c3f2be022a4410c22ac"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysisBrowser.ts",
+      "upstream_sha256": "a552656c5f78e3d0d90e07f229c42ef4615098b02bdecbd5f564a2284381282b"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysisIpc.ts",
+      "upstream_sha256": "a834aa05b662f0192c13e67d51004adc9b30d664e3f1db665f46b946f7de74fb"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysisNative.ts",
+      "upstream_sha256": "eebfc334f60766f7c9eb5f871b16a1a4e0070a7350595b1862e88161b7a5b082"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysisTypes.ts",
+      "upstream_sha256": "d01b3fc4e9aadd88e72cf4b2be3e2302ff98ae1c2f748f5080a909fb157c6bf4"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticAnalysisValues.ts",
+      "upstream_sha256": "8357c7ca6e6bdc682e6f599b739c4a364cfee8cfe4bf007292a00aa72200efe8"
+    },
+    {
+      "path": "src/domain/javascript/electronStaticOptionObjects.ts",
+      "upstream_sha256": "d36692298cf51b140835936ed7e726623a7cbf7dccec102e892ee04fd15af51b"
+    },
+    {
+      "path": "src/domain/javascript/electronWrappedCallPaths.ts",
+      "upstream_sha256": "68656d5deb88b79318315acef52c3adf02a12a683742f8c7aba88195064b4d32"
+    },
+    {
+      "path": "src/domain/javascript/htmlArtifactReferences.ts",
+      "upstream_sha256": "dd63ec67689813f1b746ddb439ac77be9622eebac19d995983dee9d61b9a56e1"
+    },
+    {
+      "path": "src/domain/javascript/javascriptAnalysisResourceControls.ts",
+      "upstream_sha256": "29bd0c1377ac7733dafee5292b6533f82b98564b82084674d86b6cfd1c0ca925"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationAnalysis.ts",
+      "upstream_sha256": "a387adf1aa58818ea1f95cb2aae66440d75880933e34f00a586a951c2a257c5b"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationChangeGraph.ts",
+      "upstream_sha256": "108e9702ac9204d89051a8890d4c6ca483bfb010213a971ca8df937b3342a66f"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationEvidenceSchemas.ts",
+      "upstream_sha256": "b5229e409aa0b2a9e1470254ca93ab987ca26f1bc9e9f94ab44e89c749df59ca"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationGraph.ts",
+      "upstream_sha256": "2b98df498d2e12973ae14d5e3e94144c181ecdb286867caaa352849e48105f1a"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationGraphSchemas.ts",
+      "upstream_sha256": "a89656b54aa74ff62d00b4601527c66c07201ab315d000380b9b5d45decb966c"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationProjectionResources.ts",
+      "upstream_sha256": "fc513138936499a439cc799bab54a8d07273807fc7a4bf49abb700bcb8191306"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationVersionComparison.ts",
+      "upstream_sha256": "70effdd70d7e1c3ecdc252fb12950efa18fe6e1b23189a1ec36cc1a3155e4af9"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationVersionComparisonSchemas.ts",
+      "upstream_sha256": "8bec19a33ee34620d310ffe120a60b9f7b8c599ab353f428b32b20568aeba38e"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationVersionItems.ts",
+      "upstream_sha256": "442614f5d73ce5c627599f7c34eb53e89ee571a9743451a3ea5905442b2644a9"
+    },
+    {
+      "path": "src/domain/javascript/javascriptApplicationVersionKeys.ts",
+      "upstream_sha256": "f60f61d882bfdb77b946cd79556a42f3a8f6d5fc0998220abadfaa6142085078"
+    },
+    {
+      "path": "src/domain/javascript/javascriptArtifactFiles.ts",
+      "upstream_sha256": "9c8c98d02cceaf5efdfe2de692db4e816cc928245aa8f661a7d968d53b655d05"
+    },
+    {
+      "path": "src/domain/javascript/javascriptAstFingerprint.ts",
+      "upstream_sha256": "8618cb79ea03a30097783d0aeff8a50e4f666d4b9c5c14f0e5cdb8d5b4f9dc1e"
+    },
+    {
+      "path": "src/domain/javascript/javascriptAstValues.ts",
+      "upstream_sha256": "72245ccef3510aab2fd01d263821bc211bb2e2826f6a90f7e3ac9628887c2b3f"
+    },
+    {
+      "path": "src/domain/javascript/javascriptBootstrap.ts",
+      "upstream_sha256": "4d1932928e3367e516483c92193a5cf4850dc2721595253525fe7ea72d523e78"
+    },
+    {
+      "path": "src/domain/javascript/javascriptBootstrapIntegrity.ts",
+      "upstream_sha256": "1ca8f0703d8a3b9b6c12511bd788146771ab68ff17f7b627eed74f5968870519"
+    },
+    {
+      "path": "src/domain/javascript/javascriptBuiltinResourceMethods.ts",
+      "upstream_sha256": "ecf046c228db6489d7d56d5552d441582d0014fd9801281ad5290037d1adacac"
+    },
+    {
+      "path": "src/domain/javascript/javascriptBundledRequireOrigin.ts",
+      "upstream_sha256": "e5bacf475192a17c58b6b6b23ecefee0f0dd46d76c1e163b98fc5bd2f1237aa1"
+    },
+    {
+      "path": "src/domain/javascript/javascriptCommonJsExportReceivers.ts",
+      "upstream_sha256": "9a34ed3dcb71dac47cca27ea0fd513769ddcbbcf6bb318a976e50f0b75a9349e"
+    },
+    {
+      "path": "src/domain/javascript/javascriptContextBridgeExposure.ts",
+      "upstream_sha256": "9f331ed894bf5c2971ff3877c1029d3a5dfab1a4341b13e0503e58f93ba952e3"
+    },
+    {
+      "path": "src/domain/javascript/javascriptElectronMemberWrites.ts",
+      "upstream_sha256": "b9e8c3df53cf867432b4a5abeeecb12fa283de57040fc2f24038364ed9259d10"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportReturnShapeProjection.ts",
+      "upstream_sha256": "9d7dc60560cc1afa6301721ae476d8860a119f4a5863bac8dbb299734f44ef54"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportShapeComparison.ts",
+      "upstream_sha256": "88058bea05daeae137dfad8e345749385b49fc48e49cd27b7f363c6b7de231b3"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportShapeComparisonIdentity.ts",
+      "upstream_sha256": "4b9326fa35265eb7556a2c6073b39ece8dd59cfca8c167cc77a54c91fb288aae"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportShapeComparisonSchemas.ts",
+      "upstream_sha256": "5d878e1ecaa2c828bbd21506f3f8c27c05629a048304eab1359cb06a6fb0d4ed"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportShapeSelection.ts",
+      "upstream_sha256": "7f01f40c9aef306c22e1b14a608341043fc0ace7603af2b3b96539f84923a264"
+    },
+    {
+      "path": "src/domain/javascript/javascriptExportShapeVariants.ts",
+      "upstream_sha256": "dfd94fe4dca98b5c981e3bdee459131f2328847e395eaa57180f6aa812b4ea78"
+    },
+    {
+      "path": "src/domain/javascript/javascriptFeatureSeed.ts",
+      "upstream_sha256": "7861d1d23e10f0365ccfb13f04c13563e0dfd91226a8f34f32cc009de313b7a6"
+    },
+    {
+      "path": "src/domain/javascript/javascriptFeatureTrace.ts",
+      "upstream_sha256": "b2122e4ae026e176dca775351101ad2ce876e3bf804f39554a2d9344d8fe1fd1"
+    },
+    {
+      "path": "src/domain/javascript/javascriptFeatureTraceSchemas.ts",
+      "upstream_sha256": "7777fba1e2dd88e0d47db7df9f9447622f7fdcc2748fe27521408f332cd7e201"
+    },
+    {
+      "path": "src/domain/javascript/javascriptFeatureTraversal.ts",
+      "upstream_sha256": "943e9b3cac3e8c75888b9ddc8115272c1520802a63a655423ddc6d7d1324eedf"
+    },
+    {
+      "path": "src/domain/javascript/javascriptGraphqlOperations.ts",
+      "upstream_sha256": "6a325fd57aca918ae9e442bf942485e2b510b634647d8b245b9af25fcf5b9401"
+    },
+    {
+      "path": "src/domain/javascript/javascriptIntrinsicInvocation.ts",
+      "upstream_sha256": "358897e0de8db90c991bbc70da22b669ab307d597961439627b763f5361f47e5"
+    },
+    {
+      "path": "src/domain/javascript/javascriptModuleDeclaration.ts",
+      "upstream_sha256": "ba22006cd1ecbe32e291186dc0984169e833acd2bca039fdc33c8744f5600422"
+    },
+    {
+      "path": "src/domain/javascript/javascriptModuleInterop.ts",
+      "upstream_sha256": "f836b4a8ebddbc9b0c826d91a32d8ba6639e486b8d2cc5a21ebb8373e07ee900"
+    },
+    {
+      "path": "src/domain/javascript/javascriptModuleResolutionMode.ts",
+      "upstream_sha256": "219bf9bf32243eae636d5980aae035c96a946f499389a3cc76048ccc7b0b5924"
+    },
+    {
+      "path": "src/domain/javascript/javascriptModuleSemanticIr.ts",
+      "upstream_sha256": "1a220238a666c6e4c59bdd781fce3f001b00bb38c32d2adcccfaadf7d1856bb8"
+    },
+    {
+      "path": "src/domain/javascript/javascriptModuleSpecifier.ts",
+      "upstream_sha256": "13f5a29202be5378165a91173f25340b1544de76431c98b7cb6686bd16d2dd4b"
+    },
+    {
+      "path": "src/domain/javascript/javascriptNativeHandoff.ts",
+      "upstream_sha256": "6a0c6277dcbd7a5b79bf926d2191afe69af79993bb30c8823c833ccfd946c68c"
+    },
+    {
+      "path": "src/domain/javascript/javascriptPackageImportAliases.ts",
+      "upstream_sha256": "d02f3601ac1c17ad9175e994539e8e8a4789b1e720618c4c397ed820cb3e3b8f"
+    },
+    {
+      "path": "src/domain/javascript/javascriptRecovery.ts",
+      "upstream_sha256": "9be6718fdc5bff055a5440a705af1d9a8b8b6a4a8c9724830d84338b0dd140a4"
+    },
+    {
+      "path": "src/domain/javascript/javascriptRpcEndpoints.ts",
+      "upstream_sha256": "808aa8a1f1bd7591b2903f5837e8df1c070a5b8264446095ad4244a18c2977aa"
+    },
+    {
+      "path": "src/domain/javascript/javascriptRuntimeObservation.ts",
+      "upstream_sha256": "c7c44be91b62edd668ba5dfd557c29bddeba168f3e5324b29bceaf87250f4dd6"
+    },
+    {
+      "path": "src/domain/javascript/javascriptRuntimeReconciliationSchemas.ts",
+      "upstream_sha256": "79881572873ce46b804f9cf769b0d2190676395ce643522c878c0e8128fb09c2"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticAmbientWrites.ts",
+      "upstream_sha256": "ad06ecdbe164d64e1bc8b1afbb5b3c2df0a3a6b8b9eb6c0ec58dae3d56313c04"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticAnalysis.ts",
+      "upstream_sha256": "584267bfa5005066d8aface494242e53ad7f5a96a19cb927f29a84ceec08da6e"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticAsyncEffects.ts",
+      "upstream_sha256": "2e358618cc9f570f57b580b0e5b871b7c8f5545452f5009ec4f35710d5f18eb2"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticCallResolution.ts",
+      "upstream_sha256": "bded70efb3fac872173e82fb8b98ae9e051ca4955bba07b04b036090566e46a3"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticCallableResults.ts",
+      "upstream_sha256": "decfcfdd7d8957345ab1f664ac0546db46168db45f7d5385f4a0ccd60efea82a"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticCallableStack.ts",
+      "upstream_sha256": "c745e1e7763cff20eb7c6e7713756a0e9881ba4c24ee3ccdcf015af6d8262b7b"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticCalls.ts",
+      "upstream_sha256": "9306c44c694948619f9a44a1d4db8012e7dd78df52985fce47dd676562f4fb16"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticChildProcesses.ts",
+      "upstream_sha256": "4c6a07652a42f00f0a63ffe7e65bce1d59fe5f978003f8bb0b7c9155a8f62306"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticCoverage.ts",
+      "upstream_sha256": "52b52857d809a90d7f82dda864edefced1332dc340b77320c9f7b53d5c6bacec"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticDataEffectHelpers.ts",
+      "upstream_sha256": "8f9cf1a36f05b03dd816eaf9a6cdba0160d34ad7d17a961206e1bc32444d2ccc"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticDataEffects.ts",
+      "upstream_sha256": "7c8ceb7f5f8413e41aeb72d6f36475dd577bccfeb33b2504fef13ffdbfc451ec"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticDependencies.ts",
+      "upstream_sha256": "7cfd9d316c515bf1973ee4f498c948740b926e17c1b3f2954f7584883b820c41"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticDerivedAnalysis.ts",
+      "upstream_sha256": "ce27b7e37b14eb2843baa27b09e04654af576c82a126042146da7589c0306f0b"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticEvaluationOrder.ts",
+      "upstream_sha256": "c72739749395feb9249218976f10421bce6d8b9463b6b83aed9fa2cec931d2a6"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticExpressionShapes.ts",
+      "upstream_sha256": "de75defa31eb12411733c840fe4eaf3dbbe505640ddc405c16f1b2f59d048238"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticFileProjection.ts",
+      "upstream_sha256": "3a7b49fc9e3a001e743df1244e53c7b0e4102d6b15fe1bab3a6bda606c11d3c9"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticFingerprints.ts",
+      "upstream_sha256": "c622127a48f8348098d94ef4593205de539c7c64e61a72522e463cd28ecccdd4"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticGetterQueries.ts",
+      "upstream_sha256": "2e055809f5c0d66aae4d3b4b5cbcee3b38f784967162991728682a4268c00f11"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticGetterResults.ts",
+      "upstream_sha256": "0c63a5d56310f6501ce8e0bebd458ff2c4f43b4eb54312b9589607471987beba"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticGraph.ts",
+      "upstream_sha256": "9182e7ce6325e4b759fc4ac399854b92270f664ea32cc053d1acb095f8b11f3d"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticGraphSchemas.ts",
+      "upstream_sha256": "c26d6a61a164ceab0599275f8ad1a45db20e780b82cf58d853991f507c2e5a17"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticIr.ts",
+      "upstream_sha256": "68dad360d0a9e6bd72108b2717cae756b84ca1efb48455248ded2ff699d2c113"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticIterationSources.ts",
+      "upstream_sha256": "34f04266638a5495dca5f4fdbc1aaa17afa78fdd4dc409b16acc3bef9eab37b3"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticMemberMutations.ts",
+      "upstream_sha256": "ba558a16d2352fdf4512e380536d9776357ab5e602747f6bfb8878d294563a92"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticMutationInitializers.ts",
+      "upstream_sha256": "eb46cc0d6989e88de175c29a8f94c7422e2534f363be7ae145d45873db420831"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticMutationValues.ts",
+      "upstream_sha256": "7a3b2c72f3d69cff766d30ca17e6875c95209fa4e4493b3a041088353a580b05"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticObjectReferences.ts",
+      "upstream_sha256": "b556710f642bd09f4ec5ec58e06c3ee3a8e72040ae2ac49b0a3a44f249f6222e"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticObjects.ts",
+      "upstream_sha256": "d94c753dd723c8243793404f32de2d369120e5d7a253b1928f28795d7b058a34"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticOpaqueEffects.ts",
+      "upstream_sha256": "d2e80b43b13b891991f17a0e642f16e3e93965411fb6c0a4073bd7235d871090"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticPrimitives.ts",
+      "upstream_sha256": "899eeb6ccdf666f504f8b722327599997c924c8e4fb13a1cbd13edaf08c96640"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticProjection.ts",
+      "upstream_sha256": "a065cc850a6f3e46f5f9cebc2f7657f2036f32c59cdecba3469032b5cccb9bd6"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticPromises.ts",
+      "upstream_sha256": "034cb7e62c276fd9cb91775abe1e5982ec787894a83888e6c0c6cbed68aab856"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticPropertyPaths.ts",
+      "upstream_sha256": "88abc1658bef591f7f1e683161e29daad04372567c02dfb760a7ddc39254ac5f"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticProvenance.ts",
+      "upstream_sha256": "8c6df21010180d0165a753093120278edc140f6d66fef6a880c71c999ba2c206"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticQuery.ts",
+      "upstream_sha256": "ff22827450d625767409b990fb40da547973f8eeb1e538b7cc2c434c017c738a"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticQueryAssessment.ts",
+      "upstream_sha256": "0eb4d5d17f67546c67f0ee9e0ae887532cd7987c4266cb0278b510e8fb810c68"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticQueryIdentity.ts",
+      "upstream_sha256": "f0b9e92144ac469936c749c05f5dab08d8df79a0223a87047cfa2f85e0ad65ae"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticQueryRelations.ts",
+      "upstream_sha256": "c1aa2016432ed5a02469802d6ba132bc420eaf66ec02c3feaac86a7334c8703c"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticQuerySchemas.ts",
+      "upstream_sha256": "0547977e3e27b1dc68a94a28843b05e7c8543d426a8d2e70452453f60216ee47"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticReferenceSources.ts",
+      "upstream_sha256": "717334ee9d6885e27d455b420c5b3a19e4149573cbff83050de854ea8d799123"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticRequireOrigin.ts",
+      "upstream_sha256": "92a004f2d29062f30a04a8e4a22a4d6a66ad2f7d1c17c60f1e318243c98a6b67"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticResourceLimits.ts",
+      "upstream_sha256": "10da213444c0fdddadb5e64d1f7daa9872cf666f4740444ef31e7e9153427f6c"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticResources.ts",
+      "upstream_sha256": "8724fc0e22648299dcd4b3b975eadf54da2e3c550888073728ac1a0f8c6641c3"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticReturnedReferences.ts",
+      "upstream_sha256": "0be8a745846985986e4285d699848d3c616f33ccbc04e14cfe759f597f701d38"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticReturns.ts",
+      "upstream_sha256": "908c13c0e53ef097af8fd511d5792c94faa318fd82bb9e1a8dd62c2db22c4b52"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticSlots.ts",
+      "upstream_sha256": "49c733ab75486f252f0fecb86e1d13b4bce9abe2e0ca4daaae2df819b9b92e8a"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticState.ts",
+      "upstream_sha256": "9b812396cc1de7d31e32caaf2091b29cd8022d4fb4406003b208eeccc8791c8d"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticTraversal.ts",
+      "upstream_sha256": "ac44a9e643510ca02306084480402b4284ae88b91918ed253273e3b089f56a70"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticValueTypes.ts",
+      "upstream_sha256": "61f31942f893ce219c8c83e339370ddbabf1eb6c2dd9d9d3b08faee349979467"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSemanticValues.ts",
+      "upstream_sha256": "c739f6850616753c7df87b71bd2ad4cb7e4b7680c4bfb090366e419ab5f123c8"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSourceAnalysis.ts",
+      "upstream_sha256": "ccf2951f9279f7ee0a28d1042e280ac5852a6b729b03ecfb6cd202f1d9cabc75"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSourceMapPaths.ts",
+      "upstream_sha256": "52dea977dad8fa3837ae960ed5d874b0d5fd857f4780dcd9634f21bd178e26ab"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSourceParser.ts",
+      "upstream_sha256": "201da6791aa6cc805580d75af4a3679e2b1de34430795391fced14a0c38d5d76"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSourceSelection.ts",
+      "upstream_sha256": "850ffc1e022e76f80f4b05c3f447befc002e9c6e927c2273f320fb788041b05b"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysis.ts",
+      "upstream_sha256": "752104c2f3817f8ef55453ab328ac197f32bee0b750e109f31eae3824ef2fe3f"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisBundler.ts",
+      "upstream_sha256": "3f31b320a97b073b2e44664df849c0cf5c1140ab9645a3eedcbac9a078f97603"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisCalls.ts",
+      "upstream_sha256": "a4017fccab4cf8897d8065b16f7b8127036c28edf68f882d7d1bcb7d7f2a4953"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisFindings.ts",
+      "upstream_sha256": "92a21639a8ab925b6ee7e669b5b559d771579cd92303560c51286ab05c17da72"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisHelpers.ts",
+      "upstream_sha256": "bdd3e297626678e739d696083314fcc564cfa220cbca32c81bfd0076bc1aaf92"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisState.ts",
+      "upstream_sha256": "5c227399b46cce8e3af2cd5ffffbfbc8b41d0d4826a5dea2ce1388bc1dee30b1"
+    },
+    {
+      "path": "src/domain/javascript/javascriptStaticAnalysisTypes.ts",
+      "upstream_sha256": "7bf6513fec180a722a420c4af702ad326e02458287a0095ba117a0c7a54e6dd8"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSymbolicBindings.ts",
+      "upstream_sha256": "2422927fdebc03908aef7cebd94b000b0932d0b3c5bf059373a12271cb917a1c"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSymbolicControlFlow.ts",
+      "upstream_sha256": "ff2a8d860c220690cb4036b2e30a179dba7a713013d6a40b03813a9d526dd1e1"
+    },
+    {
+      "path": "src/domain/javascript/javascriptSymbolicValues.ts",
+      "upstream_sha256": "2b467a8e547b47856b5fa86b6451fe11442c13ed338694d6746b3e058681dada"
+    },
+    {
+      "path": "src/domain/javascript/sourceToBundleComparison.ts",
+      "upstream_sha256": "91dba87848b98c75ea6092a81752491c762091a57fb8e1a6acc1cbac05afe9b7"
+    },
+    {
+      "path": "src/domain/javascript/sourceToBundleComparisonSchemas.ts",
+      "upstream_sha256": "2f10916c10b38e00f0f0c61d53b4f22cf1ecb858921ccd8a8c5df6ad0377b7ba"
+    },
+    {
+      "path": "src/domain/javascript/sourceToBundleSignals.ts",
+      "upstream_sha256": "caaf9fd4e6bdce90828c3fca7fa792f989326f21cb63670f72f5b77f2f0c90a3"
+    },
+    {
+      "path": "src/domain/jsonSerialization.ts",
+      "upstream_sha256": "950dbc97a5c20c1bb37873388aa428b7093c622f40aefa54290fed95ba956861"
+    },
+    {
+      "path": "src/domain/jsonShape.ts",
+      "upstream_sha256": "7d28d10976a31d2dfef4ed5d1a0245281ace464fc0be6ebd6ef34b30f76f3b62"
+    },
+    {
+      "path": "src/domain/jsonValue.ts",
+      "upstream_sha256": "868d1e8e47f0a46e21d30d0bcd85967eb971bf453e400a19df60610b8b3fadc0"
+    },
+    {
+      "path": "src/domain/localPath.ts",
+      "upstream_sha256": "6cbaacf59332290c49cb8d76340ff318e135d58dcb5bbe0d71116ecddf1d0ba0"
+    },
+    {
+      "path": "src/domain/managed/managedApplicationGraph.ts",
+      "upstream_sha256": "b62017ed0698cc94c2f24d4e598579f9b96f130c661cc4cba20db10e50a276c4"
+    },
+    {
+      "path": "src/domain/managed/managedApplicationGraphCoverage.ts",
+      "upstream_sha256": "0c906054d3e60032b4a5cfe4e7b3d058666e925c6d0b2bbba178da7a881ae719"
+    },
+    {
+      "path": "src/domain/managed/managedApplicationGraphNodes.ts",
+      "upstream_sha256": "95a72722692febe7e2d3cd569cf6e04ed2019954df638cbf7ed22656adafc3f3"
+    },
+    {
+      "path": "src/domain/managed/managedArtifact.ts",
+      "upstream_sha256": "49a0c6880909b069fca8f227750b494b3f78bf95d67f76833df0f2e9f3ac6742"
+    },
+    {
+      "path": "src/domain/managed/managedInspectionEvidence.ts",
+      "upstream_sha256": "8d913bc3e9dcfc8e86ffee15f52b1cf05a21517149ff78692c4d5856ee75f025"
+    },
+    {
+      "path": "src/domain/managed/managedMemberComparison.ts",
+      "upstream_sha256": "881cbe151bd299a3f1c3af7d88329d11a5f62e30af4e2facc07bf6b896e958f4"
+    },
+    {
+      "path": "src/domain/managed/managedMemberComparisonCoverage.ts",
+      "upstream_sha256": "74a81aa40e6b419c11b9e0cf60a015694ec56bad43ae1e124a344e6fcb6ca32d"
+    },
+    {
+      "path": "src/domain/managed/managedMemberComparisonItems.ts",
+      "upstream_sha256": "ecd35bef52c28ea87be901d54aac03de64945df148d1c6e62412c88eeffc11f0"
+    },
+    {
+      "path": "src/domain/managed/managedMemberComparisonMatch.ts",
+      "upstream_sha256": "f8d4094f88c0bcfbd3c76f922aca5daadc234123fad79d62176c7e8aff4c194d"
+    },
+    {
+      "path": "src/domain/managed/managedMemberSignatureIdentity.ts",
+      "upstream_sha256": "230dabe8bab58b72d83956808d34df3f5bbbeefdaabcc16b5c06d4a86fcb5e2c"
+    },
+    {
+      "path": "src/domain/managed/managedNativeVerification.ts",
+      "upstream_sha256": "f8f0f960cab61eecb0c53b86bbec05bfe4fc181a157b22d3cb96c317d1a7638b"
+    },
+    {
+      "path": "src/domain/managed/managedNativeVerificationMatch.ts",
+      "upstream_sha256": "5f60b68fa16c84368eb67f73f211e5e52c264608052878ccf378ffba096a3e81"
+    },
+    {
+      "path": "src/domain/managed/managedNativeVerificationSchemas.ts",
+      "upstream_sha256": "f288eac2cd72a6ffc9786defc3ef3d2830a09d01b114afc0b9a57789103ad907"
+    },
+    {
+      "path": "src/domain/managed/managedReconstruction.ts",
+      "upstream_sha256": "632ee654bf66a11a580492bc6ecd22597f66760b8aac3e434f60d006773f0403"
+    },
+    {
+      "path": "src/domain/mobileApplicationGraphProjection.ts",
+      "upstream_sha256": "53fc5a7dab21971bac979309ff5a20bb8511dcd5600b7ca1c4ca4dd7694b7644"
+    },
+    {
+      "path": "src/domain/native/addressCoordinate.ts",
+      "upstream_sha256": "8555acfb7f2a8435e9a4a0de81e2df97d43d099aebcc36b629444179af265c1e"
+    },
+    {
+      "path": "src/domain/native/binaryLayout.ts",
+      "upstream_sha256": "45c0cd3171c0589ae7c434424f36a1cb9bd2b1ace929adc59c0694af8170d892"
+    },
+    {
+      "path": "src/domain/native/bytePattern.ts",
+      "upstream_sha256": "ac996859afb7a62de87c95897fe95d4b675530b33b16e2186aa638a67070eecd"
+    },
+    {
+      "path": "src/domain/native/fileOffsetPartialObservation.ts",
+      "upstream_sha256": "f1b8504d38b2610192e1a0a5dcdd8039cb10c314c9c3cc5cbea819ec7093491f"
+    },
+    {
+      "path": "src/domain/native/nativeAotSnapshotObservation.ts",
+      "upstream_sha256": "e5e67e747ad43ff6f50a0002cb7de69d59429d500c9f0408419a88db324050d5"
+    },
+    {
+      "path": "src/domain/native/nativeApiBoundary.ts",
+      "upstream_sha256": "d1a944858e3376d25210d7e3570720fa523f7bda35580230d5a068f2a970abea"
+    },
+    {
+      "path": "src/domain/native/nativeCallObservation.ts",
+      "upstream_sha256": "4de47a08d4f740475b56382d6b9874b06177af15648efca45cd38074bb44f534"
+    },
+    {
+      "path": "src/domain/native/nativeCallPartialObservation.ts",
+      "upstream_sha256": "7a33e0e8604bf7e52b5f41a16f6d484aa6c8a36d453cc06ccb879f4ca7a21509"
+    },
+    {
+      "path": "src/domain/native/nativeDataType.ts",
+      "upstream_sha256": "77b847b1c844d8d59af7448094a55b3d1084ff6e152be6d0143ce235065e3118"
+    },
+    {
+      "path": "src/domain/native/nativeFunctionAnnotations.ts",
+      "upstream_sha256": "c2ad333261b04547981f1d6a12f899dbe62c3da493d1764a1a60e4be1b291b31"
+    },
+    {
+      "path": "src/domain/native/nativeInspection.ts",
+      "upstream_sha256": "97aec09eacc4eff4ae4fe5250bd2594a23b9510761efc4df49bd4abfd3211900"
+    },
+    {
+      "path": "src/domain/native/nativeInstruction.ts",
+      "upstream_sha256": "e27aae1068ca0d056e0c307d670282d121569c20c007010aa5e087db0df5cb64"
+    },
+    {
+      "path": "src/domain/native/nativeInvestigationGraph.ts",
+      "upstream_sha256": "b603e23da1caf15a9d266332f06d91cd7e6c6466d2cbdb5fadf90741c067ffda"
+    },
+    {
+      "path": "src/domain/native/nativeLoadImage.ts",
+      "upstream_sha256": "91d359e10ee01cde7d032594c2f3ffc2b49f69423f88762e0798084d1d9979d0"
+    },
+    {
+      "path": "src/domain/native/nativeMetadataRecovery.ts",
+      "upstream_sha256": "3430585df9d6b3e03822bce53f799154e72edfbd1caab4a6c02335ed933a7e58"
+    },
+    {
+      "path": "src/domain/native/nativeUiObservation.ts",
+      "upstream_sha256": "99ccf9970080b6c7e1bf8644af0c94b764f1109bf66e07f10608a5d7f7861c02"
+    },
+    {
+      "path": "src/domain/native/nativeValueFlow.ts",
+      "upstream_sha256": "2ffefe2ed9ba304235481bb4065bee73930552955a2e1c76488a09d404d92e7a"
+    },
+    {
+      "path": "src/domain/native/nativeValueTrace.ts",
+      "upstream_sha256": "b04d6dc917ba5493eaf67419ffe092174ad23e49ecbbd045b94fe754bc6b57be"
+    },
+    {
+      "path": "src/domain/native/objcSwiftMetadata.ts",
+      "upstream_sha256": "81e46276aa20d5c45ce047bfb71ae51666505b313a5c05b1c4ce5f35fc9eec99"
+    },
+    {
+      "path": "src/domain/native/peResources.ts",
+      "upstream_sha256": "19a96871c41df6fcc35cbcf32da855bcd933b82be0f5ae8201e25e967e879acc"
+    },
+    {
+      "path": "src/domain/native/recordedCrash.ts",
+      "upstream_sha256": "0f02af5a4dd9ef5def793969e04d6fa35b10ef30486e823bc533b763f02a7195"
+    },
+    {
+      "path": "src/domain/native/recordedCrashNoteCoverage.ts",
+      "upstream_sha256": "2296b3c74b305974d33817fa3e226cb1fdaaf78cca6e224debac71344ef342df"
+    },
+    {
+      "path": "src/domain/nativeConvention.ts",
+      "upstream_sha256": "b8971ad604f87bcff4a7d07eadc37d0381c9b193ceee58ad0d23955a55b96fda"
+    },
+    {
+      "path": "src/domain/pcap/pcapAnalysis.ts",
+      "upstream_sha256": "9c330ef8bb8271b2ae8b529a2882be5362b23caee3db4993eedeb2e72dc85c8a"
+    },
+    {
+      "path": "src/domain/peMachine.ts",
+      "upstream_sha256": "d6845eea162412978f422f8f7bc05a440da64034ccd0427031957f26e9bbe26b"
+    },
+    {
+      "path": "src/domain/pngHeader.ts",
+      "upstream_sha256": "ef54b81e8aa224b573f61e30689aaa53751377cb1551700e807a817c3ae955ae"
+    },
+    {
+      "path": "src/domain/process/processCapture.ts",
+      "upstream_sha256": "0e3b663edeb7ad5c5fdfbf4862801c0e23ae52b5bdde30f5f298dceb5da134ed"
+    },
+    {
+      "path": "src/domain/process/processCaptureCoverage.ts",
+      "upstream_sha256": "687e0a12cff8235d260abb33b24b8df63e4668ebd30c043640cc65e4a49eca41"
+    },
+    {
+      "path": "src/domain/process/processCaptureExample.ts",
+      "upstream_sha256": "22440dd19e47ac0b36d406705ba6dd78420e984dd47a1a26caef24721fe749c4"
+    },
+    {
+      "path": "src/domain/process/processCaptureParsing.ts",
+      "upstream_sha256": "1c1f3ca114add4e2cf9b2e5f03ae3575fa63425a5e9e87a369ba1c7d4d2186f4"
+    },
+    {
+      "path": "src/domain/process/processCaptureValidation.ts",
+      "upstream_sha256": "54b88f64b7a2ee6cfa90b76130ed794255dd13f883ff46d6a0103b38e4f41465"
+    },
+    {
+      "path": "src/domain/process/processComparison.ts",
+      "upstream_sha256": "5574dd3e76433b2061ff2c62a5be862caa0f79d319eed1395df3e8e4fcdf72b6"
+    },
+    {
+      "path": "src/domain/process/processEvidenceProvider.ts",
+      "upstream_sha256": "7804d244455b9be25dbf240ce2bbff910686ae4902a785228119655798efb019"
+    },
+    {
+      "path": "src/domain/process/processObservation.ts",
+      "upstream_sha256": "2fb575bf68716c4eb1ee2e3db3a125a851abbd4957bdcc26ec80105488883bcb"
+    },
+    {
+      "path": "src/domain/process/processScenario.ts",
+      "upstream_sha256": "340e00f1ecec6af80cf9b868f2d2559fc53ac6fd6fe2ba2682c702cd8ada506e"
+    },
+    {
+      "path": "src/domain/process/processTraceComparison.ts",
+      "upstream_sha256": "c88d1975b4a2ab437b0a349e0a4c07bbe9b482ab167c3d19581feb2b7866212c"
+    },
+    {
+      "path": "src/domain/process/processTraceDimensionProjection.ts",
+      "upstream_sha256": "cd0565d63a752c31d5d10d2dbcc83c1b08698fc5499bc834237f654e2f3a04d4"
+    },
+    {
+      "path": "src/domain/process/processTraceEvaluation.ts",
+      "upstream_sha256": "b9c9963f19abb3af2182e7c7c848589703380697cd7393bf6b53abf6ed712a5a"
+    },
+    {
+      "path": "src/domain/process/processTraceSpecification.ts",
+      "upstream_sha256": "3ba49b8006e86d8da8bea36265082e7e5d3469c78494925aef4c82295408499d"
+    },
+    {
+      "path": "src/domain/propertyListKeys.ts",
+      "upstream_sha256": "506c60f46ea167c1ae6964abba0ca7f1f90b2e1b721e5d2586b0c1b6120cc028"
+    },
+    {
+      "path": "src/domain/propertyListXml.ts",
+      "upstream_sha256": "9ee7f531d53dea5f9bacffea523922458f8365ea01a30ba289cf08abd72de8bc"
+    },
+    {
+      "path": "src/domain/propertyListXmlText.ts",
+      "upstream_sha256": "377c6483f061f5174e00dd062a213eb4e1e966b636723f03a9968ddb3bb0ec6e"
+    },
+    {
+      "path": "src/domain/providerAdapterError.ts",
+      "upstream_sha256": "87bc6fa59350acff9322ede7b99067c27c138cfe257d1b56adfdac31c4506200"
+    },
+    {
+      "path": "src/domain/providerCleanupError.ts",
+      "upstream_sha256": "e91dcb102f6c3ddd444202ce436e5aff8df7a6009565f24b7b17e77b443dbcf7"
+    },
+    {
+      "path": "src/domain/providerOperationHealth.ts",
+      "upstream_sha256": "6cc1fe39520c94da3ab6c16dcd739507ad5b5bcff22c1468dba17651bb83f356"
+    },
+    {
+      "path": "src/domain/providerSelectionError.ts",
+      "upstream_sha256": "b1005812461a1591d8f7e4fcde835f54328c9186b425e1ba565d20813afdb45a"
+    },
+    {
+      "path": "src/domain/qlogCapture.ts",
+      "upstream_sha256": "0b72c176c2ed4f9096f114737a7b74761d2d3eb6098fefd512a789b836d3a41f"
+    },
+    {
+      "path": "src/domain/rawBinary.ts",
+      "upstream_sha256": "00bf51769b14f006511e66e13edd257d5cc4fffd1aef8c277b0692e30bdd304d"
+    },
+    {
+      "path": "src/domain/reconstructionVerificationSchemas.ts",
+      "upstream_sha256": "552cf944751455f2d3593c97752c240ad767547f10675d4bb06698b9e87fe083"
+    },
+    {
+      "path": "src/domain/recordedTransportUrl.ts",
+      "upstream_sha256": "bf7c2e90c3250ffbbc3ed898dbfa947bbe6d3dfd99fbf320d3d35f92e2528454"
+    },
+    {
+      "path": "src/domain/referenceSourceGraph.ts",
+      "upstream_sha256": "60962a645fdc62916f5805edccfc92287cb1393c3d05f5cb4fe44521993cad3d"
+    },
+    {
+      "path": "src/domain/referenceSourcePathIdentity.ts",
+      "upstream_sha256": "57ad77b70beb41707d0cf1256bc02c72729de08797336a4e85366b9f766e6f43"
+    },
+    {
+      "path": "src/domain/relationshipCoverage.ts",
+      "upstream_sha256": "4578c04c21148da89a030279f05964cb050e6a8f93513950edc0808a50ae18be"
+    },
+    {
+      "path": "src/domain/residualUnknown.ts",
+      "upstream_sha256": "c12e3ee6005f7fba3ad8ea1ea2daf1478abe417848ce7ed9a696e94e620aa7ec"
+    },
+    {
+      "path": "src/domain/result.ts",
+      "upstream_sha256": "46d1417aa94e5093269858c11449369b278c8de44d7c4258b7443abae0c426a2"
+    },
+    {
+      "path": "src/domain/runtimeVersion.ts",
+      "upstream_sha256": "0f715bc926f340657ab180c25e772a3e200f83d655c1dec9e03847ac7ea7b355"
+    },
+    {
+      "path": "src/domain/rust/rustBinary.ts",
+      "upstream_sha256": "6942cf7186c63f47cc5c9bedc8f9cec694ffa18987429f3efaf0cbc2ef36cf59"
+    },
+    {
+      "path": "src/domain/safeJson.ts",
+      "upstream_sha256": "a62ea3b454a21a097c6d49f52031ce05f86793f566b6922af2bd54331a4fb91a"
+    },
+    {
+      "path": "src/domain/sourceMapContents.ts",
+      "upstream_sha256": "bd920f8f96e1cd9bb73d3c4aa2a835600c241486bdee86fec12e862da479cfe9"
+    },
+    {
+      "path": "src/domain/sourceMapEnvelope.ts",
+      "upstream_sha256": "894d60eb845c275b8000d8dd2d6457288577bf08f90895f014bf14efb28f7873"
+    },
+    {
+      "path": "src/domain/staticRuntimeCorrelation.ts",
+      "upstream_sha256": "17777294415a6ea649a5155e0ff36a1f7983bab374fd84bbd4823a6aecad22f3"
+    },
+    {
+      "path": "src/domain/stringPatterns.ts",
+      "upstream_sha256": "5c7dfd218efc8be0a1f0b2a5a7ad63db293472d0e31c85909ced3982de3f5111"
+    },
+    {
+      "path": "src/domain/swiftSymbolClassification.ts",
+      "upstream_sha256": "32920095458c9203fbf5d489bbe209772b6c02755fb72c9073f8722500579863"
+    },
+    {
+      "path": "src/domain/unicodeCodePointOrder.ts",
+      "upstream_sha256": "fdff9c493eec0fbca808c7975cd88abd9f1cb9398c333a3981f185c3eaee8cb5"
+    },
+    {
+      "path": "src/domain/unknownRegistryError.ts",
+      "upstream_sha256": "2a9c540c6549dfe24158da35250273227556206e9a66ab71b7baaf26fbe74d82"
+    },
+    {
+      "path": "src/domain/urlComponents.ts",
+      "upstream_sha256": "4e58067167ca04c0b6eb9be476ef581060296ac93786ad240050b24f79c24085"
+    },
+    {
+      "path": "src/domain/wasm/wasmArtifact.ts",
+      "upstream_sha256": "b64beafc1454f79b89cc9f93056d766f09256236208477c40c41f93ec03b147d"
+    },
+    {
+      "path": "src/domain/wasm/wasmInterface.ts",
+      "upstream_sha256": "a2125a86728491dd875f58249936d484fc44d04a81e205a0e6c0d7a0d187bdcf"
+    },
+    {
+      "path": "src/domain/webContentArtifact.ts",
+      "upstream_sha256": "a4ae3ed202f43d838a73024a5e0f09518006d11e26b21813943613acb1bbb982"
+    },
+    {
+      "path": "src/domain/webEventListeners.ts",
+      "upstream_sha256": "e40253fb7118d3b911ffab68867fdeabcc15283b285f1fad9cb7dac182dda027"
+    },
+    {
+      "path": "src/domain/webExecution.ts",
+      "upstream_sha256": "be2f15f8488d53e21ed8213d55c82a82e4ea24088717cbc12756f8859d552acb"
+    },
+    {
+      "path": "src/domain/webNetworkCapture.ts",
+      "upstream_sha256": "1cada14ddb3a6d33f8b5edb6726cc9e7c2677eef184134ecb55f8fc809de9bb6"
+    },
+    {
+      "path": "src/domain/webRuntime.ts",
+      "upstream_sha256": "65b6bf70b1fff56aeeb67cce8970286dedcb576da228816c56b2137c1984f3f7"
+    },
+    {
+      "path": "src/domain/webScreenshot.ts",
+      "upstream_sha256": "fc9845ea7f28c44c151226c4df6ef1c268b7680d3317891394b82dacfff781d8"
+    },
+    {
+      "path": "src/domain/webScriptExport.ts",
+      "upstream_sha256": "94353dd27ab67855182f5ab0751d52339a37fb2d6b02afd440180b38258e1950"
+    },
+    {
+      "path": "src/domain/xmlDocument.ts",
+      "upstream_sha256": "c3456f3592f597f7b638a1a4451b765ff9b4c3862ba13e962f3b385ccd153582"
+    },
+    {
+      "path": "src/domain/zipPackageFormat.ts",
+      "upstream_sha256": "d0e2821bcf64e796eda36f2f4c1346deffd5da42b776e100d358b946740ebbc3"
+    },
+    {
+      "path": "src/domain/zodCollectionSteps.ts",
+      "upstream_sha256": "9cb0c18a0f8b8c18e9096c1f88f49c33849f146db512f60b3cd93fbb6b2ebf8f"
+    },
+    {
+      "path": "src/dotnet/ManagedArtifactInspector.ts",
+      "upstream_sha256": "5a4576204b216c76ae9bcd62bc66a60ae85c917a7aaa8f9043ed88fb9be4ab0f"
+    },
+    {
+      "path": "src/dotnet/ManagedDecodeBudget.ts",
+      "upstream_sha256": "2578e260cff34a2756d7dda51d77ac1ee40677780c24e5bb49545559cfebde97"
+    },
+    {
+      "path": "src/dotnet/ManagedExceptionRegionValidation.ts",
+      "upstream_sha256": "5f2372ec7112ab0e88e2a6a30bdf2fa7ed3054f341b9faa164200f0adc8b3f9c"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberInspector.ts",
+      "upstream_sha256": "f0f75068b820993ea5312e9a418d6dd642f4fb9df87d2af37c042e5341929493"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberInspectorCore.ts",
+      "upstream_sha256": "54fbf3d74c6a6c3441c92c03b0b2d47f1131d5ec3a11699bdd7fbcbee97f15ca"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberInstructionDecoder.ts",
+      "upstream_sha256": "3e6c303ead06aa2193086ae33439723a6413a672c4a2094b8e967d1988b2bdcd"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberOwnership.ts",
+      "upstream_sha256": "027b9323813b1e803213cda2d6190c852f79f7f6107afa8a00af9694decc96f8"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberPointers.ts",
+      "upstream_sha256": "42f25d9307ccd9e228a008842778eb26131b9b5c4a42d2e97e5c44e5b3131106"
+    },
+    {
+      "path": "src/dotnet/ManagedMemberRows.ts",
+      "upstream_sha256": "ac022ff67a6c9c790be998192b1f1a6895e37ce2535f77710469a91835f07922"
+    },
+    {
+      "path": "src/dotnet/ManagedMetadataHeaps.ts",
+      "upstream_sha256": "a2dfcf0363c53073a1dbe7b8aca6d62f531caaa36ce540cfa04903cb2127f6c2"
+    },
+    {
+      "path": "src/dotnet/ManagedMetadataInventory.ts",
+      "upstream_sha256": "f0b3af692f3bf0fe56860947bb2ee412fe644831e8d6b3429db1d2ab032e8513"
+    },
+    {
+      "path": "src/dotnet/ManagedMetadataInventoryRows.ts",
+      "upstream_sha256": "d871cdf1eec08ca410a2bdf8c083f55ffd44816a36458069ba66794ff8eedbcc"
+    },
+    {
+      "path": "src/dotnet/ManagedMetadataLayout.ts",
+      "upstream_sha256": "f78b4dbc6dc084a8e3904346b368eb94d0b2076a3a2df827372384c6771f930a"
+    },
+    {
+      "path": "src/dotnet/ManagedMetadataRowSizes.ts",
+      "upstream_sha256": "0f3d7a882d09ff9af1b348b3d1cef0c7cdf6aade6f540b68244d210ad969a7b4"
+    },
+    {
+      "path": "src/dotnet/ManagedMethodBodyReader.ts",
+      "upstream_sha256": "b50a508d1d056a1c22ccaa7cdce98f819c0190cbb2cff65b06c9234dfb1d4fcb"
+    },
+    {
+      "path": "src/dotnet/ManagedMethodSpecs.ts",
+      "upstream_sha256": "0a0feca2876d46f8c3e0e17d2713057bbdbe69dadaf4569b0ce1e1fa7f95d926"
+    },
+    {
+      "path": "src/dotnet/ManagedNativeBoundaryHelpers.ts",
+      "upstream_sha256": "56eb94bde3e86275885ef9c9e55c862bbef2fe455593f5d845d3609a3b0c97f7"
+    },
+    {
+      "path": "src/dotnet/ManagedNativeBoundaryInspector.ts",
+      "upstream_sha256": "36cd7c0e950d577296626947138f30a46efe432ab3ce01a14b6fc5521ca64b04"
+    },
+    {
+      "path": "src/dotnet/ManagedPeReader.ts",
+      "upstream_sha256": "551049f87219fc55eda16a77dc23d58aa32d6cbd20cb452e59253ab9c6b85e69"
+    },
+    {
+      "path": "src/dotnet/ManagedReaderFailure.ts",
+      "upstream_sha256": "b8ffa20d1d24d16ca11e8b7dc869341bd2517aa94129990c86897d81e1ad7ea6"
+    },
+    {
+      "path": "src/dotnet/ManagedTypeMemberLists.ts",
+      "upstream_sha256": "940f0723e480ba57a86c757cc1716736702a9742532a5632f42392396a4bf1ae"
+    },
+    {
+      "path": "src/dotnet/ManagedTypeNameDigests.ts",
+      "upstream_sha256": "f9f0f13e91f3fb27bc326271170e268cb1ebf8d86aa95d16e720a129d84f68fd"
+    },
+    {
+      "path": "src/dotnet/ManagedTypeNames.ts",
+      "upstream_sha256": "dd6168eb0f7f8c8f0f454558ba845c4c92465c792ecc3ca3a3445e689358619d"
+    },
+    {
+      "path": "src/dotnet/ManagedTypeNesting.ts",
+      "upstream_sha256": "42c98b97b6c37eb501169b8470fe65f9ae75228e2ceca455f0e26fffc5be1650"
+    },
+    {
+      "path": "src/dotnet/ManagedTypeReferences.ts",
+      "upstream_sha256": "4239ae65669013cc1516753fe0dd52835dfd351c994c7bb3266257c25d8db419"
+    },
+    {
+      "path": "src/dotnet/ManagedUserStrings.ts",
+      "upstream_sha256": "236429bbc8d8a8b3da8a2fe92ce79ac07b9bdf84f681ce4ff21fdc55dbba90c6"
+    },
+    {
+      "path": "src/electron/ElectronFusePath.ts",
+      "upstream_sha256": "9278a4226ec75155268ce81e6643461311d28e4c758aadc503d69f42f2d02629"
+    },
+    {
+      "path": "src/electron/ElectronFuseReader.ts",
+      "upstream_sha256": "7b4f3e5d990d85a6fc2583b9788cea9f03e323cea0b7a76ed80b916f63cc5bea"
+    },
+    {
+      "path": "src/evm/EvmBytecodeCarrier.ts",
+      "upstream_sha256": "d9139a903047a957d9fc8038b9b435dc6d5923963804b30f633c990fd23eeaf2"
+    },
+    {
+      "path": "src/evm/SolidityMetadata.ts",
+      "upstream_sha256": "3671c20b0b14f7991c6354cebb2fa9dc10dde2e739759272f2870d2fdd587c86"
+    },
+    {
+      "path": "src/filesystem/OwnedDirectoryHandle.ts",
+      "upstream_sha256": "6c468afd1ed1f705fd1eca30133a5acf2eeecea6cfdf37684ba4d30e080d2038"
+    },
+    {
+      "path": "src/filesystem/OwnedFileHandle.ts",
+      "upstream_sha256": "323c9a8cb354ee02f819a3c543afaa3aa7b136b203404b91b171ed958c95104a"
+    },
+    {
+      "path": "src/filesystem/OwnedRegularFile.ts",
+      "upstream_sha256": "7a2d80814164aec7dbf0c455ac9a10dc5b72040da303510a2cdc4e0e95b07f9e"
+    },
+    {
+      "path": "src/filesystem/OwnedStagedOutput.ts",
+      "upstream_sha256": "46aa4ab273f21cca3e45a4cd95c975fa9888347b55eeeb14b0fcd3b9f27db2ad"
+    },
+    {
+      "path": "src/filesystem/RegularFile.ts",
+      "upstream_sha256": "4f8640415953c6fd12f2ae4cfdd8ef0f7558ea9cda34a3dbe38f016c1e1c96b5"
+    },
+    {
+      "path": "src/filesystem/callerPath.ts",
+      "upstream_sha256": "293cd6c0193026393f25b8533038a74a690327ca02dce99d348bd06719e46e60"
+    },
+    {
+      "path": "src/filesystem/readFileHandleChunks.ts",
+      "upstream_sha256": "aa370258766ac032c52f22238e10d8f0d8e14fe21713a2c52479ad60ab090152"
+    },
+    {
+      "path": "src/flutter/DartElf.ts",
+      "upstream_sha256": "db8310d3e4656c21cefb140d1229f01d56757b8d715dec4d05f806650570b42a"
+    },
+    {
+      "path": "src/flutter/ElfBuildId.ts",
+      "upstream_sha256": "105a32aa2280c66258184c96724ee05dc7300ba3e0342fa2b58f6b09a9f70ad4"
+    },
+    {
+      "path": "src/flutter/ElfLoadMap.ts",
+      "upstream_sha256": "c34e03296b1cb6ad2105a1d2a0425dfc8cc99216a9dec862308e3dd798ab30e7"
+    },
+    {
+      "path": "src/flutter/FlutterPayloadScan.ts",
+      "upstream_sha256": "0a4afb2138c75f1d98441f0290ae77fba8093ad12fb8054095e9769b112b9164"
+    },
+    {
+      "path": "src/generatedPackageMetadata.ts",
+      "upstream_sha256": "c03be3a895a98b1a21ae8a522f3d77f808fd3f7496ca84612c5f43c99e303870"
+    },
+    {
+      "path": "src/go/GoBinaryContainer.ts",
+      "upstream_sha256": "7b120c9930d123e7dd87d4cda725a92d800fc674354cf9a8e4b711283321a824"
+    },
+    {
+      "path": "src/go/GoBinaryImage.ts",
+      "upstream_sha256": "2684b595248f8f10801bebffed0834a9cf418002db170b20590ac822d065bd0f"
+    },
+    {
+      "path": "src/go/GoElfImage.ts",
+      "upstream_sha256": "e42df28c785702529a5012cf1152fad1761e7ce26995dfb6b7ce32ae088ab083"
+    },
+    {
+      "path": "src/go/GoMachoImage.ts",
+      "upstream_sha256": "d6f5d2500996a6a92d8c8b48dcf6b185c199f8618f4cbf46cb8ef69115e02f01"
+    },
+    {
+      "path": "src/go/GoModuleText.ts",
+      "upstream_sha256": "dfc01a5ff4ffe4046e885d0de80e9a22e986be6e2255c514cdc240e9ebc5fa66"
+    },
+    {
+      "path": "src/go/GoPeImage.ts",
+      "upstream_sha256": "94a7babdf8896a8a25196dedd6b367cfeae6cfc3476f5123b829f908538f27c3"
+    },
+    {
+      "path": "src/javascript/analysis/JavaScriptAnalysisTransfer.ts",
+      "upstream_sha256": "3fd3d50a46100f599b62d39650b9941ca3e62209efa6c0c858ba3b9814157785"
+    },
+    {
+      "path": "src/javascript/analysis/JavaScriptAnalysisWorker.ts",
+      "upstream_sha256": "9571a7b27f7e559e7deb9f49c45546fde1bc2e837af3eacff9941b4ab8028093"
+    },
+    {
+      "path": "src/javascript/analysis/JavaScriptAnalysisWorkerProtocol.ts",
+      "upstream_sha256": "92f3024314a67eaddb146e048fe4ed1f12f33246ab0b61c764bb6d56e28a7409"
+    },
+    {
+      "path": "src/javascript/analysis/JavaScriptAnalysisWorkerSchemas.ts",
+      "upstream_sha256": "ebab1d3933d2211e9bd91aa4983bd5b0d2781c4f8c527cfeeb2f94a222ae803e"
+    },
+    {
+      "path": "src/native/AppleDispatchCoverage.ts",
+      "upstream_sha256": "bb6b576ef4130b86a17cc5692553a7021bf156489c4ee1199af455bb1fd03b41"
+    },
+    {
+      "path": "src/native/AppleDispatchDecodeFacts.ts",
+      "upstream_sha256": "c3c597b9cdc7ebf79354c52f140208879f6d129c9ba28196cd41fc7a739468e6"
+    },
+    {
+      "path": "src/native/AppleDispatchMetadata.ts",
+      "upstream_sha256": "3d03d0c12ab362e6cfac73efa4aded118a3cd8bf71a0eb4139b8cea244005c8c"
+    },
+    {
+      "path": "src/native/AppleMachoFixups.ts",
+      "upstream_sha256": "730e90b3a98c0a6177bdbb4dc1c33339c0173d17401d5297bbfe3a922bcd0dea"
+    },
+    {
+      "path": "src/native/AppleMachoSelection.ts",
+      "upstream_sha256": "2fe47bc4c90a4482d21094491515825caf24aac7ab0fef26d095292d0f0702f0"
+    },
+    {
+      "path": "src/native/AppleObjcCategories.ts",
+      "upstream_sha256": "f21f4b71d5ee80054fee0b15d363e3e64f1f69d1914e74128e18f25d311911fc"
+    },
+    {
+      "path": "src/native/AppleObjcDispatchFacets.ts",
+      "upstream_sha256": "bb5d5626fdc59ded6dd1f77261fb57dba17e6d5e10e43a273e5a38c0fe4a8b57"
+    },
+    {
+      "path": "src/native/AppleObjcProperties.ts",
+      "upstream_sha256": "4b620ead5f8df620a9e8bbdfea0f2a82499827df875b09bd9aad97879a19fcb7"
+    },
+    {
+      "path": "src/native/AppleObjcProtocols.ts",
+      "upstream_sha256": "3b437de4d147d16a2a2c3eb05f108628e3a7cbe66ff18d7b3b93c4c4c39fd5ca"
+    },
+    {
+      "path": "src/native/AppleSwiftDispatchFacets.ts",
+      "upstream_sha256": "a18ab946c61c7debad9ce71558d503dab0e03fa4423a835393c39d46a2d5ee7b"
+    },
+    {
+      "path": "src/native/AppleSwiftVtables.ts",
+      "upstream_sha256": "a78a773320e630c405c21a154aeba43ce542c4d6a994d8dc52ab88833292f70e"
+    },
+    {
+      "path": "src/native/CommandRunner.ts",
+      "upstream_sha256": "8caba0706ef02fce9f77436834dcd5aec413d0aed96146ccebec0d638085a3e5"
+    },
+    {
+      "path": "src/native/MachoArchitectureSelection.ts",
+      "upstream_sha256": "e18b3d2b612e67f9ec71527deb2718787e608237551eff6513f62c95e40285da"
+    },
+    {
+      "path": "src/native/NativeMacOSProviderMetadata.ts",
+      "upstream_sha256": "954e5434506a1c26acdcf38fc6f5b12ce18f68b6dccb89c88266b8cf954f43b9"
+    },
+    {
+      "path": "src/native/parsers/lipo.ts",
+      "upstream_sha256": "bd142988c2db19993d9b8b6119f2cb57530b682b7678165158044bb95735b228"
+    },
+    {
+      "path": "src/native/pe/PeResourceLayout.ts",
+      "upstream_sha256": "b904b9b44231c9c6ff0556642fe043fbc90598ab744b1da3a5c99793c8ecd727"
+    },
+    {
+      "path": "src/native/pe/PeResourceParser.ts",
+      "upstream_sha256": "ab18113e51ea8211eefdcaaf7000de119994e9cfc89ab62ee4adfdbbf77e0c4d"
+    },
+    {
+      "path": "src/process/AbortablePromise.ts",
+      "upstream_sha256": "8766db61f2b55bdc32987bdc3170a797b03e42462eb1048d80126ae9d2f9c2f8"
+    },
+    {
+      "path": "src/process/BoundedFileBytes.ts",
+      "upstream_sha256": "edbcbfbe388611e2b6494783fdf263449d5540979bd4d1361f09c4c24b696264"
+    },
+    {
+      "path": "src/process/DarwinProcessRunTokenReader.ts",
+      "upstream_sha256": "3426d18b4db95c41f9a35fef0efbec84d60d7fdd5785bebc06be8a85a0685ce0"
+    },
+    {
+      "path": "src/process/ExecFileOutput.ts",
+      "upstream_sha256": "9a1ca10a2ad0891d19dea87d18823acce622e4612a2ecb4e78de6ec9df8f2cee"
+    },
+    {
+      "path": "src/process/JavaScriptWorkerMemoryLimit.ts",
+      "upstream_sha256": "407984345087b47406edaf99addd7d07a39bddef9daf82fdb2164a5ca91c17a2"
+    },
+    {
+      "path": "src/process/OwnedCommand.ts",
+      "upstream_sha256": "4bd7453035a88e9c48010588645b7298285ed9e0119d65a6bf1f1ee46a920b7c"
+    },
+    {
+      "path": "src/process/PrivateRuntimeRoot.ts",
+      "upstream_sha256": "34cb5256578df89a2af21ffea3d96bf8477ae6c5ab75dbbee0c287c714f449fd"
+    },
+    {
+      "path": "src/process/PrivateRuntimeRootUnavailableError.ts",
+      "upstream_sha256": "b2b627f073e78974acd55089a3306654d333aae89afeb0c1c77355c27b3433c7"
+    },
+    {
+      "path": "src/process/ProcessCommandIdentity.ts",
+      "upstream_sha256": "4dbbefea0f4e9dc86f5189d8a716bb04250cb93d6a2959ec37128bf2665aecb8"
+    },
+    {
+      "path": "src/process/ProcessOwnership.ts",
+      "upstream_sha256": "47db2088de02f5f6c974d66b8f0fb53db863376b2500f3c7906381734c848f49"
+    },
+    {
+      "path": "src/process/ProcessOwnershipIdentity.ts",
+      "upstream_sha256": "6fc8440e4ba20007aed1eb22971875c210f83a40f2be4c822cd4445ea52d8418"
+    },
+    {
+      "path": "src/process/ProcessOwnershipObservation.ts",
+      "upstream_sha256": "9d2f855348c06097414739a661c51ed1ca7b68e34e2470ea1719c0662b2c555e"
+    },
+    {
+      "path": "src/process/ProcessOwnershipProcessTree.ts",
+      "upstream_sha256": "04198ca9ec7cb87ac8f170a1a496ed255f1ee2a1a5a5403e8beada7f73cc5989"
+    },
+    {
+      "path": "src/process/ProcessRunTokenObservations.ts",
+      "upstream_sha256": "20d00df59c178343beb7c40036b34c0b8de1c8fe8ae3e96c188319242cbf6536"
+    },
+    {
+      "path": "src/process/ProviderDeadline.ts",
+      "upstream_sha256": "81d36c4f0a071f9dc396bacd12b40a7b71cc485e492aea87d682d09bdee34c8d"
+    },
+    {
+      "path": "src/process/ProviderProcess.ts",
+      "upstream_sha256": "93286015cd96e618091f3d67e7517369f1e66ea9b6cd0dc3bd6c6f9c61e70870"
+    },
+    {
+      "path": "src/process/WindowsAuthority.ts",
+      "upstream_sha256": "8917080d6962a70ea5e18203bece5a597ddc217c6cf0e2ba82509d698389749d"
+    },
+    {
+      "path": "src/process/boundedUtf8Text.ts",
+      "upstream_sha256": "e9c5a8976eb1ccb2e3bf2ce9a88f29e6c4d9ab9e02b3fcdb10bc3b29ac0cc21b"
+    },
+    {
+      "path": "src/process/snapshotEnvironment.ts",
+      "upstream_sha256": "b307da8fd381aed64e93429cc165390bf7bc01d4e243c2186d53a06c9bd5ffa4"
+    },
+    {
+      "path": "src/providers/ProviderInspectionScope.ts",
+      "upstream_sha256": "160a3712aedf6d3c6da4f27fecf189178fb593c16d090c1558e56e918953daba"
+    },
+    {
+      "path": "src/rust/RustAuditableReader.ts",
+      "upstream_sha256": "8f65f46899b63840e8720095d209bee6ba7468ca6a5d9fc981bd97dc5f90daa5"
+    },
+    {
+      "path": "src/rust/RustBinaryImage.ts",
+      "upstream_sha256": "7cce9b3e2fd85f5880bbd39674d317aedab73931bcd712b635b638c3984f46dc"
+    },
+    {
+      "path": "src/wasm/WabtInterface.ts",
+      "upstream_sha256": "32cdd50f9fedda22cea498dba7556db23d3854e6ee0736786bd221dc0483d697"
+    },
+    {
+      "path": "src/wasm/WabtString.ts",
+      "upstream_sha256": "a683187b4ba983c543f0bcea33bdc1ff63d14fbca1c016efc0fdc9d383fea04b"
+    },
+    {
+      "path": "src/wasm/WabtWat.ts",
+      "upstream_sha256": "3515cf6bf1ef891cc59f0d4858a08bb6c31a7bac63e539c7f5d736395d6bc150"
+    },
+    {
+      "path": "src/wasm/WasmInterfaceBudget.ts",
+      "upstream_sha256": "ba1d8fef494879948a682d20d3bc757c6cac92523ecc926172815949ab5eab7c"
+    },
+    {
+      "path": "src/windows/WindowsNativeLoader.ts",
+      "upstream_sha256": "22205c5cb868c7016d6273219deb8a6c5969fe60a01452e432a880a51ca8b8ae"
+    },
+    {
+      "path": "src/windows/WindowsOwnedProcess.ts",
+      "upstream_sha256": "a38a74203a8b8812c475ed9db6281ee67230d24d6ad91b6ccadd03fe5395d240"
+    },
+    {
+      "path": "src/windows/WindowsPrivateRuntime.ts",
+      "upstream_sha256": "ab6f56c78229b28aca26ec90ce97f2c36a3d0587ef5fd94b3e65c7035a03d48f"
+    }
+  ],
+  "local_changes": {
+    "src/artifacts/extraction/ArtifactExtraction.ts": "Accept inventory root formats, including directory, in the input format type.",
+    "src/domain/javascript/sourceToBundleSignals.ts": "Expose exact physical location keys for graph role grouping.",
+    "src/domain/javascript/sourceToBundleComparison.ts": "Classify coincident asset/module roles at one exact path together; retain every node identity.",
+    "bridge/ghidra/ReaGhidraBridge.java": "Native Theseus naming/transport; persistent navigation, comments/bookmarks, call graph/path, batch decompilation and native API projection added to prior retained-project/byte-evidence adaptations.",
+    "src/domain/native/nativeValueTrace.ts": "Remove arbitrary hard maxima; default to full traversal and retain explicit caller selections.",
+    "src/application/native/NativeValueTrace.ts": "Remove fixed output-size/depth gates; preserve explicit caller query bounds and unknown/truncated results.",
+    "src/domain/managed/managedNativeVerificationSchemas.ts": "Use the product-owned native-verification algorithm identifier.",
+    "src/domain/managed/managedNativeVerificationMatch.ts": "Use the product-owned native-verification algorithm identifier."
+  }
+}

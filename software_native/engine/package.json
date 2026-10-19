@@ -1,0 +1,39 @@
+{
+  "name": "theseus-analysis-core",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babel/generator": "8.0.6",
+    "@babel/parser": "^8.0.7",
+    "@babel/types": "^8.0.6",
+    "@electron/asar": "^4.3.1",
+    "@jridgewell/trace-mapping": "^0.3.31",
+    "@xmldom/xmldom": "^0.9.12",
+    "@zip.js/zip.js": "^2.24.0",
+    "canonicalize": "^5.1.0",
+    "cborg": "^6.1.3",
+    "diff": "^9.0.0",
+    "evmole": "^0.9.4",
+    "parse5": "^8.0.1",
+    "plist": "^5.0.0",
+    "saxes": "^6.0.0",
+    "semver": "^7.8.5",
+    "wabt": "^1.0.39",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/semver": "^7.8.0",
+    "esbuild": "0.28.2",
+    "solc": "0.8.30",
+    "typescript": "7.0.2"
+  }
+}

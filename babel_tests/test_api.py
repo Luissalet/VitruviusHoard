@@ -1,0 +1,197 @@
+import sys
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from babels_hoard.api import create_app
+
+from .agent_auth import agent_headers
+
+PORT = 18813
+
+
+@pytest.fixture()
+def client(tmp_path):
+    app = create_app(tmp_path, None, port=PORT)
+    with TestClient(app, base_url=f"http://127.0.0.1:{PORT}", headers=agent_headers(app)) as c:
+        yield c
+
+
+def test_health(client):
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["service"] == "babels-hoard"
+    assert body["name"] == "Babel's Hoard"
+    assert body["status"] == "ok"
+
+
+def test_no_ui_placeholder_page(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "npm run build" in r.text
+
+
+def test_bad_host_rejected(client):
+    # The shared guard (hoard_link.guard) answers 403 {"error": message} for every rejected request.
+    r = client.get("/api/health", headers={"Host": "evil.example.com"})
+    assert r.status_code == 403
+    assert r.json() == {"error": "Only local access is allowed."}
+
+
+def test_host_naming_another_port_is_rejected(client):
+    assert client.get("/api/health", headers={"Host": "127.0.0.1:9"}).status_code == 403
+    assert client.get("/api/health", headers={"Host": f"localhost:{PORT}"}).status_code == 200
+
+
+def test_allowed_hosts_env_opens_a_lan_name(tmp_path, monkeypatch):
+    monkeypatch.setenv("BABEL_ALLOWED_HOSTS", "babel.lan, *.ts.net")
+    app = create_app(tmp_path, None, port=PORT)
+    with TestClient(app, base_url=f"http://127.0.0.1:{PORT}") as c:
+        assert c.get("/api/health", headers={"Host": "babel.lan"}).status_code == 200
+        assert c.get("/api/health", headers={"Host": f"babel.lan:{PORT + 1}"}).status_code == 403  # strict ports
+        assert c.get("/api/health", headers={"Host": "box.tail1234.ts.net"}).status_code == 200
+        assert c.get("/api/health", headers={"Host": "evil.example.com"}).status_code == 403
+
+
+def test_iframe_embedding_from_another_site_is_refused(client):
+    r = client.get("/api/health", headers={"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "iframe"})
+    assert r.status_code == 403
+
+
+def test_cross_site_post_rejected(client):
+    r = client.post(
+        "/api/agent/docs_search", json={"query": "x"}, headers={"sec-fetch-site": "cross-site"}
+    )
+    assert r.status_code == 403
+    assert r.json()["error"] == "Cross-site requests are not allowed."
+
+
+def test_cross_origin_post_rejected(client):
+    r = client.post(
+        "/api/agent/docs_search",
+        json={"query": "x"},
+        headers={"Origin": "http://evil.example.com"},
+    )
+    assert r.status_code == 403
+
+
+def test_same_origin_post_allowed(client):
+    r = client.post(
+        "/api/agent/docs_search",
+        json={"query": "x"},
+        headers={"Origin": f"http://127.0.0.1:{PORT}"},
+    )
+    assert r.status_code == 200
+
+
+def test_plain_get_navigation_always_works(client):
+    r = client.get("/api/health", headers={"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate"})
+    assert r.status_code == 200
+
+
+def test_agent_register_environment_and_lookup(client):
+    r = client.post(
+        "/api/agent/docs_add_environment",
+        json={"path": sys.executable, "index_dependencies": False},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["environment"]["python_path"] == sys.executable
+
+    r2 = client.post("/api/agent/api_lookup", json={"symbol": "json.dumps"})
+    assert r2.status_code == 200
+    assert r2.json()["found"] is True
+
+
+def test_agent_check_code_flags_bad_call(client):
+    client.post("/api/agent/docs_add_environment", json={"path": sys.executable, "index_dependencies": False})
+    r = client.post(
+        "/api/agent/api_check_code",
+        json={"code": "import json\njson.this_is_fake()\n"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is False
+    assert body["findings"][0]["code"] == "unknown_attribute"
+
+
+def test_agent_check_code_is_silent_on_names_hidden_in_compiled_modules(client):
+    # os re-exports posix/nt with a star import: absence proves nothing.
+    client.post("/api/agent/docs_add_environment", json={"path": sys.executable, "index_dependencies": False})
+    r = client.post("/api/agent/api_check_code", json={"code": "import os\nos.getcwd()\nos.listdir('.')\n"})
+    assert r.json()["findings"] == []
+
+
+def test_agent_docs_read_not_found(client):
+    r = client.post("/api/agent/docs_read", json={"id": "nope"})
+    assert r.status_code == 200
+    assert r.json()["found"] is False
+
+
+def test_agent_docs_index_folder(client, tmp_path):
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "a.md").write_text("# Title\nBody text.\n", encoding="utf-8")
+    r = client.post("/api/agent/docs_index_folder", json={"path": str(docs), "name": "Test Docs"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "done"
+
+
+def test_agent_call_is_logged(client):
+    client.post("/api/agent/docs_search", json={"query": "x"})
+    r = client.get("/api/agent_calls")
+    assert r.status_code == 200
+    calls = r.json()
+    assert any(c["tool"] == "docs_search" for c in calls)
+
+
+def test_error_shape_for_unknown_environment(client):
+    r = client.post(
+        "/api/libraries/index", json={"env": "no-such-env", "import_name": "x"}
+    )
+    assert r.status_code == 404
+    body = r.json()
+    assert set(body.keys()) == {"error", "message"}
+
+
+def test_ui_search_endpoint(client):
+    r = client.post(
+        "/api/agent/docs_add_environment", json={"path": sys.executable, "index_dependencies": False}
+    )
+    env_id = r.json()["environment"]["id"]
+    r2 = client.post("/api/libraries/index", json={"env": env_id, "import_name": "json"})
+    assert r2.status_code == 200
+    assert r2.json()["status"] == "done"
+
+    r3 = client.get("/api/search", params={"q": "dumps"})
+    assert r3.status_code == 200
+    assert r3.json()["count"] >= 1
+
+    r4 = client.get("/api/libraries")
+    assert any(lib["name"] == "stdlib/json" for lib in r4.json())
+
+    r5 = client.get("/api/environments")
+    assert any(e["id"] == env_id for e in r5.json())
+
+    r6 = client.get("/api/jobs")
+    assert isinstance(r6.json(), list)
+
+
+def test_ui_lookup_and_check_are_not_logged_as_assistant_calls(client):
+    client.post("/api/agent/docs_add_environment", json={"path": sys.executable, "index_dependencies": False})
+    before = len(client.get("/api/agent_calls").json())
+    look = client.get("/api/lookup", params={"symbol": "json.dumps"})
+    assert look.status_code == 200 and look.json()["found"] is True
+    chk = client.post("/api/check", json={"code": "import json\njson.dumpz({})\n"})
+    assert chk.status_code == 200 and chk.json()["ok"] is False
+    assert len(client.get("/api/agent_calls").json()) == before
+
+
+def test_installed_packages_listing(client):
+    env_id = client.post(
+        "/api/agent/docs_add_environment", json={"path": sys.executable, "index_dependencies": False}
+    ).json()["environment"]["id"]
+    body = client.get(f"/api/environments/{env_id}/packages", params={"q": "httpx"}).json()
+    assert any(p["name"] == "httpx" and p["status"] in ("not_indexed", "done", "partial") for p in body["packages"])

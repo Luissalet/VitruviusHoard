@@ -1,0 +1,30 @@
+{
+  "task":933,
+  "status":"inventory_only_no_real_data_or_binaries_moved",
+  "owner":"Vitruvius's Hoard",
+  "destination_root":"VITRUVIUS_PROFILE_DIR",
+  "native_moves_for_root":[
+    {"source":"Existing configured Vitruvius data root","destination":"<profile>/design","preserve":["vitruvius.db and coherent WAL/SHM","app-projects with index, all source revisions, records.db and exports","sources, renders, references, tokens, diagrams, motion and all metadata/IDs","backend.json, mcp-token, copilot-space-id and conversation bindings"]},
+    {"source":"Existing configured Babel data root","destination":"<profile>/babel","preserve":["babel.db and coherent WAL/SHM","environments and exact interpreter/node_modules identities","indexes, docsets, jobs, settings and captured sources","backend.json, mcp-token, copilot-space-id and conversation bindings"]},
+    {"source":"Existing configured Theseus data root","destination":"<profile>/theseus","preserve":["theseus.db and coherent WAL/SHM","projects, artifacts, findings, scenarios, workflow/handoffs and portable evidence","analyses, retained native projects, sessions, requests, results, recordings, uploads and receipts","artifact/analysis SHA256 and original retained-source identities","mcp-token, copilot-space-id and conversation bindings"]},
+    {"source":"Existing owner bridge identity/configuration","destination":"VITRUVIUS_TOKEN_FILE or <profile>/mcp-token and explicit owner configuration","preserve":["existing root token without rotation","native tokens accepted by owner","Faustus family endpoints and bearer; do not disclose secrets","original source paths and optional engine configuration"]}
+  ],
+  "new_store":"<profile>/software-links.db: immutable project/source/environment/artifact/job/result references",
+  "binary_inventory_categories":[
+    "Ignored installed Node engine dist/node_modules: do not copy; rebuild from software_native/engine package-lock/build sources in owner.",
+    "Ghidra/JDK and native bridge jars, Frida/client runtimes, Android ADB, TShark/sigrok, debugger/compiler or other optional engine binaries: root inventories actual configured installations and ownership before activating. No such real binary was read/copied by this task.",
+    "Existing Playwright/browser runtime, FFmpeg and embedding cache: root inventories existing locations/leases; reuse only explicitly supported shared installations or install own dependencies under demand. Do not move old venv/node_modules or link folders.",
+    "Generated Vitruvius/Babel browser assets are rebuilt from owner source; no old frontend bundles are operational dependencies."
+  ],
+  "migration_checks":[
+    "Quiesce native writers, previews and sessions before coherent SQLite/file moves; do not copy running DBs piecemeal.",
+    "Inventory configured roots rather than assuming repository/data. Remap absolute artifact/analysis/source/export/interpreter paths explicitly, retaining old identity/hashes/provenance.",
+    "Native projects/revisions, multiple environment IDs, retained-job sources and reader/builder handoff separation must survive. Do not relabel old results under a new source revision.",
+    "Keep native app/data-space/copilot identities and historical turns separate. Root coordinates surviving tool-server aliases to vitruvius without losing existing bindings.",
+    "On first owner start all modules/automatic flags are OFF; historical work is not resumed by discovery. A listed operation does not establish engine availability or Theseus completeness."
+  ],
+  "public_revisions":{"owner":"13983c31e30e1c0b0f5f425120dc1c98083c0918","babel":"582bacdcbd8404ace171654a69c692cd542dbb31","theseus":"3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc"},
+  "excluded_private_sdk_commits":["Babel7607321","Babel817e2a4"],
+  "pending_root":["independent CAS review","browser/CUA and visual finish","installed-package smoke","real-data and binary inventory/relocation","deployed938 global-model trial","alias/Hub installation and publication"],
+  "theseus":"Development incomplete and paused by Luis due to usage; pending reverse-engineering scope is not resumed by933."
+}

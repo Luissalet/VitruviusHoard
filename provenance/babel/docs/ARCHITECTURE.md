@@ -1,0 +1,272 @@
+# Architecture
+
+## Modules
+
+```
+babels_hoard/
+  __main__.py        python -m babels_hoard: port check, demo seeding, uvicorn on 127.0.0.1
+  api.py             FastAPI app: browser guard, /api/agent/* (audited), UI endpoints, SPA hosting
+  mcp_server.py      standalone stdio MCP adapter (stdlib + httpx + mcp only)
+  backend.py         the shared model backend: backend.json read/write (token never leaves the
+                      process), the app's one Link, and "Ask the docs" (search + llm + embeddings)
+  hoard_link/        vendored copy of Hoard Link (do not edit; see VENDORED.txt)
+  db.py              schema (WAL, FTS5, trigram), in-place migrations, one connection per thread
+  jobs.py            background job queue: one worker thread, progress in the jobs table
+  environments.py    detect/register environments, run and cache the interpreter probe
+  indexing.py        griffe-based static Python indexing with completeness metadata
+  symbols.py         environment-scoped symbol resolution shared by lookup and checker
+  checker.py         api_check_code for Python (ast) and TypeScript imports (v1)
+  search.py          FTS5 search, api_lookup payloads, docs_read, library listings
+  node_indexing.py   runs probes/ts_probe.mjs (TypeScript compiler API) on node_modules
+  docsets.py         DevDocs catalogue and install (shared Fetcher), split by section anchors, converted with
+                     hoard_link.web.htmltext
+  markdown_index.py  folder-of-markdown indexing
+  deps.py            direct dependencies from pyproject.toml / requirements*.txt
+  probes/
+    python_probe.py  stdlib-only script run by the *target* interpreter
+    ts_probe.mjs     TypeScript compiler API probe (reads only declaration files)
+```
+
+The core modules take a `sqlite3.Connection` and plain dicts and never
+import FastAPI, so they are tested directly and offline.
+
+## Data model (SQLite, WAL)
+
+- `environments`: registered interpreter and/or `node_modules` (a project
+  root also finds `frontend/`, `web/`, `client/`, `ui/`, `webapp/` or
+  `app/` `node_modules`). The id is a hash of the two paths; the same
+  interpreter registered again keeps its id (and gains a `node_modules`
+  found later). `created_at` is the time of the latest registration. The
+  default is per language: for Python the most recently registered project
+  with an interpreter, for TypeScript the most recent with `node_modules`;
+  a Python check against a `node_modules`-only environment is a `no_python`
+  error rather than an all-unchecked "ok".
+- `libraries`: `(ecosystem, name, version, source)`; a distribution that
+  ships several import names (pytest: `py` and `pytest`) has one library
+  per import name, and siblings of the same version never supersede each
+  other. `status` is
+  `indexing | done | partial | error | superseded`. `partial` means a size
+  cap was hit (the note says which); `superseded` is an older installed
+  version kept only for "other versions" and never used for answers.
+- `entries`: one row per symbol or section. `qualname` is the public dotted
+  path. Python rows also have `target` (griffe's canonical definition path),
+  `parent_id` and `meta_json` (below). `entries_fts` (FTS5, external
+  content) and `names_trigram` (FTS5 trigram, for "did you mean") are kept
+  in sync by triggers.
+- `docsets`, `jobs`, `agent_calls`, `settings`, `meta` (schema version).
+  `db._migrate` upgrades older databases in place; a v1 database loses its
+  Python/JS indexes (they lack the completeness metadata) and rebuilds them
+  lazily.
+
+## Threads and SQLite
+
+`db.Database` gives every thread its own connection to the same WAL file
+(`busy_timeout` 30 s). Request threads, the job worker and health checks
+never share a connection, readers never wait for writers, and
+`/api/health` answers while a long tool call runs (tested). Rebuilding one
+library is a single short transaction - rows are computed first, then
+`DELETE` + `INSERT` + status update are written together - under
+`indexing.INDEX_LOCK`, so two threads cannot interleave rebuilds.
+
+## Python indexing
+
+1. **Probe.** `python_probe.py` runs as a subprocess of the target
+   interpreter (only files named like `python`, `python3.x`, `python.exe`
+   are ever run; `CREATE_NO_WINDOW` on Windows). It reports `sys.path`
+   without its own folder, the stdlib path, builtin module names and every
+   distribution with its import names (`top_level.txt`, else `RECORD`).
+   It imports nothing from the environment. Results are cached per
+   interpreter and invalidated when the interpreter or a site-packages
+   folder changes (installs add or remove `*.dist-info` folders).
+2. **Which distribution.** `find_distribution` maps an import name to the
+   distribution that ships it (`yaml` → `PyYAML`); a distribution that
+   ships no modules (griffe 2.x's `griffe` wraps `griffelib`) is used only
+   if nothing else provides the name. Dependencies read from project files
+   go the other way (`index_python_dependency`).
+3. **Loading.** A `griffe.GriffeLoader` subclass parses source and `.pyi`
+   stubs (`allow_inspection=False`: nothing executes), skips `tests`/`test`
+   folders, and stops after 1,500 modules of the package. When griffe's stub
+   merge needs another package (`attrs/__init__.pyi` re-exports `attr`),
+   that package is loaded first and the load retried. The memo caches that
+   hold griffe objects (including griffe's own dataclass cache) are cleared
+   after each library, so a long dependency job does not keep every parsed
+   package in memory. Other packages are
+   loaded into the same collection only when needed to resolve a base class
+   or a re-export (at most 16 packages, 600 modules); imported helpers that a
+   module does not re-export (`from warnings import warn` under an
+   `__all__` that omits it) are recorded without loading their package.
+4. **Walk.** Breadth-first from the package root, so the public surface is
+   indexed before internals. Each module or class is expanded once, at its
+   *home* (the first public path that reaches it); other paths to the same
+   object get an entry with `meta.see = <home>`. Classes include inherited
+   members and public `self.x = ...` assignments made outside `__init__`.
+   `__init__`, `__call__`, `__enter__` and `__aenter__` are kept (for
+   constructor, call and context-manager checks); other private names only
+   when listed in `__all__`. Submodules griffe does not list - compiled
+   extensions without stubs (`lxml/etree.*.so`) and namespace sub-packages
+   (a folder without `__init__.py`, `chromadb/api/models`) - are recorded as
+   unverifiable modules. A name declared only with `@overload` in a stub
+   (numpy's `Generator.normal`) is recorded through its last overload with
+   all overloads as its contract. Cap: 15,000 entries; namespaces not
+   expanded because of the cap are flagged, the library becomes `partial`.
+   **On-demand expansion:** when a lookup or a check reaches such a
+   namespace (`sqlalchemy.ext.asyncio`), `expand_on_demand` parses the
+   package again (the submodule path is parsed even past the module budget)
+   and walks that subtree, pointing at objects already expanded elsewhere,
+   and merges the rows into the same library; so the cap bounds the first
+   pass, not what can be answered.
+5. **Completeness facts** (`meta_json`, see the `indexing.py` docstring):
+   - modules: `dyn=1` for star-imports from compiled or unloaded modules,
+     `globals()`/`vars()`/`sys.modules[...]` writes, `@enum.global_enum`
+     (how `re` exports its flags), and module-level calls that write names
+     into a module while it is imported - decided by reading the callee's
+     source with a small AST data-flow check (writes through `globals()`,
+     `f_globals`, `__dict__` or `sys.modules[...]` aliases; reads do not
+     count), or, when the callee cannot be read, by it being handed
+     `__name__` (enum's `_convert_` in `ssl`); `dyn="soft"` for a module
+     `__getattr__`. Names listed in `__all__` but not defined statically
+     are recorded as existing (lazy exports such as
+     `concurrent.futures.ThreadPoolExecutor`);
+   - classes: `dyn=1` for unresolved or builtin bases, metaclasses other
+     than ABCMeta/Enum/Protocol/pydantic's, unknown class decorators, and
+     classes defined in a module that star-imports code Babel cannot read
+     (the pure-Python `datetime.timezone` is replaced by `_datetime`'s);
+     attributes attached after the class body (`timezone.utc = ...`,
+     `setattr(Color, "GREEN", ...)`) are added as members;
+     `dyn="soft"` for `__getattr__` or `setattr(self, <computed name>)`
+     outside pickling methods; `ctor` when calling the class runs the
+     indexed `__init__` (no `__new__`, compatible metaclass);
+   - functions: method kind (instance/class/static), `sig0` when a
+     decorator may change the signature (known transparent ones such as
+     `functools.wraps`, `lru_cache`, `property`, docstring appenders are
+     trusted; `deprecate_kwarg`-style renamers are not), overload contracts
+     (`ovn`/`ovk`), async, the returned class (`ret`, `rself`), the class an
+     `@(async)contextmanager` yields (`cm`, from `-> AsyncIterator[T]`), and
+     PEP 702 `@deprecated(...)` (pydantic 2's `BaseModel.dict`).
+   - `nx`/`trunc`/`unres`/`compiled`/`ns`: not expanded, cut by the cap, an
+     alias griffe could not resolve (`os.path`), a compiled module without
+     stubs, a namespace sub-package.
+6. **Freshness.** `current_library` computes the library id for the
+   version installed now; if it is not indexed it indexes it and marks
+   older versions of the same distribution `superseded`. Imports that are
+   not installed are remembered (per probe fingerprint) so they do not
+   re-trigger work, and never create rows.
+
+## Symbol resolution (`symbols.py`)
+
+`SymbolIndex(conn, env)` resolves `a.b.c` member by member, following
+`see` to the home that holds the members. A missing member comes back as
+`Missing(parent, name, certainty)`: `error` when the parent's member list is
+statically complete, `warning` for soft-dynamic parents, `unknown`
+otherwise (private names, attributes/functions as parents, `dyn=1`, caps,
+unresolved aliases, compiled modules). `api_lookup` and `api_check_code`
+both use it, so they never disagree.
+
+## Checker (`checker.py`)
+
+An `ast.NodeVisitor` evaluates expressions to `Value`s (module, class,
+instance, callable with its receiver) using imports, assignments,
+annotations, return annotations, `Self`, `__enter__`/`__aenter__`,
+context-manager functions (`with client.stream(...) as response`) and
+`await`. A class defined in the snippet whose bases are all indexed classes
+(and that has no metaclass, decorators other than `dataclass`, or dynamic
+attribute hooks) is followed too: names its body does not define are looked
+up on the bases (`item.dict()` on `class Item(BaseModel)`). Any store to a name forgets it (assignments of unknown values,
+parameters, loop and comprehension targets, `except ... as`, `match`
+captures, `global`), and so does an `isinstance`/`issubclass`/`type` check
+on it (narrowing to a subclass); function and class bodies get a copy of the
+enclosing bindings; comprehension generators are visited before their
+element. Attribute stores/deletes are not checked (they create attributes).
+Code under `try` with import/attribute/type/general exception handlers, and
+under `if`/boolean/ternary tests that mention `hasattr`, `getattr`,
+version, `TYPE_CHECKING`, `sys.platform` or `os.name`, is guarded: findings
+there are counted as unchecked. Argument checks drop the first parameter
+only for bound methods and constructors, trust overloads for keywords only,
+and skip unknown decorators.
+
+`scripts/check_corpus.py` runs the checker over the source of installed
+packages as a false-positive harness (any error there is suspect).
+
+TypeScript (v1): named imports and re-exports are matched against the
+top-level exports of the installed package's declarations (indexed on
+first use). The first 500 exports are indexed with types and docs, the rest
+(up to 50,000) by name, so large icon libraries stay checkable; a name
+another installed package exports is reported with that package. Packages
+that are not installed are unchecked.
+
+Search ranks FTS5 bm25 hits again by kind (callables and classes before
+attributes, constants last), by how well the entry's own name matches the
+query words, by path depth and away from `v1`/`deprecated`/private paths;
+an exact identifier query always considers every entry with that name.
+
+## HTTP layer
+
+The shared guard (`hoard_link.guard.install_guard`, with `strict_ports=True`): a `Host` other than loopback on this
+app's own port is rejected (DNS rebinding) with `403 {"error": "Only local access is allowed."}`; a LAN name or a
+tailnet is opened with `BABEL_ALLOWED_HOSTS` (comma-separated, `*.suffix` allowed); a foreign `Origin`, a cross-site
+request that is not a top-level navigation (reads index packages, so this covers `<img>`/`fetch` GETs too), a form
+post and a cross-site `iframe` are rejected; WebSocket upgrades get the same checks. No CORS headers. The per-tool
+`/api/agent/<tool>` routes also need `Authorization: Bearer <data/mcp-token>` (the MCP adapter sends it; `GET
+/api/agent/tools` and every UI route stay open). The SPA route
+serves a file only if its resolved path stays inside `frontend/dist`.
+Validation and routing errors use the same `{error, message}` shape as tool
+errors. `/api/agent/*` calls are timed and written to `agent_calls`; the UI
+uses separate endpoints (`/api/lookup`, `/api/check`, ...) so the audit log
+only shows the assistant.
+
+## Shared model backend (`backend.py`)
+
+One [Hoard Link](../babels_hoard/hoard_link) `Link` per app, built from
+`data/backend.json` + environment overrides by `backend.build_link` and
+stored on `app.state.link`; `app.state.link_factory` is how it gets
+rebuilt (a config change or `/api/backend/recheck` calls it and closes the
+old `Link`, so probe caches and explicit overrides never mix between the
+old and new config - tests inject a fixed/fake factory to stay offline, and
+`create_app`'s default factory builds a real `Link` lazily so every other
+test that never touches `/api/backend*` is unaffected). `GET /api/backend`
+reports only the two capabilities this app uses (`llm`, `embeddings`);
+`GET`/`PUT /api/backend/config` read and merge-write `backend.json`,
+replacing the Faustus token with a bare `token_set` boolean on the way out
+so it is never sent back to the browser. An empty string in a `PUT`
+removes that key (a cleared form field, or `faustus.token: ""` to forget
+the token); the merged file is written to `backend.json.tmp`, validated
+with `LinkConfig.load` and only then moved over the old one, so an invalid
+value is a 400 `bad_config` that leaves the working file and `Link`
+untouched. If the file on disk is already unusable (hand-edited),
+`build_link` falls back to env + auto-detection and `GET /api/backend`
+carries the loader's sentence as `config_error`.
+
+"Ask the docs" (`backend.ask_the_docs`) is a plain function over a
+`sqlite3.Connection`, a `Link` and `search.search` (no FastAPI import): it
+resolves `llm` first and returns an honest `{available: false, reason}`
+without ever calling the model when nothing resolves; otherwise it takes
+the top 50 FTS hits, and when `embeddings` also resolves, embeds the
+question and each hit's compact text and re-orders them by reciprocal-rank
+fusion (k = 60) of the lexical rank and the cosine-similarity rank (hybrid
+search: pure cosine let a small embedding model push exact identifier
+matches out of the six excerpts) - a failure here is swallowed and the endpoint falls back
+to lexical order rather than failing the whole answer. The top six entries
+become the model's only context; the answer is asked to cite their ids in
+`[brackets]`, and the response's `cited` list is filtered down to ids that
+actually are one of those six (a model inventing a citation does not
+produce a broken link in the UI). A `BackendError`/`Unavailable` raised by
+the `chat()` call itself (resolved a moment ago, then the server went
+away) is caught and turned into a soft `answered: false` result with the
+entries still attached, never a 500.
+
+## Jobs
+
+One daemon worker thread drains a queue; each job function receives the
+worker's own connection and a `progress(pct, message)` callback that
+updates the `jobs` row. Dependency indexing and docset installs run there;
+the MCP tools return a job id immediately and `docs_libraries` reports the
+five most recent jobs.
+
+## Frontend
+
+React 19 + Vite + TypeScript strict. Hash routes (`#/search`,
+`#/libraries`, ...), strings in `i18n.ts` (English, Spanish), light/dark
+from `prefers-color-scheme` or the header toggle. `Signature.tsx` colours
+signatures with a small tokenizer; `Markdown.tsx` renders docstrings
+(Markdown, numpydoc/rst headings, admonitions, doctest blocks) by building
+React elements - no index content is injected as HTML.

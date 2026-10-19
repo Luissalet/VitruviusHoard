@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "vitruvius",
   "name": "Vitruvius's Hoard",
-  "purpose": "A local frontend-design workbench: a criterion library ingested from open design-skill repos, a render-capture-critique loop on real Chromium, a design-system (tokens) generator with a live playground, and a reference gallery of captured websites.",
+  "purpose": "Software workbench with design/source projects, version-exact API documentation and existing reverse-engineering capabilities; independent modules under demand.",
   "capabilities": [
     "design-criterion-library",
     "design-rules",
@@ -41,7 +41,12 @@
     "typed-application-actions",
     "owned-local-previews",
     "owned-functional-page-checker",
-    "explicit-page-behavior-criteria"
+    "explicit-page-behavior-criteria",
+    "version-exact-api-docs",
+    "native-api-checker",
+    "source-environment-links",
+    "retained-analysis-results",
+    "existing-reverse-engineering"
   ],
   "placeholders": [
     "VITRUVIUS_DIR",
@@ -52,7 +57,7 @@
   "defaults": {
     "APP_URL": "http://127.0.0.1:5191",
     "TOKEN_FILE": "{VITRUVIUS_DIR}/data/mcp-token",
-    "PYTHON": "{VITRUVIUS_DIR}/venv/Scripts/python.exe"
+    "PYTHON": "{VITRUVIUS_DIR}/.venv/Scripts/python.exe"
   },
   "app": {
     "url_default": "http://127.0.0.1:5191",
@@ -69,7 +74,7 @@
       ],
       "title": [
         "vitruvius's hoard",
-        "taller de diseño de interfaces"
+        "taller de dise\u00f1o de interfaces"
       ]
     },
     "launch_hint": {
@@ -82,7 +87,9 @@
       "cwd": "{VITRUVIUS_DIR}",
       "env": {
         "PORT_STRICT": "1",
-        "VITRUVIUS_PORT": "5191"
+        "VITRUVIUS_PORT": "5191",
+        "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data",
+        "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
       },
       "readiness": {
         "url": "{APP_URL}/api/health",
@@ -98,14 +105,15 @@
     ],
     "env": {
       "VITRUVIUS_URL": "{APP_URL}",
-      "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
+      "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}",
+      "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data"
     },
     "optional_env": [
       "VITRUVIUS_BRIDGE_AUTOSTART",
       "VITRUVIUS_DATA_DIR"
     ]
   },
-  "notes": "Keep the app running (python -m vitruvius_hoard) so it can render and critique pages: the MCP bridge proxies every call to the local server, never opens the database, and starts the app itself when it is not answering. render_preview, design_critique and tokens_preview change nothing on disk (they only read/render); reference_add, source_add, source_ingest, tokens_delete and reference_delete are the only tools that change or delete something, and are only for when the user asks.",
+  "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and paused by Luis due to usage; this incorporation does not complete its pending reverse-engineering scope.",
   "x-family": {
     "copilot": {
       "contract_version": "1.0",

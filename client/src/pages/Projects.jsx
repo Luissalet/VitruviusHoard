@@ -49,7 +49,7 @@ export default function Projects({ param }) {
   useEffect(() => {
     loadSequence.current++;
     setProject(null); setPreview(null); setBundle(null); setRender(null); setFile("pages/index.html");
-    if (param) loadProject(param);
+    if (param) loadProject(param, new URLSearchParams(window.location.search).get("source_revision") || undefined);
     return () => { loadSequence.current++; };
   }, [param]);
   useCopilotRefresh(() => { loadList(); if (param) loadProject(param); });

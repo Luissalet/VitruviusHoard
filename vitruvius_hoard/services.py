@@ -60,7 +60,7 @@ def ffmpeg_available() -> bool:
 
 class Services:
     def __init__(self, config: Config, *, browser: Any = None, link: Any = None, clock_fn: Callable[[], float] = time.time,
-                 autostart_ingest: bool = True, assay_runner: Any = None):
+                 autostart_ingest: bool = False, assay_runner: Any = None):
         self.config = config
         self.assay_runner = assay_runner  # tests inject a fake `(cmd, timeout) -> (code, out, err)`
         self.clock = clock_fn
@@ -81,13 +81,13 @@ class Services:
             self.link_sync = link  # test double, already "sync-shaped"
             self._link = None
         else:
-            from .hoard_link.link import Link
+            from .software.global_models import GlobalLink as Link
             link_config = LinkConfig.load(config.backend_json_path if config.backend_json_path.is_file() else None,
                                           app="vitruvius")
             self._link = Link(link_config)
             self.link_sync = self._link.sync
 
-        self._ingest_autostart = autostart_ingest
+        self._ingest_autostart = autostart_ingest and config.autostart
         self.ingest_runner = IngestRunner(self.db, self.config, emit=self._emit_event)
 
         from .dense import DenseIndex, default_cache_dir, make_embedder
@@ -108,23 +108,20 @@ class Services:
 
     # ---------------- lifecycle ----------------
     def start(self) -> None:
-        self.browser.start()
-        if self.app_browser is not self.browser:
-            self.app_browser.start()
         if self._ingest_autostart:
             self.ingest_runner.start()
 
     def stop(self) -> None:
         self.ingest_runner.stop()
+        if self.dense._thread is not None:
+            self.dense._thread.join()
         self.app_projects.close()
         self.browser.stop()
         if self.app_browser is not self.browser:
             self.app_browser.stop()
         if self._link is not None:
-            try:
-                self.link_sync.close()
-            except Exception:  # noqa: BLE001
-                pass
+            import asyncio
+            asyncio.run(self._link.aclose())
         self.db.close()
 
     # ---------------- sources ----------------

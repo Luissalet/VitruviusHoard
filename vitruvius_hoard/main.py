@@ -4,6 +4,7 @@ and the single-page-app server are the shared `hoard_link.guard` / `hoard_link.s
 from __future__ import annotations
 
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -29,15 +30,15 @@ def create_app(config: Config | None = None, services: Services | None = None) -
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        svc = services or Services(config)
+        svc = services or await asyncio.to_thread(Services, config, autostart_ingest=config.autostart)
         app.state.services = svc
         _seed_sources(svc)
-        svc.start()
+        await asyncio.to_thread(svc.start)
         logging.getLogger("vitruvius").info("Vitruvius's Hoard %s — data in %s", __version__, config.data_dir)
         try:
             yield
         finally:
-            svc.stop()
+            await asyncio.to_thread(svc.stop)
 
     app = FastAPI(title="Vitruvius's Hoard", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.config = config

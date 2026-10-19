@@ -10,3 +10,9 @@ __pycache__/
 .env.*
 !.env.example
 *.log
+
+*.egg-info/
+/babel_client/dist/
+/software_native/engine/dist/
+/vitruvius_hoard/static/assets/
+/vitruvius_hoard/static/index.html

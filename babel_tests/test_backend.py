@@ -1,0 +1,369 @@
+"""The shared model backend surface: /api/backend*, config persistence
+without leaking the token, and /api/ask ("Ask the docs")."""
+import json
+import shutil
+
+import pytest
+from fastapi.testclient import TestClient
+
+from babels_hoard import backend, db, search
+from babels_hoard.api import create_app
+
+from .agent_auth import agent_headers
+
+from .fake_link import FakeLink, factory_of, resolved, unresolved
+
+PORT = 18814
+
+
+def _app(tmp_path, **kwargs):
+    return create_app(tmp_path, None, port=PORT, **kwargs)
+
+
+def _client(app):
+    return TestClient(app, base_url=f"http://127.0.0.1:{PORT}", headers=agent_headers(app))
+
+
+# --------------------------------------------------------------- /api/backend
+def test_backend_status_lists_only_capabilities_babel_uses(tmp_path):
+    link = FakeLink(resolutions={"llm": resolved("llm"), "embeddings": unresolved("embeddings")})
+    with _client(_app(tmp_path, link=link)) as c:
+        r = c.get("/api/backend")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["used"] == ["llm", "embeddings"]
+        assert set(body["capabilities"]) == {"llm", "embeddings"}
+        assert body["capabilities"]["llm"]["state"] == "resolved"
+        assert body["capabilities"]["embeddings"]["state"] == "unavailable"
+        # the reason sentence is what the Settings screen shows for an
+        # honest empty state
+        assert "embeddings" in body["capabilities"]["embeddings"]["reason"]
+
+
+def test_backend_config_roundtrip_never_returns_token(tmp_path):
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link, link_factory=factory_of(link))) as c:
+        r = c.put("/api/backend/config", json={"faustus": {"url": "http://127.0.0.1:7000", "token": "ody_secret"}})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["config"]["faustus"]["token_set"] is True
+        assert "token" not in body["config"]["faustus"]
+        assert "ody_secret" not in json.dumps(body)
+
+    # the raw file does hold the token (so the backend can actually use it)
+    raw = json.loads((tmp_path / "backend.json").read_text(encoding="utf-8"))
+    assert raw["faustus"]["token"] == "ody_secret"
+
+
+def test_backend_config_empty_token_clears_it(tmp_path):
+    backend.save_overrides(tmp_path, {"faustus": {"url": "http://127.0.0.1:7000", "token": "ody_secret"}})
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link, link_factory=factory_of(link))) as c:
+        r = c.put("/api/backend/config", json={"faustus": {"token": ""}})
+        assert r.json()["config"]["faustus"]["token_set"] is False
+    raw = json.loads((tmp_path / "backend.json").read_text(encoding="utf-8"))
+    assert "token" not in raw.get("faustus", {})
+
+
+def test_backend_config_replaces_the_link_and_closes_the_old_one(tmp_path):
+    before = FakeLink(resolutions={"llm": unresolved("llm")})
+    after = FakeLink(resolutions={"llm": resolved("llm")})
+    with _client(_app(tmp_path, link=before, link_factory=factory_of(after))) as c:
+        assert c.get("/api/backend").json()["capabilities"]["llm"]["state"] == "unavailable"
+        c.put("/api/backend/config", json={"only_resident": False})
+        assert before.closed is True
+        r = c.get("/api/backend")
+        assert r.json()["capabilities"]["llm"]["state"] == "resolved"
+
+
+def test_backend_recheck_forces_a_fresh_probe(tmp_path):
+    """Simulates the model appearing between two clicks of "Re-check"."""
+    stale = FakeLink(resolutions={"llm": unresolved("llm", "server not started yet")})
+    fresh = FakeLink(resolutions={"llm": resolved("llm", model="qwen3.8-27b")})
+    with _client(_app(tmp_path, link=stale, link_factory=factory_of(fresh))) as c:
+        assert c.get("/api/backend").json()["capabilities"]["llm"]["state"] == "unavailable"
+        r = c.post("/api/backend/recheck")
+        assert r.status_code == 200
+        assert r.json()["capabilities"]["llm"]["state"] == "resolved"
+        assert r.json()["capabilities"]["llm"]["model"] == "qwen3.8-27b"
+        assert stale.closed is True
+
+
+def test_backend_config_get_reflects_saved_overrides(tmp_path):
+    backend.save_overrides(tmp_path, {"capabilities": {"llm": {"url": "http://127.0.0.1:8081", "model": "qwen"}}})
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link)) as c:
+        r = c.get("/api/backend/config")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["capabilities"]["llm"]["model"] == "qwen"
+        assert body["faustus"]["token_set"] is False
+        # embeddings/etc are not this app's business, but llm/embeddings are
+        assert set(body["capabilities"]) == {"llm", "embeddings"}
+
+
+# ------------------------------------------------------------------ /api/ask
+@pytest.fixture()
+def indexed_data_dir(tmp_path, web_stack_template):
+    shutil.copyfile(web_stack_template, tmp_path / "babel.db")
+    return tmp_path
+
+
+def _first_hit_id(data_dir, query="get request"):
+    conn = db.connect(data_dir / "babel.db")
+    try:
+        hits = search.search(conn, query, limit=10)["results"]
+        assert hits, "fixture db should have indexed httpx by now"
+        return hits[0]["id"]
+    finally:
+        conn.close()
+
+
+def test_ask_disabled_when_llm_unavailable(indexed_data_dir):
+    link = FakeLink(resolutions={"llm": unresolved("llm", "not running")})
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": "how do I send a get request"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["available"] is False
+        assert "llm" in body["reason"]
+        assert link.chat_calls == []
+
+
+def test_ask_empty_question_is_a_soft_no(indexed_data_dir):
+    link = FakeLink(resolutions={"llm": resolved("llm")})
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": "   "})
+        assert r.json() == {"available": False, "reason": "Type a question first."}
+
+
+def test_ask_no_matching_entries(indexed_data_dir):
+    link = FakeLink(resolutions={"llm": resolved("llm")})
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": "xqzzptlkvw12345"})
+        body = r.json()
+        assert body["available"] is True
+        assert body["answered"] is False
+        assert link.chat_calls == []
+
+
+def test_ask_answers_and_filters_citations_to_real_ids(indexed_data_dir):
+    question = "how do I send a get request"
+    real_id = _first_hit_id(indexed_data_dir, query=question)
+    from babels_hoard.hoard_link import ChatResult, Usage
+
+    link = FakeLink(
+        resolutions={"llm": resolved("llm"), "embeddings": unresolved("embeddings")},
+        chat_result=ChatResult(
+            text=f"Use it like this [{real_id}], and also cite [made-up:not-real].",
+            model="qwen-test", provider="test", usage=Usage(), elapsed_ms=2.0,
+        ),
+    )
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": question})
+        body = r.json()
+        assert body["available"] is True
+        assert body["answered"] is True
+        assert body["cited"] == [real_id]
+        assert body["semantic_rerank"] is False
+        assert len(body["entries"]) <= 6
+        assert body["model"] == "qwen-test"
+        # user-initiated call: foreground, no wait_idle bookkeeping needed
+        assert len(link.chat_calls) == 1
+
+
+def test_ask_hybrid_rerank_when_embeddings_resolve(indexed_data_dir):
+    link = FakeLink(
+        resolutions={"llm": resolved("llm"), "embeddings": resolved("embeddings", provider="ollama")},
+        embed_vectors=None,  # overridden below once we know candidate count
+    )
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": "how do I send a get request"})
+        body = r.json()
+        assert body["semantic_rerank"] is True
+        # Borges's embedder (through the hub) is asked first; with no hub the local backend answers: one call for the
+        # candidates (documents), one for the question (a query), from the same model.
+        assert len(link.embed_calls) == 2
+        assert len(link.embed_calls[0]) >= 2
+        assert len(link.embed_calls[1]) == 1
+
+
+def test_ask_prefers_borges_embeddings_when_the_hub_answers(indexed_data_dir, monkeypatch):
+    from babels_hoard.hoard_link import fam_embed
+
+    calls = []
+
+    def fake_call(owner, tool, args=None, *, timeout_s=120.0):
+        calls.append((owner, tool, dict(args or {})))
+        n = len(args["texts"])
+        vectors = [[1.0, 0.0] if i % 2 == 0 else [0.0, 1.0] for i in range(n)]
+        return {"ok": True, "kind": "", "error": "", "data": {"vectors": vectors, "model": "borges-test", "normalized": True}}
+
+    monkeypatch.setattr(fam_embed._s, "call_tool", fake_call)
+    # The local backend has no embeddings model: Borges alone must be enough for the semantic re-rank.
+    link = FakeLink(resolutions={"llm": resolved("llm"), "embeddings": unresolved("embeddings")})
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        body = c.post("/api/ask", json={"question": "how do I send a get request"}).json()
+    assert body["semantic_rerank"] is True
+    assert link.embed_calls == []
+    assert [c[:2] for c in calls] == [("borges", "embed_texts")] * 2
+    assert calls[0][2]["kind"] == "document" and calls[1][2]["kind"] == "query"
+
+
+def test_ask_keeps_the_lexical_order_when_the_two_embedding_models_differ(indexed_data_dir, monkeypatch):
+    from babels_hoard.hoard_link import fam_embed
+
+    def fake_call(owner, tool, args=None, *, timeout_s=120.0):
+        model = "doc-model" if args["kind"] == "document" else "query-model"
+        return {"ok": True, "kind": "", "error": "", "data": {"vectors": [[1.0, 0.0]] * len(args["texts"]), "model": model}}
+
+    monkeypatch.setattr(fam_embed._s, "call_tool", fake_call)
+    link = FakeLink(resolutions={"llm": resolved("llm"), "embeddings": unresolved("embeddings")})
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        body = c.post("/api/ask", json={"question": "how do I send a get request"}).json()
+    assert body["answered"] is True and body["semantic_rerank"] is False
+
+
+def test_ask_soft_failure_when_chat_call_fails(indexed_data_dir):
+    from babels_hoard.hoard_link import BackendError
+
+    link = FakeLink(
+        resolutions={"llm": resolved("llm")},
+        chat_error=BackendError("test", 0, "connection refused"),
+    )
+    with _client(_app(indexed_data_dir, link=link)) as c:
+        r = c.post("/api/ask", json={"question": "how do I send a get request"})
+        body = r.json()
+        assert body["available"] is True
+        assert body["answered"] is False
+        assert "model call failed" in body["message"]
+        assert body["entries"]
+
+
+# ------------------------------------------------------------ default wiring
+def test_create_app_builds_a_real_link_by_default_and_closes_it(tmp_path):
+    """No injected link: create_app must still build one (common step 2) and
+    close it on shutdown, without making any network call just by existing."""
+    app = _app(tmp_path)
+    with _client(app):
+        pass  # lifespan runs on enter/exit; must not raise
+
+
+# ------------------------------------------------- config robustness (UI form)
+def test_backend_config_cleared_field_removes_the_override(tmp_path):
+    """Clearing a URL in Settings sends "" - that must drop the override,
+    not keep the old value (deep merge) or save an empty string."""
+    backend.save_overrides(
+        tmp_path,
+        {"faustus": {"url": "http://127.0.0.1:7005"}, "capabilities": {"llm": {"url": "http://127.0.0.1:8081", "model": "qwen"}}},
+    )
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link, link_factory=factory_of(link))) as c:
+        r = c.put("/api/backend/config", json={"faustus": {"url": ""}, "capabilities": {"llm": {"url": "", "model": "qwen2"}}})
+        assert r.status_code == 200
+        cfg = r.json()["config"]
+        assert "url" not in cfg["faustus"]
+        assert cfg["capabilities"]["llm"] == {"model": "qwen2"}
+    raw = json.loads((tmp_path / "backend.json").read_text(encoding="utf-8"))
+    assert "url" not in raw["capabilities"]["llm"]
+    assert "faustus" not in raw  # nothing left in that section
+
+
+def test_backend_config_invalid_value_is_rejected_and_not_saved(tmp_path):
+    backend.save_overrides(tmp_path, {"capabilities": {"llm": {"url": "http://127.0.0.1:8081"}}})
+    before = (tmp_path / "backend.json").read_text(encoding="utf-8")
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link, link_factory=factory_of(link))) as c:
+        r = c.put("/api/backend/config", json={"capabilities": {"llm": {"command": "piper"}}})
+        assert r.status_code == 400
+        assert r.json()["error"] == "bad_config"
+        assert "command" in r.json()["message"]
+        assert link.closed is False  # the working Link was kept
+    assert (tmp_path / "backend.json").read_text(encoding="utf-8") == before
+    assert not (tmp_path / "backend.json.tmp").exists()
+
+
+def test_broken_backend_json_does_not_stop_the_app(tmp_path):
+    """A hand-edited, broken backend.json: the app still starts (auto-detect
+    only) and the Settings screen is told why the file was ignored."""
+    (tmp_path / "backend.json").write_text("{not json", encoding="utf-8")
+    link = backend.build_link(tmp_path)  # must not raise
+    assert link.config.capability("llm").explicit is False
+    import asyncio
+
+    asyncio.run(link.aclose())
+    fake = FakeLink()
+    with _client(_app(tmp_path, link=fake)) as c:
+        body = c.get("/api/backend").json()
+        assert "not valid JSON" in body["config_error"]
+        # and the form still loads with defaults
+        assert c.get("/api/backend/config").json()["faustus"]["token_set"] is False
+
+
+# ----------------------------------------------------------- hybrid ranking
+def test_fuse_keeps_strong_lexical_hits_and_lifts_semantic_ones():
+    cands = [{"id": f"e{i}"} for i in range(10)]
+    # the embedding model likes e9 best and e0 least
+    sims = [0.1 * i for i in range(10)]
+    order = [c["id"] for c in backend._fuse(cands, sims)]
+    assert sorted(order) == sorted(c["id"] for c in cands)
+    # pure cosine would put e0 last; fusion keeps the lexical winner in the top half
+    assert order.index("e0") < 5
+    assert order.index("e9") < 5
+
+
+def test_fuse_agreeing_signals_keep_the_order():
+    cands = [{"id": f"e{i}"} for i in range(5)]
+    sims = [1.0 - 0.1 * i for i in range(5)]
+    assert [c["id"] for c in backend._fuse(cands, sims)] == ["e0", "e1", "e2", "e3", "e4"]
+
+
+def test_partial_config_patch_keeps_every_field_not_sent(tmp_path):
+    """The Settings form sends only the fields the user changed: what is
+    already saved (an edit made elsewhere meanwhile) must survive."""
+    backend.save_overrides(
+        tmp_path,
+        {"faustus": {"url": "http://127.0.0.1:7005", "token": "ody_secret"}, "capabilities": {"llm": {"url": "http://127.0.0.1:8081", "model": "qwen"}}},
+    )
+    link = FakeLink()
+    with _client(_app(tmp_path, link=link, link_factory=factory_of(link))) as c:
+        r = c.put("/api/backend/config", json={"capabilities": {"llm": {"model": "qwen2"}}})
+        assert r.status_code == 200
+        cfg = r.json()["config"]
+        assert cfg["capabilities"]["llm"] == {"url": "http://127.0.0.1:8081", "model": "qwen2"}
+        assert cfg["faustus"] == {"url": "http://127.0.0.1:7005", "token_set": True}
+        # a patch for another section leaves the first one alone
+        r = c.put("/api/backend/config", json={"capabilities": {"embeddings": {"model": "nomic"}}})
+        assert r.json()["config"]["capabilities"]["llm"] == {"url": "http://127.0.0.1:8081", "model": "qwen2"}
+    raw = json.loads((tmp_path / "backend.json").read_text(encoding="utf-8"))
+    assert raw["faustus"]["token"] == "ody_secret"
+
+
+def test_concurrent_partial_saves_do_not_lose_each_other(tmp_path):
+    import threading
+
+    errors = []
+
+    def save(patch):
+        try:
+            backend.save_overrides(tmp_path, patch)
+        except Exception as exc:  # pragma: no cover - reported below
+            errors.append(exc)
+
+    patches = [
+        {"capabilities": {"llm": {"url": "http://127.0.0.1:8081"}}},
+        {"capabilities": {"llm": {"model": "qwen"}}},
+        {"capabilities": {"embeddings": {"url": "http://127.0.0.1:11434"}}},
+        {"capabilities": {"embeddings": {"model": "nomic"}}},
+        {"faustus": {"url": "http://127.0.0.1:7000"}},
+    ]
+    threads = [threading.Thread(target=save, args=(p,)) for p in patches]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    raw = json.loads((tmp_path / "backend.json").read_text(encoding="utf-8"))
+    assert raw["capabilities"]["llm"] == {"url": "http://127.0.0.1:8081", "model": "qwen"}
+    assert raw["capabilities"]["embeddings"] == {"url": "http://127.0.0.1:11434", "model": "nomic"}
+    assert raw["faustus"] == {"url": "http://127.0.0.1:7000"}

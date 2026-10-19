@@ -6,7 +6,7 @@ import { api } from '../api.js';
 const normalise = recipe => ({ width: 1280, height: 720, fps: 24, ...structuredClone(recipe) });
 
 async function request(path, body) {
-  const response = await fetch('/api/motions' + path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const response = await fetch('/design/api/motions' + path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) { const text = await response.text(); throw new Error(text.slice(0, 500)); }
   return path === '/preview' ? response.text() : response.json();
 }

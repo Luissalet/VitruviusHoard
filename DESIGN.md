@@ -613,3 +613,7 @@ Uncaptured states and scoped SHIP are not promoted into universal quality or fun
 - **Don't** imply that selecting earlier source also restores earlier data.
 - **Don't** claim production authentication, schema migration or cloud/rendering parity from the starter output.
 - **Don't** turn two visual fixes, author test results or earlier receipts into independent core approval or whole-app certification.
+
+## Software workspace extension933
+
+Operate extension: owner header, three independent module rows, visible Theseus incomplete/paused note, project/revision and source/result workspace. Preserve the existing palette, Cinzel/Source Sans3, icon and Faustus mark. All native editors remain accessible; the shared surface presents actual IDs/hashes/history. CSS supports a single-column layout below760px, 44px controls, keyboard focus, busy/error/empty states and saved source drafts per revision. API/build checks establish implementation only. Browser/CUA and visual finishing review are explicitly pending root; no new whole-surface visual certification is claimed.

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es" data-hoard-app="vitruvius">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vitruvius — Ingeniería inversa</title>
+    <link rel="stylesheet" href="/theseus/static/hoard-theme.css" />
+    <link rel="stylesheet" href="/theseus/static/app.css" />
+    <script type="module" src="/theseus/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#workspace">Ir al proyecto</a>
+    <header class="app-header">
+      <a class="brand" href="/">Vitruvius · Theseus</a
+      ><span>Ingeniería inversa</span
+      ><a href="http://127.0.0.1:8810">Hoard Hub</a>
+    </header>
+    <p class="development-status" role="note">Ingeniería inversa: capacidades existentes de Theseus. El desarrollo está incompleto y permanece pausado por decisión de Luis por cuota de uso. Esta integración conserva las funciones disponibles y no completa el alcance pendiente. <a href="/api/software/theseus-limits">Capacidades, requisitos y límites</a>.</p>
+    <div class="layout">
+      <aside aria-label="Proyectos">
+        <div class="rail-heading">
+          <h2>Proyectos</h2>
+          <button
+            id="new-project-toggle"
+            aria-expanded="false"
+            aria-controls="new-project"
+          >
+            Nuevo
+          </button>
+        </div>
+        <form id="new-project" hidden>
+          <label>Nombre<input name="name" required autocomplete="off" /></label>
+          <label
+            >Qué quieres averiguar<textarea name="question" rows="3"></textarea>
+          </label>
+          <button class="primary" type="submit">Crear proyecto</button>
+        </form>
+        <details id="evidence-import">
+          <summary>Importar evidencias</summary>
+          <form id="evidence-import-form">
+            <p class="small">Crea un proyecto nuevo con hallazgos, análisis y recibos históricos. Los archivos originales y las sesiones del motor no se trasladan.</p>
+            <label>Archivo de evidencias<input name="file" type="file" accept=".json,application/json" /></label>
+            <label>Nombre del proyecto (opcional)<input name="name" autocomplete="off" /></label>
+            <details id="evidence-paste"><summary>Introducir JSON</summary><label>Documento de evidencias · JSON<textarea name="bundle" rows="6" spellcheck="false"></textarea></label></details>
+            <button type="submit">Importar como proyecto nuevo</button>
+          </form>
+        </details>
+        <label class="inline small"
+          ><input id="show-archived" type="checkbox" /> Mostrar
+          archivados</label
+        >
+        <nav id="project-list" aria-label="Elegir proyecto">
+          <p class="muted">Cargando proyectos…</p>
+        </nav>
+        <p class="rail-note">
+          Los artefactos se inspeccionan sin ejecutarlos. Las comparaciones usan
+          los programas que indiques en cada escenario.
+        </p>
+      </aside>
+      <main id="workspace" tabindex="-1">
+        <p>Cargando espacio de trabajo…</p>
+      </main>
+    </div>
+    <div id="notice" role="status" aria-live="polite"></div>
+  </body>
+</html>
