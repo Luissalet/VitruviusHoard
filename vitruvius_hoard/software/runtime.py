@@ -9,7 +9,15 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def profile():
-    return Path(os.environ.get("VITRUVIUS_PROFILE_DIR", ROOT / "data")).resolve()
+    configured = os.environ.get("VITRUVIUS_PROFILE_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    # Editable checkouts keep their existing default. Installed distributions
+    # must never create databases/tokens inside site-packages.
+    if (ROOT / '.git').exists():
+        return ROOT / 'data'
+    base = Path(os.environ.get('LOCALAPPDATA') or Path.home() / '.local/share')
+    return (base / 'VitruviusHoard' / 'data').resolve()
 
 
 def token_path():

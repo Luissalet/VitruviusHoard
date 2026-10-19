@@ -120,7 +120,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
         "contracts.d.ts": contracts,
         "tsconfig.json": json.dumps({"compilerOptions": {"allowJs": True, "checkJs": True, "noEmit": True, "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022", "DOM"]}, "include": ["assets/api.js", "contracts.d.ts"]}, indent=2),
         "Dockerfile": 'FROM python:3.13-slim\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["python", "server.py", "--host", "0.0.0.0", "--port", "3000"]\n',
-        "LICENSE": Path(__file__).parent.parent.joinpath("LICENSE").read_text(encoding="utf-8"),
+        "LICENSE": Path(__file__).with_name("LICENSE").read_text(encoding="utf-8"),
         "README.md": f'# {name}\n\nRun `python server.py --port 3000` and open http://127.0.0.1:3000. Python 3.10+; no packages or workbench required. SQLite data is stored in data/app.db. Edit pages/*.html, layout.html, assets and project.json; restart after editing to use the changed source.\n\nPages are discovered from the pages directory, with index.html and [parameter].html paths. JSON operations are available through /api/records and POST /actions/create, /actions/update, /actions/delete. /api/schema and /api/routes describe the project. contracts.d.ts and the annotated API client share the field types; run `tsc -p tsconfig.json` if TypeScript is installed.\n\nGenerated application source belongs to the exported project. It uses an ordinary local HTTP server, without account, authentication or external service setup. Add production infrastructure appropriate to your deployment.\n',
     }
 

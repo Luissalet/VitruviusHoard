@@ -12,3 +12,5 @@
 - Public source incorporates licences/provenance before adaptation. Exclude private SDK commits and never modify original repositories, actual data or installed runtimes.
 
 - Owner factories must derive native Config.from_env() and replace only owner routing/data/explicit automation fields. Constructing a fresh Config drops existing functional settings. Compare every non-owner dataclass field in regression tests; explicit factory identity metadata is distinct from cold catalogue discovery or opened engine stores.
+
+- A successful source suite is not an installed-package check. Exercise the wheel outside the checkout with isolated imports and actual builds: top-level MCP modules and generated-project licence resources need explicit ownership; installed defaults must keep mutable profiles outside code. pip rewrites RECORD, and a real Vite bootstrap can be smaller than 1KB: compare exact resource bytes and real JS/CSS rather than inventing an HTML-size oracle.
