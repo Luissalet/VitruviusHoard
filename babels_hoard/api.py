@@ -179,11 +179,10 @@ def create_app(
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
-        yield
-        import asyncio
-        await asyncio.to_thread(job_mgr.stop)
-        await app.state.link.aclose()
-        database.close_all()
+        try:
+            yield
+        finally:
+            await app.state.shutdown()
 
     app = FastAPI(title=DISPLAY_NAME, version=__version__, lifespan=lifespan)
     # The shared request guard: loopback Host (plus BABEL_ALLOWED_HOSTS for a LAN name or a tailnet), Origin and Fetch
@@ -201,6 +200,10 @@ def create_app(
         link_factory = (lambda: link) if link is not None else (lambda: backend.build_link(data_dir, app="babel"))
     app.state.link_factory = link_factory
     app.state.link = link if link is not None else link_factory()
+    from vitruvius_hoard.software.cleanup import Shutdown
+    async def close_link():
+        await app.state.link.aclose()
+    app.state.shutdown = Shutdown(job_mgr.stop, close_link, database.close_all)
 
     # The per-tool routes run the assistant's tools, some of them destructive: they need the same bearer token as
     # POST /api/agent/call (data/mcp-token), which the MCP adapter sends. Without it any local process that passed

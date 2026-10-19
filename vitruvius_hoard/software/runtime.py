@@ -29,6 +29,7 @@ class Module:
         self.name = name
         self.app = None
         self.context = None
+        self.context_failed = False
         self.state = "off"
         self.automatic = False
         self.lock = asyncio.Lock()
@@ -51,15 +52,19 @@ class Module:
                 self.automatic = automatic
                 return self.status()
             if enabled:
+                if self.app is not None:
+                    raise ValueError('Close the retained owner successfully before enabling it again')
                 self.state = "starting"
                 self.automatic = automatic
                 try:
                     self.app = await asyncio.to_thread(self.create)
+                    self.context_failed = False
                     self.context = self.app.router.lifespan_context(self.app)
                     await self.context.__aenter__()
                     self.state = "on"
                     self.automatic = automatic
                 except BaseException:
+                    self.context_failed = True
                     self.state = "error"
                     raise
             elif self.app:
@@ -67,8 +72,16 @@ class Module:
                 await join_tasks(list(self.readers), cancel=True)
                 await self.idle.wait()
                 try:
-                    await self.context.__aexit__(None, None, None)
+                    if self.context_failed:
+                        from .cleanup import invoke
+                        shutdown = getattr(self.app.state, 'shutdown', None)
+                        if shutdown is None:
+                            raise RuntimeError('Failed lifespan has no retryable shutdown; owner remains retained')
+                        await invoke(shutdown)
+                    else:
+                        await self.context.__aexit__(None, None, None)
                 except BaseException:
+                    self.context_failed = True
                     self.state = "error"
                     raise
                 self.app = self.context = None

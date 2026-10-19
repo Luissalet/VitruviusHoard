@@ -112,17 +112,23 @@ class Services:
             self.ingest_runner.start()
 
     def stop(self) -> None:
-        self.ingest_runner.stop()
-        if self.dense._thread is not None:
-            self.dense._thread.join()
-        self.app_projects.close()
-        self.browser.stop()
-        if self.app_browser is not self.browser:
-            self.app_browser.stop()
-        if self._link is not None:
+        def dense():
+            if self.dense._thread is not None:
+                self.dense._thread.join()
+        def app_browser():
+            if self.app_browser is not self.browser:
+                self.app_browser.stop()
+        def link():
             import asyncio
-            asyncio.run(self._link.aclose())
-        self.db.close()
+            if self._link is not None:
+                asyncio.run(self._link.aclose())
+        steps = (self.ingest_runner.stop, dense, self.app_projects.close,
+                 self.browser.stop, app_browser, link, self.db.close)
+        completed = getattr(self, '_stop_completed', 0)
+        while completed < len(steps):
+            steps[completed]()
+            completed += 1
+            self._stop_completed = completed
 
     # ---------------- sources ----------------
     def sources_list(self) -> list[dict[str, Any]]:
