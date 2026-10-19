@@ -13,6 +13,7 @@ import httpx
 from hoard_link import Link
 from hoard_link._sync import SyncFacade
 from hoard_link.types import Resolution
+from .owned_http import OwnedAsyncClient,close_client
 
 _job = ContextVar('vitruvius_global_job', default=None)
 
@@ -35,6 +36,10 @@ def job(function):
 
 
 class GlobalSync(SyncFacade):
+    def __init__(self,link):
+        super().__init__(link)
+        self._close_lock=threading.Lock()
+
     def _twin(self):
         with self._start_lock:
             if self._inner is None:
@@ -43,29 +48,35 @@ class GlobalSync(SyncFacade):
             return self._inner
 
     def close(self, timeout=None):
-        loop, inner, thread = self._loop, self._inner, self._thread
-        if thread is threading.current_thread():
+        if self._thread is threading.current_thread():
             raise RuntimeError('Close the global client from its owning module')
-        if loop is not None:
-            if inner is not None and inner._owns_client:
-                asyncio.run_coroutine_threadsafe(inner._client.aclose(), loop).result()
-            loop.call_soon_threadsafe(loop.stop)
-        if thread is not None:
-            thread.join()
-        if loop is not None:
-            loop.close()
-        self._loop = self._thread = self._inner = None
+        with self._close_lock:
+            loop,inner,thread=self._loop,self._inner,self._thread
+            if loop is not None:
+                async def drain():
+                    if inner is not None and inner._owns_client:
+                        await close_client(inner._client)
+                    if self._link._owns_client:
+                        await close_client(self._link._client)
+                    await loop.shutdown_asyncgens()
+                    await loop.shutdown_default_executor()
+                asyncio.run_coroutine_threadsafe(drain(),loop).result()
+                loop.call_soon_threadsafe(loop.stop)
+            elif self._link._owns_client:
+                asyncio.run(close_client(self._link._client))
+            if thread is not None:thread.join()
+            if loop is not None:loop.close()
+            self._loop=self._thread=self._inner=None
 
 
 class GlobalLink(Link):
     def __init__(self, config, client=None):
-        super().__init__(config, client)
+        super().__init__(config,OwnedAsyncClient(trust_env=False) if client is None else client)
+        self._owns_client=client is None
         self.sync = GlobalSync(self)
 
     async def aclose(self):
         await asyncio.to_thread(self.sync.close)
-        if self._owns_client:
-            await self._client.aclose()
 
     async def status(self, task=None):
         with global_job():

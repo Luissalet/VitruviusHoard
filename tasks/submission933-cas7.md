@@ -1,0 +1,11 @@
+#933 CAS7: retain physical global-client shutdown
+
+Root reproduced HTTPX's transport false-OFF in the installed CAS6 Design factory before editing: transport933-a76a9f7ed1/receipt.json under private fusion QA. OFF1 failed physically; OFF2 released the app and closed the loop without retrying the transport. The earlier browser route/icon fixes and native project acceptance remain intact.
+
+The product-owned HTTP client retains unique pooled connections and transports until each physical close succeeds. Successful connections leave their pool by identity under its lock; failed resources stay pending. Parent and synchronous twin close on their live owning loops, with loop/thread references retained on failure. Caller-injected clients remain caller-owned. No SDK, engine, UI, native format, schema or paused Theseus development change.
+
+Source:10 existing global/lifecycle cases PASS, then5 physical cases PASS. Actual Design and Babel factories, each parent/twin, send an in-memory HTTP request, fail physical shutdown twice and retain ownership/ON rejection. Two consumer cancellations during a held third close wait until the physical resource is released before OFF. A real HTTPX/httpcore/HTTP11 connection-pool control closes an already successful stream once and the failing one on attempt3. No sockets or models.
+
+Wheel dist/cas7/vitruvius_hoard-0.1.0-py3-none-any.whl:5,537,957bytes; SHA256d80a20d7dc479edef89ec8a78f389ead5b0a3a42b67c016492b18dbff1c8bf61. Fresh external target vitruvius933-installed/target-cas7-http. All wheel payload members except pip's RECORD match installed bytes;110 cold tools and threeOFF modules create no profile. All five resource cases pass from the installed target, with own imports restricted to it: installed-owned933-dbf86879/receipt.json. No checkout imports are used for product execution.
+
+CAS6 browser QA already reopened the existing project/README artifact/revision, displayed the corrected native Design icon, and retained history with all three modulesOFF. That private server exited cleanly. Its UI assets are unchanged. Theseus remains incomplete and paused; no reverse-engineering work is resumed. No personal data moved, production runtime activated, source integrated or published. Migration934 and global938live remain pending. Request exact CAS7 independent review.
