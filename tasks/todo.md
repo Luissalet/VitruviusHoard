@@ -12,3 +12,5 @@ Owner public base13983c31e30e1c0b0f5f425120dc1c98083c0918. Babel public582bacdcb
 Success: existing design/app-export, Babel checker/indexing and Theseus retained evidence can be operated from owner code, with exact native identities/schema preservation; a selected project revision passes to the correct environment/artifact and keeps historical findings after revision changes. No old server/repository dependency and no assertion that Theseus pending scope is complete. Any approved local non-SDK capabilities must be inventoried/preserved before the final commit. Root owns real migration, installed packaging, #938 deployment acceptance and publication.
 
 Source implementation and scoped verification ready; independent CAS review, CUA/visual finish, installed packaging, migration, live938 and activation remain root work. Theseus pending scope stays paused.
+
+CAS2: preserve all native design environment settings through Config.from_env()+replace. Eight own area cases and three unmodified reviewer probes PASS; no new wheel/build, current three asset sets inventoried. Source remains pending independent CAS2, root packaging/CUA/migration/activation.

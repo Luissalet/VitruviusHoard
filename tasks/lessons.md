@@ -10,3 +10,5 @@
 - ThreadPoolExecutor does not propagate ContextVars. Copy each native branch and share one descriptor Future per job across loops; pin endpoint/model/revision without serializing chat or allowing fallback.
 - Local HTTP to an explicitly owned synthetic preview is legitimate isolated QA. Record ownership and closure, distinguish it from external personal services/models, and do not claim zero sockets. Root clarified this boundary after the original inherited preview tests ran; do not repeat successful runs just to pursue zero-network wording.
 - Public source incorporates licences/provenance before adaptation. Exclude private SDK commits and never modify original repositories, actual data or installed runtimes.
+
+- Owner factories must derive native Config.from_env() and replace only owner routing/data/explicit automation fields. Constructing a fresh Config drops existing functional settings. Compare every non-owner dataclass field in regression tests; explicit factory identity metadata is distinct from cold catalogue discovery or opened engine stores.
