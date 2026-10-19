@@ -1,0 +1,124 @@
+{
+  "status": "PASS",
+  "cwd": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed",
+  "target": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b",
+  "profile": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\profile-cas3-final",
+  "cold_catalog": 110,
+  "installed_default_external": true,
+  "wheel": {
+    "sha256": "bd3790f5fa4133b4efae39478db53eb47c144869c11b067de8009e2835a439a1",
+    "bytes": 5535423,
+    "members": 1574,
+    "inventory_sha256": "9413e736c5fefa06aa85385e7a90416567902d164a75f99228a08af8027eaa40"
+  },
+  "real_builds_exact": {
+    "design": 6,
+    "babel": 22,
+    "native_analysis": 555
+  },
+  "initial": {
+    "modules": [
+      {
+        "module": "design",
+        "state": "off",
+        "enabled": false,
+        "automatic": false,
+        "active_requests": 0
+      },
+      {
+        "module": "babel",
+        "state": "off",
+        "enabled": false,
+        "automatic": false,
+        "active_requests": 0
+      },
+      {
+        "module": "theseus",
+        "state": "off",
+        "enabled": false,
+        "automatic": false,
+        "active_requests": 0
+      }
+    ],
+    "theseus_status": "Existing capabilities; development incomplete and paused by Luis due to usage."
+  },
+  "imports": {
+    "vitruvius_hoard": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\vitruvius_hoard\\__init__.py",
+    "babels_hoard": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\babels_hoard\\__init__.py",
+    "theseus": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\theseus\\__init__.py",
+    "hoard_link": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\hoard_link\\__init__.py",
+    "software_native": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\software_native\\__init__.py",
+    "babel_client": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\babel_client\\__init__.py",
+    "mcp_server": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\mcp_server.py"
+  },
+  "ui_assets": [
+    {
+      "url": "/design/assets/index-BH4gysai.js",
+      "bytes": 344000,
+      "sha256": "b482ddf480c0c0e6251f2949966e3802fa0faa7fd5da8fb8ded4db3e86e790ca"
+    },
+    {
+      "url": "/design/assets/index-RosVPaKQ.css",
+      "bytes": 41468,
+      "sha256": "89f9a469325af88788e96dde9ba8f4a7a3a57e093f0e883ffdd1a4be37442e0b"
+    },
+    {
+      "url": "/design/api/copilot/launcher.js",
+      "bytes": 21910,
+      "sha256": "bceeaf16eae7f5bcfc578e2498ea6adb5ff77fd758b7fd1926460b3d9fc5ae6d"
+    },
+    {
+      "url": "/babel/assets/index-VGfNMryZ.js",
+      "bytes": 311330,
+      "sha256": "524ad62c26c788e0e39008f0b746a3943d723318a1e0d48b04d6d5054b1ed408"
+    },
+    {
+      "url": "/babel/assets/index-B0_qlTIm.css",
+      "bytes": 45103,
+      "sha256": "b31c7c40b6c36b6511990ab29315a46df86fe059a35f81bcf4bef97527984500"
+    },
+    {
+      "url": "/babel/api/copilot/launcher.js",
+      "bytes": 21906,
+      "sha256": "b4962469261f63b420d8edb19b8d7a12b74f02cacf2dcc9fcc5b88f960615ecd"
+    },
+    {
+      "url": "/theseus/static/hoard-theme.css",
+      "bytes": 25153,
+      "sha256": "ca2f97a50742248d4ab00ee52701f59313ad8bdc47932bd2333c8736694f0e7a"
+    },
+    {
+      "url": "/theseus/static/app.css",
+      "bytes": 12607,
+      "sha256": "cddde1d18f2014bee77e9e9b1aa29b6339409b0c0eb556d62e251d4f79121432"
+    },
+    {
+      "url": "/theseus/static/app.js",
+      "bytes": 95476,
+      "sha256": "201fac657c54325c56803f844b7fc0ad2abda97e453644415bfc01b8a22c9446"
+    },
+    {
+      "url": "/theseus/api/copilot/launcher.js",
+      "bytes": 21914,
+      "sha256": "3ceb49b0b82e79587310c45b955dffff004ff9943eccad287c7e3bb8f4cbf425"
+    }
+  ],
+  "roundtrip": {
+    "project_id": "b118c8d82741472b",
+    "source_revision": "f45ef158263624f1cb1e",
+    "source_sha256": "f45ef158263624f1cb1eb98595838db3f37d774df43ea7f7d4e8993c9ed65466",
+    "environment_id": "env-f7459d4f0b48",
+    "native_project_id": "884a06f719fb43288daeaa3ab68d71d3",
+    "artifact_id": "a7f3dee0382e46bd912a92509f71221b",
+    "file": ".",
+    "tree_sha256": "f29c27141afdb5e647bd399ef1d8b6b070d08a250eaa2edeeebcbff1d86154b1",
+    "job_id": "6ceaba5c926e4a28bb33776be4fc1c7d",
+    "retained_sha256": "f9bf90d88e5c7edb87104f34ffb1bf57987a96f78a8ba0be1d5ca95e9f8b68d5",
+    "historical_references": 5
+  },
+  "on_off_on_closed": true,
+  "installed_stdio_cold": 110,
+  "source_files_exact": 1568,
+  "full_receipt": "D:/LocalAI/research-inbox/fusion-candidates-wave3/vitruvius933-installed/installed-cas3.json",
+  "full_receipt_sha256": "bbd0df957d08304563e75bc06400f48e2479ac0bc34aa8279233e9069d3c5941"
+}

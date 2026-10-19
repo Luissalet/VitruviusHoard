@@ -35,6 +35,9 @@ runtime = ["frida==17.24.2"]
 [project.scripts]
 vitruvius-hoard = "vitruvius_hoard.__main__:main"
 
+[tool.setuptools]
+py-modules = ["mcp_server"]
+
 [tool.setuptools.packages.find]
 include = ["vitruvius_hoard*", "babels_hoard*", "theseus*", "hoard_link*", "software_native*", "babel_client*"]
 exclude = ["theseus_tests*", "babel_tests*"]
@@ -49,7 +52,7 @@ namespaces = false
 "hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "babel_client" = ["dist/*", "dist/assets/*"]
 "software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/dist/*.js", "engine/dist/**/*.js"]
-vitruvius_hoard = ["static/*", "static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
+vitruvius_hoard = ["LICENSE", "static/*", "static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

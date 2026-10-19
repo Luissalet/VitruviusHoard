@@ -14,3 +14,5 @@ Success: existing design/app-export, Babel checker/indexing and Theseus retained
 Source implementation and scoped verification ready; independent CAS review, CUA/visual finish, installed packaging, migration, live938 and activation remain root work. Theseus pending scope stays paused.
 
 CAS2: preserve all native design environment settings through Config.from_env()+replace. Eight own area cases and three unmodified reviewer probes PASS; no new wheel/build, current three asset sets inventoried. Source remains pending independent CAS2, root packaging/CUA/migration/activation.
+
+CAS3 packaging follow-up: own wheel includes mcp_server and packaged export licence; installed profile defaults outside code. Real existing builds verified exactly (6/22/555 files), installed imports from external TARGET, cold real stdio110, all modules/automaticOFF, shared project/environment/check/real Node result with historical IDs/SHA and ON/OFF/ON complete. Six package/configuration cases pass. Independent CAS3 review and root CUA/live938/migration/activation/publication remain pending. No optional-engine or paused Theseus scope added.
