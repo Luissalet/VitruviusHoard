@@ -106,6 +106,33 @@ async def test_native_project_revision_environment_artifact_result_roundtrip(tmp
 
 
 @pytest.mark.asyncio
+async def test_theseus_native_frontend_uses_mounted_api_and_owner_limits(tmp_path,monkeypatch):
+    monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
+    from vitruvius_hoard.software.host import create_app
+    app=create_app()
+    async with app.router.lifespan_context(app):
+        await app.state.execute('software_module_set',{'module':'theseus','enabled':True})
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='http://127.0.0.1:5191') as client:
+            page=await client.get('/theseus/')
+            assert page.status_code==200
+            assert 'href="/api/software/theseus-limits"' in page.text
+            limits=await client.get('/api/software/theseus-limits')
+            assert limits.status_code==200 and limits.content==(ROOT/'software_native/theseus-limits.md').read_bytes()
+            script=await client.get('/theseus/static/app.js')
+            helper=script.text[script.text.index('async function api('):script.text.index('\nfunction notice(')]
+            # Run the shipped request helper, then route its captured URL through
+            # the actual mounted application. No browser or engine is simulated.
+            probe='const calls=[];const fetch=async(url)=>{calls.push(url);return {ok:true,json:async()=>({})}};const json=JSON.stringify;'+helper+';api("/projects").then(()=>console.log(JSON.stringify(calls)));'
+            result=subprocess.run(['node','-e',probe],capture_output=True,text=True,check=True)
+            assert json.loads(result.stdout)==['/theseus/api/projects']
+            created=await client.post('/theseus/api/projects',json={'name':'Mounted native project'})
+            assert created.status_code==200,created.text
+            projects=await client.get(json.loads(result.stdout)[0])
+            assert created.json()['id'] in [p['id'] for p in projects.json()['projects']]
+            assert all(m.state=='off' for name,m in app.state.runtime.modules.items() if name!='theseus')
+
+
+@pytest.mark.asyncio
 async def test_stdio_catalog_and_native_handlers(tmp_path):
     from mcp import ClientSession,StdioServerParameters
     from mcp.client.stdio import stdio_client

@@ -125,7 +125,7 @@ class Module:
                     prefix = '/' + self.name
                     import re
                     if not str(scope['path']).endswith(('/api/copilot/info','/manifest.webmanifest')):
-                        body = re.sub(rb'(?<=["\'`])/(api|static|assets)/', lambda m: prefix.encode() + b'/' + m[1] + b'/', body)
+                        body = re.sub(rb'(?<=["\'`])/(api/(?!software/)|static/|assets/)', lambda m: prefix.encode() + b'/' + m[1], body)
                     if str(scope['path']).endswith('/api/copilot/info'):
                         info = json.loads(body)
                         # The panel's server is the remote Faustus API root;
