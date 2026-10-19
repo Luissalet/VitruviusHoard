@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   root: 'client',
+  base: '/design/',
   plugins: [react(), tailwindcss()],
   build: {
     outDir: '../vitruvius_hoard/static',

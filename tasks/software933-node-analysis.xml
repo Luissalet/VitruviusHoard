@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="2.205" timestamp="2026-10-19T04:42:00.461186+02:00" hostname="DESKTOP-RURQM6M"><testcase classname="tests.test_software_workspace" name="test_owned_node_analysis_reads_source_without_executing_it" time="2.020"><failure message="AssertionError: {'id': '48ecb0ef48804c2788b44c2a089e2e85', 'project_id': 'c3b3e063f10a461a86bc6348837db990', 'state': 'failed', 'resul...lication', 'title': 'JavaScript y Electron · Aplicación', 'artifact_id': '95b6918176134643b312ae72cf8a17df', ...}, ...}&#10;assert 'failed' == 'finished'&#10;  &#10;  - finished&#10;  + failed">tests\test_software_workspace.py:203: in test_owned_node_analysis_reads_source_without_executing_it
+    assert job['state']=='finished',job
+E   AssertionError: {'id': '48ecb0ef48804c2788b44c2a089e2e85', 'project_id': 'c3b3e063f10a461a86bc6348837db990', 'state': 'failed', 'resul...lication', 'title': 'JavaScript y Electron · Aplicación', 'artifact_id': '95b6918176134643b312ae72cf8a17df', ...}, ...}
+E   assert 'failed' == 'finished'
+E     
+E     - finished
+E     + failed</failure></testcase></testsuite></testsuites>

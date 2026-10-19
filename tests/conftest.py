@@ -169,3 +169,14 @@ def client(tmp_path):
     with TestClient(app, base_url="http://127.0.0.1") as test_client:
         test_client.svc = svc
         yield test_client
+
+
+@pytest.fixture(autouse=True)
+def no_live_transport(monkeypatch):
+    import httpx
+    async def async_block(self,request):
+        raise AssertionError('Live HTTP is disabled in synthetic tests: '+str(request.url))
+    def block(self,request):
+        raise AssertionError('Live HTTP is disabled in synthetic tests: '+str(request.url))
+    monkeypatch.setattr(httpx.HTTPTransport,'handle_request',block)
+    monkeypatch.setattr(httpx.AsyncHTTPTransport,'handle_async_request',async_block)

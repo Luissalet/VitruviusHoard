@@ -274,10 +274,11 @@ class IngestRunner:
         self._stop.set()
         self._queue.put("")
         if self._thread is not None:
-            self._thread.join(timeout=5)
+            self._thread.join()
 
     def enqueue(self, source_id: str) -> None:
         self.db.execute("UPDATE sources SET status = 'idle' WHERE id = ? AND status = 'error'", (source_id,))
+        self.start()
         self._queue.put(source_id)
 
     def _run(self) -> None:

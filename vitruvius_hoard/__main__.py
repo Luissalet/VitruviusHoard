@@ -7,8 +7,8 @@ from .hoard_link.service import run_main
 
 
 def main() -> int:
-    return run_main(service="vitruvius-hoard", package="vitruvius_hoard", default_port=5191, app_factory="vitruvius_hoard.main:create_app",
-                    data_dir_env="VITRUVIUS_DATA_DIR", port_env="VITRUVIUS_PORT", title="Vitruvius's Hoard", open_browser_default=False)
+    return run_main(service="vitruvius-hoard", package="vitruvius_hoard", default_port=5191, app_factory="vitruvius_hoard.software.host:create_app",
+                    data_dir_env="VITRUVIUS_PROFILE_DIR", port_env="VITRUVIUS_PORT", title="Vitruvius's Hoard", open_browser_default=False)
 
 
 if __name__ == "__main__":

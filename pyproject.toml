@@ -15,25 +15,41 @@ dependencies = [
   "uvicorn>=0.30",
   "pydantic>=2.7",
   "httpx>=0.27",
-  "mcp>=1.10,<2",
-  "playwright>=1.45",
-  "fastembed>=0.5",
+  "mcp>=1.26,<2",
+  "griffe>=2.3,<3",
+  "pefile>=2024.8",
+  "python-multipart>=0.0.20",
+  "psutil>=5.9",
+  "jsonschema>=4.20,<5",
+  "websocket-client>=1.9",
   "pillow>=10",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 icon = ["pillow>=11", "numpy>=2"]
-vectors = ["numpy>=2"]
+vectors = ["numpy>=2", "fastembed>=0.5"]
+render = ["playwright>=1.45"]
+runtime = ["frida==17.24.2"]
 
 [project.scripts]
 vitruvius-hoard = "vitruvius_hoard.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["vitruvius_hoard*"]
+include = ["vitruvius_hoard*", "babels_hoard*", "theseus*", "hoard_link*", "software_native*", "babel_client*"]
+exclude = ["theseus_tests*", "babel_tests*"]
+namespaces = false
 
 [tool.setuptools.package-data]
-vitruvius_hoard = ["static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
+"vitruvius_hoard.software" = ["catalog.json", "web/*"]
+"babels_hoard" = ["probes/*", "LICENSE"]
+"theseus" = ["LICENSE"]
+"babels_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
+"vitruvius_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
+"hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
+"babel_client" = ["dist/*", "dist/assets/*"]
+"software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/dist/*.js", "engine/dist/**/*.js"]
+vitruvius_hoard = ["static/*", "static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

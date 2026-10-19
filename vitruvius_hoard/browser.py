@@ -470,7 +470,7 @@ class BrowserWorker:
         self._stop.set()
         self._queue.put(Job("_stop", {}))
         if self._thread is not None:
-            self._thread.join(timeout=5)
+            self._thread.join()
 
     def _ensure_browser(self):
         if self._browser is not None:
