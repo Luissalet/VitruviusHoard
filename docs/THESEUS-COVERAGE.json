@@ -20,10 +20,10 @@
   ],
   "status_counts": {
     "semantic-review-pending": 169,
-    "implementation-pending": 26,
+    "implementation-pending": 24,
     "platform-required-implementation-pending": 3,
     "excluded-by-user": 4,
-    "independent-review-pending": 5
+    "independent-review-pending": 7
   },
   "contracts": [
     {
@@ -3220,12 +3220,21 @@
         "line": 115,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "evidence.compare_bundles"
+      ],
+      "status": "independent-review-pending",
       "scope": "Exact bundle membership, declared one-to-one observation pairs, full residual unknowns and digest-bound comparison history.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "author-MCP-and-UI-tested-CAS1-awaiting-full-suite-installed-acceptance-review-and-integration",
+        "task": 1059,
+        "submission_revision": 1,
+        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "tests": [
+          "theseus_tests/test_retained_evidence.py"
+        ],
+        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
+        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration."
       },
       "group": "bundle-correlation"
     },
@@ -3237,12 +3246,22 @@
         "line": 120,
         "kind": "session"
       },
-      "counterparts": [],
+      "counterparts": [
+        "evidence.changed_behavior"
+      ],
       "status": "implementation-pending",
       "scope": "Aggregate validated artifact/process deltas while separating observed behavior, static candidates and incomplete evidence.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "partial-native-counterpart; full reference semantic contract remains implementation-pending",
+        "task": 1059,
+        "submission_revision": 1,
+        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "tests": [
+          "theseus_tests/test_retained_evidence.py"
+        ],
+        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
+        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration.",
+        "remaining": "Also support retained native function comparisons, their dimension selectors, explicit side alignment, and unchanged static occurrences. Current1059 supports artifact inventory +process comparisons only. Do not certify the entire original contract."
       },
       "group": "bundle-correlation"
     },
@@ -3254,12 +3273,21 @@
         "line": 125,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "evidence.call_paths"
+      ],
+      "status": "independent-review-pending",
       "scope": "All shortest direct-callee paths from complete retained dossiers with exact addresses and source evidence; missing/mixed providers remain unknown.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "author-MCP-and-UI-tested-CAS1-awaiting-full-suite-installed-acceptance-review-and-integration",
+        "task": 1059,
+        "submission_revision": 1,
+        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "tests": [
+          "theseus_tests/test_retained_evidence.py"
+        ],
+        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
+        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration."
       },
       "group": "retained-call-paths"
     },
@@ -3271,12 +3299,22 @@
         "line": 130,
         "kind": "session"
       },
-      "counterparts": [],
+      "counterparts": [
+        "evidence.correlate"
+      ],
       "status": "implementation-pending",
       "scope": "Explicit caller hypotheses bound to exact static findings and runtime dimensions; co-change is not causation.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "partial-native-counterpart; full reference semantic contract remains implementation-pending",
+        "task": 1059,
+        "submission_revision": 1,
+        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "tests": [
+          "theseus_tests/test_retained_evidence.py"
+        ],
+        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
+        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration.",
+        "remaining": "Also support retained native function comparisons, their dimension selectors, explicit side alignment, and unchanged static occurrences. Current1059 supports artifact inventory +process comparisons only. Do not certify the entire original contract."
       },
       "group": "bundle-correlation"
     },
