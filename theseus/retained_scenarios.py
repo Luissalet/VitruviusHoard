@@ -2,6 +2,7 @@
 import hashlib
 import json
 import re
+from . import retained_process_scenarios as process
 
 
 KIND='retained-page-scenarios'
@@ -9,7 +10,7 @@ FIELDS={'kind','reference_job_id','reference_sha256','candidate_job_id','candida
 
 
 def selected(definition):
-    return definition.get('kind')==KIND
+    return definition.get('kind') in {KIND,process.KIND}
 
 
 def literal(value):
@@ -17,6 +18,7 @@ def literal(value):
 
 
 def validate(definition):
+    if definition.get('kind')==process.KIND:return process.validate(definition)
     if set(definition)!=FIELDS or not selected(definition):
         raise ValueError('A retained-page-scenarios definition needs both capture IDs and SHA-256 identities')
     for side in ('reference','candidate'):
@@ -40,12 +42,14 @@ def binding(store,project_id,job_id,expected):
 
 
 def validate_bindings(store,project_id,definition):
+    if definition.get('kind')==process.KIND:return process.validate_bindings(store,project_id,definition)
     validate(definition)
     for side in ('reference','candidate'):
         binding(store,project_id,definition[side+'_job_id'],definition[side+'_sha256'])
 
 
 def observe(store,project_id,definition,side):
+    if definition.get('kind')==process.KIND:return process.observe(store,project_id,definition,side)
     from .native_analysis import analysis_file
     key,expected=definition[side+'_job_id'],definition[side+'_sha256']
     result={'kind':KIND,'capture_job_id':key,'analysis_sha256':expected,'valid':False,
@@ -93,10 +97,14 @@ def observe(store,project_id,definition,side):
 
 
 def valid_pair(reference,candidate):
+    if reference.get('kind')==process.KIND or candidate.get('kind')==process.KIND:
+        return reference.get('kind')==candidate.get('kind') and process.valid_pair(reference,candidate)
     return reference['valid'] and candidate['valid'] and literal(reference['requests'])==literal(candidate['requests'])
 
 
 def differences(reference,candidate):
+    if reference.get('kind')==process.KIND or candidate.get('kind')==process.KIND:
+        return process.differences(reference,candidate) if reference.get('kind')==candidate.get('kind') else ['Retained scenario families differ']
     if not reference['valid'] or not candidate['valid']:
         return [side+': '+row.get('error','Invalid retained capture') for side,row in
             (('reference',reference),('candidate',candidate)) if not row['valid']]
@@ -106,6 +114,7 @@ def differences(reference,candidate):
 
 
 def unchanged(store,project_id,observation):
+    if observation.get('kind')==process.KIND:return process.unchanged(store,project_id,observation)
     if observation.get('kind')!=KIND:return False
     definition={'reference_job_id':observation.get('capture_job_id'),'reference_sha256':observation.get('analysis_sha256')}
     current=observe(store,project_id,definition,'reference')

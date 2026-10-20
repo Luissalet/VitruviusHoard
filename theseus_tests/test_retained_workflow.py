@@ -186,3 +186,44 @@ def test_project_read_cannot_pair_finished_jobs_with_precompletion_workflow(tmp_
             assert next(row for row in snapshot['jobs'] if row['id']==job['id'])['state']=='finished'
             assert snapshot['workflow']['claims'][0]['status']=='verified'
         finally:release.set();assert finished.wait(5)
+
+
+def test_retained_variant_links_remap_twice_without_changing_literal_names_or_results(workspace):
+    store,manager,flow,pid=workspace
+    mutant=capture(store,pid,{'candidate_job_id':'different'})
+    literal={'candidate_job_id':mutant['id'],'job_id':mutant['id']}
+    left=capture(store,pid,literal);right=capture(store,pid,literal,wire_id=21)
+    saved=store.save_scenario(pid,'Typed oracle binding',definition(left,right))
+    tested=wait(store,flow.selftest(pid,[variant(mutant['id'],[(saved,mutant)])]))
+    evidence=Evidence(flow);first=evidence.load(evidence.export(pid));second=evidence.load(evidence.export(first['project']['id']))
+    moved={key:second['id_map'][value] for key,value in first['id_map'].items()}
+    imported=store.job(moved[tested['id']]);variants=imported['result']['variants']
+    assert variants[0]['name']==mutant['id']
+    assert variants[0]['captures']==[{'scenario_id':moved[saved['id']],'candidate_job_id':moved[mutant['id']],
+        'candidate_sha256':mutant['result']['analysis_sha256']}]
+    source_observation=imported['result']['references'][moved[saved['id']]]
+    assert source_observation['capture_job_id']==moved[left['id']]
+    assert source_observation['sources'][0]['job_id']==moved[left['id']]
+    assert source_observation['sources'][0]['artifact_id']==moved[left['result']['artifact_id']]
+    assert imported['result']['cases'][0]['candidate']['capture_job_id']==moved[mutant['id']]
+    assert source_observation['responses'][0]['result']['result']['value']==literal
+    fresh=wait(store,flow.selftest(second['project']['id'],variants,[moved[saved['id']]]))
+    assert fresh['result']['sensitive'] and fresh['result']['detected']==[mutant['id']]
+
+
+@pytest.mark.parametrize('damage',['missing-candidate','wrong-hash','missing-scenario'])
+def test_import_validates_typed_oracle_candidate_links_before_writing(workspace,damage):
+    from theseus.workflow import fingerprint
+    store,manager,flow,pid=workspace
+    left=capture(store,pid,128);right=capture(store,pid,128);mutant=capture(store,pid,129)
+    saved=store.save_scenario(pid,'Selected capture',definition(left,right))
+    tested=wait(store,flow.selftest(pid,[variant('wrong',[(saved,mutant)])]))
+    evidence=Evidence(flow);bundle=evidence.export(pid)
+    result=next(row['result'] for row in bundle['payload']['jobs'] if row['id']==tested['id'])
+    binding=result['variants'][0]['captures'][0]
+    if damage=='missing-candidate':binding['candidate_job_id']='missing'
+    elif damage=='wrong-hash':binding['candidate_sha256']='0'*64
+    else:binding['scenario_id']='missing'
+    bundle['manifest']['sha256']=fingerprint(bundle['payload']);before={row['id'] for row in store.projects()}
+    with pytest.raises(ValueError,match='missing|SHA-256|frozen scenarios'):evidence.load(bundle)
+    assert {row['id'] for row in store.projects()}==before

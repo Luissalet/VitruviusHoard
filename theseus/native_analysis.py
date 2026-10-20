@@ -15,6 +15,7 @@ from .android import OPERATIONS as ANDROID_OPERATIONS, available as android_avai
 from .packets import OPERATIONS as PACKET_OPERATIONS, engine as packet_engine
 from .qlog import OPERATIONS as QLOG_OPERATIONS
 from .firmware import OPERATIONS as FIRMWARE_OPERATIONS, available as firmware_availability
+from .process_compare import QUERY as PROCESS_QUERY
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -87,6 +88,13 @@ OPERATIONS += [{"name": "javascript.reconcile_runtime", "title": "JavaScript · 
             "required": ["runtime_url", "source_path"], "properties": {
                 "runtime_url": {"type": "string"}, "source_path": {"type": "string"}}}}}}}]
 OPERATIONS += [
+    {"name":"process.compare","title":"Procesos · Comparar capturas guardadas","input":"pair","worker":"python",
+     "retained_only":True,"requires_operation":"process.capture",
+     "source_states":["finished","failed","cancelled","interrupted","imported"],
+     "description":"Compara dimensiones explícitas de dos capturas guardadas: bytes de salida, código final, terminal, archivos antes/después y obligaciones de orden parcial. Conserva las ausencias como desconocidas; no ejecuta los programas ni consulta sus rutas originales.",
+     "inputSchema":{**PAIR_PARAMETERS,"required":[*PAIR_PARAMETERS['required'],'query'],
+         "properties":{**PAIR_PARAMETERS['properties'],'query':PROCESS_QUERY}},
+     "example":{"query":{"dimensions":["stdout","stderr","exit","files"]}}},
     {**OPERATIONS[-1],"name":"browser.reconcile_sources","title":"Web · Comparar fuentes y scripts de página",
      "candidate_requires_operation":["browser.observe","browser.scenario","browser.coverage"],"candidate_states":["finished","failed","cancelled","interrupted"]},
     {"name":"browser.compare","title":"Web · Comparar capturas guardadas","input":"pair","worker":"python",

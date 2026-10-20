@@ -205,9 +205,10 @@ class Comparisons:
                         "differences": differences, "reference": reference, "candidate": candidate}
                 if retained_scenarios.selected(definition):
                     valid=retained_scenarios.valid_pair(reference,candidate)
-                    case.update(valid=valid,state='unknown' if not valid else 'different' if differences else 'same-recorded-responses',
+                    process=definition['kind']=='retained-process-scenarios'
+                    case.update(valid=valid,state='unknown' if not valid else 'different' if differences else 'same-selected-observations' if process else 'same-recorded-responses',
                         sources=reference['sources']+candidate['sources'],
-                        limitations=['Only retained responses to the selected literal requests are compared. No target was contacted; equality is not whole-application equivalence.'])
+                        limitations=['Only selected retained process dimensions are compared. No program or original path was read; equality is not whole-application equivalence.' if process else 'Only retained responses to the selected literal requests are compared. No target was contacted; equality is not whole-application equivalence.'])
                 result["cases"].append(case)
                 result.pop("partial_case", None)
                 result["passed" if case["passed"] else "failed"] += 1
