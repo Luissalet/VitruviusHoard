@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T11:20:33.305110Z",
+  "generatedAt": "2026-10-20T11:33:24.555738Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -323,11 +323,25 @@
         "focalAuthorReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-tests-r4.log",
         "focalAuthorResult": "27 native tests passed, including separate PDF page sizes and combined PNG height 1104px.",
         "historicalFullSuiteReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-suite-r1.log",
-        "historicalFullSuiteResult": "502 passed, 2 skipped before later validation/image changes; final complete suite pending at this documentation checkpoint.",
+        "historicalFullSuiteResult": "502 passed, 2 skipped before later validation/image changes; retained historical receipt, superseded for Python acceptance by editorial-suite-final.log on baa.",
         "detector": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-detector.json",
         "detectorResult": "One supplied run, ten advisories against root palette/type ramps: document-local colours, inherited type sizes and existing error fallback. Finish review required no root metadata fix.",
         "activation": "No installed-package activation established; task 934 installation coordination remains pending.",
-        "documenterActivity": "Read current source and supplied receipts; opened five supplied captures. No new context/detector, browser, server, model, GPU or functional run."
+        "documenterActivity": "Read current source and supplied receipts; opened five supplied captures. No new context/detector, browser, server, model, GPU or functional run.",
+        "finalFullSuiteReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-suite-final.log",
+        "finalFullSuiteResult": "Python source baa: 502 passed, 2 skipped in 158.71s. Subsequent atomic Remove image correction changes JavaScript only; Python source unchanged, no later Python rerun claimed.",
+        "independentFunctionalReview": "Reported 69 tests passed; found one P2 in Remove image: separate updates could overwrite the first value. Atomic fix applied; new submission/review CAS pending at this checkpoint.",
+        "removeImageFix": {
+          "source": "EditorialControls.jsx: one change clears asset_id and restores show_label together.",
+          "authorBuildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-build-r5.log",
+          "authorBuildResult": "Successful frontend build.",
+          "authorEdgeReceipts": [
+            "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-remove-r2.json",
+            "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editorial-remove-r2.log"
+          ],
+          "authorEdgeResult": "Removal, one-step undo, one-step redo, save without image reference; original embedded asset bytes exact; zero JavaScript errors.",
+          "visualScope": "No CSS/layout change; prior SHIP remains limited to mobile compaction, no new visual certification."
+        }
       },
       "notCanonized": [
         "Editorial document palette, template typography and geometry do not become shell tokens.",

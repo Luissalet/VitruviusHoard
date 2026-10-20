@@ -37,6 +37,6 @@ export function TextControls({ box, update, draft, change, chosen, lang, error }
     <label>{en?'Text colour':'Color del texto'}<input type="color" value={box.ink||'#1d2433'} onChange={e=>update('ink',e.target.value)}/></label>
     <label>{en?'Move to page':'Mover a página'}<select className="field" value={box.page_id} onChange={e=>update('page_id',e.target.value)}>{draft.view.pages.map(p=><option key={p.id} value={p.id}>{p.title||p.id}</option>)}</select></label>
     <label className="btn de-import">{en?'Import image':'Importar imagen'}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{image(e.target.files?.[0]);e.target.value='';}}/></label>
-    {box.asset_id&&<><label className="de-check"><input type="checkbox" checked={box.show_label!==false} onChange={e=>update('show_label',e.target.checked)}/>{en?'Show text over image':'Mostrar texto sobre imagen'}</label><button className="btn" onClick={()=>{update('asset_id','');update('show_label',true);}}>{en?'Remove image':'Quitar imagen'}</button></>}
+    {box.asset_id&&<><label className="de-check"><input type="checkbox" checked={box.show_label!==false} onChange={e=>update('show_label',e.target.checked)}/>{en?'Show text over image':'Mostrar texto sobre imagen'}</label><button className="btn" onClick={()=>change(next=>{next.view.nodes[chosen.id]={...next.view.nodes[chosen.id],asset_id:'',show_label:true};})}>{en?'Remove image':'Quitar imagen'}</button></>}
   </>;
 }
