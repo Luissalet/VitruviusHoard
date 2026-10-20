@@ -6,6 +6,7 @@ from pathlib import Path
 from .comparison import observation_differences, validate_scenario
 from .inspection import digest
 from .store import identifier, now
+from . import retained_scenarios
 
 
 def fingerprint(value):
@@ -119,10 +120,26 @@ class Workflow:
         variants = json.loads(json.dumps(variants))
         if len({row["name"] for row in variants}) != len(variants):
             raise ValueError("Perturbations need distinct names")
+        retained=all(retained_scenarios.selected(row['definition']) for row in scenarios)
+        if not retained and any(retained_scenarios.selected(row['definition']) for row in scenarios):
+            raise ValueError('Selftest selects either command scenarios or retained page scenarios')
         for variant in variants:
             if not variant["name"].strip():
                 raise ValueError("Name each deliberate defect")
-            validate_scenario({**scenarios[0]["definition"], "candidate": variant["candidate"]})
+            if retained:
+                if set(variant)!={'name','captures'}:
+                    raise ValueError('A retained perturbation selects captures, not commands')
+                captures=variant.get('captures',[])
+                if not isinstance(captures,list) or len(captures)!=len(scenarios) or {row['scenario_id'] for row in captures}!={row['id'] for row in scenarios}:
+                    raise ValueError('A retained perturbation needs exactly one capture for each selected scenario')
+                for scenario in scenarios:
+                    capture=next(row for row in captures if row['scenario_id']==scenario['id'])
+                    definition={**scenario['definition'],**{key:capture[key] for key in ('candidate_job_id','candidate_sha256')}}
+                    retained_scenarios.validate_bindings(self.store,project_id,definition)
+            else:
+                if 'candidate' not in variant:
+                    raise ValueError('A command perturbation needs a candidate command')
+                validate_scenario({**scenarios[0]["definition"], "candidate": variant["candidate"]})
         snapshot = [{key: row[key] for key in ("id", "name", "definition")} for row in scenarios]
         result = {"kind": "oracle_selftest", "scenarios": snapshot, "variants": variants,
                   "definition_sha256": fingerprint(snapshot), "cases": [], "detected": [], "survived": [], "invalid": []}
@@ -137,25 +154,38 @@ class Workflow:
             references = result["references"] = {}
             for scenario in result["scenarios"]:
                 definition = scenario["definition"]
-                reference = self.manager._execute(job_id, definition["reference"], definition)
+                reference = self.manager.observe(project_id,job_id,definition,'reference')
                 references[scenario["id"]] = reference
                 self.store.save_job(project_id, job_id, "running", result)
-                if observation_differences(reference, reference, definition) or (
-                        reference["exit_code"] != definition.get("expected_exit_code", 0)):
+                if not retained_scenarios.selected(definition) and (observation_differences(reference, reference, definition) or (
+                        reference["exit_code"] != definition.get("expected_exit_code", 0))):
                     raise ValueError("Reference fails its expectation or produces invalid/timed-out output")
             result["references"] = references
             for variant in result["variants"]:
                 detected, invalid = False, False
                 for scenario in result["scenarios"]:
                     definition = scenario["definition"]
-                    candidate = self.manager._execute(job_id, variant["candidate"], definition)
+                    retained=retained_scenarios.selected(definition)
+                    if retained:
+                        capture=next(row for row in variant['captures'] if row['scenario_id']==scenario['id'])
+                        definition={**definition,**{key:capture[key] for key in ('candidate_job_id','candidate_sha256')}}
+                        candidate=self.manager.observe(project_id,job_id,definition,'candidate')
+                    else:
+                        candidate = self.manager._execute(job_id, variant["candidate"], definition)
                     reference = references[scenario["id"]]
                     differences = observation_differences(reference, candidate, definition)
                     # A timeout cannot certify sensitivity to the intended defect.
-                    invalid |= candidate["timed_out"] or candidate["exit_code"] != variant.get("expected_exit_code", reference["exit_code"])
-                    detected |= bool(differences) and not candidate["timed_out"]
+                    if retained:
+                        valid=retained_scenarios.valid_pair(reference,candidate)
+                        invalid |= not valid
+                        detected |= valid and bool(differences)
+                    else:
+                        invalid |= candidate["timed_out"] or candidate["exit_code"] != variant.get("expected_exit_code", reference["exit_code"])
+                        detected |= bool(differences) and not candidate["timed_out"]
                     result["cases"].append({"variant": variant["name"], "scenario_id": scenario["id"],
                         "differences": differences, "reference": reference, "candidate": candidate})
+                    if retained:
+                        result['cases'][-1].update(valid=valid,sources=reference['sources']+candidate['sources'])
                     self.store.save_job(project_id, job_id, "running", result)
                 result["invalid" if invalid else "detected" if detected else "survived"].append(variant["name"])
             with self.manager.lock:
@@ -179,6 +209,8 @@ class Workflow:
         jobs = self.store.items("jobs", project_id)
         file_hashes = {}
         def unchanged(observation):
+            if observation.get('kind')==retained_scenarios.KIND:
+                return retained_scenarios.unchanged(self.store,project_id,observation)
             for path, recorded in observation.get("file_sha256", {}).items():
                 if path not in file_hashes:
                     try:
@@ -199,6 +231,9 @@ class Workflow:
             left, right = dict(row["definition"]), dict(scenarios[scenario_id]["definition"])
             if reference_only:
                 left.pop("candidate", None); right.pop("candidate", None)
+                if retained_scenarios.selected(left):
+                    for field in ('candidate_job_id','candidate_sha256'):
+                        left.pop(field,None);right.pop(field,None)
             if left != right:
                 return False
             if reference_only:
@@ -214,7 +249,7 @@ class Workflow:
                 observed = next((job for job in reversed(jobs) if job["state"] == "finished" and
                     job["result"].get("kind") != "oracle_selftest" and matching(job, key)), None)
                 case = next((row for row in observed["result"].get("cases", []) if row["scenario_id"] == key), None) if observed else None
-                if case is None:
+                if case is None or case.get('valid') is False:
                     missing.append(key)
                 elif not case["passed"]:
                     failures.append(key)
@@ -223,6 +258,11 @@ class Workflow:
                 oracle = next((job for job in reversed(jobs) if job["state"] == "finished" and
                     job["result"].get("kind") == "oracle_selftest" and matching(job, key, True)), None)
                 checked = bool(oracle and oracle["result"].get("sensitive"))
+                if checked and retained_scenarios.selected(scenarios[key]['definition']):
+                    # Keep the latest reference-matching selftest authoritative;
+                    # a changed mutant must not fall back to an older PASS.
+                    cases=[row for row in oracle['result']['cases'] if row['scenario_id']==key]
+                    checked=bool(cases) and all(row.get('valid') and unchanged(row['candidate']) for row in cases)
                 if not checked:
                     unchecked.append(key)
             parents = [evaluate(next(row for row in claims if row["id"] == key)) for key in claim["depends_on"]]

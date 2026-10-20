@@ -166,6 +166,9 @@ class Store:
         from .comparison import validate_scenario
         self.project(project_id)
         validate_scenario(definition)
+        from . import retained_scenarios
+        if retained_scenarios.selected(definition):
+            retained_scenarios.validate_bindings(self,project_id,definition)
         key = scenario_id or identifier()
         with self.db() as db:
             previous = db.execute("SELECT project_id FROM scenarios WHERE id=?", (key,)).fetchone()
