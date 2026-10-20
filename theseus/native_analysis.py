@@ -95,6 +95,23 @@ OPERATIONS += [
      "description":"Compara observaciones de scripts/red, árbol DOM sin IDs locales y hashes PNG guardados. Conserva ausencias como desconocidas; igualdad de observaciones no demuestra equivalencia."},
 ]
 OPERATIONS += [
+    {"name": "browser.export_scripts", "title": "Web · Exportar fuentes guardadas", "input": "analysis", "worker": "python",
+     "requires_operation": ["browser.observe", "browser.scenario", "browser.coverage"],
+     "source_states": ["finished", "failed", "cancelled", "interrupted", "imported"],
+     "description": "Exporta scripts y respuestas ya guardados, con manifiesto, bytes y hashes. Conserva duplicados, exclusiones y ausencias; no conecta con el navegador ni descarga fuentes.",
+     "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id"], "properties": {"source_job_id": {"type": "string"}}}},
+    *[{"name": name, "title": title, "input": "analysis", "requires_operation": "browser.export_scripts",
+       "source_states": ["finished", "imported"], "description": description, "example": {"query": example},
+       "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id", "query"],
+           "properties": {"source_job_id": {"type": "string"}, "query": {"type": "object"}}}}
+      for name, title, description, example in [
+          ("javascript.trace_source", "Web · Trazar posición original", "Consulta un script y mapa exportados por sus IDs, línea generada desde 1 y columna UTF-16 desde 0. Conserva todas las correspondencias de la posición y los límites sin mapa; no ejecuta ni descarga código.",
+           {"script_id": "script-000000", "map_id": "response-000000", "line": 1, "column": 0}),
+          ("javascript.trace_imports", "Web · Trazar imports guardados", "Lee imports y reexports literales de un script exportado con su URL y un import_map opcional. Conserva versiones, duplicados y resoluciones desconocidas; no ejecuta módulos.",
+           {"script_id": "script-000000"}),
+      ]],
+]
+OPERATIONS += [
     {"name": "artifact.compare", "title": "Artefactos · Comparar inventarios guardados", "input": "pair",
      "requires_operation": "artifact.inventory", "inputSchema": PAIR_PARAMETERS,
      "description": "Compara contenido, metadatos y relaciones por ocurrencia lógica de dos inventarios guardados. Conserva duplicados ambiguos y cobertura desconocida; no lee los originales ni demuestra equivalencia de comportamiento."},
@@ -268,6 +285,8 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
     if candidate:
         request.update(candidate_path=str(analysis_file(manager.store, candidate["id"])),
                        expected_candidate_sha256=candidate["result"]["analysis_sha256"])
+    if operation == "browser.export_scripts":
+        request["parameters"]["output_directory"] = str(folder / "extracted")
     if operation == "managed.verify_native":
         request["parameters"].pop("native_job_ids")
         request["native_inputs"] = native_inputs
@@ -350,7 +369,7 @@ def retain(store, project_id, job_id, artifact, folder, output, result):
     result["source_unavailable"] = not available
     result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
     result["sections"] = store.index_analysis(job_id, document["result"])
-    if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract"}:
+    if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract", "browser.export_scripts"}:
         result["derived_artifacts"] = []
         derived_by_path = {}
         for row in document["result"]["artifacts"]:
