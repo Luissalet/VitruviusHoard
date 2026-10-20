@@ -17,6 +17,7 @@ from .qlog import OPERATIONS as QLOG_OPERATIONS
 from .firmware import OPERATIONS as FIRMWARE_OPERATIONS, available as firmware_availability
 from .process_compare import QUERY as PROCESS_QUERY
 from .retained_evidence import OPERATIONS as EVIDENCE_OPERATIONS
+from .elf_layout import OPERATIONS as ELF_OPERATIONS
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -164,6 +165,7 @@ OPERATIONS += [{"name": name, "title": title, "description": description,
 
 
 OPERATIONS += STRUCTURED_OPERATIONS
+OPERATIONS += ELF_OPERATIONS
 OPERATIONS += EVIDENCE_OPERATIONS
 OPERATIONS += RECORDING_OPERATIONS
 OPERATIONS += SIGNAL_OPERATIONS
