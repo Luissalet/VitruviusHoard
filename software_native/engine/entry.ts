@@ -15,6 +15,7 @@ import {analyzePortfolio} from './portfolio.js';
 import {recoverSources} from './recovery.js';
 import {sourceGraph,managedReconstruction} from './retained.js';
 import {managedNativeVerification} from './managed-native.js';
+import {traceWebSources} from './web-sources.js';
 
 const portfolioOperations=['artifact.inventory','artifact.extract','managed.graph','apple.application',
   'android.application','harmony.application','apple.interface_builder','apple.assets','apple.dylibs'] as const;
@@ -23,7 +24,7 @@ const requestSchema = z.object({
   operation:z.enum(['managed.artifact','managed.members','managed.native_boundaries','go.build','rust.dependencies',
     'electron.fuses','apple.macho','apple.dispatch','apple.keyed_archive','apple.nib','pe.resources','wasm.artifact','evm.interface','flutter.elf','javascript.application','javascript.query','javascript.feature',
     'artifact.compare','managed.compare','javascript.compare_versions','javascript.compare_exports','javascript.recover','source.graph',
-    'javascript.compare_source','managed.reconstruction','managed.verify_native','wasm.compare_interfaces',...portfolioOperations]),
+    'javascript.compare_source','managed.reconstruction','managed.verify_native','wasm.compare_interfaces','javascript.trace_source','javascript.trace_imports',...portfolioOperations]),
   path:z.string().min(1),
   parameters:z.object({type_names:z.array(z.string()).optional(), method_offset:z.number().int().min(0).optional(),
     method_limit:z.number().int().min(0).optional(), user_strings:z.boolean().optional(),
@@ -50,6 +51,8 @@ async function main() {
   let result:unknown;
   if (request.candidate_path && request.expected_candidate_sha256) {
     result=await compareRetained(request.operation,bytes,request.candidate_path,request.expected_candidate_sha256,parameters.query);
+  } else if(request.operation==='javascript.trace_source'||request.operation==='javascript.trace_imports') {
+    result=traceWebSources(request.operation,bytes,parameters.query);
   } else if(request.operation==='source.graph') {
     result=await sourceGraph(path,bytes);
   } else if(request.operation==='managed.reconstruction') {
