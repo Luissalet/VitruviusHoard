@@ -5,6 +5,11 @@ export const editorialNames = {
   en: { editorialComparison: 'Infographic · comparison', editorialTimeline: 'Infographic · timeline', editorialProcess: 'Infographic · process', editorialRelations: 'Infographic · relationships' },
 };
 
+export function selectedPage(content, id) {
+  const pages = content?.view?.kind === 'infographic' ? content.view.pages : [];
+  return pages?.find(page => page.id === id) || [...(pages || [])].sort((a,b) => (a.order||0)-(b.order||0))[0] || null;
+}
+
 export function editorialTemplate(kind) {
   const title = editorialNames.es[kind];
   const diagram = { type: 'flowchart', title, nodes: [], edges: [], groups: [] };

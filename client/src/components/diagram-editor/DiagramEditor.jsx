@@ -3,7 +3,7 @@ import { api } from "../../api.js";
 import { useApp } from "../../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../../copilot-hooks.js";
 import { clone, connector, equal, geometry, mergeDraft, templates, uid } from "./model.js";
-import { editorialNames, editorialTemplate } from './editorial.js';
+import { editorialNames, editorialTemplate, selectedPage } from './editorial.js';
 import { PageControls, TextControls } from './EditorialControls.jsx';
 import "./diagram-editor.css";
 
@@ -37,7 +37,7 @@ export default function DiagramEditor() {
   useEffect(() => { reloadList(); }, [reloadList]);
   useEffect(() => { if (row?.id && draft) sessionStorage.setItem(`diagram-draft:${row.id}`, JSON.stringify({ revision: row.revision, content: draft })); }, [draft, row]);
   useCopilotObjects(row ? [{ kind: "diagram-document", id: row.id }] : []);
-  useCopilotForm("diagram-document-draft", { objectId: row?.id, initial: { content: row?.content, revision: row?.revision, selected_nodes: [], selected_edge: null }, current: { content: draft, revision: row?.revision, selected_nodes: selection, selected_edge: edgeId, selected_page: draft?.view.pages?.find(p=>p.id===pageId)?.id || draft?.view.pages?.[0]?.id || null } });
+  useCopilotForm("diagram-document-draft", { objectId: row?.id, initial: { content: row?.content, revision: row?.revision, selected_nodes: [], selected_edge: null }, current: { content: draft, revision: row?.revision, selected_nodes: selection, selected_edge: edgeId, selected_page: selectedPage(draft, pageId)?.id || null } });
   const refresh = useCallback(async () => {
     reloadList();
     const old = rowRef.current;
@@ -106,7 +106,7 @@ export default function DiagramEditor() {
   };
   const scene = row?.rendering?.scene, boxes = draft ? geometry(draft, scene) : {};
   const editorial = draft?.view.kind === 'infographic';
-  const page = editorial ? draft.view.pages.find(p => p.id === pageId) || [...draft.view.pages].sort((a,b) => (a.order||0)-(b.order||0))[0] : null;
+  const page = selectedPage(draft, pageId);
   const visibleNodes = (draft?.diagram.nodes || []).filter(n => !page || boxes[n.id].page_id === page.id);
   const visibleIds = new Set(visibleNodes.map(n => n.id));
   const visibleEdges = (draft?.diagram.edges || []).filter(e => visibleIds.has(e.from) && visibleIds.has(e.to));
@@ -160,7 +160,7 @@ export default function DiagramEditor() {
     const viewer = kind === "viewer" ? window.open("about:blank", "_blank") : null;
     const saved = await save();
     if (!saved) { viewer?.close(); return; }
-    const url = kind === "viewer" ? api.diagramDocumentViewer(saved.id, saved.revision) : kind === "source" ? api.diagramDocumentSource(saved.id, saved.revision) : api.diagramDocumentExport(saved.id, kind, saved.revision, mode, kind === "vfigure" && editorial ? pageId || saved.content.view.pages[0].id : '');
+    const url = kind === "viewer" ? api.diagramDocumentViewer(saved.id, saved.revision) : kind === "source" ? api.diagramDocumentSource(saved.id, saved.revision) : api.diagramDocumentExport(saved.id, kind, saved.revision, mode, kind === "vfigure" ? selectedPage(saved.content, page?.id)?.id || '' : '');
     if (viewer) viewer.location.href = url;
     else { const link = document.createElement("a"); link.href = url; link.download = ""; document.body.append(link); link.click(); link.remove(); }
   };
@@ -189,7 +189,7 @@ export default function DiagramEditor() {
           <div className="de-selection-actions"><button className="btn" disabled={!selection.length} onClick={duplicate}>{l.duplicate}</button><button className="btn" disabled={selection.length < 2} onClick={() => align("x")}>{l.left}</button><button className="btn" disabled={selection.length < 2} onClick={() => align("y")}>{l.top}</button><button className="btn" disabled={selection.length < 2} onClick={group}>{l.group}</button><button className="btn" disabled={!selection.length} onClick={() => change(next => { for (const n of next.diagram.nodes) if (selection.includes(n.id)) n.group = ""; })}>{l.ungroup}</button><button className="btn" disabled={!selection.length && !edgeId} onClick={remove}>{l.remove}</button></div></aside>}
       </div>
       {editorial && !dirty && row.rendering.gates.some(g=>!g.ok) && <p role="status" className="help">{lang==="en"?"Some blocks exceed page or text bounds. Resize or move them before publishing.":"Hay bloques fuera de página o con texto que no cabe. Amplíalos o muévelos antes de publicar."}</p>}
-      <div className="de-actions de-exports"><span>{dirty ? (lang === "en" ? "Save and export" : "Guardar y exportar") : l.export}:</span><a className="btn" href={api.diagramDocumentExport(row.id, "vfigure", row.revision, mode, editorial ? pageId || draft.view.pages[0].id : "")} onClick={e => output(e, "vfigure")} download>{lang === "en" ? "Figure with source" : "Figura con fuente"}</a>{["svg", "png", "pdf", "drawio", "mmd", "html"].map(format => <a key={format} className="btn" href={api.diagramDocumentExport(row.id, format, row.revision, mode)} onClick={e => output(e, format)} download>{format.toUpperCase()}</a>)}<a className="btn" href={api.diagramDocumentSource(row.id, row.revision)} onClick={e => output(e, "source")} download>{l.source}</a><a className="btn" href={api.diagramDocumentViewer(row.id, row.revision)} onClick={e => output(e, "viewer")} target="_blank" rel="noreferrer">{l.reader}</a><button className="btn" onClick={async () => { try { setHistory((await api.diagramDocumentHistory(row.id)).revisions); } catch (e) { setError(e.message); } }}>{l.history}</button></div>
+      <div className="de-actions de-exports"><span>{dirty ? (lang === "en" ? "Save and export" : "Guardar y exportar") : l.export}:</span><a className="btn" href={api.diagramDocumentExport(row.id, "vfigure", row.revision, mode, page?.id || "")} onClick={e => output(e, "vfigure")} download>{lang === "en" ? "Figure with source" : "Figura con fuente"}</a>{["svg", "png", "pdf", "drawio", "mmd", "html"].map(format => <a key={format} className="btn" href={api.diagramDocumentExport(row.id, format, row.revision, mode)} onClick={e => output(e, format)} download>{format.toUpperCase()}</a>)}<a className="btn" href={api.diagramDocumentSource(row.id, row.revision)} onClick={e => output(e, "source")} download>{l.source}</a><a className="btn" href={api.diagramDocumentViewer(row.id, row.revision)} onClick={e => output(e, "viewer")} target="_blank" rel="noreferrer">{l.reader}</a><button className="btn" onClick={async () => { try { setHistory((await api.diagramDocumentHistory(row.id)).revisions); } catch (e) { setError(e.message); } }}>{l.history}</button></div>
       {history.length > 0 && <div className="de-history">{history.map(item => <div key={item.revision}><span>{l.revision} {item.revision} · {item.reason}</span><button className="btn" onClick={async () => { try { setComparison(await api.diagramDocumentCompare(row.id, item.revision)); } catch (e) { setError(e.message); } }}>{l.compare}</button></div>)}</div>}
       {comparison && <div className="de-comparison" role="status"><strong>{l.result}: {comparison.before_revision} → {comparison.after_revision}</strong>{Object.entries(comparison.changes).map(([kind, changes]) => <p key={kind}>{kind}: +{changes.added.length} / −{changes.removed.length} / {changes.changed.length} · {[...changes.added, ...changes.removed, ...changes.changed.map(v => v.id)].join(", ")}</p>)}</div>}
     </>}
