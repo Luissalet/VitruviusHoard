@@ -44,6 +44,11 @@ def merge(base, proposed, current, path=""):
         return _copy(current)
     if current == base:
         return _copy(proposed)
+    # Geometry overrides have no identity of their own: their first fields can
+    # be authored independently. Semantic objects still conflict on creation.
+    if (base is _MISSING and re.fullmatch(r"/view/(nodes|edges)/[^/]+", path)
+            and isinstance(proposed, dict) and isinstance(current, dict)):
+        base = {}
     if all(isinstance(v, dict) for v in (base, proposed, current)):
         result = {}
         for key in dict.fromkeys([*current, *proposed, *base]):

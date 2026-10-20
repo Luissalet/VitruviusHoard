@@ -179,6 +179,24 @@ def test_invalid_edit_rolls_back_before_publishing_revision(tmp_path):
     assert store.get(first["id"])["revision"] == 1
 
 
+def test_initial_geometry_overrides_merge_by_field_but_keep_conflicts(tmp_path):
+    store = DocumentStore(tmp_path)
+    source = sample()
+    source["view"] = {"nodes": {}, "edges": {}}
+    first = store.save(source)
+    wide, moved = deepcopy(first["content"]), deepcopy(first["content"])
+    wide["view"]["nodes"]["start"] = {"width": 240}
+    moved["view"]["nodes"]["start"] = {"x": 300}
+    store.save(wide, did=first["id"], base_revision=1)
+    merged = store.save(moved, did=first["id"], base_revision=1)
+    assert merged["content"]["view"]["nodes"]["start"] == {"width": 240, "x": 300}
+    conflicting = deepcopy(first["content"])
+    conflicting["view"]["nodes"]["start"] = {"width": 400}
+    with pytest.raises(AppError, match="changed"):
+        store.save(conflicting, did=first["id"], base_revision=1)
+    assert store.get(first["id"])["revision"] == 3
+
+
 def test_surgical_native_edit_deletes_only_incident_connectors(tmp_path):
     svc = SimpleNamespace(config=SimpleNamespace(data_dir=tmp_path))
     row = save(svc, DocumentSave(content=sample()))

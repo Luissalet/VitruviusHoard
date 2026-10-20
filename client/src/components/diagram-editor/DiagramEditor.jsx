@@ -43,6 +43,11 @@ export default function DiagramEditor() {
       const fresh = await api.diagramDocument(old.id);
       if (rowRef.current?.id !== old.id) return;
       const merged = mergeDraft(old.content, draftRef.current, fresh.content);
+      // Rebase every local snapshot before adopting a new remote revision.
+      // Undo and redo must preserve fields the person never edited.
+      const rebasedUndo = localUndo.current.map(snapshot => mergeDraft(old.content, snapshot, fresh.content));
+      const rebasedRedo = localRedo.current.map(snapshot => mergeDraft(old.content, snapshot, fresh.content));
+      localUndo.current = rebasedUndo; localRedo.current = rebasedRedo;
       setRow(fresh); setDraft(merged);
     } catch (e) { setError(e.message); }
   }, [reloadList]);
@@ -52,11 +57,18 @@ export default function DiagramEditor() {
     if (!id) return;
     try {
       const next = await api.diagramDocument(id), retained = JSON.parse(sessionStorage.getItem(`diagram-draft:${id}`) || "null");
-      adopt(next);
       if (retained && retained.revision <= next.revision) {
         const base = retained.revision === next.revision ? next : await api.diagramDocument(id, retained.revision);
-        setDraft(mergeDraft(base.content, retained.content, next.content));
-      }
+        let merged;
+        try { merged = mergeDraft(base.content, retained.content, next.content); }
+        catch (e) {
+          // Keep both the local source and the revision it was based on. Saving
+          // remains conflict-aware and session storage stays recoverable.
+          adopt(base); setDraft(clone(retained.content)); setError(e.message); return;
+        }
+        adopt(next); setDraft(merged);
+      } else if (retained) { throw new Error("El borrador pertenece a una revisión posterior; se ha conservado en esta sesión."); }
+      else adopt(next);
     } catch (e) { setError(e.message); }
   };
   useEffect(() => {
