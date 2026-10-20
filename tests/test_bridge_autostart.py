@@ -1,49 +1,58 @@
-"""The MCP bridge (the shared `hoard_link.bridge.CatalogBridge`) starts the app when nothing answers, so a workspace that
-starts first still gets the tools."""
+"""The incorporated MCP owner is cold and ignores retired autostart flags."""
 import importlib.util
-import sys
+import json
 from pathlib import Path
+
+import httpx
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def load(monkeypatch, autostart: str):
+def load(monkeypatch, tmp_path):
     monkeypatch.setenv("VITRUVIUS_URL", "http://127.0.0.1:1")
-    monkeypatch.setenv("VITRUVIUS_BRIDGE_AUTOSTART", autostart)
+    monkeypatch.setenv("VITRUVIUS_BRIDGE_AUTOSTART", "1")
     spec = importlib.util.spec_from_file_location("vitruvius_bridge_under_test", ROOT / "mcp_server.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.build()
+    token = tmp_path / "mcp-token"
+    token.write_text("synthetic-token", encoding="utf8")
+    monkeypatch.setattr(module, "token_path", lambda: token)
+    return module
 
 
-def test_nothing_answers_and_autostart_is_off(monkeypatch):
-    bridge = load(monkeypatch, "0")
-    assert bridge.healthy() is False
-    assert bridge.start_app(wait_s=1) is False
+@pytest.mark.asyncio
+async def test_discovery_never_calls_http_even_with_retired_autostart_enabled(monkeypatch, tmp_path):
+    owner = load(monkeypatch, tmp_path)
+    def unexpected(*args, **kwargs):
+        pytest.fail("Discovery attempted HTTP")
+    monkeypatch.setattr(owner, "HTTP_CLIENT", unexpected)
+    tools = await owner.tools()
+    assert len(tools) == 118
+    assert {"diagram_document_save", "software_modules"} <= {tool.name for tool in tools}
 
 
-def test_the_bridge_is_configured_for_this_app(monkeypatch):
-    bridge = load(monkeypatch, "1")
-    assert (bridge.service, bridge.package, bridge.default_port) == ("vitruvius-hoard", "vitruvius_hoard", 5191)
-    assert bridge.base_url == "http://127.0.0.1:1" and bridge.prefix == "VITRUVIUS"
+@pytest.mark.asyncio
+async def test_explicit_call_uses_the_configured_owner_and_native_envelope(monkeypatch, tmp_path):
+    owner = load(monkeypatch, tmp_path)
+    def respond(request):
+        assert str(request.url) == "http://127.0.0.1:1/api/agent/call"
+        assert request.headers["Authorization"] == "Bearer synthetic-token"
+        assert json.loads(request.content) == {"name": "software_modules", "arguments": {}}
+        return httpx.Response(200, json={"modules": [{"id": "design", "enabled": False}]})
+    monkeypatch.setattr(owner, "HTTP_CLIENT", lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(respond), **kwargs))
+    result = await owner.call("software_modules", {})
+    assert json.loads(result[0].text)["modules"][0]["enabled"] is False
 
 
-def test_nothing_answers_so_the_bridge_starts_the_app(monkeypatch, tmp_path):
-    from vitruvius_hoard.hoard_link import bridge as lib
-
-    bridge = load(monkeypatch, "1")
-    monkeypatch.setenv("VITRUVIUS_DATA_DIR", str(tmp_path))
-    started = []
-
-    answers = iter([False, False, True])
-    monkeypatch.setattr(lib, "_healthy", lambda port, service, host="127.0.0.1": next(answers, True))
-    # The bridge starts the app as an orphan (so it outlives the MCP host): record the spawn instead of making one.
-    monkeypatch.setattr(lib.launch, "spawn_orphan", lambda argv, cwd, env, log_path: started.append((argv, env)) or 4242)
-    monkeypatch.setattr(lib.launch, "process_created", lambda pid: 1.0)
-    monkeypatch.setattr(lib.launch, "process_alive", lambda pid, created: True)
-    lib._children.clear()
-    assert bridge.start_app(wait_s=5) is True
-    argv, env = started[0]
-    assert argv == [sys.executable, "-m", "vitruvius_hoard"]
-    assert env["VITRUVIUS_PORT"] == "1" and env["PORT_STRICT"] == "1" and env["HOARD_NO_BROWSER"] == "1"
-    assert (tmp_path / "logs").is_dir()
+@pytest.mark.asyncio
+async def test_unavailable_owner_reports_failure_without_launching_an_app(monkeypatch, tmp_path):
+    owner = load(monkeypatch, tmp_path)
+    from vitruvius_hoard.hoard_link import launch
+    monkeypatch.setattr(launch, "spawn_orphan", lambda *args, **kwargs: pytest.fail("MCP attempted autostart"))
+    def unavailable(request):
+        raise httpx.ConnectError("Synthetic owner unavailable", request=request)
+    monkeypatch.setattr(owner, "HTTP_CLIENT", lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(unavailable), **kwargs))
+    result = await owner.call("software_modules", {})
+    assert result.isError
+    assert json.loads(result.content[0].text)["code"] == "vitruvius_unavailable"

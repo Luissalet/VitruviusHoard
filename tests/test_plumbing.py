@@ -6,6 +6,9 @@ import subprocess
 import sys
 import threading
 import time
+import json
+from urllib.request import Request, urlopen
+from urllib.error import URLError
 from pathlib import Path
 
 import httpx
@@ -63,24 +66,31 @@ def test_a_second_start_reports_the_running_app_and_leaves_the_token_alone(tmp_p
     from vitruvius_hoard.hoard_link.net import free_port
 
     port = free_port()
-    env = {**os.environ, "VITRUVIUS_DATA_DIR": str(tmp_path / "data"), "VITRUVIUS_PORT": str(port), "VITRUVIUS_AUTOSTART": "0",
-           "VITRUVIUS_EMBED": "none", "PYTHONUNBUFFERED": "1"}
+    env = {**os.environ, "VITRUVIUS_PROFILE_DIR": str(tmp_path / "data"), "VITRUVIUS_TOKEN_FILE": str(tmp_path / "data" / "mcp-token"),
+           "VITRUVIUS_PORT": str(port), "VITRUVIUS_AUTOSTART": "0", "HOARD_EVENTS": "0", "HOARD_COPILOT": "0",
+           "VITRUVIUS_EMBED": "none", "PYTHONUNBUFFERED": "1", "HOARD_NO_BROWSER": "1"}
     first = subprocess.Popen([sys.executable, "-m", "vitruvius_hoard"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         deadline = time.time() + 60
         while time.time() < deadline:
             try:
-                if httpx.get(f"http://127.0.0.1:{port}/api/health", timeout=1).status_code == 200:
-                    break
-            except httpx.HTTPError:
+                # Only this native process test uses its own loopback port;
+                # the synthetic HTTPX transport guard remains in force.
+                with urlopen(f"http://127.0.0.1:{port}/api/health", timeout=1) as reply:
+                    if reply.status == 200:
+                        break
+            except (URLError, TimeoutError):
                 time.sleep(0.2)
         token_file = tmp_path / "data" / "mcp-token"
         before = token_file.read_text()
         second = subprocess.run([sys.executable, "-m", "vitruvius_hoard"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
         assert second.returncode == 0 and "already running" in second.stdout
         assert token_file.read_text() == before
-        auth = {"Authorization": f"Bearer {before.strip()}"}
-        assert httpx.post(f"http://127.0.0.1:{port}/api/agent/call", json={"name": "sources_list"}, headers=auth).status_code == 200
+        request = Request(f"http://127.0.0.1:{port}/api/agent/call", data=json.dumps({"name": "software_modules", "arguments": {}}).encode(),
+                          headers={"Authorization": f"Bearer {before.strip()}", "Content-Type": "application/json"})
+        with urlopen(request, timeout=10) as reply:
+            assert reply.status == 200
+            assert all(not module["enabled"] for module in json.load(reply)["modules"])
     finally:
         first.terminate()
         try:
