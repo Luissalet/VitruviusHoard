@@ -37,6 +37,21 @@ def test_owned_checker_measures_working_and_broken_controls(tmp_path):
     assert bad["works"] is False and bad["failed"] >= 1 and bad["failing"], bad
 
 
+def test_state_measurements_do_not_count_as_a_functional_page_change(tmp_path):
+    html = '<!doctype html><html lang="en"><head><title>Static</title></head><body><h1>Static page</h1><button id="dead">Inert</button></body></html>'
+    criteria = [
+        {"id": "inert-baseline", "what": "Inert baseline", "acts": [{"click": "#dead"}], "expect": {}},
+        {"id": "inert-mobile", "what": "Inert mobile", "acts": [{"click": "#dead"}], "expect": {}, "environment": {"viewport": {"width": 390, "height": 844}}},
+        {"id": "unchanged-baseline", "what": "Unchanged baseline", "acts": [], "expect": {"unchanged": True}},
+        {"id": "unchanged-desktop", "what": "Unchanged desktop", "acts": [], "expect": {"unchanged": True}, "environment": {"viewport": {"width": 1440, "height": 1000}}},
+    ]
+    result = assay.run(tmp_path / "static", html=html, criteria=criteria)
+    assert "error" not in result, result
+    outcomes = {row["what"]: row["outcome"] for row in result["cases_sample"]}
+    assert outcomes["Inert baseline"] == outcomes["Inert mobile"] == "failed", result
+    assert outcomes["Unchanged baseline"] == outcomes["Unchanged desktop"] == "passed", result
+
+
 def test_explicit_browser_states_measure_focus_hover_mobile_and_motion(tmp_path):
     html = '''<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Estados</title>
 <style>body{margin:0}#nav .help{display:none}#nav:hover .help{display:block}
