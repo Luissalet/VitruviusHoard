@@ -311,5 +311,18 @@ an independent IPC result log. Tests retain exact main/preload/renderer sources,
 explicit results and an original error, then close the application and compare
 saved sources and transfer evidence without the original files. These explicit
 observations are not general IPC causality or whole-process equivalence. The
-retained-page-scenario obligation oracle remains separate pending development;
+retained-page-scenario obligation oracle is implemented separately in993, below.
 Theseus is incomplete and in progress inside Vitruvius's Inspection module.
+
+Reconstruction obligations can now use two hash-bound retained browser.scenario
+captures, with complete literally aligned requests and exact selected responses.
+The same workflow verifies builder handoffs and measures sensitivity against
+explicitly mapped mutant captures without connecting or replaying. Invalid or
+unaligned observations remain unknown; finite matching observations are not
+whole-program equivalence. Evidence transfer remaps only typed links, retains
+literal payloads and requires new verification/self-test after import. Original
+constant/branch/boundary defects, a weak survivor and broken/unaligned captures
+were exercised after originals closed through native MCP and desktop UI. The
+area passes40 tests; the complete suite passes269 with2 emulator opt-ins skipped.
+See docs/RETAINED-SCENARIO-ORACLE.md and tasks/submission993.md. Whole-runtime and
+package observation coverage beyond these selected page responses remains open.
