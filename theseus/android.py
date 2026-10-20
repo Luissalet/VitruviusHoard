@@ -62,7 +62,7 @@ def inspect_android(source, operation, parameters, output, source_sha256):
     tools = engines()
     folder = output.parent
     snapshot = folder / ('android-input'+source.suffix)
-    bridge = Path(__file__).resolve().parent.parent / 'engine/bridge/android/TheseusAndroidBridge.java'
+    bridge = Path(__file__).resolve().parent.parent / 'software_native/engine/bridge/android/TheseusAndroidBridge.java'
     identity = {'java': {'path': tools['java'], 'sha256': sha(tools['java']),
         'version': observed([tools['java'], '-version'])}}
     try:
