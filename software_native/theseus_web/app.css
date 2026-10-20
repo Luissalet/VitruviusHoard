@@ -488,6 +488,11 @@ summary {
 .reading {
   max-width: 900px;
 }
+#client-inspection-report th:first-child,
+#client-inspection-report td:first-child {
+  min-width: 7rem;
+  overflow-wrap: normal;
+}
 .reading > form + h2 {
   margin-top: 32px;
 }
