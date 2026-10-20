@@ -167,7 +167,7 @@ def _label_chip(x: float, y: float, s: str, p: dict) -> str:
             + _text(x, y, s, p["muted"], size=FONT - 1))
 
 
-def _graph_svg(d: Diagram, lay: Layout, p: dict, styles: Optional[dict] = None) -> list[str]:
+def _graph_svg(d: Diagram, lay: Layout, p: dict, styles: Optional[dict] = None, images: Optional[dict] = None) -> list[str]:
     out = []
     for i, f in enumerate(lay.frames):
         color = p["series"][i % len(p["series"])]
@@ -187,7 +187,21 @@ def _graph_svg(d: Diagram, lay: Layout, p: dict, styles: Optional[dict] = None) 
     for b in lay.boxes.values():
         style = (styles or {}).get(b.id, {})
         colours = {**p, **{role: style[key] for key, role in (("fill", "surface"), ("stroke", "border"), ("ink", "ink")) if key in style}}
-        out.append(f'<g data-node-id="{escape(b.id, quote=True)}">{_shape(b, colours)}{_box_text(b, colours)}</g>')
+        shape = _shape(b, colours) if style.get("border", True) else ""
+        image = (images or {}).get(style.get('asset_id'))
+        if image:
+            shape += f'<image x="{_f(b.x)}" y="{_f(b.y)}" width="{_f(b.w)}" height="{_f(b.h)}" href="{escape(image, quote=True)}" preserveAspectRatio="xMidYMid meet"/>'
+        if any(key in style for key in ("font_size", "font_weight", "align")):
+            size, align = style.get("font_size", FONT), style.get("align", "center")
+            x = b.x + 12 if align == "left" else b.x + b.w - 12 if align == "right" else b.cx
+            top = b.cy - size * 1.3 * (len(b.lines) - 1) / 2
+            text = "".join(_text(x, top + size * 1.3 * i, line, colours["ink"], size=size,
+                                weight=style.get("font_weight", 500), anchor={"left":"start", "right":"end", "center":"middle"}[align]) for i, line in enumerate(b.lines))
+        else:
+            text = _box_text(b, colours)
+        if not style.get('show_label', True):
+            text = ''
+        out.append(f'<g data-node-id="{escape(b.id, quote=True)}">{shape}{text}</g>')
     for r in lay.routes:
         if r.label and r.label_at:
             out.append(_label_chip(r.label_at[0], r.label_at[1], r.label, p))
@@ -273,14 +287,14 @@ def layout_of(d: Diagram) -> Any:
     return {"sequence": _sequence, "timeline": _timeline, "gantt": _gantt}[d.type](d)
 
 
-def svg(d: Diagram, profile: dict, mode: str = "light", lay: Any = None, node_styles: Optional[dict] = None) -> str:
+def svg(d: Diagram, profile: dict, mode: str = "light", lay: Any = None, node_styles: Optional[dict] = None, images: Optional[dict] = None) -> str:
     p = profile[mode]
     font = profile.get("font") or FONT_STACK
     lay = lay if lay is not None else layout_of(d)
     if d.type == "isometric":
         return isometric.svg(d, profile, mode, lay, font)
     if isinstance(lay, Layout):
-        width, height, body = lay.width, lay.height, _graph_svg(d, lay, p, node_styles)
+        width, height, body = lay.width, lay.height, _graph_svg(d, lay, p, node_styles, images)
     else:
         width, height = lay["width"], lay["height"]
         body = {"sequence": _sequence_svg, "timeline": _timeline_svg, "gantt": _gantt_svg}[d.type](d, lay, p)
