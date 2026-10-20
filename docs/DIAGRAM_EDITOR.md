@@ -33,6 +33,32 @@ The first visual surface edits graph types: flowcharts, architecture, state, ER 
 
 ## Editorial pages
 
+### Reusable shape styles
+
+The inspector's **Reusable styles / Estilos reutilizables** disclosure saves the
+selected shape's appearance in the Design profile, independently of any document.
+The library retains names and immutable revisions in the diagram SQLite store.
+Choose a preset and apply it to all selected shapes in one local undo step;
+saving publishes the same values in the normal document revision. Text, position,
+size, pinning, page, image and relationships remain on each shape. Library updates
+and removal never modify previously styled documents or exported figures.
+
+`diagram_style_list/get/save/remove/apply` expose the same functions. REST uses
+`/design/api/diagrams/styles`: GET lists; POST saves `{name,values,id?,base_revision?}`;
+GET `/{id}?revision=N` reads an exact revision; POST `/remove` requires
+`{id,base_revision}`; POST `/apply` takes `{id,base_revision,style_id,style_revision,node_ids}`.
+Style values are fill/stroke/ink, font_size/font_weight/align, border/show_label;
+save supplies the complete appearance object. Updating a style merges independent
+fields from the revision read; conflicting fields retain the existing source and
+return the same conflict contract as document edits. Removed style revisions stay
+readable explicitly, and saving from the retained head restores it to the library.
+Refreshing preserves both a pending name and its original revision base. A
+conflicting remote rename therefore reports `/name` without replacing either
+writer's text; independent appearance/name edits still merge normally.
+Application copies that exact style revision into a normal conflict-aware document
+save. An assistant's independent text/position edits survive; a conflicting color
+change remains a conflict. Listing an empty library creates no store.
+
 Four infographic templates cover comparison, timeline, process and relationships.
 They use the same graph source with `view.kind="infographic"`. `view.pages` holds
 stable IDs, title, order and pixel width/height. Each `view.nodes[id].page_id`

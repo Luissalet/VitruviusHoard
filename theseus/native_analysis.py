@@ -15,6 +15,7 @@ from .android import OPERATIONS as ANDROID_OPERATIONS, available as android_avai
 from .packets import OPERATIONS as PACKET_OPERATIONS, engine as packet_engine
 from .qlog import OPERATIONS as QLOG_OPERATIONS
 from .firmware import OPERATIONS as FIRMWARE_OPERATIONS, available as firmware_availability
+from .process_compare import QUERY as PROCESS_QUERY
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -87,12 +88,37 @@ OPERATIONS += [{"name": "javascript.reconcile_runtime", "title": "JavaScript · 
             "required": ["runtime_url", "source_path"], "properties": {
                 "runtime_url": {"type": "string"}, "source_path": {"type": "string"}}}}}}}]
 OPERATIONS += [
+    {"name":"process.compare","title":"Procesos · Comparar capturas guardadas","input":"pair","worker":"python",
+     "retained_only":True,"requires_operation":"process.capture",
+     "source_states":["finished","failed","cancelled","interrupted","imported"],
+     "description":"Compara dimensiones explícitas de dos capturas guardadas: bytes de salida, código final, terminal, archivos antes/después y obligaciones de orden parcial. Conserva las ausencias como desconocidas; no ejecuta los programas ni consulta sus rutas originales.",
+     "inputSchema":{**PAIR_PARAMETERS,"required":[*PAIR_PARAMETERS['required'],'query'],
+         "properties":{**PAIR_PARAMETERS['properties'],'query':PROCESS_QUERY}},
+     "example":{"query":{"dimensions":["stdout","stderr","exit","files"]}}},
     {**OPERATIONS[-1],"name":"browser.reconcile_sources","title":"Web · Comparar fuentes y scripts de página",
      "candidate_requires_operation":["browser.observe","browser.scenario","browser.coverage"],"candidate_states":["finished","failed","cancelled","interrupted"]},
     {"name":"browser.compare","title":"Web · Comparar capturas guardadas","input":"pair","worker":"python",
      "requires_operation":["browser.observe","browser.scenario"],"inputSchema":PAIR_PARAMETERS,
      "source_states":["finished","failed","cancelled","interrupted"],
      "description":"Compara observaciones de scripts/red, árbol DOM sin IDs locales y hashes PNG guardados. Conserva ausencias como desconocidas; igualdad de observaciones no demuestra equivalencia."},
+]
+OPERATIONS += [
+    {"name": "browser.export_scripts", "title": "Web · Exportar fuentes guardadas", "input": "analysis", "worker": "python",
+     "retained_only": True,
+     "requires_operation": ["browser.observe", "browser.scenario", "browser.coverage"],
+     "source_states": ["finished", "failed", "cancelled", "interrupted", "imported"],
+     "description": "Exporta scripts y respuestas ya guardados, con manifiesto, bytes y hashes. Conserva duplicados, exclusiones y ausencias; no conecta con el navegador ni descarga fuentes.",
+     "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id"], "properties": {"source_job_id": {"type": "string"}}}},
+    *[{"name": name, "title": title, "input": "analysis", "requires_operation": "browser.export_scripts", "retained_only": True,
+       "source_states": ["finished", "imported"], "description": description, "example": {"query": example},
+       "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id", "query"],
+           "properties": {"source_job_id": {"type": "string"}, "query": {"type": "object"}}}}
+      for name, title, description, example in [
+          ("javascript.trace_source", "Web · Trazar posición original", "Consulta un script y mapa exportados por sus IDs, línea generada desde 1 y columna UTF-16 desde 0. Conserva todas las correspondencias de la posición y los límites sin mapa; no ejecuta ni descarga código.",
+           {"script_id": "script-000000", "map_id": "response-000000", "line": 1, "column": 0}),
+          ("javascript.trace_imports", "Web · Trazar imports guardados", "Lee imports y reexports literales de un script exportado con su URL y un import_map opcional. Conserva versiones, duplicados y resoluciones desconocidas; no ejecuta módulos.",
+           {"script_id": "script-000000"}),
+      ]],
 ]
 OPERATIONS += [
     {"name": "artifact.compare", "title": "Artefactos · Comparar inventarios guardados", "input": "pair",
@@ -268,6 +294,8 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
     if candidate:
         request.update(candidate_path=str(analysis_file(manager.store, candidate["id"])),
                        expected_candidate_sha256=candidate["result"]["analysis_sha256"])
+    if operation == "browser.export_scripts":
+        request["parameters"]["output_directory"] = str(folder / "extracted")
     if operation == "managed.verify_native":
         request["parameters"].pop("native_job_ids")
         request["native_inputs"] = native_inputs
@@ -346,11 +374,16 @@ def retain(store, project_id, job_id, artifact, folder, output, result):
     result.update(artifact_sha256=document["artifact_sha256"], analysis_file=str(output),
                   analysis_sha256=digest(output), runtime=document["runtime"])
     result["source_changed"] = document["artifact_sha256"] != artifact["sha256"]
-    available = Path(artifact["path"]).exists()
-    result["source_unavailable"] = not available
-    result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
+    definition = next(row for row in OPERATIONS if row["name"] == result["operation"])
+    if definition.get("retained_only"):
+        result.update(source_unavailable=None, source_changed_during_analysis=None,
+                      original_source_check="not-performed-retained-input")
+    else:
+        available = Path(artifact["path"]).exists()
+        result["source_unavailable"] = not available
+        result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
     result["sections"] = store.index_analysis(job_id, document["result"])
-    if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract"}:
+    if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract", "browser.export_scripts"}:
         result["derived_artifacts"] = []
         derived_by_path = {}
         for row in document["result"]["artifacts"]:

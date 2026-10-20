@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T12:42:47.513126Z",
+  "generatedAt": "2026-10-20T15:55:47Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -11,11 +11,15 @@
         "client/src/components/diagram-editor/model.js",
         "client/src/pages/Diagrams.jsx",
         "client/src/components/diagram-editor/EditorialControls.jsx",
+        "client/src/components/diagram-editor/StyleControls.jsx",
         "client/src/components/diagram-editor/editorial.js",
         "client/src/api.js",
         "vitruvius_hoard/diagrams/exchange.py",
         "vitruvius_hoard/diagrams/document_tools.py",
-        "vitruvius_hoard/api/diagrams.py"
+        "vitruvius_hoard/api/diagrams.py",
+        "client/src/components/diagram-editor/IsometricControls.jsx",
+        "vitruvius_hoard/diagrams/mechanism.py",
+        "vitruvius_hoard/diagrams/isometric_reader.py"
       ],
       "briefPath": "docs/design/diagrams.md",
       "authorities": [
@@ -354,6 +358,129 @@
         "No downstream consumer integration or authored isometric states asserted."
       ]
     },
+    "reusableStyles": {
+      "task": 1038,
+      "mode": "Operate",
+      "status": "Developed in isolated worktree codex/styles1038 relative to efb85ea. CAS1 CHANGES corrected; CAS2 APPROVE on 715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc, integrated into Main and installed with scoped installed acceptance receipts below.",
+      "visualAuthority": "Incumbent inspector extension; no new visual contract, approved comp or independent quality bar. Root PRODUCT.md/DESIGN.md and existing tokens retain authority.",
+      "source": [
+        "client/src/components/diagram-editor/StyleControls.jsx",
+        "client/src/components/diagram-editor/DiagramEditor.jsx (import and selected-shape placement)",
+        "client/src/components/diagram-editor/diagram-editor.css (.de-style-library)"
+      ],
+      "placement": "Native secondary disclosure below selected-shape properties and before selection actions; library selector with visible name/revision, named field and separate apply/refresh versus save/update/remove groups.",
+      "appearance": "Existing flat inspector surfaces, fields, secondary buttons, focus and disabled/busy states; no new palette, shadows or decorative effects.",
+      "layout": {
+        "separator": "Thin inherited top border; 8px top padding and min-width 0.",
+        "summary": "44px minimum height; 12px vertical padding; inherited 13px control type.",
+        "spacing": "10px above labels/action groups; 12px above help.",
+        "buttons": "Long labels wrap and align left within max-width 100%.",
+        "responsive": "At 1100px and below, spans all inspector columns, including both mobile columns. Existing workspace and canvas unchanged."
+      },
+      "typography": {
+        "convention": "Inherited local 13px controls / 12px labels and helper text; helper line-height 1.5. No root type-ramp addition.",
+        "declaredBodyStack": "Source Sans 3, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Liberation Sans, Arial, sans-serif",
+        "fontsLoaded": [],
+        "scope": "Author browser result reports a CSS stack and loaded: []; no loaded Source Sans 3 or Cinzel claim."
+      },
+      "behavior": {
+        "library": "Named appearance presets independent of documents in the Design profile; immutable retained revisions support reuse across documents, create, rename/update and removal.",
+        "apply": "Copies fill/stroke/ink, font_size/font_weight/align, border/show_label to every selected shape in one local change and undo/redo step; normal document save publishes those values.",
+        "preservation": "Text, geometry, pinning, page, image and relationships remain on each shape. Library updates/removal leave saved documents and figures unchanged; exact retained style revisions remain readable.",
+        "refresh": "Adopts a remote name and advances draftStyle only if the name field still matches its base name. A manual name retains its original draftStyle revision while the library head advances; Update submits that base. Divergent names conflict at /name without overwriting remote or local draft; independent local-name/remote-stroke edits can merge.",
+        "nativeTools": ["diagram_style_list", "diagram_style_get", "diagram_style_save", "diagram_style_remove", "diagram_style_apply"],
+        "nativeBoundary": "Native apply saves an exact style snapshot through the ordinary conflict-aware document revision contract; distinct from UI local undo."
+      },
+      "evidence": {
+        "directory": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/",
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/FINISH.txt",
+          "disposition": "ship",
+          "sections": ["persistence", "fidelity", "ceiling", "material_fixes", "keep"],
+          "materialFixes": "None within the new control and visible inspector integration.",
+          "scope": "Scoped finish only; does not replace technical review or certify other editor states, integration or installed acceptance."
+        },
+        "captures": [
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/desktop-r1.png", "width": 1440, "height": 2817, "state": "Full desktop capture; viewport 1440x1000"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/mobile-r1.png", "width": 390, "height": 3714, "state": "Full mobile capture; viewport 390x844"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/desktop-r1-styles.png", "width": 207, "height": 533, "state": "Native-size inspector detail"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/mobile-r1-styles.png", "width": 328, "height": 470, "state": "Native-size inspector detail"}
+        ],
+        "captureInspection": "Opened by author and finish reviewer as recorded in FINISH.txt; this documenter read the receipts and file dimensions without reopening images.",
+        "browserReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/browser-results.json",
+        "browserResult": "Author: cross-document reuse, one-step undo/redo, geometry/pages/assets/text preserved, saved documents exact after library changes/removal, untouched remote name adopted and manual name draft retained; no JS/HTTP errors. Accompanying script/log records 1440/390 viewport overflow assertions passing.",
+        "browserLog": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-browser-r2.log",
+        "nativeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/native-results.json",
+        "nativeResult": "Author: 123 MCP tools; manual move/text and assets/pages preserved; native apply document revision 3.",
+        "buildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-build-r3.log",
+        "buildResult": "Author: successful frontend build.",
+        "areaReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-area-r3.log",
+        "areaResult": "Author: 12 new style tests included in area coverage.",
+        "fullSuiteReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-suite-counts.json",
+        "fullSuiteResult": "Author: 518 passed, 2 skipped, exit 0, counted from completed run progress statuses because double-quiet output printed no summary.",
+        "collectionReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-collected.log",
+        "collectionResult": "520 collected tests.",
+        "cas1Correction": {
+          "review": "CAS1 CHANGES: refresh had advanced the revision used by a pending name and could overwrite a remote rename.",
+          "source": "StyleControls.jsx retains draftStyle as the pending name's original base across refresh and uses its revision in Update.",
+          "status": "Historical correction checkpoint: implemented, then awaiting a new technical review and integration/installed acceptance. Subsequent CAS2 and installation recorded separately below.",
+          "authorEdgeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/conflict-results.json",
+          "authorEdgeLog": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-conflict-r3.log",
+          "authorEdgeResult": "PASS in real Edge: divergent /name preserves remote revision 2 and local draft; independent local-name/remote-stroke changes merge; clean remote name adopted; JavaScript errors empty.",
+          "historicalFailures": "r1/r2 receipts retained: HTTP oracles expected 400/200 instead of the actual conflict/save contract 409/201. Not relabelled as passing.",
+          "authorBuildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-build-r4.log",
+          "authorBuildResult": "Successful frontend build after correction.",
+          "suiteScope": "Backend unchanged; prior 518 passed/2 skipped receipt retains its original scope. No new Python suite run claimed.",
+          "visualScope": "No UI markup or CSS change; existing captures and FINISH.txt retain visual scope. Prior SHIP did not functionally review this later correction or replace the technical review pending at that checkpoint.",
+          "documenterActivity": "Read corrected source and author receipts only. No new tests, browser, captures, detector, context scan or finish round."
+        },
+        "cas2Review": {
+          "receipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/review-r1038/REPORT-R2.txt",
+          "disposition": "APPROVE",
+          "submissionRevision": 2,
+          "source": "715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc",
+          "result": "Independent real Edge/MCP: refresh preserves base_revision 1 in actual update POST; divergent /name returns 409 with remote r2 and local draft exact; independent local-name/remote-stroke changes return 201/r3 with both changes and remaining values exact. Clean name adopts remote; saved document exact; own build PASS.",
+          "contextLimit": "formSnapshot exposes changed fields and can omit unchanged revision. The actual POST proves base_revision 1; no claim that revision travels in the event or that model inference was tested.",
+          "historicalHelperFailures": "Two initial helper expectation/setup failures remain recorded; not product failures or passing executions.",
+          "suiteScope": "R1 independent 43 Python PASS and author 518/2 retained as their original evidence; Python unchanged in R2, neither suite repeated in this JavaScript review."
+        },
+        "installedAcceptance": {
+          "source": "715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc",
+          "mainIntegrated": true,
+          "installed": true,
+          "exactReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-installed-exact.json",
+          "wheelSha256": "ec056497af3c7977e5d6e0036b91e9e9d3f9ffeb16e4ad09dcd174913870e971",
+          "rawWheelMembersExact": 3773,
+          "pythonGitBlobsEqualAfterCrLfLfNormalizationOnly": 388,
+          "dependencyVersionsUnchanged": true,
+          "pipCheck": "PASS: No broken requirements found.",
+          "firstCheckReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-installed-first-check.txt",
+          "firstCheckFailure": "Additional verification initially compared raw Main LF with wheel CRLF in motion.py and failed. Retained; verify-only rerun PASS without reinstalling. No raw-byte equality claimed between Main working sources and wheel.",
+          "actualUserAppStarted": false,
+          "actualUserDataSettingsTokensAccessed": false,
+          "nativeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/native-results.json",
+          "browserReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/browser-results.json",
+          "conflictReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/conflict-results.json",
+          "finalReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/final-results.json",
+          "authorResult": "Installed package: MCP123, Edge1440/390, cross-document reuse, one-step undo/redo, geometry/pages/assets/text and saved source preserved; divergent-name conflict and independent name/stroke merge PASS; JS/HTTP errors empty. Declared font stack with loaded: [], no loaded-face claim.",
+          "finalState": "Design/Babel/Theseus OFF, automatic false, active requests 0; model calls 0. Root subsequently stopped private QA processes on ports 54574 and 54577.",
+          "scope": "Supplied installed acceptance for reusable styles only; read by documenter without new QA. Does not broaden prior visual SHIP or other editor acceptance."
+        },
+        "manualUpdate": {
+          "receipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/manual-styles1038-proof.json",
+          "result": "Functional library addition in paragraph 87; other 189 paragraphs' text, styles and links exact.",
+          "scope": "Manual describes usable functionality without implementation hashes, CAS or deployment-test detail."
+        },
+        "detector": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-detector.json",
+        "detectorResult": "One supplied run; 11 advisories for existing document-local colours, heading/control sizes and error fallback, including local 13px disclosure type. Retain inherited 13/12 inspector convention; no global drift repair or new root tokens.",
+        "documenterActivity": "Read source and supplied author/finish receipts; checked image file dimensions and documentation consistency. No new context scan, detector, browser, server, model, GPU, tests or capture."
+      },
+      "notCanonized": [
+        "Authored style appearance is document content, not a shell palette or type system.",
+        "Scoped SHIP and initial author QA alone do not establish independent technical acceptance or installation; CAS2 and installed acceptance have their own later receipts.",
+        "Loaded fonts, model-generated quality, unseen states and isometric origin are not certified."
+      ]
+    },
     "figures": {
       "mode": "Operate",
       "status": "Implemented in isolated worktrees; not integrated or installed at this checkpoint.",
@@ -471,6 +598,240 @@
         },
         "documenterActivity": "Inspected corrected source, build and functional receipts; opened both supplied pagefix captures. No detector, browser/server, functional tests, model or GPU execution."
       }
+    },
+    "isometric1049": {
+      "task": 1049,
+      "modes": [
+        "Operate",
+        "Read"
+      ],
+      "status": "Technical CAS2 APPROVE, integrated through Main a7ab5cbe748ec0999365ade6205a57230dc3b5ba, final R2 wheel installed and acceptance passed against actually installed package in isolated QA; default user app never started.",
+      "direction": {
+        "path": "docs/design/diagrams.md",
+        "heading": "Isometric extension direction — task 1049",
+        "timing": "Existing direction retained verbatim as historical intention; built record appended afterward, without backdating completion."
+      },
+      "visualAuthority": "Incumbent Hoard workbench and root PRODUCT.md/DESIGN.md unchanged; no new world, approved comp, seed or decorative raster.",
+      "model": {
+        "source": "Stable diagram.pieces IDs with original geometry; mechanism.parts holds long explanations by piece ID; mechanism.states holds stable state IDs, titles, explanations, hidden IDs, dx/dy/dz poses and optional visible focus_piece.",
+        "derivedRendering": "Copy original geometry, apply authored translation and highlight, filter hidden pieces; retain complete source unchanged.",
+        "validation": "Known stable piece references, unique part/state identities, finite valid geometry, at least one visible piece and visible focus_piece.",
+        "semantics": "Authored positions and explanations; no physics or simulation claim."
+      },
+      "interaction": {
+        "selection": "Labelled native State/Part selects; visible SVG pieces support click and Enter/Space with button role, aria-pressed and visible focus. Hidden parts remain selectable; reader explains absence.",
+        "inspection": "Short label where supported, unrestricted long explanation/sources textarea, original geometry disclosure, state title/explanation, visible checkbox, dx/dy/dz and visible highlight selector.",
+        "stateActions": "Add state from original, duplicate current authored state with new stable ID, delete selected state and return to original.",
+        "history": "Existing local change/undo/redo and native saved revision merge/selective undo; no parallel state store.",
+        "faustusContext": "Existing draft context includes selected_state and selected_piece.",
+        "colour": "Native Color/Colour select, Claro/Oscuro or Light/Dark, uses setMode for figure and mode-aware exports; state changes retain chosen mode."
+      },
+      "layout": {
+        "editorColumns": "minmax(0,1fr) 260px",
+        "selectors": "State and Part use two minmax(0,1fr) columns plus 80px Color/Colour; 12px gap/padding, labelled above figure.",
+        "figure": "280px minimum area; responsive SVG width and 560px maximum height; white authored figure ground.",
+        "reading": "After figure, max-width 75ch; preserved line breaks and anywhere wrapping.",
+        "editorBreakpoint": "850px: inspector after figure/explanation, top border, 44px action targets.",
+        "readerColumns": "minmax(0,1fr) 320px",
+        "readerBreakpoint": "700px: sequential figure and reading sidebar.",
+        "selectionTreatment": "Local SVG drop shadow for selected part and visible focus outline; not a new shell elevation token."
+      },
+      "nativeContract": {
+        "catalogTools": 123,
+        "countMeaning": "Existing catalog count; new collection/state selection schemas do not add tools.",
+        "objectCollections": [
+          "pieces",
+          "mechanism_parts",
+          "mechanism_states"
+        ],
+        "selection": "diagram_document_get and preview accept state_id; state-aware derived SVG/PNG/PDF, HTML, viewer and vfigure URLs use accepted revision; source download retains complete source.",
+        "portableFigure": "Selected-state PNG and state_id with full native source and retained revision.",
+        "standaloneReader": "Full source plus embedded original/state SVG frames, native selectors, authored notes, keyboard part selection and explicit hidden-part explanation; no server/network needed to read exported embedded states.",
+        "invalidState": "Explicit invalid state requests fail rather than silently selecting original.",
+        "formatBoundary": "Editable draw.io and Mermaid remain graph formats; no isometric parity inferred from visible export row."
+      },
+      "evidence": {
+        "directory": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/",
+        "captures": [
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-reader-r1.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-reader-r1.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          }
+        ],
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/FINISH.txt",
+          "disposition": "ship",
+          "materialFixes": "None in scoped visual review.",
+          "scope": "Four supplied captures and visible local Operate/Read integration only; not uncaptured states, inference, technical API/MCP/CAS approval, integration or installed activation."
+        },
+        "authorNative": {
+          "paths": [
+            "qa1049/native-results.json",
+            "qa1049-native-final.log"
+          ],
+          "reported": "123 MCP tools; complete source retained; independent edits merge and selective undo preserves unrelated edits; selected inside state; 640x420 PNG; SVG/PNG/PDF/HTML/vfigure exports."
+        },
+        "authorBrowser": {
+          "path": "qa1049/browser-results.json",
+          "reported": "Saved-state reopen, keyboard part selection, local undo/redo, dirty-state export, Faustus selection context, standalone reader and hidden-part explanation at widths 1440 and 390; empty JS/HTTP error lists."
+        },
+        "authorTests": {
+          "fullReceipt": "isometric1049-suite-r1.log",
+          "fullReported": "529 passed/2 skipped, 531 collected, before last two narrow backend corrections; progress output has no printed summary.",
+          "finalAreaReceipt": "isometric1049-final-area.log",
+          "finalArea": "16 passed in 20.59s plus two JavaScript area checks reported by author.",
+          "limit": "Composed validation; no second full run of final code asserted."
+        },
+        "detector": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/isometric1049-detector.json",
+          "runs": 1,
+          "findings": 11,
+          "severity": "advisory only",
+          "scope": "Incumbent sizes, document-local white/selection colours and existing error fallback; no root repair or rerun."
+        },
+        "documenterActivity": "Read source and supplied receipts, then checked documentation consistency. No capture reopening, context scan, detector, browser/server, build, functional tests, model or GPU execution."
+      },
+      "limits": [
+        "Concrete webfont loading is not established.",
+        "Initial checkpoint limitation retained historically: no technical CAS approval, integration or installed activation was claimed then; subsequent exact acceptance is recorded in finalInstalledAcceptance.",
+        "No global Faustus, memory or Manual acceptance inferred.",
+        "Earlier surface history and its scope remain retained."
+      ],
+      "colorCorrectionAfterCas1": {
+        "chronology": "After initial documentation and scoped FINISH.txt, independent technical CAS1 returned CHANGES for P2; author restored Color in three UI files; subsequent FINISH-COLOR.txt is a correction-only SHIP. Technical approval still unestablished.",
+        "technicalReview": {
+          "submissionRevision": 1,
+          "commit": "350b3e3e6b1d3d9d370515af9a4f8ba7c76c8b30",
+          "decision": "changes",
+          "report": "review-r1049/REPORT-R1.txt",
+          "vote": "review-r1049/vote-r1.txt",
+          "finding": "P2: hiding graph toolbar removed inherited isometric Claro/Oscuro selector; mode change required visiting another diagram type.",
+          "independentValidation": "88 Python area passed/1 skipped, two JS model checks, build and real native/API/MCP/browser/offline-reader checks in reviewer private environment; attributed to reviewer, separate from author 529/2 and final 16. Covers CAS1 source, not approval of correction.",
+          "receipts": [
+            "review-r1049/area-tests.log",
+            "review-r1049/js-tests.log",
+            "review-r1049/native-proof.json",
+            "review-r1049/schema-proof.json",
+            "review-r1049/browser-proof.json"
+          ]
+        },
+        "built": "DiagramEditor passes setMode; IsometricControls shows labelled Color/Colour beside State/Part; CSS uses two flexible columns plus 80px. Three UI files only, no Python change.",
+        "authorEvidence": {
+          "receipts": [
+            "qa1049/color-results.json",
+            "qa1049-color-r1.log"
+          ],
+          "reported": "Visible at 1440/390, selected open state retains mode, dark PNG bytes exact to API and different from light, return to light, no JavaScript errors."
+        },
+        "captures": [
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-color-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-color-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          }
+        ],
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/FINISH-COLOR.txt",
+          "disposition": "ship",
+          "finding": "P2 resolved; no visible material regression in four reviewer-opened full/detail captures.",
+          "scope": "Color correction only; does not broaden initial FINISH.txt or replace technical CAS review, integration or installed activation."
+        },
+        "documenterActivity": "Corrected source and supplied receipt inspection only; no capture reopening, detector/context, browser/server, build/test rerun.",
+        "historicalCheckpoint": true
+      },
+      "initialStatusCheckpoint": "Implemented and verified in author isolated worktree; technical CAS approval, integration and installed activation not established.",
+      "finalInstalledAcceptance": {
+        "chronology": "After CAS1 CHANGES and correction-only visual SHIP; exact CAS2 APPROVE, Main integration, final R2 installation and isolated installed-package acceptance. Earlier failures and verdict scopes remain historical.",
+        "technicalReview": {
+          "submissionRevision": 2,
+          "decision": "approve",
+          "commits": [
+            "350b3e3e6b1d3d9d370515af9a4f8ba7c76c8b30",
+            "dc3908b7412a2b117f1ecfd329448cba2503e0f3",
+            "898455648122108e516beffaf73bc32b771cdf1b"
+          ],
+          "report": "review-r1049/REPORT-R2.txt",
+          "vote": "review-r1049/vote-r2.txt",
+          "independentChecks": "Own build and two JS checks; MCP 123; original/exploded/inspection in both 1440/390 viewports with persistent dark mode and selected-state dark PNG exact to API, distinct from light. Prior independent backend 88/1 retained because Python unchanged.",
+          "retainedHarnessFailure": "color-acceptance-r2.log assumed MCP result envelope; corrected raw/direct-result read passed in color-acceptance-r2b.log without product change."
+        },
+        "mainSource": "a7ab5cbe748ec0999365ade6205a57230dc3b5ba",
+        "sourceBoundary": "Main final change was documentation; executable product source approved at 898455648122108e516beffaf73bc32b771cdf1b.",
+        "installedExact": {
+          "receipts": [
+            "isometric1049-wheel-preflight-r2.json",
+            "isometric1049-installed-exact.json"
+          ],
+          "wheelSha256": "04aada517f3557c48bf99c8f142757bcaca112edb9cdf2bcdb18a9a6f42eb7d1",
+          "installedMembersRawExact": 3771,
+          "pythonGitBlobsEqualAfterCrLfLfNormalizationOnly": 390,
+          "cacheEntries": 0,
+          "nativeResourcesAndBuiltUiExact": true,
+          "distributionAndDependencyVersionsExact": true,
+          "pipCheck": "No broken requirements found.",
+          "actualAppStarted": false,
+          "actualDataSettingsTokensAccessed": false
+        },
+        "installedQa": {
+          "environment": "Actually installed package via Python -I, external cwd and official MCP entry point; private QA.",
+          "receipts": [
+            "qa1049-installed/native-results.json",
+            "qa1049-installed/browser-results.json",
+            "qa1049-installed/color-results.json",
+            "isometric1049-installed-native-r2.log",
+            "isometric1049-installed-browser.log",
+            "isometric1049-installed-color.log"
+          ],
+          "reported": "PASS: 123 tools, all source/state retained through SVG/PNG/PDF/HTML/vfigure; independent merge/selective undo; UI 1440/390 keyboard/save/reopen/dirty export/offline HTML/Color; no JS/HTTP errors or horizontal overflow.",
+          "retainedFailure": "isometric1049-installed-native.log: httpx.ReadTimeout under helper default 5s. Increased helper timeout to 180s; R2 passed. No unobserved cause assigned.",
+          "observedExportSeconds": {
+            "svg": 0.01,
+            "png": 1.466,
+            "pdf": 1.148,
+            "html": 0.007,
+            "vfigure": 1.289
+          }
+        },
+        "cleanupReportedByParent": "Source/installed QA ports 54580/54584 stopped after three modules OFF and zero active jobs; default 5191 never started.",
+        "manual": {
+          "proof": "manual-isometric1049-cicero1051-proof.json",
+          "changedOnlyParagraphs": [
+            87,
+            99
+          ],
+          "other188TextStylesLinksExact": true,
+          "method": "Native CAS edit and readback."
+        },
+        "consumerBoundary": "Installed Cicero task 1051 product 1ce161f captured-state case with 69-tool QA; no universal consumer support asserted.",
+        "documenterActivity": "Supplied receipt inspection and scoped documentation update only; no new QA/CPU/build/detector/browser/server/capture execution. Root product/design and prior validation/finish history retained."
+      }
     }
   },
   "components": [
@@ -549,6 +910,13 @@
       "css": ".ds-pages{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);color:var(--hoard-text,#e1e4ec);font-size:12px;margin-block:4px;padding-block:6px}.ds-page-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}.ds-field{min-width:0;width:100%;padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec)}.ds-button{font:600 13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);padding:7px 8px;min-height:36px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:transparent;color:var(--hoard-text,#e1e4ec);cursor:pointer}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible,.ds-field:focus-visible,.ds-options summary:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-options{margin-top:8px}.ds-options summary{cursor:pointer;padding:4px 0}.ds-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ds-dimensions label{display:grid;gap:5px;color:var(--hoard-text-muted,#b4b7be)}"
     },
     {
+      "name": "Reusable shape styles",
+      "kind": "custom",
+      "description": "Illustrative open inspector disclosure with inherited fields, separate application/library actions and wrapping labels. Library persistence and one-step selection undo require the product runtime.",
+      "html": "<details class=\"ds-style-library\" open><summary>Estilos reutilizables</summary><label>Estilo de la biblioteca<select class=\"ds-style-field\"><option>Evidencia actual · r4</option></select></label><div class=\"ds-style-actions\"><button class=\"ds-style-button\">Aplicar a la selección</button><button class=\"ds-style-button\">Actualizar biblioteca</button></div><label>Nombre del estilo<input class=\"ds-style-field\" value=\"Borrador manual de nombre\" maxlength=\"160\"></label><div class=\"ds-style-actions\"><button class=\"ds-style-button\">Guardar forma como estilo nuevo</button><button class=\"ds-style-button\">Actualizar estilo con esta forma</button><button class=\"ds-style-button\">Retirar de la biblioteca</button></div><p class=\"ds-style-help\">Copia sólo el aspecto. Cada forma conserva texto, posición, página e imagen. Cambiar la biblioteca conserva los estilos ya aplicados.</p></details>",
+      "css": ".ds-style-library{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);border-top:1px solid var(--line,var(--hoard-border,#333845));padding-top:8px;min-width:0;color:var(--ink,var(--hoard-text,#e1e4ec))}.ds-style-library summary{cursor:pointer;min-height:44px;padding:12px 0;font-size:13px}.ds-style-library label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted,var(--hoard-text-muted,#b4b7be));margin-top:10px}.ds-style-field{width:100%;min-width:0;box-sizing:border-box;font:13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec)}.ds-style-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}.ds-style-button{font:600 13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);min-height:36px;padding:7px 14px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:transparent;color:var(--hoard-text,#e1e4ec);white-space:normal;text-align:left;max-width:100%;cursor:pointer;transition:background .16s,border-color .16s}.ds-style-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-style-button:focus-visible,.ds-style-field:focus-visible,.ds-style-library summary:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-style-button:disabled{opacity:.45;cursor:not-allowed}.ds-style-help{font-size:12px;line-height:1.5;margin-top:12px;color:var(--muted,var(--hoard-text-muted,#b4b7be))}@media(max-width:1100px){.ds-style-library{grid-column:1/-1}}@media(max-width:650px){.ds-style-button{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-style-button{transition:none}}"
+    },
+    {
       "name": "Portable figure export",
       "kind": "button",
       "refersTo": "button-secondary",
@@ -559,7 +927,7 @@
   ],
   "narrative": {
     "northStar": "Existing Hoard workbench",
-    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Authored isometric states remain outside this record. This figures extension is implemented and verified in isolated worktrees; integration and installed activation are not established here.",
+    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Task 1049 adds selectable isometric parts, long explanations and authored states to the same document. Task 1049 subsequently received technical CAS2 approval, integration and installed-package acceptance in isolated QA; the chronological addendum below records their exact scope. The default user app was not started for that acceptance. Earlier phase and extension receipts retain their own scope.",
     "keyCharacteristics": [
       "An independent versioned document with a visible name, save state and selected revision.",
       "A native SVG canvas between a shape palette and selection inspector on wide screens.",
@@ -567,7 +935,9 @@
       "Shared shape activation for pointer and keyboard, with explicit connection and selection modes.",
       "Output actions save an outstanding draft and use the accepted revision.",
       "Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.",
-      "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview."
+      "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.",
+      "Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents.",
+      "Isometric parts retain original geometry and explanations while authored states derive translated, hidden and highlighted views for editing, reading and export."
     ],
     "rules": [
       {
@@ -598,6 +968,11 @@
       {
         "name": "The Visible Page Rule",
         "body": "Resolve the current document's page consistently for the canvas, Faustus context and figure export; resolve it again against the accepted source after saving.",
+        "section": "components"
+      },
+      {
+        "name": "The Authored State Rule",
+        "body": "Preserve original geometry, explanations and every state in source; a selected state's rendering is a derived view of the accepted document revision.",
         "section": "components"
       }
     ],

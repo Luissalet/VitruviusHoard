@@ -51,6 +51,12 @@ export function connector(edge, boxes, view = {}, edges = []) {
 }
 
 export const templates = {
+  mechanism: { type: 'isometric', title: 'Conjunto desmontable', pieces: [
+    { id: 'base', kind: 'slab', plan: {x:0,y:0,w:120,d:80}, z:0, h:10, label:'Base', tone:'lo' },
+    { id: 'housing', kind: 'slab', plan: {x:10,y:10,w:100,d:60}, z:10, h:28, label:'Cuerpo', tone:'mid' },
+    { id: 'lid', kind: 'plate', plan: {x:5,y:5,w:110,d:70}, z:38, h:5, label:'Tapa', tone:'hi', lit:true },
+    { id: 'knob', kind: 'cylinder', plan: {cx:60,cy:40,r:12}, z:43, h:12, tone:'mid' },
+  ] },
   flow: { type: "flowchart", title: "Proceso con revisión", nodes: [{ id: "start", label: "Recibir solicitud", shape: "pill" }, { id: "review", label: "¿Está completa?", shape: "diamond" }, { id: "finish", label: "Resolver", shape: "pill" }, { id: "fix", label: "Pedir información" }], edges: [{ id: "e1", from: "start", to: "review" }, { id: "e2", from: "review", to: "finish", label: "Sí" }, { id: "e3", from: "review", to: "fix", label: "No" }, { id: "e4", from: "fix", to: "review" }] },
   architecture: { type: "architecture", title: "Arquitectura de ejemplo", direction: "LR", groups: [{ id: "app", label: "Aplicación" }], nodes: [{ id: "person", label: "Persona" }, { id: "client", label: "Interfaz", group: "app" }, { id: "service", label: "Servicio", group: "app" }, { id: "data", label: "Datos", shape: "cylinder", group: "app" }], edges: [{ id: "e1", from: "person", to: "client" }, { id: "e2", from: "client", to: "service" }, { id: "e3", from: "service", to: "data" }] },
   tree: { type: "flowchart", title: "Organigrama de ejemplo", nodes: [{ id: "lead", label: "Coordinación" }, { id: "design", label: "Diseño" }, { id: "production", label: "Producción" }, { id: "support", label: "Soporte" }], edges: [{ id: "e1", from: "lead", to: "design" }, { id: "e2", from: "lead", to: "production" }, { id: "e3", from: "lead", to: "support" }] },
