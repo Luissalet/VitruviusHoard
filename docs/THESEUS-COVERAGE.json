@@ -24,7 +24,7 @@
     "platform-required-implementation-pending": 3,
     "excluded-by-user": 4,
     "integrated-tested-published": 5,
-    "independent-review-pending": 5
+    "source-integrated-release-pending": 5
   },
   "contracts": [
     {
@@ -3227,10 +3227,10 @@
         "theseus_binary_compare",
         "evidence.compare_functions"
       ],
-      "status": "independent-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "source-integrated-release-pending",
+      "scope": "Eight explicit static dimensions from two complete retained native function dossiers; preserve provider/profile and facet uncertainty, source citations and portable closure. Static differences do not establish runtime equivalence.",
       "acceptance": {
-        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3240,7 +3240,11 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "reviewed_submission_revision": 1,
+        "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
+        "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
       }
     },
     {
@@ -3254,10 +3258,10 @@
       "counterparts": [
         "evidence.compare_bundles"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "Exact bundle membership, declared one-to-one observation pairs, full residual unknowns and digest-bound comparison history.",
       "acceptance": {
-        "state": "author-and-installed-tested-awaiting-review-and-integration",
+        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3265,7 +3269,11 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md"
+        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md",
+        "reviewed_submission_revision": 1,
+        "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
+        "external_installed_wheel_sha256": "d75f255122062d8b17ae75a1e5366e53b7977a3f18d2b5266bdcd77eb78b3564",
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
       },
       "group": "bundle-correlation"
     },
@@ -3280,10 +3288,10 @@
       "counterparts": [
         "evidence.changed_behavior"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "Aggregate validated artifact/process deltas while separating observed behavior, static candidates and incomplete evidence.",
       "acceptance": {
-        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3293,7 +3301,11 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "reviewed_submission_revision": 1,
+        "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
+        "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
       },
       "group": "bundle-correlation"
     },
@@ -3308,10 +3320,10 @@
       "counterparts": [
         "evidence.call_paths"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "All shortest direct-callee paths from complete retained dossiers with exact addresses and source evidence; missing/mixed providers remain unknown.",
       "acceptance": {
-        "state": "author-and-installed-tested-awaiting-review-and-integration",
+        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3319,7 +3331,11 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md"
+        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md",
+        "reviewed_submission_revision": 1,
+        "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
+        "external_installed_wheel_sha256": "d75f255122062d8b17ae75a1e5366e53b7977a3f18d2b5266bdcd77eb78b3564",
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
       },
       "group": "retained-call-paths"
     },
@@ -3334,10 +3350,10 @@
       "counterparts": [
         "evidence.correlate"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "Explicit caller hypotheses bound to exact static findings and runtime dimensions; co-change is not causation.",
       "acceptance": {
-        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3347,7 +3363,11 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "reviewed_submission_revision": 1,
+        "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
+        "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
       },
       "group": "bundle-correlation"
     },
