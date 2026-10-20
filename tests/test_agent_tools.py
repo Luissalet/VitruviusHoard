@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 60
+    assert len(TOOLS) == 65
 
 
 def test_tool_names_are_unique():
@@ -33,10 +33,10 @@ def test_read_only_hints_correct():
     read_only_names = {"app_templates", "app_project_list", "app_project_get", "design_patterns", "design_pattern", "reference_collections", "design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
                        "fonts_search", "design_lint", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
                        "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get",
-                       "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare"}
+                       "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare", "diagram_style_list", "diagram_style_get"}
     write_names = {"app_project_create", "app_project_update", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render",
-                  "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import"}
+                  "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_style_save", "diagram_style_remove", "diagram_style_apply"}
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
@@ -85,6 +85,11 @@ def test_every_arg_model_validates_empty_or_minimal(services):
             args['id'] = 'a' * 12
         if t.name.startswith('diagram_document_') and 'id' in required:
             args['id'] = 'a' * 12
+        if t.name.startswith('diagram_style_') and 'id' in required:
+            args['id'] = 'a' * 12
+        if t.name == 'diagram_style_apply':
+            args['style_id'] = 'b' * 12
+            args['node_ids'] = ['shape']
         if t.name == 'diagram_brand_onboard':
             args['colors'] = {'accent': '#123456'}
         if t.name in ('motion_get','motion_render'):

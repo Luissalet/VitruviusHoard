@@ -2275,6 +2275,203 @@
     "module": "design"
   },
   {
+    "name": "diagram_style_list",
+    "description": "List reusable named shape styles. Estilos reutilizables.\nDoes not create a store.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_get",
+    "description": "Read an immutable style revision. Leer estilo.\nRetained revisions remain readable after removal.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StyleGet",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_save",
+    "description": "Create or revise a named shape style. Guardar estilo.\nSupply complete appearance values, excluding geometry, content, images and page.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "base_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Revision"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": true,
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "values"
+      ],
+      "title": "StyleSave",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_remove",
+    "description": "Remove a style from the library. Retirar estilo.\nRetains its revisions and all styled documents.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "base_revision"
+      ],
+      "title": "StyleRemove",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_apply",
+    "description": "Copy a style onto selected shapes. Aplicar estilo.\nOne undoable document change; preserves geometry, text, resources and independent later edits.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "description": "Document to change.",
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "style_id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Style Id",
+          "type": "string"
+        },
+        "style_revision": {
+          "minimum": 1,
+          "title": "Style Revision",
+          "type": "integer"
+        },
+        "node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Node Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "base_revision",
+        "style_id",
+        "style_revision",
+        "node_ids"
+      ],
+      "title": "StyleApply",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "diagram_document_list",
     "description": "List editable diagram documents without starting models. Lista de diagramas editables.",
     "annotations": {
@@ -2343,6 +2540,19 @@
           "default": null,
           "description": "Select one infographic page for the figure preview; full source is retained.",
           "title": "Page Id"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select an authored isometric state; the complete source remains unchanged.",
+          "title": "State Id"
         }
       },
       "required": [
@@ -2399,6 +2609,19 @@
           "default": "Edit diagram",
           "title": "Reason",
           "type": "string"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Preview only: select an authored isometric state.",
+          "title": "State Id"
         }
       },
       "title": "DocumentSave",
@@ -2424,6 +2647,9 @@
                 "nodes",
                 "edges",
                 "groups",
+                "pieces",
+                "mechanism_parts",
+                "mechanism_states",
                 "view_nodes",
                 "view_edges",
                 "pages",
@@ -2580,6 +2806,19 @@
           "default": null,
           "description": "Select one infographic page for the figure preview; full source is retained.",
           "title": "Page Id"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select an authored isometric state; the complete source remains unchanged.",
+          "title": "State Id"
         }
       },
       "required": [
@@ -3826,7 +4065,7 @@
   },
   {
     "name": "theseus_scenario_save",
-    "description": "Save explicit command arrays/shared input or hash-bound retained browser.scenario captures. Retained cases compare complete, literally aligned step responses without connecting or replaying. Escenario diferencial.",
+    "description": "Save explicit commands/shared input, hash-bound retained page scenarios or process captures with selected comparison dimensions. Retained cases compare complete aligned observations without connecting or replaying. Escenario diferencial.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -3910,6 +4149,181 @@
                 "reference_sha256",
                 "candidate_job_id",
                 "candidate_sha256"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "retained-process-scenarios"
+                },
+                "reference_job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "candidate_job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reference_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "candidate_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "query": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "dimensions"
+                  ],
+                  "properties": {
+                    "dimensions": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "stdout",
+                          "stderr",
+                          "exit",
+                          "terminal",
+                          "files",
+                          "http",
+                          "websocket",
+                          "commands",
+                          "trace"
+                        ]
+                      }
+                    },
+                    "terminal_view": {
+                      "enum": [
+                        "rendered",
+                        "raw"
+                      ]
+                    },
+                    "http_headers": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "websocket_headers": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "command_working_directory": {
+                      "type": "boolean"
+                    },
+                    "normalizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "dimension",
+                          "side",
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "dimension": {
+                            "enum": [
+                              "stdout",
+                              "stderr",
+                              "terminal"
+                            ]
+                          },
+                          "side": {
+                            "enum": [
+                              "reference",
+                              "candidate"
+                            ]
+                          },
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "to": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "trace": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "nodes",
+                        "before"
+                      ],
+                      "properties": {
+                        "nodes": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "match"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "match": {
+                                "type": "object",
+                                "minProperties": 1
+                              },
+                              "occurrence": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            }
+                          }
+                        },
+                        "before": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "before",
+                              "after"
+                            ],
+                            "properties": {
+                              "before": {
+                                "type": "string"
+                              },
+                              "after": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "reference_job_id",
+                "reference_sha256",
+                "candidate_job_id",
+                "candidate_sha256",
+                "query"
               ],
               "additionalProperties": false
             }
@@ -4512,7 +4926,7 @@
   },
   {
     "name": "theseus_oracle_selftest",
-    "description": "Test deliberately wrong command candidates or explicitly mapped retained page captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.",
+    "description": "Test deliberately wrong commands or explicitly mapped retained page/process captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.",
     "inputSchema": {
       "type": "object",
       "properties": {

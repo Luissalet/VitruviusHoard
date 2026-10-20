@@ -20,6 +20,7 @@ const state = {
   runtimeCatalog: null,
   analysisPage: null,
   analysisRecord: null,
+  webSourceChoices: null,
   showArchived: false,
   busy: false,
   sequence: 0,
@@ -340,7 +341,7 @@ const claimFields = ["id", "kind", "statement", "owner", "finding_ids", "scenari
 const claimStatus = {verified:"Verificada con estos casos",different:"Se han observado diferencias",unknown:"Sin resolver",resolved:"Pregunta resuelta"};
 function reconstruction() {
   const workflow = state.data.workflow || {claims:[],handoffs:[],oracle_jobs:[]};
-  const commandScenarios=state.data.scenarios.filter(row=>row.definition.kind!=='retained-page-scenarios');
+  const commandScenarios=state.data.scenarios.filter(row=>!isRetainedKind(row.definition.kind));
   const options = (rows, key, label) => rows.map(row => `<option value="${escape(row.id)}" ${draft(key)===row.id?"selected":""}>${escape(label(row))}</option>`).join("");
   const links = (rows,key,label) => rows.length ? `<div class="claim-links">${rows.map(row=>`<label class="inline"><input type="checkbox" name="${key}" value="${escape(row.id)}" data-linkset="${key}" data-draft="claim-${key}" ${String(draft("claim-"+key)).split(",").map(value=>value.trim()).includes(row.id)?"checked":""}>${escape(label(row))}</label>`).join("")}</div>` : '<p class="small">No hay entradas disponibles para vincular.</p>';
   return `<div class="reading"><h2>Obligaciones y preguntas</h2>
@@ -391,13 +392,14 @@ function oracleJob(job) {
 }
 
 function retainedOracleForm() {
-  const cases=state.data.scenarios.filter(row=>row.definition.kind==='retained-page-scenarios');
+  const cases=state.data.scenarios.filter(row=>isRetainedKind(row.definition.kind));
   if(!cases.length)return '';
   const chosen=draft('retained-oracle-scenario')||cases[0].id;
+  const kind=(cases.find(row=>row.id===chosen)||cases[0]).definition.kind;
   return `<h3>Probar una perturbación guardada</h3><p>Elige un escenario y la captura de una reconstrucción deliberadamente errónea con los mismos pasos. Una captura incompleta o con peticiones distintas queda inválida y no cuenta como defecto detectado.</p>
-    <form id="retained-oracle-form"><label>Escenario de página<select name="scenario_id" data-draft="retained-oracle-scenario" required>${cases.map(row=>`<option value="${escape(row.id)}" ${row.id===chosen?'selected':''}>${escape(row.name)}</option>`).join('')}</select></label>
+    <form id="retained-oracle-form"><label>Escenario guardado<select id="retained-oracle-scenario" name="scenario_id" data-draft="retained-oracle-scenario" required>${cases.map(row=>`<option value="${escape(row.id)}" ${row.id===chosen?'selected':''}>${escape(row.name)}</option>`).join('')}</select></label>
     <label>Defecto introducido<input name="name" data-draft="retained-oracle-name" value="${attr('retained-oracle-name')}" placeholder="Por ejemplo: devolver una constante" required></label>
-    ${captureSelect('Captura de la perturbación','candidate_job_id','retained-oracle-candidate')}
+    ${captureSelect('Captura de la perturbación','candidate_job_id','retained-oracle-candidate','',kind)}
     <button type="submit">Probar perturbación guardada</button></form>`;
 }
 
@@ -573,24 +575,43 @@ function nativeAnalyses() {
       return `<label>${side === "reference" ? "Análisis de referencia" : "Análisis candidato"}<select name="${side}_job_id" data-draft="analysis-${side}-${selected.name}">${choices.map(row=>`<option value="${row.id}" ${draft("analysis-"+side+"-"+selected.name,side === "reference" ? choices.at(-1)?.id : choices[0]?.id)===row.id?"selected":""}>${escape(row.result.artifact_name)}${mixed?" · "+escape(row.result.title||row.result.operation):""}${row.state==="finished"?"":" · "+escape(statusLabels[row.state]||row.state)} · SHA ${escape(row.result.artifact_sha256?.slice(0,8))} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>`;
     }).join("") + (!sources.length || !candidateSources.length ? '<p class="warning">Primero guarda los análisis de referencia y candidato del tipo indicado para poder compararlos.</p>' : "")
     : derived
-    ? `<label>Análisis de origen<select name="source_job_id" data-draft="analysis-source-job">${sources.map(row => `<option value="${row.id}" ${draft("analysis-source-job") === row.id ? "selected" : ""}>${escape(row.result.artifact_name)} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>${!sources.length ? '<p class="warning">Primero guarda un análisis del tipo indicado. La consulta reutiliza sus observaciones guardadas.</p>' : ""}`
+    ? `<label>Análisis de origen<select id="analysis-source-job" name="source_job_id" data-draft="analysis-source-job">${sources.map(row => `<option value="${row.id}" ${draft("analysis-source-job") === row.id ? "selected" : ""}>${escape(row.result.artifact_name)} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>${!sources.length ? '<p class="warning">Primero guarda un análisis del tipo indicado. La consulta reutiliza sus observaciones guardadas.</p>' : ""}`
     : `<label>Artefacto<select name="artifact_id" data-draft="analysis-artifact">${state.data.artifacts.map(row => `<option value="${row.id}" ${draft("analysis-artifact", state.artifact) === row.id ? "selected" : ""}>${escape(row.name)}</option>`).join("")}</select></label>`;
   const parameterDraft = "analysis-parameters-" + selected?.name;
+  const source = sources.find(row=>row.id===draft("analysis-source-job")) || sources[0];
+  const webTrace = ["javascript.trace_source", "javascript.trace_imports"].includes(selected?.name);
+  const webChoices = source && state.webSourceChoices?.job_id===source.id && state.webSourceChoices.sha256===source.result.analysis_sha256 ? state.webSourceChoices : null;
   let body = `<div class="reading"><h2>Análisis estático local</h2><p>Inspecciona archivos y aplicaciones con ubicaciones originales, o consulta los análisis guardados. El análisis estático no ejecuta el programa.</p>`;
   if (!state.data.artifacts.length) return body + '<p>Añade un archivo desde Artefactos para analizarlo.</p><button data-action="tab" data-view="artifacts">Añadir artefacto</button></div>';
   body += `<form id="native-analysis-form">
     <label>Operación<select id="analysis-operation" name="operation" data-draft="analysis-operation">${operations.map(row => `<option value="${escape(row.name)}" ${row.name === selected?.name ? "selected" : ""}>${escape(row.title)}</option>`).join("")}</select></label>
     <p class="small">${escape(selected?.description)}</p>${selected?.available === false ? '<p class="warning">'+escape(selected.availability_reason || 'Requiere '+selected.platforms?.join(", "))+'</p>' : ""}${targetPicker}
-    <details id="analysis-parameters" ${derived && selected?.example ? "open" : ""}><summary>Parámetros de la operación</summary>
+    ${webTrace ? webSourceFields(source, selected.name, webChoices) : ""}
+    <details id="analysis-parameters" ${derived && selected?.example && !webTrace ? "open" : ""}><summary>${webTrace ? "Contexto adicional · JSON" : "Parámetros de la operación"}</summary>
       <label>Parámetros JSON<textarea class="mono" name="parameters" data-draft="${escape(parameterDraft)}" rows="6">${attr(parameterDraft, json(selected?.example || {}))}</textarea></label>
       <pre>${escape(json(selected?.inputSchema))}</pre>
     </details>
-    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : "Iniciar análisis"}</button>
+    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) || (webTrace && !webChoices?.entries.some(row=>row.kind!=="inline-source-map" && row.state==="captured")) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : "Iniciar análisis"}</button>
     ${!state.catalog?.engine.available && selected?.worker !== "python" ? '<p class="warning">El núcleo de análisis no está compilado. Ejecuta Install.ps1 y vuelve a abrir esta página.</p>' : ""}
   </form><h2>Análisis guardados</h2>`;
   body += runs.length ? runs.map(job => nativeAnalysisJob(job)).join("") : '<p class="muted">Todavía no hay análisis nativos en este proyecto.</p>';
   body += analysisBrowser(runs);
   return body + '</div>';
+}
+
+function webSourceFields(source, operation, choices) {
+  if(!source) return "";
+  if(!choices) return `<button type="button" data-action="load-web-sources" data-id="${source.id}">Cargar fuentes del análisis</button><p class="small">Carga el manifiesto guardado para seleccionar sus scripts y mapas.</p>`;
+  const scripts=choices.entries.filter(row=>row.kind!=="inline-source-map");
+  const maps=choices.entries.filter(row=>row.kind!=="page-script");
+  const picker=(rows,name,label)=>`<label>${label}<select name="web-${name}" data-draft="web-${name}-${source.id}" required><option value="">Seleccionar…</option>${rows.map(row=>`<option value="${escape(row.id)}" ${row.state!=="captured"?"disabled":""} ${draft("web-"+name+"-"+source.id)===row.id?"selected":""}>${escape(row.kind==="inline-source-map"?"Mapa incrustado de "+row.script_entry_id:row.url||"Script sin URL")} · ${escape(row.id)}${row.state==="captured"?"":" · "+escape(row.state)}</option>`).join("")}</select></label>`;
+  let body=picker(scripts,"script","Script guardado");
+  if(!scripts.some(row=>row.state==="captured")) body+='<p class="warning">Esta exportación no contiene scripts capturados. Selecciona una captura que incluya sus fuentes y vuelve a exportarla.</p>';
+  if(operation==="javascript.trace_source") {
+    body+=picker(maps,"map","Mapa o respuesta guardada")+
+      `<label>Línea generada<input type="number" name="web-line" min="1" step="1" required data-draft="web-line" value="${attr("web-line",1)}"></label><label>Columna generada · UTF-16<input type="number" name="web-column" min="0" step="1" required data-draft="web-column" value="${attr("web-column",0)}"></label><p class="small">La línea empieza en 1 y la columna en 0. La selección del mapa declara una correspondencia; no acredita qué se desplegó.</p>`;
+  } else body+='<p class="small">Se usa la URL guardada del script. Puedes indicar importer_url, import_map e import_map_base_url en el contexto adicional.</p>';
+  return body;
 }
 
 function analysisBrowser(runs) {
@@ -620,15 +641,23 @@ function nativeAnalysisJob(job) {
 function analysisRecordView(record) {
   const data = record.record;
   const instructions = data?.body?.instructions;
+  const terminal=record.section==="terminal"&&data?.rendered?.final;
   let sourceLines = (record.sources || []).map(source=>`<p class="small mono analysis-source">${escape(source.kind === "runtime-observation" ? "Captura en ejecución" : source.side === "candidate" ? "Candidato" : source.side === "reference" ? "Referencia" : "Fuente")} · ${escape(source.sha256)}</p>`).join("");
   if(record.section.startsWith("trace.") && data?.evidence_id) sourceLines += `<button data-action="analysis-evidence" data-evidence="${escape(data.evidence_id)}">Consultar evidencia de origen</button>`;
   if(record.section.startsWith("verification.") && Array.isArray(data?.evidence_links)) sourceLines += data.evidence_links.map((id,index)=>`<button data-action="analysis-evidence" data-evidence="${escape(id)}">Consultar evidencia de origen ${index+1}</button>`).join("");
-  return sourceLines + `<h3>${escape(data?.name || "Registro")} · ${escape(record.record_key)}</h3>${instructions ? `<p class="mono analysis-source">${escape(data.declaring_type)} · ${escape(data.signature?.return_type)} (${escape((data.signature?.parameter_types || []).join(", "))})</p><h4>Instrucciones CIL (${instructions.length})</h4>${table(instructions, [["il_offset", "Offset IL"], ["opcode", "Instrucción"], ["operand", "Operando"], ["file_offset", "Offset de archivo"], ["bytes", "Bytes"]])}${data.body.exception_regions?.length ? `<h4>Regiones de excepción</h4>${table(data.body.exception_regions, [["flags", "Flags"], ["try_offset", "Inicio try"], ["try_length", "Bytes try"], ["handler_offset", "Inicio handler"], ["handler_length", "Bytes handler"], ["class_token", "Tipo"]])}` : ""}<details id="analysis-record-json"><summary>Registro completo en JSON</summary><pre>${escape(json(data))}</pre></details>` : `<pre>${escape(json(data))}</pre>`}<button data-action="cite-analysis">Usar registro como observación</button>`;
+  return sourceLines + `<h3>${escape(data?.name || "Registro")} · ${escape(record.record_key)}</h3>${terminal?processTerminalView(data):''}${instructions ? `<p class="mono analysis-source">${escape(data.declaring_type)} · ${escape(data.signature?.return_type)} (${escape((data.signature?.parameter_types || []).join(", "))})</p><h4>Instrucciones CIL (${instructions.length})</h4>${table(instructions, [["il_offset", "Offset IL"], ["opcode", "Instrucción"], ["operand", "Operando"], ["file_offset", "Offset de archivo"], ["bytes", "Bytes"]])}${data.body.exception_regions?.length ? `<h4>Regiones de excepción</h4>${table(data.body.exception_regions, [["flags", "Flags"], ["try_offset", "Inicio try"], ["try_length", "Bytes try"], ["handler_offset", "Inicio handler"], ["handler_length", "Bytes handler"], ["class_token", "Tipo"]])}` : ""}<details id="analysis-record-json"><summary>Registro completo en JSON</summary><pre>${escape(json(data))}</pre></details>` : terminal?`<details><summary>Bytes y fotogramas completos · JSON</summary><pre>${escape(json(data))}</pre></details>`:`<pre>${escape(json(data))}</pre>`}<button data-action="cite-analysis">Usar registro como observación</button>`;
 }
 
 async function readAnalysisPage(job, section, offset = 0, query = "") {
   state.analysisPage = await api(`/jobs/${job}/records/${encodeURIComponent(section)}?${new URLSearchParams({offset, limit: 50, query})}`);
   state.analysisRecord = null;
+}
+
+function processTerminalView(data) {
+  const key='terminal-frame-'+data.raw_bytes.sha256;
+  const frames=data.rendered.frames,chosen=draft(key)||'-1';
+  const screen=chosen==='-1'?data.rendered.final:frames[Number(chosen)]||data.rendered.final;
+  return `<section><h4>Terminal guardado · ${screen.columns} × ${screen.rows}</h4><label>Fotograma<select id="process-terminal-frame" data-draft="${escape(key)}"><option value="-1" ${chosen==='-1'?'selected':''}>Estado final</option>${frames.map((frame,index)=>`<option value="${index}" ${String(index)===chosen?'selected':''}>${index+1} · ${escape(frame.event_id)} · ${frame.columns} × ${frame.rows}</option>`).join('')}</select></label><p class="small">Buffer ${escape(screen.active_buffer)} · cursor ${screen.cursor_x}, ${screen.cursor_y}. Interpretación de los bytes VT guardados; no ejecuta el programa.</p><pre class="mono" aria-label="Contenido del terminal guardado">${escape(screen.lines.join('\n'))}</pre><p class="small mono">Bytes originales · SHA-256 ${escape(data.raw_bytes.sha256)}</p></section>`;
 }
 
 function binaryWorkspace() {
@@ -690,13 +719,13 @@ function findingSources(sources = []) {
 }
 
 function scenarios() {
-  const retained=draft('scenario-kind')==='retained-page-scenarios';
+  const kind=draft('scenario-kind'),retained=isRetainedKind(kind);
   return `<div class="reading"><form id="scenario-form"><h2>${draft("scenario-id") ? "Editar escenario" : "Nuevo escenario"}</h2>
     <label>Nombre<input name="name" data-draft="scenario-name" value="${attr("scenario-name")}" required></label>
-    <label>Tipo de escenario<select id="scenario-kind" name="kind" data-draft="scenario-kind"><option value="commands">Programas locales</option><option value="retained-page-scenarios" ${retained?'selected':''}>Capturas de página guardadas</option></select></label>
-    ${retained?retainedScenarioFields():commandScenarioFields()}
+    <label>Tipo de escenario<select id="scenario-kind" name="kind" data-draft="scenario-kind"><option value="commands">Programas locales</option><option value="retained-page-scenarios" ${kind==='retained-page-scenarios'?'selected':''}>Capturas de página guardadas</option><option value="retained-process-scenarios" ${kind==='retained-process-scenarios'?'selected':''}>Capturas de procesos guardadas</option></select></label>
+    ${retained?retainedScenarioFields(kind):commandScenarioFields()}
     <div class="toolbar"><button class="primary" type="submit">Guardar escenario</button>${draft("scenario-id") ? '<button type="button" data-action="new-scenario">Cancelar edición</button>' : ""}</div></form>
-    <h2>Escenarios guardados</h2>${state.data.scenarios.length?state.data.scenarios.map(row=>`<article class="record"><h3>${escape(row.name)}</h3>${row.definition.kind==='retained-page-scenarios'?`<p>Capturas de página guardadas · respuestas a peticiones literales</p>${['reference','candidate'].map(side=>`<p class="small mono analysis-source">${side==='reference'?'Referencia':'Reconstrucción'} · ${escape(row.definition[side+'_job_id'])}<br>SHA-256 ${escape(row.definition[side+'_sha256'])}</p>`).join('')}`:`<p class="mono">${escape(json(row.definition.reference))}<br>${escape(json(row.definition.candidate))}</p>`}<button data-action="edit-scenario" data-id="${row.id}">Editar escenario</button></article>`).join(''):'<p class="muted">Todavía no hay escenarios.</p>'}
+    <h2>Escenarios guardados</h2>${state.data.scenarios.length?state.data.scenarios.map(row=>`<article class="record"><h3>${escape(row.name)}</h3>${isRetainedKind(row.definition.kind)?`<p>${row.definition.kind==='retained-process-scenarios'?'Capturas de procesos guardadas · '+escape(row.definition.query.dimensions.join(', ')):'Capturas de página guardadas · respuestas a peticiones literales'}</p>${['reference','candidate'].map(side=>`<p class="small mono analysis-source">${side==='reference'?'Referencia':'Reconstrucción'} · ${escape(row.definition[side+'_job_id'])}<br>SHA-256 ${escape(row.definition[side+'_sha256'])}</p>`).join('')}`:`<p class="mono">${escape(json(row.definition.reference))}<br>${escape(json(row.definition.candidate))}</p>`}<button data-action="edit-scenario" data-id="${row.id}">Editar escenario</button></article>`).join(''):'<p class="muted">Todavía no hay escenarios.</p>'}
     <button data-action="tab" data-view="jobs">Ver comparaciones</button></div>`;
 }
 
@@ -704,18 +733,23 @@ function commandScenarioFields() {
   return `<div class="split"><label>Programa de referencia · argumentos JSON<textarea class="mono" name="reference" data-draft="scenario-reference" rows="3" placeholder='["python", "C:\\\\ruta\\\\original.py"]' required>${attr("scenario-reference")}</textarea></label><label>Reconstrucción · argumentos JSON<textarea class="mono" name="candidate" data-draft="scenario-candidate" rows="3" placeholder='["python", "C:\\\\ruta\\\\candidato.py"]' required>${attr("scenario-candidate")}</textarea></label></div><label>Entrada compartida (stdin)<textarea class="mono" name="stdin" data-draft="scenario-stdin" rows="3">${attr("scenario-stdin")}</textarea></label><div class="split"><label>Directorio de trabajo, opcional<input name="cwd" data-draft="scenario-cwd" value="${attr("scenario-cwd")}"></label><label>Comparar stdout como<select name="mode" data-draft="scenario-mode"><option value="text">Texto exacto</option><option value="json" ${draft("scenario-mode") === "json" ? "selected" : ""}>JSON (sin importar el orden de claves)</option></select></label></div>${scenarioExpectations()}<p class="small">Se ejecutan estos programas locales con la misma entrada; se comparan salida, errores y código de retorno. La ejecución empieza al pulsar Comparar, no al guardar.</p>`;
 }
 
-function savedPageCaptures() {
-  return state.data.jobs.filter(job=>job.result.operation==='browser.scenario'&&job.result.analysis_sha256);
+function isRetainedKind(kind) {
+  return ['retained-page-scenarios','retained-process-scenarios'].includes(kind);
 }
 
-function captureSelect(label,name,key,hashKey='') {
-  const selected=draft(key),rows=savedPageCaptures(),job=rows.find(row=>row.id===selected);
+function savedScenarioCaptures(kind='retained-page-scenarios') {
+  return state.data.jobs.filter(job=>job.result.operation===(kind==='retained-process-scenarios'?'process.capture':'browser.scenario')&&job.result.analysis_sha256);
+}
+
+function captureSelect(label,name,key,hashKey='',kind='retained-page-scenarios') {
+  const selected=draft(key),rows=savedScenarioCaptures(kind),job=rows.find(row=>row.id===selected);
   const hash=(hashKey&&draft(hashKey))||job?.result.analysis_sha256;
   return `<label>${escape(label)}<select name="${escape(name)}" data-draft="${escape(key)}" data-capture-hash="${escape(hashKey)}" required><option value="">Elige una captura guardada</option>${selected&&!job?`<option value="${escape(selected)}" selected>Captura no disponible · ${escape(selected)}</option>`:''}${rows.map(row=>`<option value="${escape(row.id)}" ${row.id===selected?'selected':''}>${escape(row.result.artifact_name||'Página')} · ${escape(statusLabels[row.state]||row.state)} · ${escape(row.id.slice(0,8))}</option>`).join('')}</select></label>${hash?`<p class="small mono analysis-source">SHA-256 ${escape(hash)}</p>`:''}`;
 }
 
-function retainedScenarioFields() {
-  return `<p>Compara las respuestas conservadas a los mismos pasos. No abre páginas ni repite acciones. Las capturas incompletas o alteradas quedan sin evidencia válida.</p>${!savedPageCaptures().length?'<p class="muted">Guarda primero dos ejecuciones «Web · Ejecutar escenario CDP» en Análisis. Después podrás elegirlas aquí.</p>':''}<div class="split">${['reference','candidate'].map(side=>`<section>${captureSelect(side==='reference'?'Captura de referencia':'Captura de la reconstrucción',side+'_job_id','scenario-'+side+'_job_id','scenario-'+side+'_sha256')}</section>`).join('')}</div><p class="small">Coincidir sólo verifica estas respuestas guardadas; no demuestra equivalencia para todas las entradas.</p>`;
+function retainedScenarioFields(kind) {
+  const process=kind==='retained-process-scenarios';
+  return `<p>${process?'Compara las dimensiones elegidas de procesos con las mismas entradas declaradas.':'Compara las respuestas conservadas a los mismos pasos.'} No repite acciones. Las capturas incompletas o alteradas quedan sin evidencia válida.</p>${!savedScenarioCaptures(kind).length?`<p class="muted">Guarda primero dos ejecuciones «${process?'Procesos · Capturar escenario':'Web · Ejecutar escenario CDP'}» en Ejecuciones. Después podrás elegirlas aquí.</p>`:''}<div class="split">${['reference','candidate'].map(side=>`<section>${captureSelect(side==='reference'?'Captura de referencia':'Captura de la reconstrucción',side+'_job_id','scenario-'+side+'_job_id','scenario-'+side+'_sha256',kind)}</section>`).join('')}</div>${process?`<label>Dimensiones y reglas de comparación · JSON<textarea name="query" class="mono" rows="5" data-draft="scenario-query" required>${attr('scenario-query',JSON.stringify({dimensions:['stdout','stderr','exit','files']},null,2))}</textarea></label><p class="small">Dimensiones: stdout, stderr, exit, terminal, files, http, websocket, commands y trace. Terminal admite terminal_view: rendered o raw; trace requiere nodos y relaciones before explícitas. Las normalizaciones literales se declaran en esta consulta y conservan sus recuentos.</p>`:''}<p class="small">Coincidir sólo verifica estas observaciones guardadas; no demuestra equivalencia para todas las entradas.</p>`;
 }
 
 function scenarioExpectations() {
@@ -733,6 +767,7 @@ Object.assign(runtimeLabels,{device_id:"Dispositivo Frida",remote_endpoint:"Endp
 Object.assign(runtimeLabels,{inspector_endpoint:"Endpoint Inspector",target_id:"ID exacto del destino",observation_ms:"Ventana de observación · milisegundos",capture_sources:"Leer también los textos de los scripts"});
 Object.assign(runtimeLabels,{capture_dom:"Guardar el árbol DOM",listener_selector:"Selector CSS para consultar listeners",capture_response_bodies:"Leer los cuerpos de respuestas completadas",capture_screenshot:"Guardar una captura PNG de la página"});
 Object.assign(runtimeLabels,{steps:"Pasos CDP · JSON"});
+Object.assign(runtimeLabels,{environment:"Variables del programa · JSON",terminal:"Terminal · JSON",files:"Archivos observados · JSON",services:"Servicios HTTP y WebSocket · JSON",commands:"Comandos declarados · JSON",timeout_seconds:"Tiempo máximo · segundos"});
 
 function runtimeForm() {
   const operations=state.runtimeCatalog?.operations || [];
@@ -744,7 +779,7 @@ function runtimeForm() {
     const token=key==="serial"?"runtime-serial":key==="session_id"?"runtime-frida-session":`runtime-${selected.name}-${key}`;
     const name=`runtime-param-${key}`;
     const required=selected.inputSchema.required.includes(key) || (selected.name==="frida.start" && (mode==="attach"?key==="pid":key==="argv"));
-    const label=runtimeLabels[key] || key;
+    const label=selected.name==="process.capture" && key==="mode"?"Modo de captura":selected.name==="process.capture" && key==="steps"?"Entradas y acciones · JSON":runtimeLabels[key] || key;
     const value=draft(token,key==="device_id"?"local":schema.default??"");
     if(key==="token") return `<label>${escape(label)} · opcional<input name="${name}" type="password" autocomplete="off"><span class="small">Se usa en esta conexión y no se guarda en la captura.</span></label>`;
     if(key==="session_id") return `<label>${escape(label)}<select name="${name}" data-draft="${token}" required><option value="">Elige una sesión conectada</option>${sessions.map(row=>`<option value="${escape(row.session_id)}" ${value===row.session_id?"selected":""}>PID ${escape(row.target.pid)} · ${escape(row.session_state)} · ${escape(row.session_id)}</option>`).join("")}</select></label>${!sessions.length?'<p>No hay sesiones conectadas. Abre una sesión para instrumentar un proceso; las capturas importadas se consultan en el historial.</p>':""}`;
@@ -754,12 +789,15 @@ function runtimeForm() {
     }
     if(key==="source") return `<label>${escape(label)}<textarea name="${name}" data-draft="${token}" rows="8" class="mono" required>${escape(value)}</textarea></label>`;
     if(schema.type==="boolean") return `<label class="inline"><input name="${name}" type="checkbox" data-draft="${token}" ${value?"checked":""}>${escape(label)}</label>`;
-    if(schema.enum) return `<label>${escape(label)}<select name="${name}" data-draft="${token}">${!required?'<option value="">Predeterminado</option>':""}${schema.enum.map(option=>`<option value="${escape(option)}" ${value===option?"selected":""}>${escape(option)}</option>`).join("")}</select></label>`;
-    if(schema.type==="array") return `<label>${escape(label)}${required?"":" · opcional"}<textarea name="${name}" data-draft="${token}" rows="${key==="steps"?8:3}" class="mono" ${required?"required":""} placeholder='${key==="steps"?'[{"method":"Page.getFrameTree","parameters":{}}]':key==="argv"?'["C:/ruta/programa.exe", "argumento"]':'[{"name":"count","type":"int","value":128}]'}'>${escape(value)}</textarea></label>`;
-    return `<label>${escape(label)}${required?"":" · opcional"}<input name="${name}" data-draft="${token}" value="${escape(value)}" ${required?"required":""} ${schema.type==="integer"?'type="number" min="0"':""} ${key==="serial"?'placeholder="Serial de Dispositivos conectados"':Array.isArray(schema.type)?'placeholder="null para todos"':""}></label>`;
+    if(schema.enum) return `<label>${escape(label)}<select name="${name}" data-draft="${token}">${!required?'<option value="">Predeterminado</option>':""}${schema.enum.map(option=>`<option value="${escape(option)}" ${value===option?"selected":""} ${selected.name==="process.capture" && option==="pty" && (!selected.pty_available || !selected.terminal_renderer_available)?"disabled":""}>${escape(selected.name==="process.capture" && key==="mode"?({pipes:"Salida y errores separados",pty:"Terminal interactivo · Windows"}[option] || option):option)}</option>`).join("")}</select></label>`;
+    if(schema.type==="array" || schema.type==="object") {
+      const example=key==="steps"?(selected.name==="process.capture"?'[{"kind":"wait_output","text":"Ready"},{"kind":"input","text":"3\\r"}]':'[{"method":"Page.getFrameTree","parameters":{}}]'):key==="argv"?'["C:/ruta/programa.exe", "argumento"]':key==="files"?'[{"label":"resultado","path":"resultado.txt"}]':key==="terminal"?'{"columns":80,"rows":24,"scrollback":1000}':schema.type==="object"?'{}':'[{"name":"count","type":"int","value":128}]';
+      return `<label>${escape(label)}${required?"":" · opcional"}<textarea name="${name}" data-draft="${token}" rows="${key==="steps"?8:3}" class="mono" ${required?"required":""} placeholder='${escape(example)}'>${escape(typeof value==="object"?json(value):value)}</textarea></label>`;
+    }
+    return `<label>${escape(label)}${required?"":" · opcional"}<input name="${name}" data-draft="${token}" value="${escape(value)}" ${required?"required":""} ${["integer","number"].includes(schema.type)?`type="number" min="0" step="${schema.type==="number"?"any":"1"}"`:""} ${key==="serial"?'placeholder="Serial de Dispositivos conectados"':Array.isArray(schema.type)?'placeholder="null para todos"':""}></label>`;
   }).join("");
   const mutates=selected.mutates_device || selected.mutates_target;
-  const modifiedTarget=selected.name.startsWith("browser.")?"la página seleccionada":selected.mutates_device?"el dispositivo seleccionado":"el proceso seleccionado";
+  const modifiedTarget=selected.name==="process.capture"?"el estado del programa y los archivos que utilice":selected.name.startsWith("browser.")?"la página seleccionada":selected.mutates_device?"el dispositivo seleccionado":"el proceso seleccionado";
   return `<section class="reading"><h2>Observaciones en ejecución</h2><p>Android usa el serial exacto del dispositivo. Frida usa un dispositivo y PID o programa, o una sesión de este proyecto. Inspector usa un endpoint y el ID exacto del destino; leer textos de scripts es opcional. Cada operación conserva una captura independiente; cerrar una sesión Frida desconecta la instrumentación sin matar el proceso.</p><form id="runtime-form"><label>Operación<select id="runtime-operation" name="operation" data-draft="runtime-operation">${operations.map(row=>`<option value="${escape(row.name)}" ${row.name===selected.name?"selected":""}>${escape(row.title)}</option>`).join("")}</select></label><p class="small">${escape(selected.description)}</p>${mutates?`<p>Esta operación modifica ${modifiedTarget}. Cancelar no revierte sus cambios.</p>`:""}${selected.available?"":`<p class="warning">${escape(selected.availability_reason)}</p>`}${fields}<button class="primary" type="submit" ${selected.available?"":"disabled"}>${selected.name==="browser.scenario"?"Ejecutar escenario":selected.name==="browser.coverage"?"Medir cobertura":selected.provider==="frida"?escape(selected.title.split(" · ").at(-1)):selected.mutates_device?"Ejecutar en el dispositivo":"Iniciar observación"}</button></form></section>`;
 }
 
@@ -788,10 +826,10 @@ function comparisonJob(job) {
 }
 
 function comparisonCase(job,test) {
-  const retained=test.reference.kind==='retained-page-scenarios',unknown=test.valid===false;
-  return `<details id="case-${job.id}-${test.scenario_id}"><summary class="${unknown?'warning':test.passed?'pass':'fail'}">${escape(test.name)} · ${unknown?'Sin evidencia válida':test.passed?'Coincide':'Difiere'}</summary>${test.differences.map(text=>`<p class="${unknown?'warning':'fail'}">${escape(differenceLabel(text))}</p>`).join('')}${retained?'<p class="small">Sólo se comparan las respuestas guardadas a los mismos pasos. No se ha conectado al original y no se afirma equivalencia general.</p>':''}<div class="comparison-output">${['reference','candidate'].map((side,index)=>{
+  const retained=isRetainedKind(test.reference.kind),process=test.reference.kind==='retained-process-scenarios',unknown=test.valid===false;
+  return `<details id="case-${job.id}-${test.scenario_id}"><summary class="${unknown?'warning':test.passed?'pass':'fail'}">${escape(test.name)} · ${unknown?'Sin evidencia válida':test.passed?'Coincide':'Difiere'}</summary>${test.differences.map(text=>`<p class="${unknown?'warning':'fail'}">${escape(differenceLabel(text))}</p>`).join('')}${retained?'<p class="small">Sólo se comparan las observaciones guardadas seleccionadas. No se ha conectado al original y no se afirma equivalencia general.</p>':''}<div class="comparison-output">${['reference','candidate'].map((side,index)=>{
     const observation=test[side];
-    return `<section><h3>${index?'Reconstrucción':'Referencia'}</h3>${retained?`<p class="small mono analysis-source">SHA-256 ${escape(observation.analysis_sha256)}</p><a href="/theseus/api/jobs/${encodeURIComponent(observation.capture_job_id)}/analysis.json" download>Descargar captura guardada</a><h4>Peticiones</h4><pre>${escape(json(observation.requests))}</pre><h4>Respuestas conservadas</h4><pre>${escape(json(observation.responses))}</pre>`:`<p class="small">Retorno ${observation.exit_code} · ${observation.duration_seconds}s</p><pre>${escape(observation.stdout||'(sin salida)')}</pre>${observation.stderr?`<h3>stderr</h3><pre>${escape(observation.stderr)}</pre>`:''}`}</section>`;
+    return `<section><h3>${index?'Reconstrucción':'Referencia'}</h3>${retained?`<p class="small mono analysis-source">SHA-256 ${escape(observation.analysis_sha256)}</p><a href="/theseus/api/jobs/${encodeURIComponent(observation.capture_job_id)}/analysis.json" download>Descargar captura guardada</a><h4>${process?"Consulta de comparación":"Peticiones"}</h4><pre>${escape(json(process?observation.query:observation.requests))}</pre><details><summary>${process?"Observación de proceso conservada":"Respuestas conservadas"}</summary><pre>${escape(json(process?observation.record:observation.responses))}</pre></details>`:`<p class="small">Retorno ${observation.exit_code} · ${observation.duration_seconds}s</p><pre>${escape(observation.stdout||'(sin salida)')}</pre>${observation.stderr?`<h3>stderr</h3><pre>${escape(observation.stderr)}</pre>`:''}`}</section>`;
   }).join('')}</div></details>`;
 }
 
@@ -814,6 +852,20 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
   const { action, id, view, page } = button.dataset;
+  if (action === "load-web-sources") return act(async () => {
+    const source=state.data.jobs.find(row=>row.id===id);
+    const response=await fetch(`/theseus/api/jobs/${id}/analysis.json`);
+    if(!response.ok) throw Error("No se pudo cargar el manifiesto. Consulta el recibo del análisis de origen.");
+    const bytes=await response.arrayBuffer();
+    const sha=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),value=>value.toString(16).padStart(2,"0")).join("");
+    if(sha!==source.result.analysis_sha256) throw Error("El manifiesto cambió respecto al recibo guardado. Vuelve a exportar la captura.");
+    const document=JSON.parse(new TextDecoder().decode(bytes));
+    if(document.result?.format!=="vitruvius.web-sources/1") throw Error("Selecciona una exportación de fuentes web guardadas.");
+    state.webSourceChoices={job_id:id,sha256:sha,entries:document.result.entries.map(row=>({
+      id:row.id,kind:row.kind,url:row.url,state:row.state,sha256:row.sha256,script_entry_id:row.script_entry_id}))};
+    render();
+    notice("Fuentes cargadas. Selecciona el script que quieres consultar.");
+  });
   if (["claim-finding","claim-dependency","claim-job"].includes(action)) {
     state.view=action==="claim-finding"?"findings":action==="claim-job"?"jobs":"reconstruction";
     route();render();
@@ -971,6 +1023,7 @@ document.addEventListener("click", (event) => {
       "scenario-id": row.id,
       "scenario-name": row.name,
       "scenario-kind": data.kind || 'commands',
+      "scenario-query": data.query?json(data.query):"",
       "scenario-reference_job_id": data.reference_job_id || '',
       "scenario-reference_sha256": data.reference_sha256 || '',
       "scenario-candidate_job_id": data.candidate_job_id || '',
@@ -993,7 +1046,7 @@ document.addEventListener("click", (event) => {
   }
   if (action === "new-scenario") {
     clearDrafts(
-      ...["id", "name", "kind", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
+      ...["id", "name", "kind", "query", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
         (key) => "scenario-" + key,
       ),
     );
@@ -1065,12 +1118,13 @@ document.addEventListener("submit", (event) => {
       await refresh();notice("Especificación congelada para el constructor.");
     }
     if (form.id === "oracle-form") {
-      const scenario_ids=state.data.scenarios.filter(row=>row.definition.kind!=='retained-page-scenarios').map(row=>row.id);
+      const scenario_ids=state.data.scenarios.filter(row=>!isRetainedKind(row.definition.kind)).map(row=>row.id);
       await api(`/projects/${projectId()}/oracle-selftests`,{variants:JSON.parse(fields.variants),scenario_ids});
       await refresh();notice("Prueba de sensibilidad iniciada.");
     }
     if(form.id==='retained-oracle-form') {
-      const job=savedPageCaptures().find(row=>row.id===fields.candidate_job_id);
+      const scenario=state.data.scenarios.find(row=>row.id===fields.scenario_id);
+      const job=savedScenarioCaptures(scenario?.definition.kind).find(row=>row.id===fields.candidate_job_id);
       if(!job)throw new Error('Elige una captura guardada para la perturbación.');
       await api(`/projects/${projectId()}/oracle-selftests`,{scenario_ids:[fields.scenario_id],variants:[{name:fields.name,captures:[{scenario_id:fields.scenario_id,candidate_job_id:job.id,candidate_sha256:job.result.analysis_sha256}]}]});
       await refresh();notice('Perturbación guardada enviada al oráculo. No se ha vuelto a conectar al original.');
@@ -1112,8 +1166,14 @@ document.addEventListener("submit", (event) => {
     if (form.id === "native-analysis-form") {
       const source = (fields.source_job_id || fields.reference_job_id) && state.data.jobs.find(row => row.id === (fields.source_job_id || fields.reference_job_id));
       const selectedSources = fields.reference_job_id ? {reference_job_id:fields.reference_job_id,candidate_job_id:fields.candidate_job_id} : source ? {source_job_id:source.id} : {};
+      const parameters=JSON.parse(fields.parameters || "{}");
+      if(["javascript.trace_source","javascript.trace_imports"].includes(fields.operation)) {
+        parameters.query={...parameters.query,script_id:fields["web-script"]};
+        if(fields.operation==="javascript.trace_source") Object.assign(parameters.query,{
+          map_id:fields["web-map"],line:Number(fields["web-line"]),column:Number(fields["web-column"])});
+      }
       await api(`/projects/${projectId()}/artifacts/${source ? source.result.artifact_id : fields.artifact_id}/analyses`, {
-        operation: fields.operation, parameters: {...JSON.parse(fields.parameters || "{}"), ...selectedSources},
+        operation: fields.operation, parameters: {...parameters, ...selectedSources},
       });
       await refresh();
       notice("Análisis nativo iniciado.");
@@ -1125,7 +1185,11 @@ document.addEventListener("submit", (event) => {
         const value=fields[`runtime-param-${key}`];
         if(schema.type==="boolean") { parameters[key]=value==="on";continue; }
         if(value===undefined || value==="") continue;
-        if(schema.type==="array") parameters[key]=JSON.parse(value);
+        if(schema.type==="array" || schema.type==="object") parameters[key]=JSON.parse(value);
+        else if(schema.type==="number") {
+          parameters[key]=Number(value);
+          if(!Number.isFinite(parameters[key]) || parameters[key]<0) throw Error("Indica una duración válida en segundos.");
+        }
         else if(schema.type==="integer" || Array.isArray(schema.type)) {
           if(value==="null") parameters[key]=null;
           else { parameters[key]=Number(value);if(!Number.isInteger(parameters[key]) || parameters[key]<0) throw Error("Indica un número entero no negativo o null para todos."); }
@@ -1196,9 +1260,9 @@ document.addEventListener("submit", (event) => {
       notice("Especificación guardada.");
     }
     if (form.id === "scenario-form") {
-      const definition = fields.kind==='retained-page-scenarios'?{
-        kind:fields.kind,...Object.fromEntries(['reference','candidate'].flatMap(side=>{
-          const id=fields[side+'_job_id'],job=savedPageCaptures().find(row=>row.id===id);
+      const definition = isRetainedKind(fields.kind)?{
+        kind:fields.kind,...(fields.kind==='retained-process-scenarios'?{query:JSON.parse(fields.query)}:{}),...Object.fromEntries(['reference','candidate'].flatMap(side=>{
+          const id=fields[side+'_job_id'],job=savedScenarioCaptures(fields.kind).find(row=>row.id===id);
           if(!job)throw new Error('Elige una captura guardada disponible para '+(side==='reference'?'la referencia':'la reconstrucción')+'.');
           return [[side+'_job_id',id],[side+'_sha256',draft('scenario-'+side+'_sha256')||job.result.analysis_sha256]];
         })),
@@ -1218,7 +1282,7 @@ document.addEventListener("submit", (event) => {
         scenario_id: draft("scenario-id"),
       });
       clearDrafts(
-        ...["id", "name", "kind", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
+        ...["id", "name", "kind", "query", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
           (key) => "scenario-" + key,
         ),
       );
@@ -1229,12 +1293,12 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("change", (event) => {
-  if(event.target.id==='scenario-kind'||event.target.dataset.captureHash!==undefined) {
+  if(['scenario-kind','retained-oracle-scenario','process-terminal-frame'].includes(event.target.id)||event.target.dataset.captureHash!==undefined) {
     if(event.target.dataset.captureHash)clearDrafts(event.target.dataset.captureHash);
     render();
   }
   if (["binary-session","binary-operation"].includes(event.target.id)) render();
-  if (event.target.id === "analysis-operation") render();
+  if (["analysis-operation","analysis-source-job"].includes(event.target.id)) render();
   if (event.target.id === "runtime-operation" || (event.target.form?.id==="runtime-form" && ['runtime-param-mode','runtime-param-session_id'].includes(event.target.name))) render();
   if (event.target.id === "show-archived") {
     state.showArchived = event.target.checked;
