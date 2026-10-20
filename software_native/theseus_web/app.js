@@ -309,7 +309,7 @@ function render() {
   }
   const p = state.data.project;
   main.innerHTML = `<div class="project-heading"><div><h1>${escape(p.name)}</h1><p class="muted">${escape(p.question || "Añade una pregunta para orientar la investigación.")}</p></div><div class="toolbar"><a class="button" href="/theseus/api/projects/${p.id}/export" download>Exportar proyecto</a><a class="button" href="/theseus/api/projects/${p.id}/evidence" download>Exportar evidencias</a><button data-action="archive">${p.archived ? "Restaurar" : "Archivar"}</button></div></div>
-    ${state.data.evidence_import ? `<p class="small">Evidencias importadas. Los recibos conservan lo observado en origen; vuelve a ejecutar los escenarios para verificar el entorno actual. <a href="${state.data.evidence_import.original_bundle}" download>Descargar documento de origen</a>.</p>` : ""}
+    ${state.data.evidence_import ? `<p class="small">Evidencias importadas. Los recibos conservan lo observado en origen; vuelve a ejecutar los escenarios para verificar el entorno actual. <a href="/theseus/api/projects/${p.id}/evidence/original" download>Descargar documento de origen</a>.</p>` : ""}
     <details id="project-editor"><summary>Editar proyecto</summary><form id="edit-project" class="reading"><label>Nombre<input name="name" data-draft="project-name" value="${attr("project-name", p.name)}" required></label><label>Pregunta<textarea name="question" data-draft="project-question" rows="2">${attr("project-question", p.question)}</textarea></label><button type="submit">Guardar proyecto</button></form></details>
     <nav class="tabs" role="tablist" aria-label="Secciones del proyecto">${Object.entries(
       labels,
