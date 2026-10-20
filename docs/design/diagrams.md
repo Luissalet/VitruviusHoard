@@ -98,6 +98,7 @@ The code-led direction preserves the existing world without an approved comp or 
 - Output actions save an outstanding draft and use the accepted revision.
 - Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.
 - Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.
+- Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents.
 
 ## Colors
 
@@ -119,6 +120,8 @@ The page headline uses the inherited serif headline role. The editor heading is 
 
 `editorial-capture-facts.json` reports the computed Source Sans 3/system fallback stack and `faces: []` at both widths. This identifies a declared stack, not a loaded face. The visible serif/sans relationship and inherited fallback are the supported observation; no loaded Cinzel or Source Sans 3 webfont is claimed.
 
+The reusable-style disclosure keeps the local control/label scale (13px/12px), including 12px helper text at 1.5 line height. These are inherited inspector roles, not additions to the root type ramp. Its author browser receipt also reports the declared Source Sans 3/system stack with `loaded: []`.
+
 **The Workbench Type Rule.** Preserve the inherited serif heading and sans control relationship; document labels remain legible working content rather than a new display voice.
 
 ## Layout
@@ -132,6 +135,8 @@ The phase B mobile capture is 390px wide for a 390×844 viewport; its supplied a
 In the final phase C 390×844 capture at `scrollY: 0`, the white canvas begins around y642; the title, introduction and both comparison blocks are visible through approximately y824. This is the one corrected finish finding, not a promise of phase B's exact 293px allowance or every language/font/document state. The final desktop capture is 1440×1000 with all three working columns. At 100%, portions of a larger drawing can lie beyond the visible viewport: Ajustar/Fit, zoom and pan make them reachable. Earlier source and brand tools remain below the editor.
 
 **The Available Canvas Rule.** Compact secondary controls on narrow screens while keeping the drawing and the Formas disclosure available; preserve desktop working columns.
+
+Reusable styles sits below the selected shape's properties and above selection actions. Its native disclosure has a thin top separator, 8px top padding and a 44px minimum summary target with 12px vertical padding. Labels/action groups gain 10px top spacing; help follows with 12px. Long button labels wrap within the inspector. At 1100px and below the group spans all inspector columns, including both mobile columns; it does not change the canvas or the surrounding working layout.
 
 ## Elevation & Depth
 
@@ -168,6 +173,26 @@ Local edits support undo/redo. Automatic arrangement records the effective pre-a
 Status distinguishes saved revision, outstanding changes and saving; errors appear in a bordered alert with wrapping text. Export actions expose SVG, PNG, PDF, DRAWIO, MMD and HTML, plus editable source and interactive view. When a draft is dirty, the output label becomes Guardar y exportar/Save and export. The handler waits for Save and builds its URL from the returned document id and accepted revision; failed saving does not continue output. The interactive view opens separately. Edits made after the submitted snapshot can remain outstanding; the accepted revision is the output's boundary.
 
 **The Accepted Revision Rule.** Output actions with outstanding changes save first and identify the accepted revision, retaining any later edits as a draft.
+
+### Reusable shape styles — task 1038
+
+Estilos reutilizables / Reusable styles is a secondary native disclosure inside the existing selection inspector. The library selector shows each name and revision; its visible labels and the adjacent Style name field use the existing field treatment. Apply to selection and Refresh library form one action group. Save shape as new style, Update style from this shape and Remove from library form another, keeping application distinct from library management. Unavailable or pending actions use the incumbent disabled state; saving names its busy state. The group adds no palette, shadow, decoration or separate visual identity.
+
+Create names the selected shape's appearance; update captures that shape's current appearance and can rename the selected library style. The Design profile library lives independently of a diagram, with immutable retained revisions, so a style can be reused across documents. Apply copies fill, stroke, ink, text size/weight/alignment, border and label visibility to all selected shapes through one local change and one undo/redo step. Text, position, dimensions, pinning, pages, images and relationships remain each shape's content. Saving then publishes those appearance values through the normal document revision. Later library updates or removal leave saved diagrams and exported figures unchanged; retained style revisions remain explicitly readable.
+
+Refresh updates the selected style and its visible revision. It adopts a remote name only while the name field still matches the previously selected style's name; a manually edited name draft remains. The same library is available to Faustus through `diagram_style_list/get/save/remove/apply`, using the ordinary conflict-aware revision contract described in `docs/DIAGRAM_EDITOR.md`. The UI's single local undo and native API/MCP document save are distinct operations with the same appearance-only boundary.
+
+### Evidence and scope — reusable styles, task 1038
+
+This addition records `StyleControls.jsx`, its import and selected-shape placement in `DiagramEditor.jsx`, and `.de-style-library` in `diagram-editor.css`, on isolated branch `codex/styles1038` relative to `efb85ea`. It extends the incumbent Operate inspector without a new visual contract, approved comp or independent quality bar. Root `PRODUCT.md`, `DESIGN.md` and their tokens remain authoritative and unchanged. Implementation is in the worktree; formal technical review, integration and installed acceptance are pending at this checkpoint.
+
+Evidence is under `D:/LocalAI/research-inbox/expansiones-fusiones-20261020/`. `qa1038/FINISH.txt` returns `disposition: ship` with five sections: persistence, fidelity, ceiling, material_fixes and keep. It records no material fixes for this delta. Its reviewer opened the author-supplied full desktop/mobile captures (`desktop-r1.png`, 1440×2817; `mobile-r1.png`, 390×3714) and native-size detail crops (`desktop-r1-styles.png`, 207×533; `mobile-r1-styles.png`, 328×470). Full captures establish placement; crops show wrapping, action spacing, labels/revisions and mobile full-width treatment. SHIP covers only the new control's finish and visible inspector integration; it does not replace technical review or certify other editor states.
+
+Author `qa1038/browser-results.json` records cross-document reuse, one-step undo/redo, preserved geometry/pages/assets/text, saved documents exact after library changes/removal, adoption of an untouched remote name and preservation of a manual name draft. The accompanying browser script and `styles1038-browser-r2.log` record 1440×1000 and 390×844 viewports without horizontal overflow, JavaScript errors or bad HTTP responses. Its CSS family begins with Source Sans 3; `loaded: []` does not establish that font's loading. `qa1038/native-results.json` records 123 MCP tools, preserved manual move/text and assets/pages, and native application at document revision 3.
+
+Author `styles1038-build-r3.log` records a successful build. The area checks include 12 new style tests; the full completed Python run is reported as 518 passed/2 skipped in `styles1038-suite-counts.json`, counted from progress statuses because double-quiet output printed no summary. `styles1038-collected.log` independently records 520 collected tests. These are author receipts read by this documenter, not repeated functional or visual QA.
+
+The one supplied `styles1038-detector.json` contains 11 advisory findings for existing document-local colours, heading/control sizes and error fallback, including the local 13px disclosure size. The 13/12 inspector convention is retained; these advisories do not establish new root tokens or require global drift repair for this addition. No new context scan, detector, browser, server, model, GPU, tests or capture was run in this documentation pass. No loaded fonts, model-generated quality, unseen states, isometric origin or installed activation is claimed.
 
 ### Editorial pages, text and imported images — phase C
 

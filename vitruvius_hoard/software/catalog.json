@@ -2275,6 +2275,203 @@
     "module": "design"
   },
   {
+    "name": "diagram_style_list",
+    "description": "List reusable named shape styles. Estilos reutilizables.\nDoes not create a store.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_get",
+    "description": "Read an immutable style revision. Leer estilo.\nRetained revisions remain readable after removal.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StyleGet",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_save",
+    "description": "Create or revise a named shape style. Guardar estilo.\nSupply complete appearance values, excluding geometry, content, images and page.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "base_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Revision"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": true,
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "values"
+      ],
+      "title": "StyleSave",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_remove",
+    "description": "Remove a style from the library. Retirar estilo.\nRetains its revisions and all styled documents.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "base_revision"
+      ],
+      "title": "StyleRemove",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_style_apply",
+    "description": "Copy a style onto selected shapes. Aplicar estilo.\nOne undoable document change; preserves geometry, text, resources and independent later edits.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "description": "Document to change.",
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "style_id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Style Id",
+          "type": "string"
+        },
+        "style_revision": {
+          "minimum": 1,
+          "title": "Style Revision",
+          "type": "integer"
+        },
+        "node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Node Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "base_revision",
+        "style_id",
+        "style_revision",
+        "node_ids"
+      ],
+      "title": "StyleApply",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "diagram_document_list",
     "description": "List editable diagram documents without starting models. Lista de diagramas editables.",
     "annotations": {
