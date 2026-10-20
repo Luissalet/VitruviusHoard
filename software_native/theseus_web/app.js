@@ -340,6 +340,7 @@ const claimFields = ["id", "kind", "statement", "owner", "finding_ids", "scenari
 const claimStatus = {verified:"Verificada con estos casos",different:"Se han observado diferencias",unknown:"Sin resolver",resolved:"Pregunta resuelta"};
 function reconstruction() {
   const workflow = state.data.workflow || {claims:[],handoffs:[],oracle_jobs:[]};
+  const commandScenarios=state.data.scenarios.filter(row=>row.definition.kind!=='retained-page-scenarios');
   const options = (rows, key, label) => rows.map(row => `<option value="${escape(row.id)}" ${draft(key)===row.id?"selected":""}>${escape(label(row))}</option>`).join("");
   const links = (rows,key,label) => rows.length ? `<div class="claim-links">${rows.map(row=>`<label class="inline"><input type="checkbox" name="${key}" value="${escape(row.id)}" data-linkset="${key}" data-draft="claim-${key}" ${String(draft("claim-"+key)).split(",").map(value=>value.trim()).includes(row.id)?"checked":""}>${escape(label(row))}</label>`).join("")}</div>` : '<p class="small">No hay entradas disponibles para vincular.</p>';
   return `<div class="reading"><h2>Obligaciones y preguntas</h2>
@@ -361,8 +362,9 @@ function reconstruction() {
     <h2>Entrega al constructor</h2><p>Congela la especificación de comportamiento y las preguntas registradas. El documento descargable del constructor excluye los hallazgos del lector y las rutas de los artefactos; revisa que la especificación escrita describa comportamiento.</p>
     <form id="handoff-form"><label>Directorio del constructor<input name="builder_directory" data-draft="builder-directory" value="${attr("builder-directory")}" required></label><button type="submit">Crear entrega de especificación</button></form>
     ${workflow.handoffs.map(row=>`<article class="record"><h3>Entrega ${escape(new Date(row.created_at).toLocaleString("es"))}</h3><p class="small mono analysis-source">${escape(row.sha256)}</p><p>${row.specification_changed||row.claims_changed?"La especificación o las obligaciones han cambiado desde esta entrega.":"Conserva la especificación y las obligaciones actuales."}</p><a class="button" href="/theseus/api/projects/${projectId()}/handoffs/${row.id}?builder_only=true" download="behavior-handoff.json">Descargar especificación para construir</a></article>`).join("")}
-    <h2>Probar el oráculo</h2><p>Indica implementaciones deliberadamente erróneas: por ejemplo, una constante distinta, una rama invertida y un índice fuera de frontera. Cada una se ejecuta con todos los escenarios guardados.</p>
-    <form id="oracle-form"><label>Perturbaciones · lista JSON con nombre y argumentos<textarea name="variants" class="mono" data-draft="oracle-variants" rows="6" placeholder='[{"name":"constante incorrecta","candidate":["python","ruta/error.py"]}]' required>${attr("oracle-variants")}</textarea></label><button type="submit" ${!state.data.scenarios.length?"disabled":""}>Ejecutar prueba de sensibilidad</button></form>
+    <h2>Probar el oráculo</h2><p>Indica implementaciones deliberadamente erróneas: por ejemplo, una constante distinta, una rama invertida y un índice fuera de frontera. Los programas se ejecutan con los escenarios de programas guardados; las capturas se comprueban sin volver al original.</p>
+    <form id="oracle-form"><label>Perturbaciones de programas · lista JSON con nombre y argumentos<textarea name="variants" class="mono" data-draft="oracle-variants" rows="6" placeholder='[{"name":"constante incorrecta","candidate":["python","ruta/error.py"]}]' required>${attr("oracle-variants")}</textarea></label><button type="submit" ${!commandScenarios.length?"disabled":""}>Ejecutar prueba de sensibilidad</button></form>
+    ${retainedOracleForm()}
     ${[...workflow.oracle_jobs].reverse().map(oracleJob).join("")}
     <h2>Verificar y reintentar</h2><form id="verify-form"><label>Especificación entregada<select name="handoff_id" data-draft="verify-handoff">${options(workflow.handoffs,"verify-handoff",row=>new Date(row.created_at).toLocaleString("es"))}</select></label><p class="small">Ejecuta los escenarios actuales y conserva el vínculo con la entrega elegida. Cada intento tiene un recibo nuevo en Ejecuciones.</p><button class="primary" type="submit" ${!workflow.handoffs.length||!state.data.scenarios.length?"disabled":""}>Verificar reconstrucción</button></form></div>`;
 }
@@ -381,11 +383,22 @@ function claimRelations(claim) {
 function oracleJob(job) {
   const data=job.result;
   return `<article class="record" id="job-${job.id}"><h3>Prueba del oráculo · ${escape(statusLabels[job.state]||job.state)}</h3>
-    <p>${data.detected.length} defectos detectados · ${data.survived.length} no detectados · ${data.invalid.length} con ejecución incompleta.</p>
+    <p>${data.detected.length} defectos detectados · ${data.survived.length} no detectados · ${data.invalid.length} sin observación válida.</p>
     ${data.survived.length?`<p class="warning">El oráculo acepta estas implementaciones erróneas: ${escape(data.survived.join(", "))}. Amplía los escenarios y vuelve a probar.</p>`:""}
     ${data.error?`<p class="error">${escape(data.error)}</p>`:""}
     ${["queued","running"].includes(job.state)?`<button data-action="cancel-job" data-id="${job.id}">Cancelar prueba</button>`:""}
     <details id="oracle-${job.id}"><summary>Entradas, referencias y resultados de cada perturbación</summary><pre>${escape(json(job))}</pre></details></article>`;
+}
+
+function retainedOracleForm() {
+  const cases=state.data.scenarios.filter(row=>row.definition.kind==='retained-page-scenarios');
+  if(!cases.length)return '';
+  const chosen=draft('retained-oracle-scenario')||cases[0].id;
+  return `<h3>Probar una perturbación guardada</h3><p>Elige un escenario y la captura de una reconstrucción deliberadamente errónea con los mismos pasos. Una captura incompleta o con peticiones distintas queda inválida y no cuenta como defecto detectado.</p>
+    <form id="retained-oracle-form"><label>Escenario de página<select name="scenario_id" data-draft="retained-oracle-scenario" required>${cases.map(row=>`<option value="${escape(row.id)}" ${row.id===chosen?'selected':''}>${escape(row.name)}</option>`).join('')}</select></label>
+    <label>Defecto introducido<input name="name" data-draft="retained-oracle-name" value="${attr('retained-oracle-name')}" placeholder="Por ejemplo: devolver una constante" required></label>
+    ${captureSelect('Captura de la perturbación','candidate_job_id','retained-oracle-candidate')}
+    <button type="submit">Probar perturbación guardada</button></form>`;
 }
 
 function artifacts() {
@@ -677,7 +690,32 @@ function findingSources(sources = []) {
 }
 
 function scenarios() {
-  return `<div class="reading"><form id="scenario-form"><h2>${draft("scenario-id") ? "Editar escenario" : "Nuevo escenario"}</h2><label>Nombre<input name="name" data-draft="scenario-name" value="${attr("scenario-name")}" required></label><div class="split"><label>Programa de referencia · argumentos JSON<textarea class="mono" name="reference" data-draft="scenario-reference" rows="3" placeholder='["python", "C:\\\\ruta\\\\original.py"]' required>${attr("scenario-reference")}</textarea></label><label>Reconstrucción · argumentos JSON<textarea class="mono" name="candidate" data-draft="scenario-candidate" rows="3" placeholder='["python", "C:\\\\ruta\\\\candidato.py"]' required>${attr("scenario-candidate")}</textarea></label></div><label>Entrada compartida (stdin)<textarea class="mono" name="stdin" data-draft="scenario-stdin" rows="3">${attr("scenario-stdin")}</textarea></label><div class="split"><label>Directorio de trabajo, opcional<input name="cwd" data-draft="scenario-cwd" value="${attr("scenario-cwd")}"></label><label>Comparar stdout como<select name="mode" data-draft="scenario-mode"><option value="text">Texto exacto</option><option value="json" ${draft("scenario-mode") === "json" ? "selected" : ""}>JSON (sin importar el orden de claves)</option></select></label></div>${scenarioExpectations()}<p class="small">Se ejecutan estos programas locales con la misma entrada; se comparan salida, errores y código de retorno. La ejecución empieza al pulsar Comparar, no al guardar.</p><div class="toolbar"><button class="primary" type="submit">Guardar escenario</button>${draft("scenario-id") ? '<button type="button" data-action="new-scenario">Cancelar edición</button>' : ""}</div></form><h2>Escenarios guardados</h2>${state.data.scenarios.length ? state.data.scenarios.map((row) => `<article class="record"><h3>${escape(row.name)}</h3><p class="mono">${escape(json(row.definition.reference))}<br>${escape(json(row.definition.candidate))}</p><button data-action="edit-scenario" data-id="${row.id}">Editar escenario</button></article>`).join("") : '<p class="muted">Todavía no hay escenarios.</p>'}<button data-action="tab" data-view="jobs">Ver comparaciones</button></div>`;
+  const retained=draft('scenario-kind')==='retained-page-scenarios';
+  return `<div class="reading"><form id="scenario-form"><h2>${draft("scenario-id") ? "Editar escenario" : "Nuevo escenario"}</h2>
+    <label>Nombre<input name="name" data-draft="scenario-name" value="${attr("scenario-name")}" required></label>
+    <label>Tipo de escenario<select id="scenario-kind" name="kind" data-draft="scenario-kind"><option value="commands">Programas locales</option><option value="retained-page-scenarios" ${retained?'selected':''}>Capturas de página guardadas</option></select></label>
+    ${retained?retainedScenarioFields():commandScenarioFields()}
+    <div class="toolbar"><button class="primary" type="submit">Guardar escenario</button>${draft("scenario-id") ? '<button type="button" data-action="new-scenario">Cancelar edición</button>' : ""}</div></form>
+    <h2>Escenarios guardados</h2>${state.data.scenarios.length?state.data.scenarios.map(row=>`<article class="record"><h3>${escape(row.name)}</h3>${row.definition.kind==='retained-page-scenarios'?`<p>Capturas de página guardadas · respuestas a peticiones literales</p>${['reference','candidate'].map(side=>`<p class="small mono analysis-source">${side==='reference'?'Referencia':'Reconstrucción'} · ${escape(row.definition[side+'_job_id'])}<br>SHA-256 ${escape(row.definition[side+'_sha256'])}</p>`).join('')}`:`<p class="mono">${escape(json(row.definition.reference))}<br>${escape(json(row.definition.candidate))}</p>`}<button data-action="edit-scenario" data-id="${row.id}">Editar escenario</button></article>`).join(''):'<p class="muted">Todavía no hay escenarios.</p>'}
+    <button data-action="tab" data-view="jobs">Ver comparaciones</button></div>`;
+}
+
+function commandScenarioFields() {
+  return `<div class="split"><label>Programa de referencia · argumentos JSON<textarea class="mono" name="reference" data-draft="scenario-reference" rows="3" placeholder='["python", "C:\\\\ruta\\\\original.py"]' required>${attr("scenario-reference")}</textarea></label><label>Reconstrucción · argumentos JSON<textarea class="mono" name="candidate" data-draft="scenario-candidate" rows="3" placeholder='["python", "C:\\\\ruta\\\\candidato.py"]' required>${attr("scenario-candidate")}</textarea></label></div><label>Entrada compartida (stdin)<textarea class="mono" name="stdin" data-draft="scenario-stdin" rows="3">${attr("scenario-stdin")}</textarea></label><div class="split"><label>Directorio de trabajo, opcional<input name="cwd" data-draft="scenario-cwd" value="${attr("scenario-cwd")}"></label><label>Comparar stdout como<select name="mode" data-draft="scenario-mode"><option value="text">Texto exacto</option><option value="json" ${draft("scenario-mode") === "json" ? "selected" : ""}>JSON (sin importar el orden de claves)</option></select></label></div>${scenarioExpectations()}<p class="small">Se ejecutan estos programas locales con la misma entrada; se comparan salida, errores y código de retorno. La ejecución empieza al pulsar Comparar, no al guardar.</p>`;
+}
+
+function savedPageCaptures() {
+  return state.data.jobs.filter(job=>job.result.operation==='browser.scenario'&&job.result.analysis_sha256);
+}
+
+function captureSelect(label,name,key,hashKey='') {
+  const selected=draft(key),rows=savedPageCaptures(),job=rows.find(row=>row.id===selected);
+  const hash=(hashKey&&draft(hashKey))||job?.result.analysis_sha256;
+  return `<label>${escape(label)}<select name="${escape(name)}" data-draft="${escape(key)}" data-capture-hash="${escape(hashKey)}" required><option value="">Elige una captura guardada</option>${selected&&!job?`<option value="${escape(selected)}" selected>Captura no disponible · ${escape(selected)}</option>`:''}${rows.map(row=>`<option value="${escape(row.id)}" ${row.id===selected?'selected':''}>${escape(row.result.artifact_name||'Página')} · ${escape(statusLabels[row.state]||row.state)} · ${escape(row.id.slice(0,8))}</option>`).join('')}</select></label>${hash?`<p class="small mono analysis-source">SHA-256 ${escape(hash)}</p>`:''}`;
+}
+
+function retainedScenarioFields() {
+  return `<p>Compara las respuestas conservadas a los mismos pasos. No abre páginas ni repite acciones. Las capturas incompletas o alteradas quedan sin evidencia válida.</p>${!savedPageCaptures().length?'<p class="muted">Guarda primero dos ejecuciones «Web · Ejecutar escenario CDP» en Análisis. Después podrás elegirlas aquí.</p>':''}<div class="split">${['reference','candidate'].map(side=>`<section>${captureSelect(side==='reference'?'Captura de referencia':'Captura de la reconstrucción',side+'_job_id','scenario-'+side+'_job_id','scenario-'+side+'_sha256')}</section>`).join('')}</div><p class="small">Coincidir sólo verifica estas respuestas guardadas; no demuestra equivalencia para todas las entradas.</p>`;
 }
 
 function scenarioExpectations() {
@@ -745,7 +783,16 @@ function analysisJob(job) {
 }
 
 function comparisonJob(job) {
-  return `<article class="record" id="job-${job.id}"><div class="job-head"><h2>${new Date(job.created_at).toLocaleString("es")}</h2><span class="status">${statusLabels[job.state] || escape(job.state)}</span><span class="pass">Casos iguales: ${job.result.passed}</span><span class="fail">Casos distintos: ${job.result.failed}</span>${["queued", "running"].includes(job.state) ? `<button data-action="cancel-job" data-id="${job.id}">Cancelar comparación</button>` : ""}</div>${job.result.running_scenario ? `<p class="small">${escape(job.result.running_scenario)} · ${job.result.phase === "reference" ? "programa de referencia" : "reconstrucción"}</p>` : ""}${job.result.error ? `<p class="error">${escape(job.result.kind === "binary_analysis" ? "El análisis local falló. Abre «Recibo y salida del motor» para revisar el diagnóstico y vuelve a analizar el artefacto." : "La comparación no pudo terminar. Abre «Recibo reproducible» para revisar el diagnóstico, corrige el escenario y vuelve a comparar.")}</p>` : ""}${job.result.message ? `<p>${escape(job.result.message)}</p>` : ""}${reconstructionReceipt(job)}${job.result.cases.map((test) => `<details id="case-${job.id}-${test.scenario_id}"><summary class="${test.passed ? "pass" : "fail"}">${escape(test.name)} · ${test.passed ? "Coincide" : "Difiere"}</summary>${test.differences.map((text) => `<p class="fail">${escape(differenceLabel(text))}</p>`).join("")}<div class="comparison-output">${["reference", "candidate"].map((side, index) => `<section><h3>${index ? "Reconstrucción" : "Referencia"}</h3><p class="small">Retorno ${test[side].exit_code} · ${test[side].duration_seconds}s</p><pre>${escape(test[side].stdout || "(sin salida)")}</pre>${test[side].stderr ? `<h3>stderr</h3><pre>${escape(test[side].stderr)}</pre>` : ""}</section>`).join("")}</div></details>`).join("")}<details id="receipt-${job.id}"><summary>Recibo reproducible</summary><pre>${escape(json(job))}</pre></details></article>`;
+  const unknown=job.result.cases.filter(test=>test.valid===false).length;
+  return `<article class="record" id="job-${job.id}"><div class="job-head"><h2>${new Date(job.created_at).toLocaleString("es")}</h2><span class="status">${statusLabels[job.state] || escape(job.state)}</span><span class="pass">Casos iguales: ${job.result.passed}</span><span class="fail">Casos distintos: ${job.result.failed-unknown}</span>${unknown?`<span class="warning">Sin evidencia válida: ${unknown}</span>`:''}${["queued", "running"].includes(job.state) ? `<button data-action="cancel-job" data-id="${job.id}">Cancelar comparación</button>` : ""}</div>${job.result.running_scenario ? `<p class="small">${escape(job.result.running_scenario)} · ${job.result.phase === "reference" ? "referencia" : "reconstrucción"}</p>` : ""}${job.result.error ? `<p class="error">${escape(job.result.kind === "binary_analysis" ? "El análisis local falló. Abre «Recibo y salida del motor» para revisar el diagnóstico y vuelve a analizar el artefacto." : "La comparación no pudo terminar. Abre «Recibo reproducible» para revisar el diagnóstico, corrige el escenario y vuelve a comparar.")}</p>` : ""}${job.result.message ? `<p>${escape(job.result.message)}</p>` : ""}${reconstructionReceipt(job)}${job.result.cases.map(test=>comparisonCase(job,test)).join('')}<details id="receipt-${job.id}"><summary>Recibo reproducible</summary><pre>${escape(json(job))}</pre></details></article>`;
+}
+
+function comparisonCase(job,test) {
+  const retained=test.reference.kind==='retained-page-scenarios',unknown=test.valid===false;
+  return `<details id="case-${job.id}-${test.scenario_id}"><summary class="${unknown?'warning':test.passed?'pass':'fail'}">${escape(test.name)} · ${unknown?'Sin evidencia válida':test.passed?'Coincide':'Difiere'}</summary>${test.differences.map(text=>`<p class="${unknown?'warning':'fail'}">${escape(differenceLabel(text))}</p>`).join('')}${retained?'<p class="small">Sólo se comparan las respuestas guardadas a los mismos pasos. No se ha conectado al original y no se afirma equivalencia general.</p>':''}<div class="comparison-output">${['reference','candidate'].map((side,index)=>{
+    const observation=test[side];
+    return `<section><h3>${index?'Reconstrucción':'Referencia'}</h3>${retained?`<p class="small mono analysis-source">SHA-256 ${escape(observation.analysis_sha256)}</p><a href="/theseus/api/jobs/${encodeURIComponent(observation.capture_job_id)}/analysis.json" download>Descargar captura guardada</a><h4>Peticiones</h4><pre>${escape(json(observation.requests))}</pre><h4>Respuestas conservadas</h4><pre>${escape(json(observation.responses))}</pre>`:`<p class="small">Retorno ${observation.exit_code} · ${observation.duration_seconds}s</p><pre>${escape(observation.stdout||'(sin salida)')}</pre>${observation.stderr?`<h3>stderr</h3><pre>${escape(observation.stderr)}</pre>`:''}`}</section>`;
+  }).join('')}</div></details>`;
 }
 
 function reconstructionReceipt(job) {
@@ -923,6 +970,11 @@ document.addEventListener("click", (event) => {
     Object.assign(state.drafts[projectId()], {
       "scenario-id": row.id,
       "scenario-name": row.name,
+      "scenario-kind": data.kind || 'commands',
+      "scenario-reference_job_id": data.reference_job_id || '',
+      "scenario-reference_sha256": data.reference_sha256 || '',
+      "scenario-candidate_job_id": data.candidate_job_id || '',
+      "scenario-candidate_sha256": data.candidate_sha256 || '',
       "scenario-reference": json(data.reference),
       "scenario-candidate": json(data.candidate),
       "scenario-stdin": data.stdin || "",
@@ -941,7 +993,7 @@ document.addEventListener("click", (event) => {
   }
   if (action === "new-scenario") {
     clearDrafts(
-      ...["id", "name", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
+      ...["id", "name", "kind", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
         (key) => "scenario-" + key,
       ),
     );
@@ -1013,8 +1065,15 @@ document.addEventListener("submit", (event) => {
       await refresh();notice("Especificación congelada para el constructor.");
     }
     if (form.id === "oracle-form") {
-      await api(`/projects/${projectId()}/oracle-selftests`,{variants:JSON.parse(fields.variants)});
+      const scenario_ids=state.data.scenarios.filter(row=>row.definition.kind!=='retained-page-scenarios').map(row=>row.id);
+      await api(`/projects/${projectId()}/oracle-selftests`,{variants:JSON.parse(fields.variants),scenario_ids});
       await refresh();notice("Prueba de sensibilidad iniciada.");
+    }
+    if(form.id==='retained-oracle-form') {
+      const job=savedPageCaptures().find(row=>row.id===fields.candidate_job_id);
+      if(!job)throw new Error('Elige una captura guardada para la perturbación.');
+      await api(`/projects/${projectId()}/oracle-selftests`,{scenario_ids:[fields.scenario_id],variants:[{name:fields.name,captures:[{scenario_id:fields.scenario_id,candidate_job_id:job.id,candidate_sha256:job.result.analysis_sha256}]}]});
+      await refresh();notice('Perturbación guardada enviada al oráculo. No se ha vuelto a conectar al original.');
     }
     if (form.id === "verify-form") {
       await api(`/projects/${projectId()}/reconstructions/verify`,fields);
@@ -1137,7 +1196,13 @@ document.addEventListener("submit", (event) => {
       notice("Especificación guardada.");
     }
     if (form.id === "scenario-form") {
-      const definition = {
+      const definition = fields.kind==='retained-page-scenarios'?{
+        kind:fields.kind,...Object.fromEntries(['reference','candidate'].flatMap(side=>{
+          const id=fields[side+'_job_id'],job=savedPageCaptures().find(row=>row.id===id);
+          if(!job)throw new Error('Elige una captura guardada disponible para '+(side==='reference'?'la referencia':'la reconstrucción')+'.');
+          return [[side+'_job_id',id],[side+'_sha256',draft('scenario-'+side+'_sha256')||job.result.analysis_sha256]];
+        })),
+      }:{
         reference: JSON.parse(fields.reference),
         candidate: JSON.parse(fields.candidate),
         stdin: fields.stdin,
@@ -1153,7 +1218,7 @@ document.addEventListener("submit", (event) => {
         scenario_id: draft("scenario-id"),
       });
       clearDrafts(
-        ...["id", "name", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
+        ...["id", "name", "kind", "reference_job_id", "reference_sha256", "candidate_job_id", "candidate_sha256", "reference", "candidate", "stdin", "cwd", "mode", "expected_stdout", "check_stdout", "expected_exit_code", "timeout_seconds"].map(
           (key) => "scenario-" + key,
         ),
       );
@@ -1164,6 +1229,10 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if(event.target.id==='scenario-kind'||event.target.dataset.captureHash!==undefined) {
+    if(event.target.dataset.captureHash)clearDrafts(event.target.dataset.captureHash);
+    render();
+  }
   if (["binary-session","binary-operation"].includes(event.target.id)) render();
   if (event.target.id === "analysis-operation") render();
   if (event.target.id === "runtime-operation" || (event.target.form?.id==="runtime-form" && ['runtime-param-mode','runtime-param-session_id'].includes(event.target.name))) render();
