@@ -12,7 +12,9 @@ The original design library, reference gallery/collections/patterns, rendering, 
 
 Use own dependencies: pip install -e .; optional [render], [vectors] and [runtime] retain browser/embedding/Frida integrations. Run npm ci and npm run build at the root, in babel_client/ and in software_native/engine/. Node22.19+ is required for the analysis core. Start explicitly with python -m vitruvius_hoard at port5191. VITRUVIUS_PROFILE_DIR holds design/, babel/, theseus/ and software-links.db; VITRUVIUS_TOKEN_FILE preserves the owner token. Read the migration inventory before activating existing real data.
 
-python -m mcp_server exposes110 cold schemas (52 design,10 API docs,38 existing reverse-engineering and10 common controls). It never starts an app or opens a native store on discovery. VITRUVIUS_URL points to the explicitly running owner. API, MCP and UI use the same handlers; native envelopes, image content and binary/Range downloads survive.
+python -m mcp_server exposes118 cold schemas (60 design,10 API docs,38 existing reverse-engineering and10 common controls). It never starts an app or opens a native store on discovery. VITRUVIUS_URL points to the explicitly running owner. API, MCP and UI use the same handlers; native envelopes, image content and binary/Range downloads survive.
+
+Design → Diagrams includes a visual graph editor: blank documents and templates, drag/resize, connectors, groups, alignment, pinned positions, keyboard selection, undo/redo and immutable revisions. Faustus edits those same objects and receives the current selection. Independent edits merge by field; a conflict preserves the local draft and its base revision. Export editable JSON, SVG, PNG, PDF, the supported draw.io/Mermaid subset or a self-contained interactive HTML reader. See [editor scope and exchange limits](docs/DIAGRAM_EDITOR.md). Infographics, multiple pages and linked insertion into other Hoards remain future work.
 
 LLM work uses only the exact global Sparks selection through Faustus938, with endpoint/model/revision pinned per job. Provider keys stay in Faustus; no local text fallback, model load, alternate selection, HTTP retry or schema relaxation. Live acceptance requires deploying938. Browser rendering, embeddings and native analysis remain separate under-demand capabilities.
 
@@ -28,3 +30,11 @@ Shutdown correction CAS4: a failed native lifespan retains its app and resources
 ## Native connections
 
 Former MCP and Hub identities can use the incorporated cold compatibility adapters without the retired repositories. See [native connections](docs/NATIVE-CONNECTIONS.md). Modules still require explicit activation.
+
+
+<details>
+<summary>Design MCP catalogue</summary>
+
+`design_search`, `design_brief`, `design_rules`, `styles_search`, `palettes_search`, `fonts_search`, `render_preview`, `design_lint`, `design_critique`, `page_assay`, `render_compare`, `tokens_generate`, `tokens_get`, `tokens_list`, `tokens_preview`, `tokens_delete`, `app_templates`, `app_project_create`, `app_project_list`, `app_project_get`, `app_project_update`, `app_project_preview`, `app_project_export`, `app_project_render`, `app_project_call`, `reference_collections`, `reference_import_collection`, `design_patterns`, `design_pattern`, `reference_add`, `reference_search`, `reference_get`, `reference_delete`, `sources_list`, `source_add`, `source_ingest`, `source_status`, `vitruvius_status`, `motion_templates`, `motion_save`, `motion_list`, `motion_get`, `motion_render`, `diagram_document_list`, `diagram_document_get`, `diagram_document_save`, `diagram_document_edit`, `diagram_document_undo`, `diagram_document_history`, `diagram_document_compare`, `diagram_document_import`, `diagram_types`, `diagram_render`, `diagram_get`, `diagram_list`, `diagram_delete`, `diagram_brand_onboard`, `diagram_brands`, `diagram_brand_delete`, `page_check`.
+
+</details>
