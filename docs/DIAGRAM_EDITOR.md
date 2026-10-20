@@ -52,6 +52,9 @@ save supplies the complete appearance object. Updating a style merges independen
 fields from the revision read; conflicting fields retain the existing source and
 return the same conflict contract as document edits. Removed style revisions stay
 readable explicitly, and saving from the retained head restores it to the library.
+Refreshing preserves both a pending name and its original revision base. A
+conflicting remote rename therefore reports `/name` without replacing either
+writer's text; independent appearance/name edits still merge normally.
 Application copies that exact style revision into a normal conflict-aware document
 save. An assistant's independent text/position edits survive; a conflicting color
 change remains a conflict. Listing an empty library creates no store.
