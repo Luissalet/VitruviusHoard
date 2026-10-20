@@ -20,6 +20,8 @@ Consulta los lectores Java/Apktool y TShark/capinfos instalados sin seleccionar 
 
 El contexto de navegación y de una dirección conserva las observaciones secuenciales del motor, la función envolvente, nombres analizados, comentarios y marcadores coincidentes. Las consultas mantienen su revisión de origen y siguen legibles tras transferir las evidencias. Consulta [Contexto nativo](docs/NATIVE-CONTEXT.md).
 
+La inspección binaria GNU conserva la salida completa y los diagnósticos del lector para cabeceras, secciones, símbolos, relocaciones, DWARF y desensamblado. Los formatos BFD anunciados se consultan sin seleccionar un artefacto. Las observaciones siguen legibles tras transferir las evidencias. Consulta [Inspección binaria](docs/BINARY-INSPECTION.md).
+
 Inspección incorpora también el lector síncrono de firmware y las observaciones guardadas de fuentes main/preload/renderer. Una aplicación Electron original de prueba contrasta resultados IPC independientes y permite transferir y comparar las fuentes retenidas después de cerrarla. Estas observaciones no demuestran equivalencia de toda la aplicación. Consulta la [adaptación972 y sus pruebas](tasks/submission972.md).
 
 Los casos de reconstrucción permiten elegir dos capturas guardadas de escenarios de página, comparar sus respuestas exactas y probar capturas con defectos deliberados después de cerrar los originales. Los dos hashes permanecen visibles; una observación incompleta o desalineada sigue siendo desconocida. Las evidencias portables permiten una nueva verificación tras importarlas; los recibos importados siguen siendo históricos. Consulta la [verificación con escenarios retenidos](docs/RETAINED-SCENARIO-ORACLE.md).

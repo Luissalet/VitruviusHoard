@@ -1,4 +1,4 @@
-> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`. Reviewed native-context source: `3f986f6bb3ed99b0b86160dc092e1331d2551809`.
+> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`. Reviewed native-context source: `3f986f6bb3ed99b0b86160dc092e1331d2551809`. Reviewed GNU-reader source: `aa81a5152f50a7466e757aa978c33256122140ba`.
 
 # Source coverage and completion
 
@@ -22,12 +22,13 @@ and explicitly side-aligned static/runtime hypotheses. Both passed independent
 revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
-The native catalogue contains67 static/retained operations,40 runtime operations
+The native catalogue contains68 static/retained operations,40 runtime operations
 and52 binary-session operations, behind39 Theseus tools and124 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
 and [evidence/function acceptance](../tasks/submission1059-1064.md).
 Delivery1068 adds the builtin ELF64 little-endian x86-64 layout reader, preserving original section/symbol/REL/RELA/RELR bytes and identities, declared linkage names and scoped inferred mitigation indicators. CAS1 passed independent17area tests and author365PASS/2emulatorSKIP, plus fresh external installed MCP/UI and original-retired transfer. The exact approved0cc6097 is retained as an ancestor of the combined source above. Delivery1070 CAS2 is independently approved and integrated in source345ac3c6: artifact-independent free decoder identity/version inspection, with356 author tests and23 independent focused tests passing, plus actual external installed MCP124/UI/downloads and cold discovery without a profile. Installed distribution identity and acceptance receipts are tracked separately in the root coverage ledger. See [ELF layout](../docs/ELF-LAYOUT.md).
+Delivery1076 adds explicit GNU binary-reader observations and subjectless advertised BFD formats. Seven artifact facets retain full original stdout/stderr, hashes and diagnostics, including nonzero exits and unknown interrupted completion. DWARF does not follow external links by default and debuginfod is disabled. Reader/artifact identities retain metadata without duplicating executable bodies. Transient Windows checkpoint publication retries do not repeat a reader run. Exact evidence remains readable after originals are retired. Source review does not certify the pending combined installed release. See [binary inspection](../docs/BINARY-INSPECTION.md).
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current

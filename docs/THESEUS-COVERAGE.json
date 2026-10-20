@@ -20,11 +20,11 @@
   ],
   "status_counts": {
     "semantic-review-pending": 168,
-    "implementation-pending": 17,
+    "implementation-pending": 16,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 13,
     "excluded-by-user": 4,
-    "source-integrated-release-pending": 2
+    "source-integrated-release-pending": 3
   },
   "contracts": [
     {
@@ -3733,12 +3733,35 @@
         "line": 27,
         "kind": "native-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
-      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "counterparts": [
+        "theseus_analysis_start:binary.objdump",
+        "theseus_client_inspect:objdump"
+      ],
+      "status": "source-integrated-release-pending",
+      "scope": "Explicit GNU headers, sections, symbols, relocations, DWARF and code/all-section disassembly; artifact-independent advertised BFD formats. Complete raw streams, reader/input identities, nonzero observations, unknown interruptions and exact portable evidence without target execution.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "task": 1076,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d5ec11d485e9581a8be260529251f36e5b6dafae",
+          "df9cd8394e3a1191160df542e98414a622f37271",
+          "328076bacc94934dfceb3ab7205a2855bcd39cfc",
+          "aa603086dba45180605d73e09647aeead2321baf",
+          "aa81a5152f50a7466e757aa978c33256122140ba"
+        ],
+        "application_head": "aa81a5152f50a7466e757aa978c33256122140ba",
+        "evidence": "Author full404PASS2emulatorSKIP603.29s at aa603 before final signal/publication fixes; final76focusedPASS49.33s including unchanged external metadata/signal oracles. Real Windows reader-lock publication and persistent-denial checks passed. Actual sourceMCP124/68static/52binary/seven GNU operations plus both Ghidra contexts, export/original retirement/import nine exact JSON docs, normal UI BFD/download/dismiss and exit0/1/retained readback passed at aa603. Positive Windows schema unchanged by final fixes; final installed release still required. Independent review details remain in the exact review receipt; no unperformed full/MCP/UI claim.",
+        "proofs": [
+          "objdump1076-review-cas1-receipt20.json",
+          "objdump1076-full2-20.xml",
+          "objdump1076-final-regression20.xml",
+          "objdump1076-publication20.xml",
+          "objdump1076-live-mcp2-20-proof.json",
+          "objdump1076-ui-transfer2-20.json",
+          "objdump1076-ui-retained-final2-20.json",
+          "objdump1076-qa2-20-final.json"
+        ]
       },
       "group": "free-debugger-backends"
     },

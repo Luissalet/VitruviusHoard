@@ -20,6 +20,8 @@ Inspect the selected Java/Apktool and TShark/capinfos clients before choosing an
 
 Native navigation and explicit-address context preserve sequential provider observations, containing functions, analyzed names, comments and matching bookmarks. Read-only queries retain their source revision and remain readable after evidence transfer. See [native context](docs/NATIVE-CONTEXT.md).
 
+GNU binary inspection preserves complete reader output and diagnostics for headers, sections, symbols, relocations, DWARF and disassembly. Advertised BFD formats can be queried before selecting an artifact. Retained observations remain readable after evidence transfer. See [binary inspection](docs/BINARY-INSPECTION.md).
+
 Inspection also includes the synchronous firmware scanner and retained main/preload/renderer source observations. An original Electron fixture checks explicit IPC results independently, then transfers and compares retained sources after the application closes. These observations do not establish whole-application equivalence. See [adaptation972 and its verification](tasks/submission972.md).
 
 Reconstruction cases can also select two saved page-scenario captures, compare their exact recorded responses and test deliberately defective captures after the original pages close. Both source hashes remain visible; incomplete or unaligned observations stay unknown. Portable evidence supports a new verification after import, while imported receipts remain historical. See [retained scenario verification](docs/RETAINED-SCENARIO-ORACLE.md).
