@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pyelftools>=0.32", "aioquic>=1.2", "websockets>=14"]
+dev = ["pytest>=8", "pytest-asyncio>=1", "pyelftools>=0.32", "aioquic>=1.2", "websockets>=14"]
 icon = ["pillow>=11", "numpy>=2"]
 vectors = ["numpy>=2", "fastembed>=0.5"]
 render = ["playwright>=1.45"]

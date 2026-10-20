@@ -183,6 +183,13 @@ def test_large_binary_pipe_output_has_no_lost_tail(tmp_path):
     assert base64.b64decode(result['stderr']['base64'])==b'last-block\x00\xff'
 
 
+def live_capture(path):
+    try:
+        return json.loads(path.read_bytes())
+    except (FileNotFoundError, PermissionError):
+        return None  # A live atomic replacement may temporarily deny a Windows reader.
+
+
 def test_native_cancel_retains_prefix_and_never_replays_target(tmp_path):
     from fastapi.testclient import TestClient
     from theseus.api import create_app
@@ -194,23 +201,27 @@ def test_native_cancel_retains_prefix_and_never_replays_target(tmp_path):
         reply=client.post('/api/agent/call',json={'tool':'theseus_runtime_start','arguments':{'project_id':project,'operation':'process.capture',
             'parameters':{'argv':[sys.executable,str(program)],'cwd':str(tmp_path)}}})
         reply.raise_for_status();job=reply.json()['result'];prefix=tmp_path/'data'/'analyses'/job['id']/'capture-latest.json'
-        deadline=time.monotonic()+5
-        while True:
-            if prefix.is_file():
-                data=json.loads(prefix.read_bytes())
-                if base64.b64decode(data['result']['stdout']['base64']).startswith(b'original-prefix'):break
-            assert time.monotonic()<deadline;time.sleep(.01)
-        target=data['result']['process'];identity=psutil.Process(target['pid']).create_time()
-        cancelled=client.post('/api/jobs/'+job['id']+'/cancel');cancelled.raise_for_status()
-        deadline=time.monotonic()+8
-        while job['state'] in {'queued','running'}:
-            assert time.monotonic()<deadline;time.sleep(.02);job=client.app.state.store.job(job['id'])
-        assert job['state']=='cancelled' and job['result']['analysis_sha256']
-        kept=client.get('/api/jobs/'+job['id']+'/analysis.json').json()['result']
-        assert kept['status']=='partial' and not kept['stream_complete']
-        assert base64.b64decode(kept['stdout']['base64']).startswith(b'original-prefix')
-        assert (tmp_path/'counter.txt').read_text()=='1'
-        assert not psutil.pid_exists(target['pid']) or psutil.Process(target['pid']).create_time()!=identity
+        try:
+            deadline=time.monotonic()+5
+            while True:
+                data=live_capture(prefix)
+                if data and base64.b64decode(data['result']['stdout']['base64']).startswith(b'original-prefix'):break
+                assert time.monotonic()<deadline;time.sleep(.01)
+            target=data['result']['process'];identity=psutil.Process(target['pid']).create_time()
+            cancelled=client.post('/api/jobs/'+job['id']+'/cancel');cancelled.raise_for_status()
+            deadline=time.monotonic()+8
+            while job['state'] in {'queued','running'}:
+                assert time.monotonic()<deadline;time.sleep(.02);job=client.app.state.store.job(job['id'])
+            assert job['state']=='cancelled' and job['result']['analysis_sha256']
+            kept=client.get('/api/jobs/'+job['id']+'/analysis.json').json()['result']
+            assert kept['status']=='partial' and not kept['stream_complete']
+            assert base64.b64decode(kept['stdout']['base64']).startswith(b'original-prefix')
+            assert (tmp_path/'counter.txt').read_text()=='1'
+            assert not psutil.pid_exists(target['pid']) or psutil.Process(target['pid']).create_time()!=identity
+        finally:
+            current=client.app.state.store.job(job['id'])
+            if current['state'] in {'queued','running'}:
+                client.post('/api/jobs/'+job['id']+'/cancel').raise_for_status()
 
 
 def test_recovery_stops_bound_old_observer_and_freezes_prefix_once(tmp_path):
@@ -228,7 +239,8 @@ def test_recovery_stops_bound_old_observer_and_freezes_prefix_once(tmp_path):
         deadline=time.monotonic()+5
         while True:
             path=folder/'capture-latest.json'
-            if path.is_file() and b'saved-prefix' in base64.b64decode(json.loads(path.read_bytes())['result']['stdout']['base64']):break
+            prefix=live_capture(path)
+            if prefix and b'saved-prefix' in base64.b64decode(prefix['result']['stdout']['base64']):break
             assert worker.poll() is None and time.monotonic()<deadline;time.sleep(.01)
         store.save_job(pid,key,'interrupted',{'kind':'runtime_analysis','operation':'process.capture','parameters':request['parameters']})
         runtime.recover(store);job=store.job(key)

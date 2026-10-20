@@ -49,7 +49,7 @@ def test_explicit_scenario_navigation_input_click_return_and_portable_png(tmp_pa
         assert [row['method'] for row in sent[:4]]==['Page.enable','Network.enable','Runtime.enable','Debugger.enable']
         assert [{'method':row['method'],'parameters':row['params']} for row in sent[4:4+len(steps)]]==[{'method':step['method'],'parameters':step['parameters']} for step in steps]
         assert any(row['method']=='Runtime.consoleAPICalled' for row in result['events'])
-        assert any(row['request'].get('url','').endswith('/action') and row['body']['state']=='captured' for row in result['network'])
+        assert any(row.get('request',{}).get('url','').endswith('/action') and row.get('body',{}).get('state')=='captured' for row in result['network'])
         image=next(row for row in job['result']['derived_artifacts'] if row['name']=='observed-page.png')
         original=client.app.state.store.artifact(project,image['id']);Path(original['path']).unlink()
         moved=client.app.state.evidence.load(client.app.state.evidence.export(project))
