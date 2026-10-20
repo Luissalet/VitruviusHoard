@@ -181,7 +181,10 @@ def main():
         before = sha(source)
     if request.get('expected_input_sha256') and before != request['expected_input_sha256']:
         raise ValueError('Retained analysis document changed; its receipt hash no longer matches')
-    if request['operation'] in {'javascript.reconcile_runtime','browser.reconcile_sources','browser.compare','browser.export_scripts','process.compare'}:
+    if request['operation'].startswith('evidence.'):
+        from retained_evidence import execute
+        result=execute(request,output_path.parent)
+    elif request['operation'] in {'javascript.reconcile_runtime','browser.reconcile_sources','browser.compare','browser.export_scripts','process.compare'}:
         source_bytes = source.read_bytes()
         if hashlib.sha256(source_bytes).hexdigest() != before:
             raise ValueError('Retained analysis document changed while reading')
