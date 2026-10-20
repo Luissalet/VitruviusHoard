@@ -6,6 +6,12 @@ Taller local de software con diseño y proyectos de fuentes, documentación de A
 
 **El desarrollo de Theseus está incompleto y en curso; Luis lo reanudó el 20 de octubre de 2026.** Esta integración conserva las funciones disponibles, incluidas las comparaciones de mensajes WebSocket guardados y los recibos inmutables de cobertura, y no completa el alcance pendiente. Consulta la [sincronización de fuentes](docs/THESEUS-SYNC.md) y el [ledger conservado](software_native/theseus-limits.md).
 
+Las capturas web guardadas permiten exportar los bytes de sus scripts y mapas de fuentes, trazar posiciones generadas a sus fuentes originales y resolver imports literales sin conexión. Los mapas ausentes, fuentes duplicadas e imports calculados conservan su incertidumbre. Consulta [Fuentes web guardadas](docs/WEB-SOURCES.md).
+
+Las capturas de procesos admiten salida y errores separados, terminales interactivos de Windows, pasos de entrada, archivos antes/después, servicios HTTP/WebSocket declarados y sustitutos de comandos. Las capturas guardadas se comparan por dimensiones explícitas y sirven para escenarios de reconstrucción y comprobaciones de sensibilidad a mutantes tras transferirlas. Estas observaciones seleccionadas no prueban equivalencia del programa completo. Consulta [Capturas de procesos y sus límites](docs/PROCESS-CAPTURES.md).
+
+El [inventario completo de contratos declarados](docs/THESEUS-COVERAGE.json) conserva el alcance implementado, sus etapas de revisión y los huecos pendientes. La coincidencia de nombres o el número total de pruebas no certifican por sí solos cada contrato.
+
 Inspección incorpora también el lector síncrono de firmware y las observaciones guardadas de fuentes main/preload/renderer. Una aplicación Electron original de prueba contrasta resultados IPC independientes y permite transferir y comparar las fuentes retenidas después de cerrarla. Estas observaciones no demuestran equivalencia de toda la aplicación. Consulta la [adaptación972 y sus pruebas](tasks/submission972.md).
 
 Los casos de reconstrucción permiten elegir dos capturas guardadas de escenarios de página, comparar sus respuestas exactas y probar capturas con defectos deliberados después de cerrar los originales. Los dos hashes permanecen visibles; una observación incompleta o desalineada sigue siendo desconocida. Las evidencias portables permiten una nueva verificación tras importarlas; los recibos importados siguen siendo históricos. Consulta la [verificación con escenarios retenidos](docs/RETAINED-SCENARIO-ORACLE.md).

@@ -1,4 +1,4 @@
-> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Source snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`.
+> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process deliveries are integrated and published in application source `5ff5b02ce74f218649f447b9f4ce593b109c9875`.
 
 # Source coverage and completion
 
@@ -11,9 +11,14 @@ semantic acceptance worklist, not a completion percentage. Existing family test
 counts and matching operation names do not certify individual contract parity.
 
 The offline web-source export, generated-position trace and literal import trace
-are implemented in delivery1043 and await independent review and integration.
-Process capture/comparison is active in1046. Whole-bundle/static-runtime
-correlation, free debugger backends and the other explicit gaps remain open.
+in1043 and process capture/comparison plus typed evidence transfer in1046 passed
+independent revision2 review, integration and publication. The shared venv has
+the approved wheel25a50de7,3804 exact installed files and123 cold MCP tools;
+the shared owner remains OFF and port5191 was never started for deployment.
+Whole-bundle/retained-call-path delivery1059 and native-function/correlation
+delivery1064 have author MCP/UI acceptance and remain in review; they are not
+advertised as part of the installed shared product yet. Free debugger backends
+and the other explicit gaps remain open. See [reviewed acceptance](../tasks/submission1043-1046.md).
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current

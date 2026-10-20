@@ -6,6 +6,12 @@ A local software workbench with design/source projects, version-exact API docume
 
 **Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026.** This incorporation retains its existing functions, including retained WebSocket stream comparisons and immutable coverage progress receipts, and does not complete the pending reverse-engineering programme. See the [source synchronization](docs/THESEUS-SYNC.md). See the [retained coverage ledger](software_native/theseus-limits.md).
 
+Retained browser captures can export their script bytes and source maps, trace generated positions to original sources and resolve literal imports offline. Missing maps, duplicate sources and computed imports retain their uncertainty. See [retained web sources](docs/WEB-SOURCES.md).
+
+Process captures support separate output/error pipes and interactive Windows terminals, input steps, before/after file observations, declared HTTP/WebSocket services and command shims. Saved captures can be compared by explicit dimensions and used in reconstruction scenarios and mutant sensitivity checks after transfer. These selected observations do not prove whole-program equivalence. See [process captures and their limits](docs/PROCESS-CAPTURES.md).
+
+The [complete declared contract inventory](docs/THESEUS-COVERAGE.json) records implemented scope, review stages and remaining gaps. Matching names or aggregate test counts do not certify individual contract parity.
+
 Inspection also includes the synchronous firmware scanner and retained main/preload/renderer source observations. An original Electron fixture checks explicit IPC results independently, then transfers and compares retained sources after the application closes. These observations do not establish whole-application equivalence. See [adaptation972 and its verification](tasks/submission972.md).
 
 Reconstruction cases can also select two saved page-scenario captures, compare their exact recorded responses and test deliberately defective captures after the original pages close. Both source hashes remain visible; incomplete or unaligned observations stay unknown. Portable evidence supports a new verification after import, while imported receipts remain historical. See [retained scenario verification](docs/RETAINED-SCENARIO-ORACLE.md).

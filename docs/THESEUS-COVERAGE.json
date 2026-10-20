@@ -19,11 +19,12 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "semantic-review-pending": 169,
-    "implementation-pending": 24,
+    "semantic-review-pending": 168,
+    "implementation-pending": 22,
     "platform-required-implementation-pending": 3,
     "excluded-by-user": 4,
-    "independent-review-pending": 7
+    "integrated-tested-published": 5,
+    "independent-review-pending": 5
   },
   "contracts": [
     {
@@ -2862,10 +2863,10 @@
       "counterparts": [
         "javascript.trace_source"
       ],
-      "status": "independent-review-pending",
+      "status": "integrated-tested-published",
       "scope": "Exact duplicate-preserving generated-position lookup in retained regular/inline-indexed maps.",
       "acceptance": {
-        "state": "author-tested-awaiting-review-and-integration",
+        "state": "independent-CAS2-approved-integrated-published-installed",
         "task": 1043,
         "submission_revision": 2,
         "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
@@ -2877,7 +2878,11 @@
         "commits": [
           "ed3510fb4376c12f04025558e1e3751f6e54f1de",
           "b4e73e73e8813c1975ff32e73a32f73fd507981b"
-        ]
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "5ff5b02ce74f218649f447b9f4ce593b109c9875",
+        "installed_wheel_sha256": "25a50de7771533be49617e8be189a78150832c5879cf289b2ffb3da2b0b7fc71",
+        "shared_acceptance": "3804 exact installed files; existing dependency versions unchanged; websockets17.2 added; pipcheck; coldMCP123/no profile created; owner remains OFF/5191 free. tasks/submission1043-1046.md"
       }
     },
     {
@@ -2891,10 +2896,10 @@
       "counterparts": [
         "javascript.trace_imports"
       ],
-      "status": "independent-review-pending",
+      "status": "integrated-tested-published",
       "scope": "Literal ES imports/reexports with explicit URL/import-map interpretation and computed/CommonJS unknowns.",
       "acceptance": {
-        "state": "author-tested-awaiting-review-and-integration",
+        "state": "independent-CAS2-approved-integrated-published-installed",
         "task": 1043,
         "submission_revision": 2,
         "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
@@ -2906,7 +2911,11 @@
         "commits": [
           "ed3510fb4376c12f04025558e1e3751f6e54f1de",
           "b4e73e73e8813c1975ff32e73a32f73fd507981b"
-        ]
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "5ff5b02ce74f218649f447b9f4ce593b109c9875",
+        "installed_wheel_sha256": "25a50de7771533be49617e8be189a78150832c5879cf289b2ffb3da2b0b7fc71",
+        "shared_acceptance": "3804 exact installed files; existing dependency versions unchanged; websockets17.2 added; pipcheck; coldMCP123/no profile created; owner remains OFF/5191 free. tasks/submission1043-1046.md"
       }
     },
     {
@@ -2920,10 +2929,10 @@
       "counterparts": [
         "browser.export_scripts"
       ],
-      "status": "independent-review-pending",
+      "status": "integrated-tested-published",
       "scope": "Hash-verified portable retained script/response export, URL layout and isolated ambiguous occurrences; no network or original-path fallback.",
       "acceptance": {
-        "state": "author-tested-awaiting-review-and-integration",
+        "state": "independent-CAS2-approved-integrated-published-installed",
         "task": 1043,
         "submission_revision": 2,
         "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
@@ -2935,7 +2944,11 @@
         "commits": [
           "ed3510fb4376c12f04025558e1e3751f6e54f1de",
           "b4e73e73e8813c1975ff32e73a32f73fd507981b"
-        ]
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "5ff5b02ce74f218649f447b9f4ce593b109c9875",
+        "installed_wheel_sha256": "25a50de7771533be49617e8be189a78150832c5879cf289b2ffb3da2b0b7fc71",
+        "shared_acceptance": "3804 exact installed files; existing dependency versions unchanged; websockets17.2 added; pipcheck; coldMCP123/no profile created; owner remains OFF/5191 free. tasks/submission1043-1046.md"
       }
     },
     {
@@ -3111,10 +3124,10 @@
       "counterparts": [
         "process.capture"
       ],
-      "status": "independent-review-pending",
+      "status": "integrated-tested-published",
       "scope": "Interactive terminal, lifecycle, files, declared command shims and HTTP/WebSocket observations; retain incomplete prefixes and causality boundaries.",
       "acceptance": {
-        "state": "author-and-installed-tested-awaiting-review-and-integration",
+        "state": "independent-CAS2-approved-integrated-published-installed",
         "task": 1046,
         "submission_revision": 2,
         "commit": "15d663a285d63f4a36be8ce496e26ea56569518f",
@@ -3134,7 +3147,11 @@
         "commits": [
           "e189a2091849aa3117b472d7e76c3efc8e121a54",
           "15d663a285d63f4a36be8ce496e26ea56569518f"
-        ]
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "5ff5b02ce74f218649f447b9f4ce593b109c9875",
+        "installed_wheel_sha256": "25a50de7771533be49617e8be189a78150832c5879cf289b2ffb3da2b0b7fc71",
+        "shared_acceptance": "3804 exact installed files; existing dependency versions unchanged; websockets17.2 added; pipcheck; coldMCP123/no profile created; owner remains OFF/5191 free. tasks/submission1043-1046.md"
       },
       "group": "process-observations"
     },
@@ -3149,10 +3166,10 @@
       "counterparts": [
         "process.compare"
       ],
-      "status": "independent-review-pending",
+      "status": "integrated-tested-published",
       "scope": "Compare explicit process observations, file effects and trace partial orders without inventing timestamp causality.",
       "acceptance": {
-        "state": "author-and-installed-tested-awaiting-review-and-integration",
+        "state": "independent-CAS2-approved-integrated-published-installed",
         "task": 1046,
         "submission_revision": 2,
         "commit": "15d663a285d63f4a36be8ce496e26ea56569518f",
@@ -3172,7 +3189,11 @@
         "commits": [
           "e189a2091849aa3117b472d7e76c3efc8e121a54",
           "15d663a285d63f4a36be8ce496e26ea56569518f"
-        ]
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "5ff5b02ce74f218649f447b9f4ce593b109c9875",
+        "installed_wheel_sha256": "25a50de7771533be49617e8be189a78150832c5879cf289b2ffb3da2b0b7fc71",
+        "shared_acceptance": "3804 exact installed files; existing dependency versions unchanged; websockets17.2 added; pipcheck; coldMCP123/no profile created; owner remains OFF/5191 free. tasks/submission1043-1046.md"
       },
       "group": "process-observations"
     },
@@ -3203,13 +3224,23 @@
         "kind": "session"
       },
       "counterparts": [
-        "theseus_binary_compare"
+        "theseus_binary_compare",
+        "evidence.compare_functions"
       ],
-      "status": "semantic-review-pending",
+      "status": "independent-review-pending",
       "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "task": 1064,
+        "submission_revision": 1,
+        "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
+        "depends_on_commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "tests": [
+          "theseus_tests/test_retained_functions.py",
+          "theseus_tests/test_retained_evidence.py"
+        ],
+        "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
       }
     },
     {
@@ -3226,7 +3257,7 @@
       "status": "independent-review-pending",
       "scope": "Exact bundle membership, declared one-to-one observation pairs, full residual unknowns and digest-bound comparison history.",
       "acceptance": {
-        "state": "author-MCP-and-UI-tested-CAS1-awaiting-full-suite-installed-acceptance-review-and-integration",
+        "state": "author-and-installed-tested-awaiting-review-and-integration",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3234,7 +3265,7 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration."
+        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md"
       },
       "group": "bundle-correlation"
     },
@@ -3249,19 +3280,20 @@
       "counterparts": [
         "evidence.changed_behavior"
       ],
-      "status": "implementation-pending",
+      "status": "independent-review-pending",
       "scope": "Aggregate validated artifact/process deltas while separating observed behavior, static candidates and incomplete evidence.",
       "acceptance": {
-        "state": "partial-native-counterpart; full reference semantic contract remains implementation-pending",
-        "task": 1059,
+        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "task": 1064,
         "submission_revision": 1,
-        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
+        "depends_on_commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
         "tests": [
+          "theseus_tests/test_retained_functions.py",
           "theseus_tests/test_retained_evidence.py"
         ],
-        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration.",
-        "remaining": "Also support retained native function comparisons, their dimension selectors, explicit side alignment, and unchanged static occurrences. Current1059 supports artifact inventory +process comparisons only. Do not certify the entire original contract."
+        "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
       },
       "group": "bundle-correlation"
     },
@@ -3279,7 +3311,7 @@
       "status": "independent-review-pending",
       "scope": "All shortest direct-callee paths from complete retained dossiers with exact addresses and source evidence; missing/mixed providers remain unknown.",
       "acceptance": {
-        "state": "author-MCP-and-UI-tested-CAS1-awaiting-full-suite-installed-acceptance-review-and-integration",
+        "state": "author-and-installed-tested-awaiting-review-and-integration",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3287,7 +3319,7 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration."
+        "evidence": "CAS1afee248:341PASS/2emulatorSKIP711.709s GhidraON,21area+23ownerPASS. Real MCP123/UI, actual C/Ghidra two shortest paths and process/static hypothesis transfer after originals retired. External wheel d75f2551:3807 exact files/pipcheck/new installed MCP/UI PASS. All own QA closed. No Main integration. progress1059-installed-full20.md"
       },
       "group": "retained-call-paths"
     },
@@ -3302,19 +3334,20 @@
       "counterparts": [
         "evidence.correlate"
       ],
-      "status": "implementation-pending",
+      "status": "independent-review-pending",
       "scope": "Explicit caller hypotheses bound to exact static findings and runtime dimensions; co-change is not causation.",
       "acceptance": {
-        "state": "partial-native-counterpart; full reference semantic contract remains implementation-pending",
-        "task": 1059,
+        "state": "author-MCP-and-UI-tested-awaiting-external-installed-acceptance-review-and-integration",
+        "task": 1064,
         "submission_revision": 1,
-        "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
+        "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
+        "depends_on_commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
         "tests": [
+          "theseus_tests/test_retained_functions.py",
           "theseus_tests/test_retained_evidence.py"
         ],
-        "normal_ui": "Análisis > Evidencias; selección de documentos guardados, registros y citas",
-        "evidence": "21 area PASS;23 owner PASS. Real MCP123 with original compiled C/Ghidra dossiers and two shortest paths; real Python processes7x/8x; portable import after originals retired and fresh queries PASS. New UI call-path and hypothesis jobs PASS. All private QA closed. See evidence1059-mcp20-proof.json/evidence1059-qa20-final.json/submission1059-cas1-20.md. Full suite/package acceptance pending; no Main integration.",
-        "remaining": "Also support retained native function comparisons, their dimension selectors, explicit side alignment, and unchanged static occurrences. Current1059 supports artifact inventory +process comparisons only. Do not certify the entire original contract."
+        "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md"
       },
       "group": "bundle-correlation"
     },
