@@ -15,6 +15,7 @@ class DocumentGet(BaseModel):
     include_svg: bool = False
     include_figure: bool = Field(False, description="Include a portable vitruvius.figure/1 source revision and PNG for another Hoard.")
     page_id: str | None = Field(None, description="Select one infographic page for the figure preview; full source is retained.")
+    state_id: str | None = Field(None, description="Select an authored isometric state; the complete source remains unchanged.")
 
 
 class DocumentSave(BaseModel):
@@ -22,6 +23,7 @@ class DocumentSave(BaseModel):
     base_revision: int | None = Field(None, ge=1)
     content: dict[str, Any] = Field(default_factory=lambda: {"diagram": {"type": "flowchart", "nodes": []}})
     reason: str = "Edit diagram"
+    state_id: str | None = Field(None, description="Preview only: select an authored isometric state.")
 
 
 class DocumentUndo(BaseModel):
@@ -41,7 +43,7 @@ class DocumentImport(BaseModel):
 
 
 class ObjectEdit(BaseModel):
-    collection: Literal["nodes", "edges", "groups", "view_nodes", "view_edges", "pages", "assets", "view", "diagram"]
+    collection: Literal["nodes", "edges", "groups", "pieces", "mechanism_parts", "mechanism_states", "view_nodes", "view_edges", "pages", "assets", "view", "diagram"]
     id: str = ""
     action: Literal["set", "add", "remove"] = "set"
     values: dict[str, Any] = Field(default_factory=dict)
@@ -99,10 +101,18 @@ def public(row, include_svg=False):
 
 def get(services, args):
     row = store(services).get(args.id, args.revision)
-    result = public(row, args.include_svg)
+    from .mechanism import selected
+    result = public(selected(row, args.state_id), args.include_svg)
+    if args.state_id:
+        from urllib.parse import quote
+        suffix = "&state_id=" + quote(args.state_id, safe="")
+        result["state_id"] = args.state_id
+        for collection in ("files", "exports"):
+            result[collection] = {key: url + suffix for key, url in result[collection].items()}
+        result["viewer_url"] += suffix
     if args.include_figure:
         from .exchange import figure
-        result["figure"] = figure(row, page_id=args.page_id, origin_url=f"http://127.0.0.1:{services.config.port}")
+        result["figure"] = figure(row, page_id=args.page_id, state_id=args.state_id, origin_url=f"http://127.0.0.1:{services.config.port}")
     return result
 
 
@@ -134,7 +144,10 @@ def edit(services, args):
                 raise ValueError("Diagram properties use action=set.")
             content["diagram"].update(change.values)
         else:
-            values = content["view"].setdefault("pages", []) if change.collection == "pages" else content["diagram"][change.collection]
+            if change.collection.startswith("mechanism_"):
+                values = content.setdefault("mechanism", {}).setdefault(change.collection[10:], [])
+            else:
+                values = content["view"].setdefault("pages", []) if change.collection == "pages" else content["diagram"][change.collection]
             item = next((item for item in values if item["id"] == change.id), None)
             if change.action == "add":
                 if item is not None:
