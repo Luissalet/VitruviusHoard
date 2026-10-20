@@ -2595,7 +2595,7 @@
   },
   {
     "name": "diagram_document_import",
-    "description": "Import an editable native, Mermaid, draw.io or Excalidraw source; retains original and reports limits. Importar diagrama.",
+    "description": "Import an editable source, retaining the original and reporting limits. Importar diagrama.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,

@@ -3,8 +3,8 @@ import pytest
 from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME, call_tool, tool_catalog
 
 
-def test_exactly_30_tools():
-    assert len(TOOLS) == 52
+def test_catalog_has_all_native_tools():
+    assert len(TOOLS) == 60
 
 
 def test_tool_names_are_unique():
@@ -33,10 +33,10 @@ def test_read_only_hints_correct():
     read_only_names = {"app_templates", "app_project_list", "app_project_get", "design_patterns", "design_pattern", "reference_collections", "design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
                        "fonts_search", "design_lint", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
                        "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get",
-                       "diagram_types", "diagram_get", "diagram_list", "diagram_brands"}
+                       "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare"}
     write_names = {"app_project_create", "app_project_update", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render",
-                  "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete"}
+                  "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import"}
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
@@ -73,11 +73,17 @@ def test_every_arg_model_validates_empty_or_minimal(services):
                 args[field_name] = "demo"
             elif prop.get("type") == "number":
                 args[field_name] = 1
+            elif prop.get("type") == "integer":
+                args[field_name] = prop.get("minimum", 1)
+            elif prop.get("type") == "array":
+                args[field_name] = []
         if t.name == 'motion_save':
             args['composition'] = {'title':'Demo','scenes':[{'name':'Demo','layers':[{'text':'Demo'}]}]}
         if t.name == 'diagram_render':
             args['source'] = 'graph TD\n A-->B'
         if t.name in ('diagram_get', 'diagram_delete'):
+            args['id'] = 'a' * 12
+        if t.name.startswith('diagram_document_') and 'id' in required:
             args['id'] = 'a' * 12
         if t.name == 'diagram_brand_onboard':
             args['colors'] = {'accent': '#123456'}
