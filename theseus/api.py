@@ -63,7 +63,7 @@ RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'na
         'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
 VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 TOOLS = [
-    tool("theseus_client_inspect", "Explicitly inspect selected free Java/Apktool or TShark/capinfos client paths, selection sources, file hashes and real version diagnostics. No project, artifact, decoding or capture is required. Cold catalog discovery never invokes these clients.", {"family": {"enum": ["apktool", "pcap"]}}, ["family"]),
+    tool("theseus_client_inspect", "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.", {"family": {"enum": ["apktool", "pcap", "objdump"]}}, ["family"]),
     tool("theseus_runtime_catalog", "Discover explicit runtime observation operations, target selection, side effects and installed clients. Separate from execution-free static analysis.", {}),
     tool("theseus_runtime_start", "Run an explicitly selected Android, instrumentation, V8 Inspector or browser CDP operation in a project. ADB requires an exact serial; Frida requires a selected device, PID/argv or live project session; Inspector requires an explicit endpoint and exact target ID. Inspector/CDP metadata never evaluates, pauses or closes the target; script text, page DOM/listeners, completed response bodies and PNG are explicit choices. Device actions and instrumentation scripts can change their targets. Captures are historical, not behavioral equivalence; cancellation cannot undo effects. Remote tokens are ephemeral and excluded from recordings.", {**PROJECT, "operation": S, "parameters": {"type": "object"}}, ["project_id", "operation"], False, True),
     tool("theseus_projects", "List local reverse engineering projects, including archived ones.", {}),
@@ -126,7 +126,7 @@ class ArtifactAdd(Payload):
 
 
 class ClientInspection(Payload):
-    family: Literal['apktool', 'pcap']
+    family: Literal['apktool', 'pcap', 'objdump']
 
 
 class SourceReference(Payload):
