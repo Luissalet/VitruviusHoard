@@ -1,0 +1,3738 @@
+{
+  "schema": "vitruvius.theseus-coverage/1",
+  "reference": {
+    "source": "https://github.com/morluto/rea",
+    "revision": "4f7b5fb6023ce2ec449561782d09e3c7e5ac7c7b",
+    "method": "Babel AST, exact ordered TOOL_CONTRACTS, imported array spreads and verified local factories; no source execution",
+    "declared_contracts": 207
+  },
+  "reference_inventory_sha256": "16e86398040f6e327552cb24c6cecb4f839ff5a2c42b57e93d537be800e97cf2",
+  "implementation_baseline": "efb85eafb26443f784793279f98789e6e45f5bab",
+  "completion": {
+    "complete": false,
+    "percentage": null,
+    "reason": "Every contract is accounted for; name linkage and family test counts are not semantic acceptance. Review and implementation remain open."
+  },
+  "boundaries": [
+    "No Sparks or substitute local text model used.",
+    "No reference CLI/MCP relay; native product operations only.",
+    "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
+  ],
+  "status_counts": {
+    "semantic-review-pending": 169,
+    "implementation-pending": 28,
+    "platform-required-implementation-pending": 3,
+    "excluded-by-user": 4,
+    "independent-review-pending": 3
+  },
+  "contracts": [
+    {
+      "index": 0,
+      "contract": "annotate_native_function",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 40,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:annotate_native_function"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 1,
+      "contract": "inspect_native_load_image",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 45,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:inspect_native_load_image"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 2,
+      "contract": "inspect_native_data_type",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 50,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:inspect_native_data_type"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 3,
+      "contract": "inspect_native_instruction",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 55,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:inspect_native_instruction"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 4,
+      "contract": "resolve_native_call_targets",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 60,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:resolve_native_call_targets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 5,
+      "contract": "address_name",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 65,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:address_name"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 6,
+      "contract": "comment",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 70,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:comment"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 7,
+      "contract": "current_address",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 75,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:current_address"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 8,
+      "contract": "current_procedure",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 80,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:current_procedure"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 9,
+      "contract": "current_document",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 85,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:current_document"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 10,
+      "contract": "goto_address",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 90,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:goto_address"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 11,
+      "contract": "inline_comment",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 95,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:inline_comment"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 12,
+      "contract": "list_bookmarks",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 100,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_bookmarks"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 13,
+      "contract": "list_documents",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 105,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_documents"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 14,
+      "contract": "list_names",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 110,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_names"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 15,
+      "contract": "list_procedures",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 115,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_procedures"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 16,
+      "contract": "list_segments",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 120,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_segments"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 17,
+      "contract": "list_strings",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 125,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:list_strings"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 18,
+      "contract": "next_address",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 130,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:next_address"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 19,
+      "contract": "prev_address",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 135,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:prev_address"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 20,
+      "contract": "procedure_address",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 140,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_address"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 21,
+      "contract": "procedure_assembly",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 145,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_assembly"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 22,
+      "contract": "procedure_callees",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 150,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_callees"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 23,
+      "contract": "procedure_callers",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 155,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_callers"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 24,
+      "contract": "procedure_info",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 160,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_info"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 25,
+      "contract": "read_function_instructions",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 165,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:read_function_instructions"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 26,
+      "contract": "search_bytes",
+      "reference": {
+        "source": "src/contracts/hopperMemoryContracts.ts",
+        "line": 10,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:search_bytes"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 27,
+      "contract": "read_bytes",
+      "reference": {
+        "source": "src/contracts/hopperMemoryContracts.ts",
+        "line": 25,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:read_bytes"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 28,
+      "contract": "address_to_file_offset",
+      "reference": {
+        "source": "src/contracts/hopperMemoryContracts.ts",
+        "line": 35,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:address_to_file_offset"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 29,
+      "contract": "procedure_references",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 173,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_references"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 30,
+      "contract": "procedure_pseudo_code",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 182,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:procedure_pseudo_code"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 31,
+      "contract": "resolve_containing_procedure",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 187,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:resolve_containing_procedure"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 32,
+      "contract": "search_procedures",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 192,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:search_procedures"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 33,
+      "contract": "search_strings",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 197,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:search_strings"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 34,
+      "contract": "set_address_name",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 202,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:set_address_name"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 35,
+      "contract": "set_addresses_names",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 207,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:set_addresses_names"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 36,
+      "contract": "set_bookmark",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 212,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:set_bookmark"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 37,
+      "contract": "set_comment",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 217,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:set_comment"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 38,
+      "contract": "set_inline_comment",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 222,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:set_inline_comment"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 39,
+      "contract": "unset_bookmark",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 227,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:unset_bookmark"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 40,
+      "contract": "xrefs",
+      "reference": {
+        "source": "src/contracts/officialToolContracts.ts",
+        "line": 232,
+        "kind": "official-proxy"
+      },
+      "counterparts": [
+        "theseus_binary_call:xrefs"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 41,
+      "contract": "inspect_native_dispatch_metadata",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 28,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "apple.dispatch"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 42,
+      "contract": "get_objc_classes",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 33,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "apple.dispatch"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 43,
+      "contract": "get_objc_protocols",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 38,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "apple.dispatch"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 44,
+      "contract": "batch_decompile",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 43,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:batch_decompile"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 45,
+      "contract": "get_call_graph",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 48,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:get_call_graph"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 46,
+      "contract": "analyze_swift_types",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 53,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "apple.dispatch"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 47,
+      "contract": "find_xrefs_to_name",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 58,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:xrefs"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 48,
+      "contract": "binary_overview",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 63,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:read_binary_inventory_summary"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 49,
+      "contract": "analyze_function",
+      "reference": {
+        "source": "src/contracts/functionWorkflowToolContracts.ts",
+        "line": 37,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:analyze_function"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 50,
+      "contract": "inspect_native_api",
+      "reference": {
+        "source": "src/contracts/functionWorkflowToolContracts.ts",
+        "line": 41,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:inspect_native_api"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 51,
+      "contract": "trace_feature",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 69,
+        "kind": "enhanced"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Retain every literal-query string/procedure occurrence, truthful containing functions and typed xrefs; bounded trace evidence is not a runtime claim.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "binary-feature"
+    },
+    {
+      "index": 52,
+      "contract": "trace_call_path",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 74,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:trace_call_path"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 53,
+      "contract": "trace_native_ui_action",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 79,
+        "kind": "enhanced"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Connect one compiled UI action through authored connections and typed native handlers/calls; preserve ambiguous and runtime-unknown edges.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "native-ui"
+    },
+    {
+      "index": 54,
+      "contract": "trace_native_values",
+      "reference": {
+        "source": "src/contracts/enhancedToolContracts.ts",
+        "line": 84,
+        "kind": "enhanced"
+      },
+      "counterparts": [
+        "theseus_binary_call:trace_native_values"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 55,
+      "contract": "observe_native_ui",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 79,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "platform-required-implementation-pending",
+      "scope": "Live Accessibility tree and selected screenshot bound to an exact running process/window and Mach-O identity.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "platform": "macOS"
+    },
+    {
+      "index": 56,
+      "contract": "capture_native_ui_scenario",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 84,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "platform-required-implementation-pending",
+      "scope": "Exact-window Accessibility press/value/scroll/wait with before/after observations and persistent effects.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "platform": "macOS"
+    },
+    {
+      "index": 57,
+      "contract": "observe_native_calls",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 89,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "platform-required-implementation-pending",
+      "scope": "Owned LLDB launch and selected native/Objective-C entry observations with autocontinue, bounded lifetime and exact process ownership.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "platform": "macOS"
+    },
+    {
+      "index": 58,
+      "contract": "inspect_macho",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 94,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "apple.macho"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 59,
+      "contract": "inspect_signature",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 106,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "apple.signature"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 60,
+      "contract": "inspect_plist",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 111,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "apple.plist"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 61,
+      "contract": "list_architectures",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 118,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "artifact.inventory"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 62,
+      "contract": "demangle_swift",
+      "reference": {
+        "source": "src/contracts/native/nativeToolContracts.ts",
+        "line": 123,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Demangle each ordered symbol using a free native implementation; retain demangled, unchanged and invalid states.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "swift-demangle"
+    },
+    {
+      "index": 63,
+      "contract": "inspect_pe_resources",
+      "reference": {
+        "source": "src/contracts/native/binaryDiagnosticsToolContracts.ts",
+        "line": 28,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "pe.resources"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 64,
+      "contract": "inspect_binary_layout",
+      "reference": {
+        "source": "src/contracts/native/binaryDiagnosticsToolContracts.ts",
+        "line": 43,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Preserve original section/symbol/relocation/RELR bytes and identities, dependency/interpreter names and scoped mitigation facts.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "binary-layout"
+    },
+    {
+      "index": 65,
+      "contract": "inspect_recorded_crash",
+      "reference": {
+        "source": "src/contracts/native/binaryDiagnosticsToolContracts.ts",
+        "line": 65,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "crash.recording"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 66,
+      "contract": "inspect_analysis_view",
+      "reference": {
+        "source": "src/contracts/analysisViewToolContracts.ts",
+        "line": 14,
+        "kind": "application"
+      },
+      "counterparts": [
+        "theseus_analysis_records+theseus_analysis_record"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 67,
+      "contract": "inspect_artifact",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 81,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "artifact.inventory"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 68,
+      "contract": "extract_artifact",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 86,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "artifact.extract"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 69,
+      "contract": "decode_interface_builder",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 91,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "apple.interface_builder"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 70,
+      "contract": "inspect_keyed_archive",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 106,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "apple.keyed_archive"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 71,
+      "contract": "inspect_asset_catalog",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 111,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "apple.assets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 72,
+      "contract": "trace_dylib_resolution",
+      "reference": {
+        "source": "src/contracts/artifactToolContracts.ts",
+        "line": 116,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "apple.dylibs"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 73,
+      "contract": "inspect_evm_interface",
+      "reference": {
+        "source": "src/contracts/evm/evmToolContracts.ts",
+        "line": 21,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "evm.interface"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 74,
+      "contract": "inspect_go_binary",
+      "reference": {
+        "source": "src/contracts/go/goToolContracts.ts",
+        "line": 11,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "go.build"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 75,
+      "contract": "inspect_rust_binary",
+      "reference": {
+        "source": "src/contracts/rust/rustToolContracts.ts",
+        "line": 11,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "rust.dependencies"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 76,
+      "contract": "inspect_wasm_artifact",
+      "reference": {
+        "source": "src/contracts/wasm/wasmToolContracts.ts",
+        "line": 20,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "wasm.artifact"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 77,
+      "contract": "compare_wasm_interfaces",
+      "reference": {
+        "source": "src/contracts/wasm/wasmComparisonContracts.ts",
+        "line": 54,
+        "kind": "application"
+      },
+      "counterparts": [
+        "wasm.compare_interfaces"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 78,
+      "contract": "inspect_sqlite_database",
+      "reference": {
+        "source": "src/contracts/sqlite/sqliteToolContracts.ts",
+        "line": 11,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "sqlite.database"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 79,
+      "contract": "inspect_packet_fields",
+      "reference": {
+        "source": "src/contracts/captures/captureToolContracts.ts",
+        "line": 13,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "capture.fields"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 80,
+      "contract": "inspect_packet_capture",
+      "reference": {
+        "source": "src/contracts/captures/captureToolContracts.ts",
+        "line": 29,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "capture.packets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 81,
+      "contract": "inspect_signal_decoders",
+      "reference": {
+        "source": "src/contracts/signals/signalToolContracts.ts",
+        "line": 13,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "signal.decoders"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 82,
+      "contract": "decode_signal_recording",
+      "reference": {
+        "source": "src/contracts/signals/signalToolContracts.ts",
+        "line": 29,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "signal.decode"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 83,
+      "contract": "inspect_managed_artifact",
+      "reference": {
+        "source": "src/contracts/managed/managedToolContracts.ts",
+        "line": 66,
+        "kind": "managed-provider"
+      },
+      "counterparts": [
+        "managed.artifact"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 84,
+      "contract": "inspect_managed_members",
+      "reference": {
+        "source": "src/contracts/managed/managedToolContracts.ts",
+        "line": 86,
+        "kind": "managed-provider"
+      },
+      "counterparts": [
+        "managed.members"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 85,
+      "contract": "inspect_managed_native_boundaries",
+      "reference": {
+        "source": "src/contracts/managed/managedToolContracts.ts",
+        "line": 116,
+        "kind": "managed-provider"
+      },
+      "counterparts": [
+        "managed.native_boundaries"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 86,
+      "contract": "inspect_android_package",
+      "reference": {
+        "source": "src/contracts/android/androidToolContracts.ts",
+        "line": 14,
+        "kind": "android-provider"
+      },
+      "counterparts": [
+        "android.package"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 87,
+      "contract": "search_android_classes",
+      "reference": {
+        "source": "src/contracts/android/androidToolContracts.ts",
+        "line": 35,
+        "kind": "android-provider"
+      },
+      "counterparts": [
+        "android.classes"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 88,
+      "contract": "inspect_android_class",
+      "reference": {
+        "source": "src/contracts/android/androidToolContracts.ts",
+        "line": 50,
+        "kind": "android-provider"
+      },
+      "counterparts": [
+        "android.class"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 89,
+      "contract": "inspect_android_method",
+      "reference": {
+        "source": "src/contracts/android/androidToolContracts.ts",
+        "line": 65,
+        "kind": "android-provider"
+      },
+      "counterparts": [
+        "android.method"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 90,
+      "contract": "trace_android_references",
+      "reference": {
+        "source": "src/contracts/android/androidToolContracts.ts",
+        "line": 84,
+        "kind": "android-provider"
+      },
+      "counterparts": [
+        "android.references"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 91,
+      "contract": "inspect_apktool_client",
+      "reference": {
+        "source": "src/contracts/apktool/apktoolToolContracts.ts",
+        "line": 11,
+        "kind": "apktool-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Expose selected free client/Java identity and version without requiring a target artifact or decoding it.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "client-diagnostics"
+    },
+    {
+      "index": 92,
+      "contract": "decode_android_resources",
+      "reference": {
+        "source": "src/contracts/apktool/apktoolToolContracts.ts",
+        "line": 21,
+        "kind": "apktool-provider"
+      },
+      "counterparts": [
+        "android.resources"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 93,
+      "contract": "inspect_pcap_client",
+      "reference": {
+        "source": "src/contracts/pcap/pcapToolContracts.ts",
+        "line": 16,
+        "kind": "pcap-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Expose selected TShark/capinfos paths, selection sources and versions without requiring a capture artifact.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "client-diagnostics"
+    },
+    {
+      "index": 94,
+      "contract": "inspect_pcap_capture",
+      "reference": {
+        "source": "src/contracts/pcap/pcapToolContracts.ts",
+        "line": 26,
+        "kind": "pcap-provider"
+      },
+      "counterparts": [
+        "capture.packets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 95,
+      "contract": "identify_flutter_build",
+      "reference": {
+        "source": "src/contracts/flutter/flutterToolContracts.ts",
+        "line": 14,
+        "kind": "flutter-provider"
+      },
+      "counterparts": [
+        "flutter.elf"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 96,
+      "contract": "inspect_dart_aot",
+      "reference": {
+        "source": "src/contracts/flutter/flutterToolContracts.ts",
+        "line": 29,
+        "kind": "flutter-provider"
+      },
+      "counterparts": [
+        "flutter.elf"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 97,
+      "contract": "inspect_jeb_client",
+      "reference": {
+        "source": "src/contracts/jeb/jebToolContracts.ts",
+        "line": 11,
+        "kind": "jeb-provider"
+      },
+      "counterparts": [],
+      "status": "excluded-by-user",
+      "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
+      "acceptance": {
+        "state": "scope-exclusion",
+        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+      }
+    },
+    {
+      "index": 98,
+      "contract": "open_jeb_project",
+      "reference": {
+        "source": "src/contracts/jeb/jebToolContracts.ts",
+        "line": 21,
+        "kind": "jeb-provider"
+      },
+      "counterparts": [],
+      "status": "excluded-by-user",
+      "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
+      "acceptance": {
+        "state": "scope-exclusion",
+        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+      }
+    },
+    {
+      "index": 99,
+      "contract": "list_jeb_units",
+      "reference": {
+        "source": "src/contracts/jeb/jebToolContracts.ts",
+        "line": 36,
+        "kind": "jeb-provider"
+      },
+      "counterparts": [],
+      "status": "excluded-by-user",
+      "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
+      "acceptance": {
+        "state": "scope-exclusion",
+        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+      }
+    },
+    {
+      "index": 100,
+      "contract": "decompile_jeb_item",
+      "reference": {
+        "source": "src/contracts/jeb/jebToolContracts.ts",
+        "line": 55,
+        "kind": "jeb-provider"
+      },
+      "counterparts": [],
+      "status": "excluded-by-user",
+      "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
+      "acceptance": {
+        "state": "scope-exclusion",
+        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+      }
+    },
+    {
+      "index": 101,
+      "contract": "inspect_adb_client",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 11,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.client"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 102,
+      "contract": "list_adb_devices",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 21,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.devices"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 103,
+      "contract": "inspect_adb_device",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 31,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.device"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 104,
+      "contract": "list_adb_packages",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 43,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.packages"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 105,
+      "contract": "pull_adb_package",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 58,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.pull_package"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 106,
+      "contract": "read_adb_logcat",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 77,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.logcat"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 107,
+      "contract": "inspect_adb_package",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 92,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.package"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 108,
+      "contract": "pull_adb_file",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 107,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.pull_file"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 109,
+      "contract": "push_adb_file",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 126,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.push_file"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 110,
+      "contract": "capture_adb_screen",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 145,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.screen"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 111,
+      "contract": "list_adb_processes",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 163,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.processes"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 112,
+      "contract": "list_adb_directory",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 173,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.directory"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 113,
+      "contract": "list_adb_features",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 191,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.features"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 114,
+      "contract": "list_adb_services",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 201,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.services"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 115,
+      "contract": "inspect_adb_display",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 211,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.display"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 116,
+      "contract": "inspect_adb_window",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 223,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.window"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 117,
+      "contract": "read_adb_setting",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 235,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.setting"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 118,
+      "contract": "collect_adb_bugreport",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 254,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.bugreport"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 119,
+      "contract": "resolve_adb_packages",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 272,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.resolve_packages"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 120,
+      "contract": "install_adb_package",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 287,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.install"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 121,
+      "contract": "uninstall_adb_package",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 310,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.uninstall"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 122,
+      "contract": "start_adb_app",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 325,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.start_app"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 123,
+      "contract": "start_adb_activity",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 340,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.start_activity"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 124,
+      "contract": "stop_adb_app",
+      "reference": {
+        "source": "src/contracts/adb/adbToolContracts.ts",
+        "line": 367,
+        "kind": "adb-provider"
+      },
+      "counterparts": [
+        "adb.stop_app"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 125,
+      "contract": "inspect_firmware_regions",
+      "reference": {
+        "source": "src/contracts/firmware/firmwareToolContracts.ts",
+        "line": 11,
+        "kind": "firmware-provider"
+      },
+      "counterparts": [
+        "firmware.regions"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 126,
+      "contract": "extract_firmware",
+      "reference": {
+        "source": "src/contracts/firmware/firmwareToolContracts.ts",
+        "line": 28,
+        "kind": "firmware-provider"
+      },
+      "counterparts": [
+        "firmware.extract"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 127,
+      "contract": "compare_managed_members",
+      "reference": {
+        "source": "src/contracts/managed/managedWorkflowToolContracts.ts",
+        "line": 97,
+        "kind": "application"
+      },
+      "counterparts": [
+        "managed.compare"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 128,
+      "contract": "verify_managed_native_boundaries",
+      "reference": {
+        "source": "src/contracts/managed/managedWorkflowToolContracts.ts",
+        "line": 115,
+        "kind": "application"
+      },
+      "counterparts": [
+        "managed.verify_native"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 129,
+      "contract": "import_managed_reconstruction",
+      "reference": {
+        "source": "src/contracts/managed/managedWorkflowToolContracts.ts",
+        "line": 135,
+        "kind": "application"
+      },
+      "counterparts": [
+        "managed.reconstruction"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 130,
+      "contract": "project_managed_application_graph",
+      "reference": {
+        "source": "src/contracts/managed/managedWorkflowToolContracts.ts",
+        "line": 155,
+        "kind": "application"
+      },
+      "counterparts": [
+        "managed.graph"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 131,
+      "contract": "list_browser_targets",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 138,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.targets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 132,
+      "contract": "inspect_web_page",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 155,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 133,
+      "contract": "analyze_web_bundle",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 173,
+        "kind": "browser-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Derive chunk/routes/endpoints/vendors and declared metadata from captured sources; explicit map acquisition and provenance remain to be implemented.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "web-bundle"
+    },
+    {
+      "index": 134,
+      "contract": "observe_web_session",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 196,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 135,
+      "contract": "discover_webmcp_tools",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 215,
+        "kind": "browser-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Passive experimental-CDP tool inventory, complete structural input-schema summaries, untrusted metadata and no invocation.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "webmcp"
+    },
+    {
+      "index": 136,
+      "contract": "compare_web_captures",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 234,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.compare"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 137,
+      "contract": "capture_web_screenshot",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 262,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 138,
+      "contract": "compare_web_screenshots",
+      "reference": {
+        "source": "src/contracts/browserToolContracts.ts",
+        "line": 280,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.compare"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 139,
+      "contract": "capture_browser_scenario",
+      "reference": {
+        "source": "src/contracts/browserScenarioToolContracts.ts",
+        "line": 25,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.scenario"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 140,
+      "contract": "list_electron_targets",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 56,
+        "kind": "electron-provider"
+      },
+      "counterparts": [
+        "browser.targets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 141,
+      "contract": "inspect_electron_page",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 73,
+        "kind": "electron-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 142,
+      "contract": "analyze_javascript_application",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 91,
+        "kind": "electron-provider"
+      },
+      "counterparts": [
+        "javascript.application"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 143,
+      "contract": "reconcile_javascript_runtime",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 125,
+        "kind": "electron-provider"
+      },
+      "counterparts": [
+        "javascript.reconcile_runtime"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 144,
+      "contract": "capture_electron_scenario",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 140,
+        "kind": "electron-provider"
+      },
+      "counterparts": [
+        "browser.scenario"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 145,
+      "contract": "inspect_electron_fuses",
+      "reference": {
+        "source": "src/contracts/javascript/electronToolContracts.ts",
+        "line": 152,
+        "kind": "artifact-provider"
+      },
+      "counterparts": [
+        "electron.fuses"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 146,
+      "contract": "list_javascript_runtime_targets",
+      "reference": {
+        "source": "src/contracts/javascript/javascriptRuntimeObservationToolContracts.ts",
+        "line": 15,
+        "kind": "runtime-provider"
+      },
+      "counterparts": [
+        "javascript.targets"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 147,
+      "contract": "observe_javascript_runtime",
+      "reference": {
+        "source": "src/contracts/javascript/javascriptRuntimeObservationToolContracts.ts",
+        "line": 32,
+        "kind": "runtime-provider"
+      },
+      "counterparts": [
+        "javascript.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 148,
+      "contract": "trace_application_feature",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 71,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.feature"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 149,
+      "contract": "trace_javascript_semantics",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 95,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.query"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 150,
+      "contract": "compare_application_versions",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 116,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.compare_versions"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 151,
+      "contract": "compare_source_to_bundle",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 143,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.compare_source"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 152,
+      "contract": "compare_javascript_export_shapes",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 159,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.compare_exports"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 153,
+      "contract": "build_reconstruction_obligation_ledger",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 187,
+        "kind": "application"
+      },
+      "counterparts": [
+        "theseus_workflow_read+theseus_claim_save"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 154,
+      "contract": "evaluate_reconstruction_coverage",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 217,
+        "kind": "application"
+      },
+      "counterparts": [
+        "theseus_workflow_read"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 155,
+      "contract": "project_android_application_graph",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 268,
+        "kind": "application"
+      },
+      "counterparts": [
+        "android.application"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 156,
+      "contract": "project_apple_application_graph",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 284,
+        "kind": "application"
+      },
+      "counterparts": [
+        "apple.application"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 157,
+      "contract": "project_harmony_application_graph",
+      "reference": {
+        "source": "src/contracts/applicationToolContracts.ts",
+        "line": 304,
+        "kind": "application"
+      },
+      "counterparts": [
+        "harmony.application"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 158,
+      "contract": "trace_web_source_location",
+      "reference": {
+        "source": "src/contracts/webScriptToolContracts.ts",
+        "line": 19,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.trace_source"
+      ],
+      "status": "independent-review-pending",
+      "scope": "Exact duplicate-preserving generated-position lookup in retained regular/inline-indexed maps.",
+      "acceptance": {
+        "state": "author-tested-awaiting-review-and-integration",
+        "task": 1043,
+        "submission_revision": 1,
+        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "tests": [
+          "theseus_tests/test_web_sources.py"
+        ],
+        "normal_ui": "Inspección > Análisis > Web",
+        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+      }
+    },
+    {
+      "index": 159,
+      "contract": "trace_web_module_imports",
+      "reference": {
+        "source": "src/contracts/webScriptToolContracts.ts",
+        "line": 43,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.trace_imports"
+      ],
+      "status": "independent-review-pending",
+      "scope": "Literal ES imports/reexports with explicit URL/import-map interpretation and computed/CommonJS unknowns.",
+      "acceptance": {
+        "state": "author-tested-awaiting-review-and-integration",
+        "task": 1043,
+        "submission_revision": 1,
+        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "tests": [
+          "theseus_tests/test_web_sources.py"
+        ],
+        "normal_ui": "Inspección > Análisis > Web",
+        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+      }
+    },
+    {
+      "index": 160,
+      "contract": "export_web_scripts",
+      "reference": {
+        "source": "src/contracts/webScriptToolContracts.ts",
+        "line": 65,
+        "kind": "application"
+      },
+      "counterparts": [
+        "browser.export_scripts"
+      ],
+      "status": "independent-review-pending",
+      "scope": "Hash-verified portable retained script/response export, URL layout and isolated ambiguous occurrences; no network or original-path fallback.",
+      "acceptance": {
+        "state": "author-tested-awaiting-review-and-integration",
+        "task": 1043,
+        "submission_revision": 1,
+        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "tests": [
+          "theseus_tests/test_web_sources.py"
+        ],
+        "normal_ui": "Inspección > Análisis > Web",
+        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+      }
+    },
+    {
+      "index": 161,
+      "contract": "observe_web_execution",
+      "reference": {
+        "source": "src/contracts/webRuntimeToolContracts.ts",
+        "line": 15,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.coverage"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 162,
+      "contract": "inspect_web_event_listeners",
+      "reference": {
+        "source": "src/contracts/webRuntimeToolContracts.ts",
+        "line": 34,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 163,
+      "contract": "inspect_web_network_capture",
+      "reference": {
+        "source": "src/contracts/webNetworkCaptureToolContracts.ts",
+        "line": 15,
+        "kind": "browser-provider"
+      },
+      "counterparts": [
+        "browser.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 164,
+      "contract": "recover_javascript_sources",
+      "reference": {
+        "source": "src/contracts/javascript/javascriptRecoveryToolContracts.ts",
+        "line": 11,
+        "kind": "application"
+      },
+      "counterparts": [
+        "javascript.recover"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 165,
+      "contract": "open_binary",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 70,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_binary_open"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 166,
+      "contract": "close_binary",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 75,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_binary_close"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 167,
+      "contract": "binary_session",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 80,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_binary_sessions"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 168,
+      "contract": "export_evidence_bundle",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 85,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_evidence_export"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 169,
+      "contract": "import_evidence_bundle",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 90,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_evidence_import"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 170,
+      "contract": "capture_process_scenario",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 95,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Interactive terminal, lifecycle, files, declared command shims and HTTP/WebSocket observations; retain incomplete prefixes and causality boundaries.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "process-observations"
+    },
+    {
+      "index": 171,
+      "contract": "compare_process_captures",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 100,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Compare explicit process observations, file effects and trace partial orders without inventing timestamp causality.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "process-observations"
+    },
+    {
+      "index": 172,
+      "contract": "compare_artifacts",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 105,
+        "kind": "session"
+      },
+      "counterparts": [
+        "artifact.compare"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 173,
+      "contract": "compare_functions",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 110,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_binary_compare"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 174,
+      "contract": "compare_bundles",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 115,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Exact bundle membership, declared one-to-one observation pairs, full residual unknowns and digest-bound comparison history.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "bundle-correlation"
+    },
+    {
+      "index": 175,
+      "contract": "find_changed_behavior",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 120,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Aggregate validated artifact/process deltas while separating observed behavior, static candidates and incomplete evidence.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "bundle-correlation"
+    },
+    {
+      "index": 176,
+      "contract": "build_call_path",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 125,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "All shortest direct-callee paths from complete retained dossiers with exact addresses and source evidence; missing/mixed providers remain unknown.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "retained-call-paths"
+    },
+    {
+      "index": 177,
+      "contract": "correlate_static_and_runtime",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 130,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Explicit caller hypotheses bound to exact static findings and runtime dimensions; co-change is not causation.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "bundle-correlation"
+    },
+    {
+      "index": 178,
+      "contract": "verify_reconstruction",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 135,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_reconstruction_verify"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 179,
+      "contract": "list_unknowns",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 140,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_workflow_read"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 180,
+      "contract": "record_unknown",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 145,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_claim_save"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 181,
+      "contract": "update_unknown",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 150,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_claim_save"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 182,
+      "contract": "verify_unknown_resolution",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 155,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_reconstruction_verify"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 183,
+      "contract": "get_evidence_bundle",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 160,
+        "kind": "session"
+      },
+      "counterparts": [
+        "theseus_evidence_export+theseus_analysis_records"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 184,
+      "contract": "get_navigation_context",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 165,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Sequential bound-document/current-address/containing-procedure observations, with procedure:null outside any function.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "navigation-context"
+    },
+    {
+      "index": 185,
+      "contract": "inspect_address_context",
+      "reference": {
+        "source": "src/contracts/sessionToolContracts.ts",
+        "line": 170,
+        "kind": "session"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "One explicit address with analyzed name, containing function, regular/inline comments and matching bookmarks; unavailable facets typed.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "navigation-context"
+    },
+    {
+      "index": 186,
+      "contract": "list_cutter_sessions",
+      "reference": {
+        "source": "src/contracts/cutterToolContracts.ts",
+        "line": 66,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 187,
+      "contract": "cutter_command",
+      "reference": {
+        "source": "src/contracts/cutterToolContracts.ts",
+        "line": 76,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 188,
+      "contract": "inspect_with_objdump",
+      "reference": {
+        "source": "src/contracts/reverseEngineeringToolContracts.ts",
+        "line": 27,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 189,
+      "contract": "execute_rizin_command",
+      "reference": {
+        "source": "src/contracts/reverseEngineeringToolContracts.ts",
+        "line": 46,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 190,
+      "contract": "start_gdb_session",
+      "reference": {
+        "source": "src/contracts/gdbToolContracts.ts",
+        "line": 26,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 191,
+      "contract": "gdb_console",
+      "reference": {
+        "source": "src/contracts/gdbToolContracts.ts",
+        "line": 45,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 192,
+      "contract": "gdb_session_status",
+      "reference": {
+        "source": "src/contracts/gdbToolContracts.ts",
+        "line": 66,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 193,
+      "contract": "close_gdb_session",
+      "reference": {
+        "source": "src/contracts/gdbToolContracts.ts",
+        "line": 95,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 194,
+      "contract": "start_rizin_debug_session",
+      "reference": {
+        "source": "src/contracts/rizinDebugToolContracts.ts",
+        "line": 21,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 195,
+      "contract": "rizin_debug_command",
+      "reference": {
+        "source": "src/contracts/rizinDebugToolContracts.ts",
+        "line": 43,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 196,
+      "contract": "rizin_debug_session_status",
+      "reference": {
+        "source": "src/contracts/rizinDebugToolContracts.ts",
+        "line": 70,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 197,
+      "contract": "close_rizin_debug_session",
+      "reference": {
+        "source": "src/contracts/rizinDebugToolContracts.ts",
+        "line": 93,
+        "kind": "native-provider"
+      },
+      "counterparts": [],
+      "status": "implementation-pending",
+      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      },
+      "group": "free-debugger-backends"
+    },
+    {
+      "index": 198,
+      "contract": "list_frida_devices",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 68,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.devices"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 199,
+      "contract": "list_frida_processes",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 87,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.processes"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 200,
+      "contract": "start_frida_session",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 115,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.start"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 201,
+      "contract": "load_frida_script",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 149,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.load"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 202,
+      "contract": "resume_frida_session",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 184,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.resume"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 203,
+      "contract": "unload_frida_script",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 199,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.unload"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 204,
+      "contract": "frida_session_status",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 220,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.status"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 205,
+      "contract": "close_frida_session",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 249,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.close"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    },
+    {
+      "index": 206,
+      "contract": "instrument_with_frida",
+      "reference": {
+        "source": "src/contracts/fridaToolContracts.ts",
+        "line": 264,
+        "kind": "native-provider"
+      },
+      "counterparts": [
+        "frida.observe"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "acceptance": {
+        "state": "not-certified-by-name-linkage",
+        "tests": []
+      }
+    }
+  ]
+}

@@ -2,6 +2,20 @@
 
 # Source coverage and completion
 
+Luis explicitly requested completion of Theseus inside Vitruvius on20October2026.
+The work is active. The complete declared inventory is tracked in
+[THESEUS-COVERAGE.json](../docs/THESEUS-COVERAGE.json): every one of the207
+contracts has a native counterpart candidate, an explicit implementation gap,
+a real platform requirement or the agreed paid-engine exclusion. This is a
+semantic acceptance worklist, not a completion percentage. Existing family test
+counts and matching operation names do not certify individual contract parity.
+
+The offline web-source export, generated-position trace and literal import trace
+are implemented in delivery1043 and await independent review and integration.
+Process capture/comparison is active in1046. Whole-bundle/static-runtime
+correlation, free debugger backends and the other explicit gaps remain open.
+No Sparks or substitute local text model is used for this completion work.
+
 This is an implementation and acceptance ledger, not a claim that the current
 application already implements every row. Luis requires a complete program
 covering the applicable local/free reverse engineering capabilities of the
