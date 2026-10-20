@@ -6,6 +6,8 @@ export const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function mergeDraft(base, wanted, current, path = "") {
   if (equal(base, wanted) || equal(wanted, current)) return clone(current);
   if (equal(base, current)) return wanted === undefined ? undefined : clone(wanted);
+  if (base === undefined && /^\/view\/(nodes|edges)\/[^/]+$/.test(path)
+      && [wanted, current].every(v => v && !Array.isArray(v) && typeof v === "object")) base = {};
   if ([base, wanted, current].every(v => v && !Array.isArray(v) && typeof v === "object")) {
     const out = {};
     for (const key of new Set([...Object.keys(current), ...Object.keys(wanted), ...Object.keys(base)])) {
