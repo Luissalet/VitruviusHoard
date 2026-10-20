@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import time
 
 import pytest
@@ -35,7 +36,8 @@ def test_dwarf_command_retains_exact_streams_and_explicit_external_input_policy(
     source = tmp_path / '-original.o'
     source.write_bytes(b'original artifact')
     observed = []
-    def capture(parameters, folder, cancelled):
+    def capture(parameters, folder, cancelled, **options):
+        assert options == {'include_file_content': False}
         observed.append(parameters)
         return {'status': 'complete', 'stream_complete': True, 'target': {'argv': parameters['argv']},
                 'process': {'exit_code': 3},
@@ -98,6 +100,8 @@ def test_real_gnu_reader_original_headers_symbols_relocations_dwarf_and_code(tmp
     assert result['completion_status'] == 'complete' and result['exit_code'] == 0
     assert result['artifact_changed'] is False and result['artifact']['sha256'] == hashlib.sha256(raw).hexdigest()
     assert not result['target_executed'] and binary.read_bytes() == raw
+    assert 'base64' not in result['engine']['identity']
+    assert all('base64' not in row[side] for row in result['process_observation']['files'] for side in ['before', 'after'])
     for key in ['stdout', 'stderr']:
         stream = base64.b64decode(result[key]['base64'])
         assert len(stream) == result[key]['bytes'] and hashlib.sha256(stream).hexdigest() == result[key]['sha256']
@@ -125,6 +129,30 @@ def test_real_subjectless_targets_and_retained_read_never_reinspect_originals(tm
     assert targets['artifact'] is None and targets['artifact_sha256_after'] is None and targets['artifact_changed'] is None
     assert targets['completion_status'] == 'complete' and targets['exit_code'] == 0
     assert 'elf64-x86-64' in targets['stdout']['text']
+
+
+@pytest.mark.parametrize('include_content', [True, False])
+def test_file_identity_mode_preserves_default_bodies_and_every_stream_byte(tmp_path, include_content):
+    source = tmp_path / 'original.txt'
+    before, after = b'original before', b'original after\xff'
+    source.write_bytes(before)
+    script = 'from pathlib import Path; import sys; Path(sys.argv[1]).write_bytes(bytes.fromhex("' + after.hex() + '")); sys.stdout.buffer.write(b"observed\\xff\\n")'
+    parameters = {'argv': [sys.executable, '-c', script, str(source)], 'cwd': str(tmp_path),
+                  'files': [{'label': 'original', 'path': str(source)}]}
+    options = {} if include_content else {'include_file_content': False}
+    capture = reader.process_capture.capture_process(parameters, tmp_path / 'capture', **options)
+    assert capture['status'] == 'complete' and capture['stream_complete']
+    assert base64.b64decode(capture['stdout']['base64']) == b'observed\xff\n'
+    observed = capture['files'][0]
+    assert observed['before']['sha256'] == hashlib.sha256(before).hexdigest()
+    assert observed['after']['sha256'] == hashlib.sha256(after).hexdigest()
+    assert ('base64' in observed['before']) is include_content and ('base64' in observed['after']) is include_content
+    if include_content:
+        assert base64.b64decode(observed['before']['base64']) == before
+        assert base64.b64decode(observed['after']['base64']) == after
+    else:
+        assert capture['file_content_retained'] is False
+        assert all('base64' not in row['after'] for row in capture['process']['input_file_changes'])
 
 
 def test_real_native_api_records_and_transfer_after_original_removed(tmp_path, original_object, monkeypatch):

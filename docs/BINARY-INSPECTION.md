@@ -23,6 +23,10 @@ status, stream closure and completed/unknown state. Nonzero exit diagnostics
 remain observations rather than fabricated empty inventories. Full collected
 streams are retained, without a delivery cap; an interrupted stream remains a
 partial observation even when its current bytes are readable.
+Reader and artifact identities retain hashes, sizes and metadata, without
+duplicating their binary bodies. Normal process-capture file observations keep
+their existing content-preserving default; this reader selects identity-only
+file observations while retaining every stdout/stderr byte.
 
 The product invokes the utility reader and never executes the selected artifact.
 Before/after artifact hashes identify observed endpoint states; they cannot rule

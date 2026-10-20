@@ -62,17 +62,18 @@ def _write(path,document):
     temporary.replace(path)
 
 
-def _file(path,excluded=None):
+def _file(path,excluded=None,include_content=True):
     try:
         if excluded is not None and path.absolute()==excluded.absolute():return {'state':'observer-directory-excluded'}
         metadata=path.lstat()
         if path.is_symlink() or getattr(metadata,'st_file_attributes',0)&0x400:
             return {'state':'link-not-followed','target':os.readlink(path) if path.is_symlink() else None}
         if path.is_dir():
-            return {'state':'directory','members':[{'name':member.name,**_file(member,excluded)} for member in sorted(path.iterdir(),key=lambda value:value.name)]}
+            return {'state':'directory','members':[{'name':member.name,**_file(member,excluded,include_content)} for member in sorted(path.iterdir(),key=lambda value:value.name)]}
         before=(metadata.st_size,metadata.st_mtime_ns)
         data=path.read_bytes();after=path.stat()
-        return {'state':'file' if before==(after.st_size,after.st_mtime_ns) else 'unstable','mode':metadata.st_mode,**_bytes(data)}
+        identity=_bytes(data) if include_content else {'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
+        return {'state':'file' if before==(after.st_size,after.st_mtime_ns) else 'unstable','mode':metadata.st_mode,**identity}
     except FileNotFoundError:return {'state':'absent'}
     except OSError as error:return {'state':'unavailable','error':str(error)}
 
@@ -181,7 +182,7 @@ def _render(folder,terminal,frames):
     return json.loads(output.read_text(encoding='utf8'))
 
 
-def capture_process(parameters,folder,cancelled=None):
+def capture_process(parameters,folder,cancelled=None,include_file_content=True):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True)
     latest=folder/'capture-latest.json'
     if latest.exists():raise FileExistsError('This process capture has already started; inspect its retained result')
@@ -204,7 +205,7 @@ def capture_process(parameters,folder,cancelled=None):
     observed=[]
     for row in parameters.get('files',[]):
         path=Path(row['path']);path=path.absolute() if path.is_absolute() else (cwd/path).absolute()
-        observed.append({'label':row['label'],'path':str(path),'before':_file(path,folder)})
+        observed.append({'label':row['label'],'path':str(path),'before':_file(path,folder,include_file_content)})
     result={'format':'vitruvius.process-capture/1','status':'capturing','target':{'argv':argv,'cwd':str(cwd)},
       'contract':parameters,'contract_sha256':hashlib.sha256(json.dumps(parameters,sort_keys=True,ensure_ascii=False).encode()).hexdigest(),
       'process':{'argv':argv,'cwd':str(cwd),'files':process_files,'exit_code':None},'steps':[],'events':[],
@@ -213,6 +214,7 @@ def capture_process(parameters,folder,cancelled=None):
         'Collection timestamps do not imply causality between independent channels.',
         'Ambient environment and concurrent changes outside the observed process remain unknown.']}
     outputs={'stdout':bytearray(),'stderr':bytearray(),'terminal':bytearray()};frames=[];counts={};last={};started=time.monotonic()
+    if not include_file_content:result['file_content_retained']=False
     decoder=codecs.getincrementaldecoder('utf8')();descendants={};pending_input=None
     def event(channel,kind,**payload):
         counts[channel]=counts.get(channel,0)+1;key=f'{channel}:{counts[channel]}'
@@ -362,10 +364,10 @@ def capture_process(parameters,folder,cancelled=None):
         if session is not None:
             try:session.close()
             except OSError as error:result.update(status='partial',cleanup_error=str(error))
-        for row in observed:row['after']=_file(Path(row['path']),folder)
+        for row in observed:row['after']=_file(Path(row['path']),folder,include_file_content)
         result['process']['input_file_changes']=[]
         for path,sha256 in process_files.items():
-            current=_file(Path(path),folder)
+            current=_file(Path(path),folder,include_file_content)
             if current.get('sha256')!=sha256:result['process']['input_file_changes'].append({'path':path,'before_sha256':sha256,'after':current})
         if result['process']['input_file_changes']:result['limitations'].append('Selected program input files changed during observation; captured runtime behavior is not bound to unchanged original bytes.')
         persist(final=True)
