@@ -289,3 +289,46 @@ def test_browser_export_and_queries_after_close_and_evidence_transfer(tmp_path):
             'project_id':project,'artifact_id':exported['result']['artifact_id'],'operation':'javascript.trace_source',
             'parameters':{'source_job_id':moved_export['id'],'query':query}}})
         assert bad.status_code==400
+
+
+def test_imported_web_operations_do_not_even_query_the_old_artifact_path(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from test_native_analysis import wait
+    from theseus.api import create_app
+    from theseus.store import identifier
+    document,_,_=capture()
+    mapping={'version':3,'sources':['original.ts'],'sourcesContent':['const gauge = 1;'],'names':[],'mappings':'AAAA'}
+    document['result']['scripts'][0]['sourceMapURL']='data:application/json;base64,'+base64.b64encode(json.dumps(mapping).encode()).decode()
+    raw=json.dumps(document).encode()
+    original=tmp_path/'must-not-query-original.json';original.write_bytes(raw)
+    with TestClient(create_app(tmp_path/'data'),base_url='http://127.0.0.1:5217') as client:
+        client.get('/');store=client.app.state.store;project=store.create_project('Detached capture identity')['id']
+        artifact=store.add_artifact(project,original);job_id=identifier()
+        retained=store.directory/'analyses'/job_id;retained.mkdir(parents=True)
+        saved=retained/'analysis.json';saved.write_bytes(raw)
+        store.save_job(project,job_id,'finished',{'kind':'runtime_analysis','operation':'browser.scenario',
+            'artifact_id':artifact['id'],'artifact_sha256':artifact['sha256'],'artifact_name':artifact['name'],
+            'analysis_sha256':identity(raw)['sha256'],'analysis_file':str(saved),'title':'Detached capture'})
+        imported=client.app.state.evidence.load(client.app.state.evidence.export(project))
+        moved=store.job(imported['id_map'][job_id]);calls=[]
+        exists=Path.exists
+        def guarded_exists(path):
+            if path==original:
+                calls.append(str(path));raise AssertionError('A retained web operation queried the old original path')
+            return exists(path)
+        monkeypatch.setattr(Path,'exists',guarded_exists)
+        def start(source,operation,query=None):
+            parameters={'source_job_id':source['id']}
+            if query is not None:parameters['query']=query
+            response=client.post(f'/api/projects/{imported["project"]["id"]}/artifacts/{source["result"]["artifact_id"]}/analyses',
+                json={'operation':operation,'parameters':parameters})
+            response.raise_for_status();job=wait(client,response.json())
+            assert job['state']=='finished',job
+            assert job['result']['original_source_check']=='not-performed-retained-input'
+            assert job['result']['source_unavailable'] is None
+            assert job['result']['source_changed_during_analysis'] is None
+            return job
+        exported=start(moved,'browser.export_scripts')
+        start(exported,'javascript.trace_source',{'script_id':'script-000000','map_id':'inline-map-000000','line':1,'column':0})
+        start(exported,'javascript.trace_imports',{'script_id':'script-000000'})
+        assert calls==[]
