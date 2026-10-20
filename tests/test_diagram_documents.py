@@ -53,6 +53,18 @@ def test_mermaid_export_retains_graph_labels_and_relationships(tmp_path):
     assert imported["diagram"]["edges"][0]["label"] == "sí"
 
 
+def test_reciprocal_routes_use_different_lanes_and_respect_manual_points(tmp_path):
+    content = sample()
+    content["diagram"]["edges"].append({"id": "return", "from": "end", "to": "start"})
+    row = DocumentStore(tmp_path).save(content)
+    outward, returning = row["rendering"]["scene"]["routes"]
+    assert returning["points"] != list(reversed(outward["points"]))
+    assert max(p[0] for p in returning["points"]) > 580
+    content["view"]["edges"]["return"] = {"points": [[700, 250]], "source_port": "bottom"}
+    row = DocumentStore(tmp_path).save(content)
+    assert row["rendering"]["scene"]["routes"][1]["points"][1] == [700, 250]
+
+
 def test_api_document_edit_read_export_and_conflict(client):
     initial = client.post("/api/diagrams/documents", json={"content": sample()})
     assert initial.status_code == 201, initial.text
