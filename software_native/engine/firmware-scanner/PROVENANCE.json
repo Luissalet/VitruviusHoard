@@ -1,0 +1,20 @@
+{
+  "component": "Theseus synchronous firmware signature scanner",
+  "incorporated_from": {
+    "product_repository": "https://github.com/Luissalet/Theseus-Hoard",
+    "commit": "afc7f5de3ec074d63985480705c5578da5ae25b4",
+    "review": "Agora ecosystem779 submission26, approval11745",
+    "scope": "Same synchronous driver and Cargo.lock; canonical module build and packaging reviewed separately"
+  },
+  "implementation": "Product-owned driver calling the Binwalk Rust library synchronously; no upstream CLI execution",
+  "dependency": {
+    "name": "binwalk",
+    "version": "3.1.0",
+    "registry": "crates.io",
+    "checksum": "99d5dc70f5021c55624f098adae4d1de9c1c07d000475664704b675aad7e0811",
+    "license": "MIT",
+    "source": "https://github.com/ReFirmLabs/binwalk"
+  },
+  "producer_issue": "https://github.com/ReFirmLabs/binwalk/issues/971",
+  "runtime_scope": "Signature observations only; no native extraction, target execution or model calls"
+}

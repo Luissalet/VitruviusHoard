@@ -1,0 +1,10 @@
+[package]
+name = "theseus-firmware-scanner"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Synchronous retained firmware signature observations"
+
+[dependencies]
+binwalk = "=3.1.0"
+serde_json = "1.0"
