@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T15:40:56Z",
+  "generatedAt": "2026-10-20T15:55:47Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -605,7 +605,7 @@
         "Operate",
         "Read"
       ],
-      "status": "Implemented and verified in author isolated worktree; technical CAS approval, integration and installed activation not established.",
+      "status": "Technical CAS2 APPROVE, integrated through Main a7ab5cbe748ec0999365ade6205a57230dc3b5ba, final R2 wheel installed and acceptance passed against actually installed package in isolated QA; default user app never started.",
       "direction": {
         "path": "docs/design/diagrams.md",
         "heading": "Isometric extension direction — task 1049",
@@ -713,7 +713,7 @@
       },
       "limits": [
         "Concrete webfont loading is not established.",
-        "No technical CAS approval, integration or installed activation claimed.",
+        "Initial checkpoint limitation retained historically: no technical CAS approval, integration or installed activation was claimed then; subsequent exact acceptance is recorded in finalInstalledAcceptance.",
         "No global Faustus, memory or Manual acceptance inferred.",
         "Earlier surface history and its scope remain retained."
       ],
@@ -763,7 +763,74 @@
           "finding": "P2 resolved; no visible material regression in four reviewer-opened full/detail captures.",
           "scope": "Color correction only; does not broaden initial FINISH.txt or replace technical CAS review, integration or installed activation."
         },
-        "documenterActivity": "Corrected source and supplied receipt inspection only; no capture reopening, detector/context, browser/server, build/test rerun."
+        "documenterActivity": "Corrected source and supplied receipt inspection only; no capture reopening, detector/context, browser/server, build/test rerun.",
+        "historicalCheckpoint": true
+      },
+      "initialStatusCheckpoint": "Implemented and verified in author isolated worktree; technical CAS approval, integration and installed activation not established.",
+      "finalInstalledAcceptance": {
+        "chronology": "After CAS1 CHANGES and correction-only visual SHIP; exact CAS2 APPROVE, Main integration, final R2 installation and isolated installed-package acceptance. Earlier failures and verdict scopes remain historical.",
+        "technicalReview": {
+          "submissionRevision": 2,
+          "decision": "approve",
+          "commits": [
+            "350b3e3e6b1d3d9d370515af9a4f8ba7c76c8b30",
+            "dc3908b7412a2b117f1ecfd329448cba2503e0f3",
+            "898455648122108e516beffaf73bc32b771cdf1b"
+          ],
+          "report": "review-r1049/REPORT-R2.txt",
+          "vote": "review-r1049/vote-r2.txt",
+          "independentChecks": "Own build and two JS checks; MCP 123; original/exploded/inspection in both 1440/390 viewports with persistent dark mode and selected-state dark PNG exact to API, distinct from light. Prior independent backend 88/1 retained because Python unchanged.",
+          "retainedHarnessFailure": "color-acceptance-r2.log assumed MCP result envelope; corrected raw/direct-result read passed in color-acceptance-r2b.log without product change."
+        },
+        "mainSource": "a7ab5cbe748ec0999365ade6205a57230dc3b5ba",
+        "sourceBoundary": "Main final change was documentation; executable product source approved at 898455648122108e516beffaf73bc32b771cdf1b.",
+        "installedExact": {
+          "receipts": [
+            "isometric1049-wheel-preflight-r2.json",
+            "isometric1049-installed-exact.json"
+          ],
+          "wheelSha256": "04aada517f3557c48bf99c8f142757bcaca112edb9cdf2bcdb18a9a6f42eb7d1",
+          "installedMembersRawExact": 3771,
+          "pythonGitBlobsEqualAfterCrLfLfNormalizationOnly": 390,
+          "cacheEntries": 0,
+          "nativeResourcesAndBuiltUiExact": true,
+          "distributionAndDependencyVersionsExact": true,
+          "pipCheck": "No broken requirements found.",
+          "actualAppStarted": false,
+          "actualDataSettingsTokensAccessed": false
+        },
+        "installedQa": {
+          "environment": "Actually installed package via Python -I, external cwd and official MCP entry point; private QA.",
+          "receipts": [
+            "qa1049-installed/native-results.json",
+            "qa1049-installed/browser-results.json",
+            "qa1049-installed/color-results.json",
+            "isometric1049-installed-native-r2.log",
+            "isometric1049-installed-browser.log",
+            "isometric1049-installed-color.log"
+          ],
+          "reported": "PASS: 123 tools, all source/state retained through SVG/PNG/PDF/HTML/vfigure; independent merge/selective undo; UI 1440/390 keyboard/save/reopen/dirty export/offline HTML/Color; no JS/HTTP errors or horizontal overflow.",
+          "retainedFailure": "isometric1049-installed-native.log: httpx.ReadTimeout under helper default 5s. Increased helper timeout to 180s; R2 passed. No unobserved cause assigned.",
+          "observedExportSeconds": {
+            "svg": 0.01,
+            "png": 1.466,
+            "pdf": 1.148,
+            "html": 0.007,
+            "vfigure": 1.289
+          }
+        },
+        "cleanupReportedByParent": "Source/installed QA ports 54580/54584 stopped after three modules OFF and zero active jobs; default 5191 never started.",
+        "manual": {
+          "proof": "manual-isometric1049-cicero1051-proof.json",
+          "changedOnlyParagraphs": [
+            87,
+            99
+          ],
+          "other188TextStylesLinksExact": true,
+          "method": "Native CAS edit and readback."
+        },
+        "consumerBoundary": "Installed Cicero task 1051 product 1ce161f captured-state case with 69-tool QA; no universal consumer support asserted.",
+        "documenterActivity": "Supplied receipt inspection and scoped documentation update only; no new QA/CPU/build/detector/browser/server/capture execution. Root product/design and prior validation/finish history retained."
       }
     }
   },
@@ -860,7 +927,7 @@
   ],
   "narrative": {
     "northStar": "Existing Hoard workbench",
-    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Task 1049 adds selectable isometric parts, long explanations and authored states to the same document. Its implementation and supplied verification are in the author worktree; technical CAS approval, integration and installed activation are not established by this record. Earlier phase and extension receipts retain their own scope.",
+    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Task 1049 adds selectable isometric parts, long explanations and authored states to the same document. Task 1049 subsequently received technical CAS2 approval, integration and installed-package acceptance in isolated QA; the chronological addendum below records their exact scope. The default user app was not started for that acceptance. Earlier phase and extension receipts retain their own scope.",
     "keyCharacteristics": [
       "An independent versioned document with a visible name, save state and selected revision.",
       "A native SVG canvas between a shape palette and selection inspector on wide screens.",
