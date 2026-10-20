@@ -563,16 +563,19 @@ function nativeAnalyses() {
   const runs = [...state.data.jobs].reverse().filter(row => row.result.kind === "native_analysis");
   const saved = [...state.data.jobs].reverse().filter(row => ["native_analysis", "runtime_analysis"].includes(row.result.kind));
   const pair = selected?.input === "pair";
-  const derived = selected?.input === "analysis" || pair;
+  const setInput = selected?.input === "set";
+  const derived = selected?.input === "analysis" || pair || setInput;
   const sourceStates=selected?.source_states || ["finished"], candidateStates=selected?.candidate_states || sourceStates;
   const sourceOps=[selected?.requires_operation].flat(),candidateOps=[selected?.candidate_requires_operation || selected?.requires_operation].flat();
-  const sources = saved.filter(row => sourceStates.includes(row.state) && row.result.analysis_sha256 && sourceOps.includes(row.result.operation));
+  const sources = saved.filter(row => sourceStates.includes(row.state) && row.result.analysis_sha256 && (!selected?.requires_operation || sourceOps.includes(row.result.operation)));
   const candidateSources = saved.filter(row => candidateStates.includes(row.state) && row.result.analysis_sha256 && candidateOps.includes(row.result.operation));
-  const targetPicker = pair
+  const targetPicker = setInput
+    ? `<fieldset><legend>Análisis guardados del conjunto</legend>${sources.map(row=>`<label class="inline"><input type="checkbox" name="source_job_ids" value="${escape(row.id)}" data-draft="analysis-set-${selected.name}-${row.id}" ${draft("analysis-set-"+selected.name+"-"+row.id,false)?"checked":""}>${escape(row.result.artifact_name)} · ${escape(row.result.title||row.result.operation)}${row.result.operation==="binary.analyze_function"?" · "+escape(row.result.parameters?.procedure||"dirección no declarada"):""} · ${escape(statusLabels[row.state]||row.state)} · SHA ${escape(row.result.analysis_sha256)} · ${row.id.slice(0,8)}</label>`).join("")}${!sources.length?'<p class="warning">Guarda primero los análisis del tipo indicado.</p>':""}</fieldset><p class="small">Elige uno o varios documentos. Se conservan sus bytes y hashes; las referencias guardadas se incluyen en el cierre sin consultar las rutas originales.</p>`
+    : pair
     ? ["reference", "candidate"].map(side=>{
       const choices=side === "reference"?sources:candidateSources;
       const mixed=(side==="reference"?sourceOps:candidateOps).length>1;
-      return `<label>${side === "reference" ? "Análisis de referencia" : "Análisis candidato"}<select name="${side}_job_id" data-draft="analysis-${side}-${selected.name}">${choices.map(row=>`<option value="${row.id}" ${draft("analysis-"+side+"-"+selected.name,side === "reference" ? choices.at(-1)?.id : choices[0]?.id)===row.id?"selected":""}>${escape(row.result.artifact_name)}${mixed?" · "+escape(row.result.title||row.result.operation):""}${row.state==="finished"?"":" · "+escape(statusLabels[row.state]||row.state)} · SHA ${escape(row.result.artifact_sha256?.slice(0,8))} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>`;
+      return `<label>${side === "reference" ? "Análisis de referencia" : "Análisis candidato"}<select name="${side}_job_id" data-draft="analysis-${side}-${selected.name}">${choices.map(row=>`<option value="${row.id}" ${draft("analysis-"+side+"-"+selected.name,side === "reference" ? choices.at(-1)?.id : choices[0]?.id)===row.id?"selected":""}>${escape(row.result.artifact_name)}${row.result.operation==="binary.analyze_function"?" · "+escape(row.result.parameters?.procedure||"dirección no declarada"):""}${mixed?" · "+escape(row.result.title||row.result.operation):""}${row.state==="finished"?"":" · "+escape(statusLabels[row.state]||row.state)} · SHA ${escape(row.result.analysis_sha256?.slice(0,12))} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>`;
     }).join("") + (!sources.length || !candidateSources.length ? '<p class="warning">Primero guarda los análisis de referencia y candidato del tipo indicado para poder compararlos.</p>' : "")
     : derived
     ? `<label>Análisis de origen<select id="analysis-source-job" name="source_job_id" data-draft="analysis-source-job">${sources.map(row => `<option value="${row.id}" ${draft("analysis-source-job") === row.id ? "selected" : ""}>${escape(row.result.artifact_name)} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>${!sources.length ? '<p class="warning">Primero guarda un análisis del tipo indicado. La consulta reutiliza sus observaciones guardadas.</p>' : ""}`
@@ -1164,8 +1167,11 @@ document.addEventListener("submit", (event) => {
       route();
     }
     if (form.id === "native-analysis-form") {
-      const source = (fields.source_job_id || fields.reference_job_id) && state.data.jobs.find(row => row.id === (fields.source_job_id || fields.reference_job_id));
-      const selectedSources = fields.reference_job_id ? {reference_job_id:fields.reference_job_id,candidate_job_id:fields.candidate_job_id} : source ? {source_job_id:source.id} : {};
+      const setJobs=[...form.querySelectorAll('input[name="source_job_ids"]:checked')].map(row=>row.value);
+      const setInput=state.catalog.operations.find(row=>row.name===fields.operation)?.input==="set";
+      if(setInput&&!setJobs.length) throw new Error("Elige al menos un análisis guardado del conjunto.");
+      const source = (setJobs[0] || fields.source_job_id || fields.reference_job_id) && state.data.jobs.find(row => row.id === (setJobs[0] || fields.source_job_id || fields.reference_job_id));
+      const selectedSources = setInput?{source_job_ids:setJobs}:fields.reference_job_id ? {reference_job_id:fields.reference_job_id,candidate_job_id:fields.candidate_job_id} : source ? {source_job_id:source.id} : {};
       const parameters=JSON.parse(fields.parameters || "{}");
       if(["javascript.trace_source","javascript.trace_imports"].includes(fields.operation)) {
         parameters.query={...parameters.query,script_id:fields["web-script"]};
