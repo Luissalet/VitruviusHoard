@@ -16,7 +16,7 @@
 .de-pages { border-block: 1px solid var(--border); padding-block: 12px; margin-block: 12px; }
 .de-workspace.de-isometric{grid-template-columns:minmax(0,1fr)}
 .de-mechanism{display:grid;grid-template-columns:minmax(0,1fr) 260px;min-width:0}.de-mechanism-wide{grid-template-columns:minmax(0,1fr)}
-.de-mechanism-main{min-width:0}.de-mechanism-selectors{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-bottom:1px solid var(--line)}
+.de-mechanism-main{min-width:0}.de-mechanism-selectors{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 80px;gap:12px;padding:12px;border-bottom:1px solid var(--line)}
 .de-mechanism-selectors label{display:grid;gap:6px;min-width:0;font-size:12px;color:var(--muted)}.de-mechanism-selectors .field{width:100%;min-width:0}
 .de-mechanism-figure{min-height:280px;background:#fff}.de-mechanism-figure svg{display:block;width:100%;height:auto;max-height:560px}
 .de-mechanism-figure [data-piece]{cursor:pointer}.de-mechanism-figure [data-piece]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.de-mechanism-figure [aria-pressed=true]{filter:drop-shadow(0 2px 2px #2f5bd3)}
