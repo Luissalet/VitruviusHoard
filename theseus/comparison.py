@@ -12,11 +12,16 @@ import psutil
 
 from .inspection import digest
 from .store import identifier
+from . import retained_scenarios
 
 
 def validate_scenario(value):
     if not isinstance(value, dict):
         raise ValueError("A scenario is a JSON object")
+    if retained_scenarios.selected(value):
+        return retained_scenarios.validate(value)
+    if 'kind' in value:
+        raise ValueError('Unknown scenario kind')
     for field in ("reference", "candidate"):
         command = value.get(field)
         if not isinstance(command, list) or not command or any(not isinstance(arg, str) or not arg for arg in command):
@@ -34,6 +39,8 @@ def validate_scenario(value):
 
 
 def observation_differences(reference, candidate, definition):
+    if retained_scenarios.selected(definition):
+        return retained_scenarios.differences(reference,candidate)
     differences = []
     if reference["timed_out"] or candidate["timed_out"]:
         differences.append("An explicitly configured timeout expired")
@@ -170,6 +177,13 @@ class Comparisons:
                 "duration_seconds": round(time.perf_counter() - started, 4), "timed_out": timed_out,
                 "file_sha256": observed_files}
 
+    def observe(self, project_id, job_id, definition, side):
+        if retained_scenarios.selected(definition):
+            with self.lock:
+                if job_id in self.cancelled:raise InterruptedError('Comparison cancelled')
+            return retained_scenarios.observe(self.store,project_id,definition,side)
+        return self._execute(job_id,definition[side],definition)
+
     def _run(self, project_id, job_id, result):
         try:
             self.store.save_job(project_id, job_id, "running", result)
@@ -181,14 +195,19 @@ class Comparisons:
                 result["phase"] = "reference"
                 result["running_scenario"] = scenario["name"]
                 self.store.save_job(project_id, job_id, "running", result)
-                reference = self._execute(job_id, definition["reference"], definition)
+                reference = self.observe(project_id, job_id, definition, 'reference')
                 result["partial_case"] = {"scenario_id": scenario["id"], "reference": reference}
                 result["phase"] = "candidate"
                 self.store.save_job(project_id, job_id, "running", result)
-                candidate = self._execute(job_id, definition["candidate"], definition)
+                candidate = self.observe(project_id, job_id, definition, 'candidate')
                 differences = observation_differences(reference, candidate, definition)
                 case = {"scenario_id": scenario["id"], "name": scenario["name"], "passed": not differences,
                         "differences": differences, "reference": reference, "candidate": candidate}
+                if retained_scenarios.selected(definition):
+                    valid=retained_scenarios.valid_pair(reference,candidate)
+                    case.update(valid=valid,state='unknown' if not valid else 'different' if differences else 'same-recorded-responses',
+                        sources=reference['sources']+candidate['sources'],
+                        limitations=['Only retained responses to the selected literal requests are compared. No target was contacted; equality is not whole-application equivalence.'])
                 result["cases"].append(case)
                 result.pop("partial_case", None)
                 result["passed" if case["passed"] else "failed"] += 1

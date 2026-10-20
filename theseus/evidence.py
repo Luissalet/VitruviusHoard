@@ -10,6 +10,7 @@ from jsonschema import validate, ValidationError
 from .native_analysis import analysis_file
 from .store import identifier, now
 from .workflow import fingerprint
+from . import retained_scenarios
 
 
 SCHEMA = "theseus/evidence-1"
@@ -111,6 +112,11 @@ class Evidence:
                     raise ValueError("Evidence contains missing " + kind + " links")
             for row in payload["findings"]:
                 links([row["artifact_id"], *[r["artifact_id"] for r in row["source_refs"]]], "artifacts")
+            for row in payload['scenarios']:
+                definition=row['definition']
+                if retained_scenarios.selected(definition):
+                    retained_scenarios.validate(definition)
+                    links([definition['reference_job_id'],definition['candidate_job_id']],'jobs')
             artifact_link_keys = set()
             for row in payload.get("artifact_links", []):
                 links([row["parent_id"], row["child_id"]], "artifacts")
@@ -178,12 +184,18 @@ class Evidence:
         folder_created = False
         stamp = now()
 
+        def remap_definition(definition):
+            if not retained_scenarios.selected(definition):return definition
+            return {key:mapping.get(value,value) if key in {'reference_job_id','candidate_job_id'} and isinstance(value,str)
+                    else value for key,value in definition.items()}
+
         def remap(value):
             if isinstance(value, list):
                 return [remap(child) for child in value]
             if isinstance(value, dict):
                 # Frozen program inputs, stdout and raw observations are opaque.
                 return {key: mapping.get(child, child) if key in LINKS and isinstance(child, str)
+                        else remap_definition(child) if key=='definition' and isinstance(child,dict)
                         else child if key in {"definition", "reference", "candidate", "stdout", "stderr", "record"}
                         else remap(child) for key, child in value.items()}
             return value
@@ -214,7 +226,7 @@ class Evidence:
                         row["interpretation"], row["source_sha256"], row["created_at"], json.dumps(remap(row["source_refs"]))))
                 for row in payload["scenarios"]:
                     db.execute("INSERT INTO scenarios VALUES (?,?,?,?,?)", (
-                        mapping[row["id"]], pid, row["name"], json.dumps(row["definition"]), row["updated_at"]))
+                        mapping[row["id"]], pid, row["name"], json.dumps(remap_definition(row["definition"])), row["updated_at"]))
                 for row in payload["jobs"]:
                     key = mapping[row["id"]]
                     result = remap(row["result"])
