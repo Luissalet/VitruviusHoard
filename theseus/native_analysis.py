@@ -16,6 +16,7 @@ from .packets import OPERATIONS as PACKET_OPERATIONS, engine as packet_engine
 from .qlog import OPERATIONS as QLOG_OPERATIONS
 from .firmware import OPERATIONS as FIRMWARE_OPERATIONS, available as firmware_availability
 from .process_compare import QUERY as PROCESS_QUERY
+from .retained_evidence import OPERATIONS as EVIDENCE_OPERATIONS
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -163,6 +164,7 @@ OPERATIONS += [{"name": name, "title": title, "description": description,
 
 
 OPERATIONS += STRUCTURED_OPERATIONS
+OPERATIONS += EVIDENCE_OPERATIONS
 OPERATIONS += RECORDING_OPERATIONS
 OPERATIONS += SIGNAL_OPERATIONS
 OPERATIONS += ANDROID_OPERATIONS
@@ -245,6 +247,17 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
     artifact = manager.store.artifact(project_id, artifact_id)
     parent = None
     candidate = None
+    selected_inputs = []
+    if definition.get('input') == 'set':
+        from .retained_evidence import bind_inputs
+        selected_inputs = bind_inputs(manager.store, project_id, parameters['source_job_ids'])
+        parent = manager.store.job(parameters['source_job_ids'][0])
+        if parent['result']['artifact_id'] != artifact_id:
+            raise ValueError('The first selected analysis must belong to this project artifact')
+        required = definition.get('requires_operation')
+        if required and any(row['operation'] not in ([required] if isinstance(required,str) else required)
+                            for row in selected_inputs if row['selected']):
+            raise ValueError('Select retained documents of the required operation')
     if definition.get("input") in {"analysis", "pair"}:
         source_key = "reference_job_id" if definition["input"] == "pair" else "source_job_id"
         parent = manager.store.job(parameters[source_key])
@@ -291,6 +304,11 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
                        source_artifact_sha256=parent["result"]["artifact_sha256"])
         request["parameters"] = {key: value for key, value in parameters.items() if key not in {
             "source_job_id", "reference_job_id", "candidate_job_id"}}
+    if selected_inputs:
+        request['source_inputs'] = selected_inputs
+        request['parameters'] = {key:value for key,value in parameters.items() if key!='source_job_ids'}
+        if operation in {'evidence.changed_behavior','evidence.correlate'}:
+            request['validation_engine'] = engine()
     if candidate:
         request.update(candidate_path=str(analysis_file(manager.store, candidate["id"])),
                        expected_candidate_sha256=candidate["result"]["analysis_sha256"])
@@ -312,6 +330,10 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
             "artifact_id": job["result"]["artifact_id"], "sha256": job["result"]["artifact_sha256"],
             "analysis_sha256": job["result"]["analysis_sha256"]}
             for side, job in (("reference", parent), ("candidate", candidate))]
+    if selected_inputs:
+        result['source_analyses'] = [{'side':'selected' if row['selected'] else 'closure','job_id':row['job_id'],
+            'artifact_id':row['artifact_id'],'sha256':row['artifact_sha256'],'analysis_sha256':row['analysis_sha256']}
+            for row in selected_inputs if 'path' in row]
     if native_jobs:
         result["source_analyses"] = [{"side": side, "job_id": job["id"], "artifact_id": job["result"]["artifact_id"],
             "sha256": job["result"]["artifact_sha256"], "analysis_sha256": job["result"]["analysis_sha256"]}
