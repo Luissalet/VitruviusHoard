@@ -27,6 +27,9 @@ Reader and artifact identities retain hashes, sizes and metadata, without
 duplicating their binary bodies. Normal process-capture file observations keep
 their existing content-preserving default; this reader selects identity-only
 file observations while retaining every stdout/stderr byte.
+Observed POSIX signals and unobserved exit codes keep completion unknown even
+when all pipe bytes reached EOF; the original return code remains in the process
+observation and a signal name is reported separately when available.
 
 The product invokes the utility reader and never executes the selected artifact.
 Before/after artifact hashes identify observed endpoint states; they cannot rule
@@ -46,6 +49,8 @@ Cancel stops only that job's utility processes. Recovery validates saved process
 identities, freezes retained bytes and never repeats a reader invocation. Evidence
 transfer preserves completed or partial JSON after original files are removed;
 reading imported analysis records does not reopen the utility or original file.
+Brief Windows sharing conflicts retry publication of the same checkpoint bytes;
+persistent publication denials remain errors and retain the previous prefix.
 
 GNU binutils and its required runtime libraries are separate free installed tools,
 with their original licenses and distribution provenance retained alongside them.

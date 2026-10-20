@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import signal
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -65,8 +66,15 @@ def normalize(context, capture):
     changed = None if artifact is None or after_hash is None else after_hash != artifact['sha256']
     if artifact is not None and before.get('sha256') not in {None, artifact['sha256']}:
         changed = True
-    complete = capture.get('status') == 'complete' and capture.get('stream_complete') is True
     code = capture['process'].get('exit_code')
+    complete = (capture.get('status') == 'complete' and capture.get('stream_complete') is True
+                and type(code) is int and code >= 0)
+    terminating_signal = None
+    if os.name != 'nt' and type(code) is int and code < 0:
+        try:
+            terminating_signal = signal.Signals(-code).name
+        except ValueError:
+            terminating_signal = 'signal-' + str(-code)
     return {'format': 'vitruvius.binary-reader-observation/1', 'operation': context['operation'],
             'started_at': context['started_at'],
             'engine': context['engine'], 'command': capture['target']['argv'],
@@ -74,7 +82,7 @@ def normalize(context, capture):
             'follow_debug_links_requested': context['follow_debug_links'],
             'follow_debug_links_effective': context['operation'] == 'dwarf' and context['follow_debug_links'],
             'stdout': _stream(capture['stdout']), 'stderr': _stream(capture['stderr']),
-            'exit_code': code, 'signal': int(-code) if os.name != 'nt' and isinstance(code, int) and code < 0 else None,
+            'exit_code': code if type(code) is int and code >= 0 else None, 'signal': terminating_signal,
             'completion_status': 'complete' if complete else 'unknown',
             'output_truncated': False, 'stream_complete': capture.get('stream_complete', False),
             'process_observation': capture, 'target_executed': False,
