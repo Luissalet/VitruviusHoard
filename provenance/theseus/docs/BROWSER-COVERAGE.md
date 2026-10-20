@@ -15,6 +15,11 @@ results and interruption. A driver using an explicit `browser.scenario` needs
 enough window time for that separate job to connect and execute its steps.
 An action outside the recorded window establishes no in-window counter claim.
 
+Published progress receipts are immutable snapshots. Concurrent Windows readers
+can keep an earlier receipt open while newer phases become visible through the
+same job/project reads. Unpublished temporary files are ignored; legacy progress
+receipts remain readable. Terminal progress is retained in the analysis result.
+
 The final recording preserves nested producer ranges/counts, `isBlockCoverage`,
 sample timestamps and independently hashed script texts. Offsets are **UTF-16
 code units**, with exclusive ends. Bounds are checked against that captured

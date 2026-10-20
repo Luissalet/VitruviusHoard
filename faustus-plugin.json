@@ -52,12 +52,14 @@
     "VITRUVIUS_DIR",
     "APP_URL",
     "TOKEN_FILE",
-    "PYTHON"
+    "PYTHON",
+    "DATA_DIR"
   ],
   "defaults": {
     "APP_URL": "http://127.0.0.1:5191",
-    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/mcp-token",
-    "PYTHON": "{VITRUVIUS_DIR}/.venv/Scripts/python.exe"
+    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/design/mcp-token",
+    "PYTHON": "{VITRUVIUS_DIR}/venv/Scripts/python.exe",
+    "DATA_DIR": "{VITRUVIUS_DIR}/data"
   },
   "app": {
     "url_default": "http://127.0.0.1:5191",
@@ -81,6 +83,7 @@
       "kind": "process",
       "executable": "{PYTHON}",
       "argv": [
+        "-I",
         "-m",
         "vitruvius_hoard"
       ],
@@ -88,7 +91,7 @@
       "env": {
         "PORT_STRICT": "1",
         "VITRUVIUS_PORT": "5191",
-        "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data",
+        "VITRUVIUS_PROFILE_DIR": "{DATA_DIR}",
         "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
       },
       "readiness": {
@@ -101,19 +104,21 @@
     "transport": "stdio",
     "command": "{PYTHON}",
     "args": [
-      "{VITRUVIUS_DIR}/mcp_server.py"
+      "-I",
+      "-m",
+      "mcp_server"
     ],
     "env": {
       "VITRUVIUS_URL": "{APP_URL}",
       "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}",
-      "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data"
+      "VITRUVIUS_PROFILE_DIR": "{DATA_DIR}"
     },
     "optional_env": [
       "VITRUVIUS_BRIDGE_AUTOSTART",
       "VITRUVIUS_DATA_DIR"
     ]
   },
-  "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and paused by Luis due to usage; this incorporation does not complete its pending reverse-engineering scope.",
+  "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026; this incorporation does not complete its pending reverse-engineering scope.",
   "x-family": {
     "copilot": {
       "contract_version": "1.0",
