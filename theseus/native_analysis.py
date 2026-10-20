@@ -96,11 +96,12 @@ OPERATIONS += [
 ]
 OPERATIONS += [
     {"name": "browser.export_scripts", "title": "Web · Exportar fuentes guardadas", "input": "analysis", "worker": "python",
+     "retained_only": True,
      "requires_operation": ["browser.observe", "browser.scenario", "browser.coverage"],
      "source_states": ["finished", "failed", "cancelled", "interrupted", "imported"],
      "description": "Exporta scripts y respuestas ya guardados, con manifiesto, bytes y hashes. Conserva duplicados, exclusiones y ausencias; no conecta con el navegador ni descarga fuentes.",
      "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id"], "properties": {"source_job_id": {"type": "string"}}}},
-    *[{"name": name, "title": title, "input": "analysis", "requires_operation": "browser.export_scripts",
+    *[{"name": name, "title": title, "input": "analysis", "requires_operation": "browser.export_scripts", "retained_only": True,
        "source_states": ["finished", "imported"], "description": description, "example": {"query": example},
        "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id", "query"],
            "properties": {"source_job_id": {"type": "string"}, "query": {"type": "object"}}}}
@@ -365,9 +366,14 @@ def retain(store, project_id, job_id, artifact, folder, output, result):
     result.update(artifact_sha256=document["artifact_sha256"], analysis_file=str(output),
                   analysis_sha256=digest(output), runtime=document["runtime"])
     result["source_changed"] = document["artifact_sha256"] != artifact["sha256"]
-    available = Path(artifact["path"]).exists()
-    result["source_unavailable"] = not available
-    result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
+    definition = next(row for row in OPERATIONS if row["name"] == result["operation"])
+    if definition.get("retained_only"):
+        result.update(source_unavailable=None, source_changed_during_analysis=None,
+                      original_source_check="not-performed-retained-input")
+    else:
+        available = Path(artifact["path"]).exists()
+        result["source_unavailable"] = not available
+        result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
     result["sections"] = store.index_analysis(job_id, document["result"])
     if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract", "browser.export_scripts"}:
         result["derived_artifacts"] = []
