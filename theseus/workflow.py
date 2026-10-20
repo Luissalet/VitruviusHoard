@@ -122,7 +122,7 @@ class Workflow:
             raise ValueError("Perturbations need distinct names")
         retained=all(retained_scenarios.selected(row['definition']) for row in scenarios)
         if not retained and any(retained_scenarios.selected(row['definition']) for row in scenarios):
-            raise ValueError('Selftest selects either command scenarios or retained page scenarios')
+            raise ValueError('Selftest selects either command scenarios or retained scenarios')
         for variant in variants:
             if not variant["name"].strip():
                 raise ValueError("Name each deliberate defect")
@@ -209,7 +209,7 @@ class Workflow:
         jobs = self.store.items("jobs", project_id)
         file_hashes = {}
         def unchanged(observation):
-            if observation.get('kind')==retained_scenarios.KIND:
+            if retained_scenarios.selected(observation):
                 return retained_scenarios.unchanged(self.store,project_id,observation)
             for path, recorded in observation.get("file_sha256", {}).items():
                 if path not in file_hashes:
