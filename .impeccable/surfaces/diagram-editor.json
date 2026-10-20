@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T14:18:23Z",
+  "generatedAt": "2026-10-20T14:33:05Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -358,7 +358,7 @@
     "reusableStyles": {
       "task": 1038,
       "mode": "Operate",
-      "status": "Implemented in isolated worktree codex/styles1038 relative to efb85ea; CAS1 technical review requested CHANGES for the name draft revision base. Correction implemented, pending new technical review; integration and installed acceptance pending.",
+      "status": "Developed in isolated worktree codex/styles1038 relative to efb85ea. CAS1 CHANGES corrected; CAS2 APPROVE on 715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc, integrated into Main and installed with scoped installed acceptance receipts below.",
       "visualAuthority": "Incumbent inspector extension; no new visual contract, approved comp or independent quality bar. Root PRODUCT.md/DESIGN.md and existing tokens retain authority.",
       "source": [
         "client/src/components/diagram-editor/StyleControls.jsx",
@@ -420,7 +420,7 @@
         "cas1Correction": {
           "review": "CAS1 CHANGES: refresh had advanced the revision used by a pending name and could overwrite a remote rename.",
           "source": "StyleControls.jsx retains draftStyle as the pending name's original base across refresh and uses its revision in Update.",
-          "status": "Implemented; pending a new technical review. No integration or installed acceptance.",
+          "status": "Historical correction checkpoint: implemented, then awaiting a new technical review and integration/installed acceptance. Subsequent CAS2 and installation recorded separately below.",
           "authorEdgeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/conflict-results.json",
           "authorEdgeLog": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-conflict-r3.log",
           "authorEdgeResult": "PASS in real Edge: divergent /name preserves remote revision 2 and local draft; independent local-name/remote-stroke changes merge; clean remote name adopted; JavaScript errors empty.",
@@ -428,8 +428,45 @@
           "authorBuildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-build-r4.log",
           "authorBuildResult": "Successful frontend build after correction.",
           "suiteScope": "Backend unchanged; prior 518 passed/2 skipped receipt retains its original scope. No new Python suite run claimed.",
-          "visualScope": "No UI markup or CSS change; existing captures and FINISH.txt retain visual scope. Prior SHIP did not functionally review this later correction and does not replace pending technical review.",
+          "visualScope": "No UI markup or CSS change; existing captures and FINISH.txt retain visual scope. Prior SHIP did not functionally review this later correction or replace the technical review pending at that checkpoint.",
           "documenterActivity": "Read corrected source and author receipts only. No new tests, browser, captures, detector, context scan or finish round."
+        },
+        "cas2Review": {
+          "receipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/review-r1038/REPORT-R2.txt",
+          "disposition": "APPROVE",
+          "submissionRevision": 2,
+          "source": "715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc",
+          "result": "Independent real Edge/MCP: refresh preserves base_revision 1 in actual update POST; divergent /name returns 409 with remote r2 and local draft exact; independent local-name/remote-stroke changes return 201/r3 with both changes and remaining values exact. Clean name adopts remote; saved document exact; own build PASS.",
+          "contextLimit": "formSnapshot exposes changed fields and can omit unchanged revision. The actual POST proves base_revision 1; no claim that revision travels in the event or that model inference was tested.",
+          "historicalHelperFailures": "Two initial helper expectation/setup failures remain recorded; not product failures or passing executions.",
+          "suiteScope": "R1 independent 43 Python PASS and author 518/2 retained as their original evidence; Python unchanged in R2, neither suite repeated in this JavaScript review."
+        },
+        "installedAcceptance": {
+          "source": "715959c0b0561bf2d4d93385a8e22a1dc6f3f6bc",
+          "mainIntegrated": true,
+          "installed": true,
+          "exactReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-installed-exact.json",
+          "wheelSha256": "ec056497af3c7977e5d6e0036b91e9e9d3f9ffeb16e4ad09dcd174913870e971",
+          "rawWheelMembersExact": 3773,
+          "pythonGitBlobsEqualAfterCrLfLfNormalizationOnly": 388,
+          "dependencyVersionsUnchanged": true,
+          "pipCheck": "PASS: No broken requirements found.",
+          "firstCheckReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-installed-first-check.txt",
+          "firstCheckFailure": "Additional verification initially compared raw Main LF with wheel CRLF in motion.py and failed. Retained; verify-only rerun PASS without reinstalling. No raw-byte equality claimed between Main working sources and wheel.",
+          "actualUserAppStarted": false,
+          "actualUserDataSettingsTokensAccessed": false,
+          "nativeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/native-results.json",
+          "browserReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/browser-results.json",
+          "conflictReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/conflict-results.json",
+          "finalReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038-installed/final-results.json",
+          "authorResult": "Installed package: MCP123, Edge1440/390, cross-document reuse, one-step undo/redo, geometry/pages/assets/text and saved source preserved; divergent-name conflict and independent name/stroke merge PASS; JS/HTTP errors empty. Declared font stack with loaded: [], no loaded-face claim.",
+          "finalState": "Design/Babel/Theseus OFF, automatic false, active requests 0; model calls 0. Root subsequently stopped private QA processes on ports 54574 and 54577.",
+          "scope": "Supplied installed acceptance for reusable styles only; read by documenter without new QA. Does not broaden prior visual SHIP or other editor acceptance."
+        },
+        "manualUpdate": {
+          "receipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/manual-styles1038-proof.json",
+          "result": "Functional library addition in paragraph 87; other 189 paragraphs' text, styles and links exact.",
+          "scope": "Manual describes usable functionality without implementation hashes, CAS or deployment-test detail."
         },
         "detector": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-detector.json",
         "detectorResult": "One supplied run; 11 advisories for existing document-local colours, heading/control sizes and error fallback, including local 13px disclosure type. Retain inherited 13/12 inspector convention; no global drift repair or new root tokens.",
@@ -437,7 +474,7 @@
       },
       "notCanonized": [
         "Authored style appearance is document content, not a shell palette or type system.",
-        "Scoped SHIP and author QA do not establish independent technical acceptance, integration or installed activation.",
+        "Scoped SHIP and initial author QA alone do not establish independent technical acceptance or installation; CAS2 and installed acceptance have their own later receipts.",
         "Loaded fonts, model-generated quality, unseen states and isometric origin are not certified."
       ]
     },
