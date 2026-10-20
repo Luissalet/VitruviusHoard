@@ -18,6 +18,8 @@ ELF64 little-endian x86-64 layout analysis retains original section, symbol and 
 
 Inspect the selected Java/Apktool and TShark/capinfos clients before choosing an artifact or project. The normal workspace shows observed versions, exact selected paths and selection sources, and downloads the complete byte-preserving diagnostics. Cold discovery does not run clients. See [installed reader inspection](docs/CLIENT-INSPECTION.md).
 
+Native navigation and explicit-address context preserve sequential provider observations, containing functions, analyzed names, comments and matching bookmarks. Read-only queries retain their source revision and remain readable after evidence transfer. See [native context](docs/NATIVE-CONTEXT.md).
+
 Inspection also includes the synchronous firmware scanner and retained main/preload/renderer source observations. An original Electron fixture checks explicit IPC results independently, then transfers and compares retained sources after the application closes. These observations do not establish whole-application equivalence. See [adaptation972 and its verification](tasks/submission972.md).
 
 Reconstruction cases can also select two saved page-scenario captures, compare their exact recorded responses and test deliberately defective captures after the original pages close. Both source hashes remain visible; incomplete or unaligned observations stay unknown. Portable evidence supports a new verification after import, while imported receipts remain historical. See [retained scenario verification](docs/RETAINED-SCENARIO-ORACLE.md).
