@@ -249,7 +249,7 @@ class Workflow:
                 observed = next((job for job in reversed(jobs) if job["state"] == "finished" and
                     job["result"].get("kind") != "oracle_selftest" and matching(job, key)), None)
                 case = next((row for row in observed["result"].get("cases", []) if row["scenario_id"] == key), None) if observed else None
-                if case is None:
+                if case is None or case.get('valid') is False:
                     missing.append(key)
                 elif not case["passed"]:
                     failures.append(key)
