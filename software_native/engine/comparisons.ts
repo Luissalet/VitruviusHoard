@@ -50,7 +50,21 @@ export async function compareRetained(operation:string,referenceBytes:Buffer,can
   if(operation==='wasm.compare_interfaces') {
     if(reference.operation!=='wasm.artifact'||candidate.operation!=='wasm.artifact') throw new Error('Select two WASM analyses');
     const scope=z.object({scope:z.enum(['both','imports','exports']).default('both')}).parse(query??{}).scope;
-    return compareWasm((reference.result as {interface:unknown}).interface,(candidate.result as {interface:unknown}).interface,scope);
+    const observation=z.object({interface:z.unknown().optional(),artifact:z.unknown().optional(),completion_status:z.unknown().optional()}).passthrough();
+    const left=observation.parse(reference.result),right=observation.parse(candidate.result);
+    const artifactIdentity=z.object({path:z.string(),sha256:z.string(),bytes:z.number().int().nonnegative()});
+    const retainedInputs=[reference,candidate].map((saved,index)=>{
+      const value=index===0?left:right,parsed=artifactIdentity.safeParse(value.artifact);
+      if(parsed.success&&parsed.data.sha256!==saved.artifact_sha256)
+        throw new Error('Retained WASM artifact identity contradicts its bound artifact SHA-256.');
+      const analysisSha=index===0?referenceId.slice(3):candidateSha;
+      return {side:index===0?'reference':'candidate',observation_id:index===0?referenceId:candidateId,
+        analysis_sha256:analysisSha,analysis_bytes:index===0?referenceBytes.length:candidateBytes.length,
+        artifact_sha256:saved.artifact_sha256,artifact:parsed.success?parsed.data:null,
+        artifact_identity_state:parsed.success?'recorded':'unavailable-in-retained-observation',
+        observation_completion_status:typeof value.completion_status==='string'?value.completion_status:null};
+    });
+    return {...compareWasm(left.interface,right.interface,scope),retained_inputs:retainedInputs};
   }
   if(operation==='javascript.compare_source') {
     if(reference.operation!=='source.graph'||candidate.operation!=='javascript.application') throw new Error('Select a source graph and a JavaScript application');

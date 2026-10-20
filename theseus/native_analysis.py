@@ -52,7 +52,10 @@ OPERATIONS = [
     {"name": "apple.nib", "title": "Apple · Interfaz NIBArchive",
      "description": "Recupera los objetos, clases, valores y conexiones de un NIBArchive compilado, sin cargar su interfaz.", "inputSchema": EMPTY_PARAMETERS},
     {"name": "wasm.artifact", "title": "WebAssembly · Interfaz y desensamblado",
-     "description": "Desensambla con WABT local: WAT completo, definiciones, firmas, imports, exports y metadatos de nombres. No instancia el módulo.", "inputSchema": EMPTY_PARAMETERS},
+     "description": "Valida y desensambla con WABT local: rangos y bytes originales de secciones, WAT completo con hash, firmas, imports y exports. Relaciona literales de JavaScript con los candidatos seleccionados; no carga módulos ni consulta la red.",
+     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
+         "glue_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+         "candidate_paths": {"type": "array", "items": {"type": "string", "minLength": 1}}}}},
     {"name": "evm.interface", "title": "EVM · Bytecode e interfaz",
      "description": "Analiza bytecode local: selectores, argumentos, mutabilidad, almacenamiento, instrucciones, bloques, flujo y metadatos CBOR. No consulta cadenas ni servicios.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {"encoding": {"type": "string", "enum": ["raw", "hex"]}}}},
@@ -187,7 +190,8 @@ OPERATIONS += [
     {"name": "javascript.compare_source", "title": "JavaScript · Comparar fuentes con distribución", "input": "pair",
      "requires_operation": "source.graph", "candidate_requires_operation": "javascript.application", "inputSchema": PAIR_PARAMETERS,
      "description": "Relaciona el inventario de fuentes con el grafo de la aplicación mediante hashes, rutas y mapas de fuentes. Una correspondencia inferida no demuestra equivalencia."},
-    {"name": "wasm.compare_interfaces", "title": "WebAssembly · Comparar interfaces", "input": "pair",
+    {"name": "wasm.compare_interfaces", "title": "WebAssembly · Comparar interfaces", "input": "pair", "retained_only": True,
+     "source_states": ["finished", "failed", "cancelled", "interrupted", "imported"],
      "requires_operation": "wasm.artifact", "inputSchema": {**PAIR_PARAMETERS, "properties": {**PAIR_PARAMETERS["properties"], "query": {"type": "object", "properties": {"scope": {"enum": ["both", "imports", "exports"]}}, "additionalProperties": False}}},
      "description": "Compara interfaces tipadas de dos análisis WABT guardados: cambios de firma y límites, duplicados y semántica desconocida explícitos; no ejecuta módulos."},
     {"name": "managed.reconstruction", "title": ".NET · Importar reconstrucción", "input": "analysis",
@@ -362,13 +366,27 @@ def _run(manager, project_id, job_id, artifact, folder, result):
     command = [configured.get("python", configured.get("node")), configured["entry"], str(folder / "request.json"), str(output)]
     try:
         manager.store.save_job(project_id, job_id, "running", result)
-        execution = manager._execute(job_id, command, {})
+        execution_definition = {}
+        if result['operation']=='wasm.artifact':
+            from .wasm_recording import record_worker
+            def observe_worker(process):
+                result['worker_identity_recording']=record_worker(folder,process,command)
+            execution_definition['spawn_observer']=observe_worker
+        execution = manager._execute(job_id, command, execution_definition)
         result["execution"] = execution
         with manager.lock:
             stopped = job_id in manager.cancelled
         failed_execution = bool(execution["exit_code"]) or not output.is_file()
         retained_firmware = False
         retained_objdump = False
+        retained_wasm = False
+        if result['operation']=='wasm.artifact':
+            from .wasm_recording import recording
+            snapshot=recording(folder,output)
+            if snapshot is not None:
+                output=snapshot[0];retained_wasm=True
+                if failed_execution:
+                    result['error']='The WebAssembly inspection did not complete; retained observations and the engine diagnostic remain available'
         if result['operation'] == 'binary.objdump':
             from .objdump_inspection import recording
             value = recording(folder, interrupted=stopped or failed_execution)
@@ -383,16 +401,17 @@ def _run(manager, project_id, job_id, artifact, folder, result):
             checkpoint = recording_file(folder, output)
             retained_firmware = checkpoint is not None
             if retained_firmware: output = checkpoint
-        if stopped and not (retained_firmware or retained_objdump):
+        if stopped and not (retained_firmware or retained_objdump or retained_wasm):
             state = "cancelled"
-        elif failed_execution and not (retained_firmware or retained_objdump):
+        elif failed_execution and not (retained_firmware or retained_objdump or retained_wasm):
             state = "failed"
             result["error"] = "The native analysis did not complete; inspect the engine diagnostic"
         else:
             if retained_firmware and (stopped or failed_execution):
                 from .firmware import freeze_recording
                 output = freeze_recording(folder, output)
-            retain(manager.store, project_id, job_id, artifact, folder, output, result)
+            retain(manager.store, project_id, job_id, artifact, folder, output, result,
+                   observe_source=not (retained_wasm and (stopped or failed_execution)))
             with manager.lock:
                 stopped = job_id in manager.cancelled
             state = "cancelled" if stopped else "failed" if failed_execution else "finished"
@@ -413,18 +432,20 @@ def _run(manager, project_id, job_id, artifact, folder, result):
     manager.store.save_job(project_id, job_id, state, result)
 
 
-def retain(store, project_id, job_id, artifact, folder, output, result):
+def retain(store, project_id, job_id, artifact, folder, output, result, *, observe_source=True):
     document = json.loads(output.read_text(encoding="utf-8"))
     if result['operation'] == 'binary.objdump':
         result['reader_observation'] = {key: document['result'][key] for key in
             ['exit_code', 'completion_status', 'stream_complete', 'artifact_changed']}
+    if result['operation']=='wasm.artifact':
+        result['wasm_observation']={key:document['result'].get(key) for key in ['validation','phase','completion_status']}
     result.update(artifact_sha256=document["artifact_sha256"], analysis_file=str(output),
                   analysis_sha256=digest(output), runtime=document["runtime"])
     result["source_changed"] = document["artifact_sha256"] != artifact["sha256"]
     definition = next(row for row in OPERATIONS if row["name"] == result["operation"])
-    if definition.get("retained_only"):
+    if definition.get("retained_only") or not observe_source:
         result.update(source_unavailable=None, source_changed_during_analysis=None,
-                      original_source_check="not-performed-retained-input")
+                      original_source_check="not-performed-retained-input" if observe_source else "not-performed-retained-observation")
     else:
         available = Path(artifact["path"]).exists()
         result["source_unavailable"] = not available
@@ -451,6 +472,23 @@ def recover(store):
     for project in store.projects():
         for job in store.items('jobs',project['id']):
             result=job['result']
+            if job['state']=='interrupted' and result.get('operation')=='wasm.artifact' and not result.get('analysis_file'):
+                from . import wasm_recording
+                import psutil
+                folder=store.directory/'analyses'/job['id']
+                try:
+                    configured=result['engine']
+                    command=[configured['node'],configured['entry'],str(folder/'request.json'),str(folder/'analysis.json')]
+                    cleanup=wasm_recording.stop_interrupted_worker(folder,command)
+                    frozen=wasm_recording.freeze_recording(folder,folder/'analysis.json')
+                    if frozen is not None:
+                        output,snapshot=frozen
+                        retain(store,project['id'],job['id'],store.artifact(project['id'],result['artifact_id']),folder,output,result,observe_source=False)
+                        result.update(recovered_recording=True,recovery_cleanup=cleanup,recording_snapshot=snapshot)
+                except (OSError,ValueError,KeyError,RuntimeError,psutil.Error) as error:
+                    result['recovery_error']=str(error)
+                store.save_job(project['id'],job['id'],'interrupted',result)
+                continue
             if job['state'] == 'interrupted' and result.get('operation') == 'binary.objdump' and not result.get('analysis_file'):
                 from . import objdump_inspection
                 folder = store.directory / 'analyses' / job['id']
