@@ -17,10 +17,10 @@ OPERATIONS=[{'name':name,'title':title,'input':'set','worker':'python','retained
         ('evidence.bundle','Evidencias · Guardar conjunto canónico',
          'Conserva los documentos seleccionados con sus bytes, hashes, ocurrencias e historial completo de incógnitas. No consulta las rutas originales.',{'unknowns':[]},None),
         ('evidence.changed_behavior','Evidencias · Agregar cambios observados',
-         'Agrega comparaciones guardadas con su cierre de evidencias. Recalcula las dimensiones de procesos y separa los candidatos estáticos de las observaciones. Las ausencias siguen desconocidas.',{},['process.compare','artifact.compare']),
+         'Agrega comparaciones guardadas con su cierre de evidencias. Recalcula dimensiones de procesos, inventarios y funciones, separando candidatos estáticos y observaciones. Las ausencias siguen desconocidas.',{},['process.compare','artifact.compare','evidence.compare_functions']),
         ('evidence.correlate','Evidencias · Contrastar hipótesis estáticas y de ejecución',
          'Contrasta asociaciones declaradas entre un cambio estático y una dimensión observada. Conserva hipótesis desconocidas; una coincidencia no prueba causalidad.',
-         {'hypotheses':[{'id':'hypothesis-1','static_record_id':'rec_sha256-from-aggregation','logical_path':'module.py','runtime_record_id':'rec_sha256-from-aggregation','dimension':'stdout','expected':'both-changed'}]},['process.compare','artifact.compare']),
+         {'hypotheses':[{'id':'hypothesis-1','static_record_id':'rec_sha256-from-aggregation','logical_path':'module.py','runtime_record_id':'rec_sha256-from-aggregation','dimension':'stdout','expected':'both-changed','side_alignment':'left_to_left','statement':'Selected static versions correspond to the selected process runs'}]},['process.compare','artifact.compare','evidence.compare_functions']),
     ]]
 OPERATIONS += [{'name':'evidence.call_paths','title':'Evidencias · Todas las vías directas más cortas','input':'set',
     'retained_only':True,'source_states':STATES,'requires_operation':'binary.analyze_function','inputSchema':SET_PARAMETERS,
@@ -32,6 +32,11 @@ OPERATIONS += [{'name':'evidence.call_paths','title':'Evidencias · Todas las v�
         'properties':{'reference_job_id':{'type':'string'},'candidate_job_id':{'type':'string'},'query':{'type':'object'}}},
     'example':{'query':{'record_pairs':[]}},
     'description':'Compara miembros, parejas explícitas uno a uno e historial completo de incógnitas. La omisión de un documento no demuestra un cambio de comportamiento.'}]
+OPERATIONS += [{'name':'evidence.compare_functions','title':'Evidencias · Comparar funciones guardadas','input':'pair',
+    'retained_only':True,'source_states':STATES,'requires_operation':'binary.analyze_function',
+    'inputSchema':{'type':'object','additionalProperties':False,'required':['reference_job_id','candidate_job_id'],
+        'properties':{'reference_job_id':{'type':'string'},'candidate_job_id':{'type':'string'}}},
+    'description':'Compara identidad, pseudocódigo, ensamblado, comentarios, llamadas, referencias, cadenas y CFG de dos dossieres completos guardados. Conserva facetas y perfiles desconocidos; las diferencias estáticas no prueban comportamiento.'}]
 
 
 def canonical(value):return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False)
@@ -246,35 +251,55 @@ def aggregate(sources,missing,validate_static=None):
                     retained={key:value.get(key) for key in checked}
                     if canonical(checked)!=canonical(retained):raise ValueError('Saved comparison differs from recomputed observations')
                     item.update(status=checked['state'],dimensions=checked['dimensions'],query_sha256=checked['query_sha256'],
+                        input_sides={side:parent['record']['analysis_sha256'] for side,parent in zip(('reference','candidate'),parents)},
                         evidence_links=[row['record']['record_id'],*[parent['record']['record_id'] for parent in parents]])
                 except (ValueError,KeyError,TypeError) as error:item['reasons'].append(str(error))
-        elif operation=='artifact.compare':
+        elif operation in {'artifact.compare','evidence.compare_functions'}:
             bindings=value.get('retained_inputs',[])
             parents=[by_hash.get(binding.get('analysis_sha256')) for binding in bindings]
             valid=(len(parents)==2 and {binding.get('side') for binding in bindings}=={'reference','candidate'}
-                and all(parent and parent['document']['operation']=='artifact.inventory' for parent in parents))
-            changes=value.get('changes')
+                and all(parent and parent['document']['operation']==('artifact.inventory' if operation=='artifact.compare' else 'binary.analyze_function') for parent in parents))
+            changes=value.get('changes') if operation=='artifact.compare' else value.get('dimensions')
             if not valid or not isinstance(changes,list):item['reasons'].append('Missing or malformed static inventory comparison closure')
             else:
-                known=value.get('status') in {'unchanged','added','removed','changed'}
                 validated=False
                 if validate_static:
                     try:
-                        checked=validate_static(bindings)
+                        checked=validate_static(bindings,operation)
                         if canonical(checked)!=canonical(value):raise ValueError('Saved static comparison differs from recomputed inventories')
                         validated=True
                     except (ValueError,OSError,KeyError) as error:item['reasons'].append(str(error))
                 else:item['reasons'].append('Static inventory comparison has not been recomputed')
-                item.update(status='validated-static-candidates' if known and validated else 'unknown',
+                item.update(status='validated-static-candidates' if validated else 'unknown',
                     dimensions=changes,producer_status=value.get('status'),
+                    input_sides={binding['side']:binding['analysis_sha256'] for binding in bindings},
                     evidence_links=[row['record']['record_id'],*[parent['record']['record_id'] for parent in parents]])
+                if validated and operation=='artifact.compare' and value.get('status') in {'unchanged','added','removed','changed'}:
+                    by_side={binding['side']:parent for binding,parent in zip(bindings,parents)}
+                    occurrences={side:parent['document']['result']['occurrences'] for side,parent in by_side.items()}
+                    paths=set.intersection(*[{entry['logical_path'] for entry in occurrences[side]} for side in ('reference','candidate')])
+                    changed_paths={entry['logical_path'] for entry in changes}
+                    unchanged=[]
+                    for path in sorted(paths-changed_paths):
+                        matched=[[entry for entry in occurrences[side] if entry['logical_path']==path] for side in ('reference','candidate')]
+                        if all(len(entries)==1 for entries in matched):
+                            unchanged.append({'logical_path':path,'classification':'unchanged','dimensions':[],
+                                'evidence_links':item['evidence_links'],
+                                'left_occurrence_id':matched[0][0]['occurrence_id'],'right_occurrence_id':matched[1][0]['occurrence_id']})
+                    item['dimensions']=[*changes,*unchanged]
         else:item['reasons'].append('Unsupported comparison document')
         reports.append(item)
-    return {'format':'vitruvius.retained-changes/1','status':'unknown' if missing or any(row['status']=='unknown' for row in reports) else 'selected-comparisons-read',
+    runtime=[row for row in reports if row['scope']=='runtime-observations']
+    unknown=bool(missing) or any(row['status']=='unknown' or any(
+        dimension.get('state',dimension.get('status',dimension.get('classification'))) in {'unknown','contradiction','truncated'}
+        for dimension in row['dimensions']) for row in reports)
+    changed=any(dimension.get('state')=='different' for row in runtime for dimension in row['dimensions'])
+    return {'format':'vitruvius.retained-changes/1','status':'unknown' if unknown else 'selected-comparisons-read',
+        'behavior_status':'unknown' if unknown or not runtime else 'observed_changed' if changed else 'observed_unchanged',
         'comparisons':reports,'missing_closure':missing,
         'closure':make_bundle([row['source'] for row in sources]),
         'limitations':['Process dimensions are recomputed from retained captures; no program or original path is accessed.',
-            'Static candidates are recomputed from retained inventories; they do not establish observed behavior.',
+            'Static candidates are recomputed from retained inventories or full native function dossiers; they do not establish observed behavior.',
             'Missing, partial, unaligned or altered comparisons remain unresolved. No causal relation is inferred.']}
 
 
@@ -283,26 +308,37 @@ def correlate(summary,hypotheses):
     reports={row['record_id']:row for row in summary['comparisons']};ids=set();rows=[]
     expected_states={'both-changed':(True,True),'static-only':(True,False),'runtime-only':(False,True),'both-unchanged':(False,False)}
     for hypothesis in hypotheses:
-        required={'id','static_record_id','logical_path','runtime_record_id','dimension','expected'}
-        if not isinstance(hypothesis,dict) or set(hypothesis)!=required or any(not isinstance(value,str) or not value for value in hypothesis.values()):
+        required={'id','static_record_id','runtime_record_id','dimension','expected'}
+        if not isinstance(hypothesis,dict) or not required<=set(hypothesis) or set(hypothesis)-required-{'logical_path','static_dimension','side_alignment','statement'} or len(set(hypothesis)&{'logical_path','static_dimension'})!=1 or any(not isinstance(value,str) or not value for value in hypothesis.values()):
             raise ValueError('A hypothesis needs exact static/runtime record IDs, logical path, dimension and expectation')
         key=hypothesis['id']
         if key in ids:raise ValueError('Hypothesis IDs must be unique')
         ids.add(key)
         if hypothesis['expected'] not in expected_states:raise ValueError('Unknown correlation expectation')
+        alignment=hypothesis.get('side_alignment')
+        if alignment is not None and alignment not in {'left_to_left','left_to_right'}:raise ValueError('Unknown declared side alignment')
         static=reports.get(hypothesis['static_record_id']);runtime=reports.get(hypothesis['runtime_record_id'])
         row={'hypothesis':hypothesis,'status':'unknown','static_changed':None,'runtime_changed':None,'evidence_links':[],
             'interpretation':'The association is caller-declared; no causal relationship is established'}
         if static and runtime and static['scope']=='static-candidates' and runtime['scope']=='runtime-observations':
-            findings=[item for item in static['dimensions'] if item.get('logical_path')==hypothesis['logical_path']]
+            function_selector='static_dimension' in hypothesis
+            findings=[item for item in static['dimensions'] if item.get('dimension')==hypothesis['static_dimension']] if function_selector else [item for item in static['dimensions'] if item.get('logical_path')==hypothesis['logical_path']]
             observed=[item for item in runtime['dimensions'] if item.get('dimension')==hypothesis['dimension']]
             if static['status']=='validated-static-candidates' and len(findings)==len(observed)==1 and observed[0]['state'] in {'same','different'}:
-                classification=findings[0].get('classification')
+                classification=findings[0].get('status') if function_selector else findings[0].get('classification')
                 if classification in {'added','removed','changed','unchanged'}:
+                    if function_selector and alignment is None:
+                        row['reason']='Function hypotheses require explicit side alignment'
+                        rows.append(row);continue
                     a=classification!='unchanged';b=observed[0]['state']=='different'
                     row.update(static_changed=a,runtime_changed=b,
                         status='consistent-with-declared-association' if (a,b)==expected_states[hypothesis['expected']] else 'contradicts-declared-association',
                         evidence_links=sorted(set(static.get('evidence_links',[])+runtime.get('evidence_links',[]))))
+                    if alignment:
+                        row['side_alignment']=alignment
+                        row['aligned_inputs']=[{'static_side':side,'static_analysis_sha256':static.get('input_sides',{}).get(side),
+                            'runtime_side':target,'runtime_analysis_sha256':runtime.get('input_sides',{}).get(target)}
+                            for side,target in zip(('reference','candidate'),('reference','candidate') if alignment=='left_to_left' else ('candidate','reference'))]
         rows.append(row)
     return {'format':'vitruvius.static-runtime-hypotheses/1','hypotheses':rows,'query_sha256':sha(hypotheses),
         'causality':'not-established','closure':summary,'limitations':summary['limitations']}
@@ -322,7 +358,7 @@ def execute(request,folder=None):
     if operation=='evidence.bundle':
         if set(query)-{'unknowns'}:raise ValueError('Unknown bundle query')
         return make_bundle([row['source'] for row in sources if row['selected']],query.get('unknowns'))
-    def validate_static(bindings):
+    def validate_static(bindings,comparison_operation):
         import subprocess
         engine=request.get('validation_engine',{})
         if not engine.get('available') or folder is None:raise ValueError('Build the native inventory core to validate static comparisons')
@@ -334,9 +370,13 @@ def execute(request,folder=None):
             chosen.append(matches[0])
         serial=len(list(folder.glob('static-recheck-*-request.json')))
         source=folder/f'static-recheck-{serial}-request.json';target=folder/f'static-recheck-{serial}-output.json'
-        source.write_text(canonical({'operation':'artifact.compare','path':chosen[0]['path'],'expected_input_sha256':chosen[0]['analysis_sha256'],
+        validation={'operation':comparison_operation,'path':chosen[0]['path'],'expected_input_sha256':chosen[0]['analysis_sha256'],
             'source_artifact_sha256':chosen[0]['artifact_sha256'],'candidate_path':chosen[1]['path'],
-            'expected_candidate_sha256':chosen[1]['analysis_sha256'],'parameters':{}}),encoding='utf8')
+            'expected_candidate_sha256':chosen[1]['analysis_sha256'],'parameters':{}}
+        if comparison_operation=='evidence.compare_functions':
+            validation.update(source_inputs=[{**value,'selected':True} for value in chosen],
+                source_input_roles={'reference_job_id':chosen[0]['job_id'],'candidate_job_id':chosen[1]['job_id']})
+        source.write_text(canonical(validation),encoding='utf8')
         result=subprocess.run([engine['node'],engine['entry'],str(source),str(target)],capture_output=True,text=True,encoding='utf8')
         if result.returncode or not target.is_file():raise ValueError('Native retained inventory validation failed: '+result.stderr[-1500:])
         return loads(target.read_bytes())['result']
