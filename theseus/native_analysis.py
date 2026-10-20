@@ -275,6 +275,9 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
                 raise ValueError("Select a completed candidate " + ' or '.join(candidate_operation) + " analysis in this project")
     configured = engine() if definition.get("worker") != "python" else {
         "available": True, "python": sys.executable, "entry": str(Path(__file__).with_name("structured.py"))}
+    if operation == 'evidence.compare_functions':
+        from .retained_evidence import bind_inputs
+        selected_inputs = bind_inputs(manager.store,project_id,[parent['id'],candidate['id']])
     if not configured["available"]:
         raise ValueError("Install the native analysis core with Install.ps1 (Node 22.19+ and engine build)")
     native_jobs, native_inputs = [], []
@@ -306,7 +309,10 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
             "source_job_id", "reference_job_id", "candidate_job_id"}}
     if selected_inputs:
         request['source_inputs'] = selected_inputs
-        request['parameters'] = {key:value for key,value in parameters.items() if key!='source_job_ids'}
+        request['parameters'] = {key:value for key,value in parameters.items() if key not in {
+            'source_job_ids','source_job_id','reference_job_id','candidate_job_id'}}
+        if operation=='evidence.compare_functions':
+            request['source_input_roles']={'reference_job_id':parent['id'],'candidate_job_id':candidate['id']}
         if operation in {'evidence.changed_behavior','evidence.correlate'}:
             request['validation_engine'] = engine()
     if candidate:

@@ -31,11 +31,12 @@ desconocido. `behavior_status` siempre es `not-evaluated`.
 
 ## Agregar cambios y contrastar hipótesis
 
-`evidence.changed_behavior` selecciona trabajos `process.compare` y
-`artifact.compare`. Sigue sus referencias retenidas dentro del proyecto y
+`evidence.changed_behavior` selecciona trabajos `process.compare`,
+`artifact.compare` y `evidence.compare_functions`. Sigue sus referencias retenidas dentro del proyecto y
 verifica los hashes de todo el cierre. Recalcula las dimensiones de procesos a
 partir de ambas capturas; recalcula las comparaciones de inventarios con el
-núcleo estático local. Un documento ausente, alterado o incompatible conserva
+núcleo estático local, incluidas las ocho dimensiones de los dossieres completos
+de funciones. Un documento ausente, alterado o incompatible conserva
 el resultado desconocido. Las diferencias de inventario son candidatos
 estáticos; las dimensiones de procesos describen las ejecuciones guardadas.
 
@@ -48,16 +49,21 @@ estáticos; las dimensiones de procesos describen las ejecuciones guardadas.
   "logical_path":"rule.py",
   "runtime_record_id":"rec_<hash del registro de comparación de procesos>",
   "dimension":"stdout",
-  "expected":"both-changed"
+  "expected":"both-changed",
+  "side_alignment":"left_to_left",
+  "statement":"Los lados seleccionados corresponden a las mismas versiones declaradas"
 }]}}
 ```
 
 Los IDs estables se leen en la agregación. `expected` admite `both-changed`,
 `static-only`, `runtime-only` y `both-unchanged`. La coincidencia debe identificar
-un único cambio estático y una única dimensión de ejecución conocida. Las
+una única clasificación estática y una única dimensión de ejecución conocida. Las
 ausencias y ambigüedades siguen desconocidas. Los nombres, rutas parecidas y
 relojes no crean asociaciones automáticas. Una coincidencia con la hipótesis
 declarada **no establece causalidad**. El cierre completo queda incluido.
+Las ocurrencias sin cambio se obtienen de los dos inventarios completos validados.
+También se puede seleccionar una dimensión de función con `static_dimension` y
+declarar la alineación de lados. Consulta [Comparar funciones guardadas](RETAINED-FUNCTIONS.md).
 
 ## Todas las vías de llamada directas más cortas
 
