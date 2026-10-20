@@ -59,7 +59,15 @@ def _bytes(data):
 def _write(path,document):
     temporary=path.with_name(path.name+'.tmp')
     temporary.write_text(json.dumps(document,ensure_ascii=False,indent=2),encoding='utf8')
-    temporary.replace(path)
+    # Windows readers may briefly hold the previous checkpoint without delete
+    # sharing. Retry only publication of these same recorded bytes, never a run.
+    for attempt in range(50):
+        try:
+            temporary.replace(path)
+            return
+        except PermissionError:
+            if os.name!='nt' or attempt==49:raise
+            time.sleep(.01)
 
 
 def _file(path,excluded=None,include_content=True):

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
+import types
 
 import pytest
 
@@ -71,6 +72,20 @@ def test_retained_prefix_does_not_turn_missing_after_state_into_unchanged(tmp_pa
     capture['stdout']['sha256'] = '0' * 64
     with pytest.raises(ValueError, match='byte identity'):
         reader.normalize(context, capture)
+
+
+@pytest.mark.parametrize('platform,code,name', [('posix', -15, 'SIGTERM'), ('nt', None, None)])
+def test_stream_eof_does_not_certify_signal_termination_or_an_unobserved_exit(monkeypatch, platform, code, name):
+    monkeypatch.setattr(reader, 'os', types.SimpleNamespace(name=platform))
+    context = {'operation': 'symbols', 'started_at': 'original-time', 'engine': {},
+               'artifact': None, 'follow_debug_links': False}
+    capture = {'status': 'complete', 'stream_complete': True, 'target': {'argv': ['reader', '--syms']},
+               'process': {'exit_code': code}, 'files': [], 'stdout': reader.process_capture._bytes(b'observed prefix'),
+               'stderr': reader.process_capture._bytes(b'original diagnostic')}
+    result = reader.normalize(context, capture)
+    assert result['completion_status'] == 'unknown' and result['exit_code'] is None
+    assert result['signal'] == name and result['process_observation']['process']['exit_code'] == code
+    assert base64.b64decode(result['stdout']['base64']) == b'observed prefix'
 
 
 @pytest.fixture(scope='module')
@@ -261,28 +276,39 @@ def test_cancelled_reader_retains_prefix_and_recovery_never_replays_command(tmp_
         job = response.json()
         folder = store.directory / 'analyses' / job['id']
         latest = folder / 'objdump-capture' / 'capture-latest.json'
-        deadline = time.monotonic() + 20
-        while True:
-            if latest.is_file() and json.loads(latest.read_text(encoding='utf8'))['result']['stdout']['bytes']:
-                break
-            assert time.monotonic() < deadline
-            time.sleep(.02)
-        client.post('/api/jobs/' + job['id'] + '/cancel').raise_for_status()
-        job = wait(client, client.get('/api/jobs/' + job['id']).json())
-        assert job['state'] == 'cancelled', job
-        assert job['result']['reader_observation']['completion_status'] == 'unknown'
-        document = client.get('/api/jobs/' + job['id'] + '/analysis.json').content
-        value = json.loads(document)['result']
-        assert value['stdout']['text'] == 'original-prefix\n' and value['completion_status'] == 'unknown'
-        assert value['artifact_changed'] is None and not value['stream_complete']
-        # Reconstruct an interrupted receipt from the persisted prefix and dead
-        # worker identities, then prohibit any new decoder launch during recovery.
-        interrupted = {k: v for k, v in job['result'].items() if k not in {'analysis_file', 'analysis_sha256', 'sections'}}
-        store.save_job(pid, job['id'], 'interrupted', interrupted)
-        from theseus import native_analysis
-        monkeypatch.setattr(reader.process_capture, 'capture_process', lambda *a, **k: pytest.fail('Recovery replayed a reader'))
-        native_analysis.recover(store)
-        recovered = store.job(job['id'])
-        assert recovered['state'] == 'interrupted' and recovered['result']['recovered_recording']
-        retained = json.loads(Path(recovered['result']['analysis_file']).read_text(encoding='utf8'))['result']
-        assert retained['stdout']['text'] == 'original-prefix\n' and retained['completion_status'] == 'unknown'
+        try:
+            deadline = time.monotonic() + 20
+            while True:
+                try:
+                    prefix=json.loads(latest.read_text(encoding='utf8'))
+                except (FileNotFoundError,PermissionError):
+                    prefix=None
+                if prefix and prefix['result']['stdout']['bytes']:
+                    break
+                current=store.job(job['id'])
+                assert current['state'] in {'queued','running'},(current,prefix)
+                assert time.monotonic() < deadline
+                time.sleep(.02)
+            client.post('/api/jobs/' + job['id'] + '/cancel').raise_for_status()
+            job = wait(client, client.get('/api/jobs/' + job['id']).json())
+            assert job['state'] == 'cancelled', job
+            assert job['result']['reader_observation']['completion_status'] == 'unknown'
+            document = client.get('/api/jobs/' + job['id'] + '/analysis.json').content
+            value = json.loads(document)['result']
+            assert value['stdout']['text'] == 'original-prefix\n' and value['completion_status'] == 'unknown'
+            assert value['artifact_changed'] is None and not value['stream_complete']
+            # Reconstruct an interrupted receipt from the persisted prefix and dead
+            # worker identities, then prohibit any new decoder launch during recovery.
+            interrupted = {k: v for k, v in job['result'].items() if k not in {'analysis_file', 'analysis_sha256', 'sections'}}
+            store.save_job(pid, job['id'], 'interrupted', interrupted)
+            from theseus import native_analysis
+            monkeypatch.setattr(reader.process_capture, 'capture_process', lambda *a, **k: pytest.fail('Recovery replayed a reader'))
+            native_analysis.recover(store)
+            recovered = store.job(job['id'])
+            assert recovered['state'] == 'interrupted' and recovered['result']['recovered_recording']
+            retained = json.loads(Path(recovered['result']['analysis_file']).read_text(encoding='utf8'))['result']
+            assert retained['stdout']['text'] == 'original-prefix\n' and retained['completion_status'] == 'unknown'
+        finally:
+            current=store.job(job['id'])
+            if current['state'] in {'queued','running'}:
+                client.post('/api/jobs/'+job['id']+'/cancel').raise_for_status()

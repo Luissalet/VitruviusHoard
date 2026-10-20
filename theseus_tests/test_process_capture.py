@@ -6,9 +6,53 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import threading
+import os
 import psutil
+import pytest
 
 from theseus.process_capture import capture_process
+
+
+@pytest.mark.skipif(os.name!='nt',reason='Windows delete-sharing behavior')
+def test_checkpoint_publication_survives_a_concurrent_windows_reader(tmp_path,monkeypatch):
+    import ctypes
+    from ctypes import wintypes
+    from theseus import process_capture
+    path=tmp_path/'capture-latest.json';path.write_text('{"version":"old"}',encoding='utf8')
+    kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+    kernel.CreateFileW.argtypes=[wintypes.LPCWSTR,wintypes.DWORD,wintypes.DWORD,wintypes.LPVOID,wintypes.DWORD,wintypes.DWORD,wintypes.HANDLE]
+    kernel.CreateFileW.restype=wintypes.HANDLE
+    kernel.CloseHandle.argtypes=[wintypes.HANDLE];kernel.CloseHandle.restype=wintypes.BOOL
+    handle=kernel.CreateFileW(str(path),0x80000000,3,None,3,0x80,None)
+    assert handle!=ctypes.c_void_p(-1).value
+    blocked=threading.Event();errors=[];replace=Path.replace
+    def observe_publication(source,destination):
+        try:return replace(source,destination)
+        except PermissionError:
+            blocked.set();raise
+    monkeypatch.setattr(Path,'replace',observe_publication)
+    def publish():
+        try:process_capture._write(path,{'version':'new','stdout':'exact recorded prefix'})
+        except BaseException as error:errors.append(error)
+    writer=threading.Thread(target=publish)
+    try:
+        writer.start();assert blocked.wait(2),'The real Windows reader did not exercise publication contention'
+    finally:
+        assert kernel.CloseHandle(handle)
+        writer.join(timeout=2)
+    assert not writer.is_alive() and not errors
+    assert json.loads(path.read_text(encoding='utf8'))=={'version':'new','stdout':'exact recorded prefix'}
+
+
+def test_persistent_checkpoint_denial_is_reported_without_overwriting_the_prefix(tmp_path,monkeypatch):
+    from theseus import process_capture
+    path=tmp_path/'capture-latest.json';original=b'{"version":"old"}';path.write_bytes(original)
+    def denied(*args):raise PermissionError('persistent publication denial')
+    monkeypatch.setattr(Path,'replace',denied)
+    with pytest.raises(PermissionError,match='persistent publication denial'):
+        process_capture._write(path,{'version':'new'})
+    assert path.read_bytes()==original
 
 
 def test_pipe_capture_preserves_binary_output_input_exit_and_file_effects(tmp_path):
