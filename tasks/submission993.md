@@ -85,3 +85,19 @@ unique input, while retaining positional comparison of the actual CDP response.
 Both runs and their partial records remain. A syntax preparation error was fixed
 before test execution. None of these failures was removed or reclassified as a
 successful product run.
+
+## Composition onto approved954
+
+The three delivery patches were rebased onto
+`6c9f76d8519879cc5a725d3119a2df19d274ad9b` without conflicts. All three patches
+are equal in range-diff. Theseus Python/tests and app.js are byte-identical to
+the full-suite/UI-tested115d81e. The static catalogue differs from954 only in
+the two Theseus tool entries; its other106 native tools, including the updated
+design descriptions, are preserved. See `oracle993-composition20.json`.
+
+The first owner composition run has22PASS/1FAIL because this new worktree's
+design/Babel clients were not built. Its XML/log remain. After its own npm ci
+without binary links and successful design/Babel Vite builds plus Babel type
+check, the same owner workspace/shutdown/package/config/global-mock suite passes
+23 tests in6.680s (`oracle993-owner2.xml`). No product code, deadline or assertion changed.
+These are isolated dependencies and outputs, with no links to shared folders.
