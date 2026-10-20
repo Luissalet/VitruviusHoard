@@ -202,6 +202,11 @@ def main():
             result = reconcile(request, source_bytes)
     elif request["operation"] == "sqlite.database":
         result = sqlite_database(source, request["parameters"], output_path)
+    elif request["operation"] == "binary.layout":
+        from elf_layout import inspect_layout
+        result = inspect_layout(source)
+        if result['artifact']['sha256'] != before:
+            raise ValueError('ELF artifact changed while reading; observations were not published')
     elif request["operation"] in {"capture.fields", "capture.packets"}:
         from packets import inspect_capture
         result = inspect_capture(source, request["operation"], request["parameters"], output_path, before)
