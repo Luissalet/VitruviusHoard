@@ -13,6 +13,13 @@ coverage capture. The source may be finished, failed, cancelled, interrupted or
 imported, provided its retained JSON document is available and matches its
 receipt hash.
 
+The orchestrator also avoids querying the old artifact path when retaining these
+results. Its receipt marks the current original-file availability and freshness
+as unqueried (`null`), with `original_source_check` set to
+`not-performed-retained-input`. The stored artifact and retained JSON identities
+remain explicit; absence and freshness are not inferred from a path that was not
+consulted.
+
 `browser.export_scripts` accepts `{"source_job_id":"…"}`. It creates a new job
 with a `vitruvius.web-sources/1` manifest and individually registered derived
 artifacts. Each script and network response occurrence retains its original URL,
