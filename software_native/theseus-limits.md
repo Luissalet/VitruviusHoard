@@ -296,3 +296,20 @@ real stdio MCP, normal desktop/mobile UI, two-source findings and historical
 transfer read them after the original browser/server close. No new operation or
 transport was added. See BROWSER-WEBSOCKETS.md. This is not wire-fragment,
 peer-delivery, Electron/IPC or whole-process behavior-equivalence certification.
+
+Adaptation972 incorporates the synchronous firmware scanner with the pinned
+Binwalk3.1.0 library and a default packaged executable. Regions, offsets, selected
+producer identity, exact extracted bytes and diagnostics remain retained records.
+Wheel builds include the production JavaScript dependency tree and native scanner
+licences; installed analysis no longer requires npm writes inside site-packages.
+The incorporated Android reader resolves its own bridge inside software_native.
+See docs/THESEUS-SYNC.md and tasks/submission972.md for exact verification.
+
+An original hidden Electron application additionally exercises main Inspector
+source capture, context-isolated/sandboxed preload and renderer CDP steps with
+an independent IPC result log. Tests retain exact main/preload/renderer sources,
+explicit results and an original error, then close the application and compare
+saved sources and transfer evidence without the original files. These explicit
+observations are not general IPC causality or whole-process equivalence. The
+retained-page-scenario obligation oracle remains separate pending development;
+Theseus is incomplete and in progress inside Vitruvius's Inspection module.
