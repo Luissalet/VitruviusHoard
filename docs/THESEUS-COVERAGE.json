@@ -20,8 +20,10 @@
   ],
   "status_counts": {
     "semantic-review-pending": 168,
-    "implementation-pending": 22,
+    "implementation-pending": 19,
     "platform-required-implementation-pending": 3,
+    "source-integrated-release-pending": 1,
+    "independent-review-pending": 2,
     "excluded-by-user": 4,
     "integrated-tested-published": 10
   },
@@ -1180,12 +1182,30 @@
         "line": 43,
         "kind": "native-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "binary.layout"
+      ],
+      "status": "source-integrated-release-pending",
       "scope": "Preserve original section/symbol/relocation/RELR bytes and identities, dependency/interpreter names and scoped mitigation facts.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independent-CAS1-approved-source-integrated-external-wheel-tested-awaiting-final-release",
+        "task": 1068,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "commit": "0cc609718e5d6895e3841498cfc8f6765430bd9b",
+        "application_head": "2004dbbe0d868f404241ee6f34ba45a86a1d2701",
+        "tests": [
+          "theseus_tests/test_elf_layout.py"
+        ],
+        "normal_ui": "Analysis operation picker, retained original-record and RELR reads, exact JSON download and portable readback after original retirement",
+        "evidence": "Author17areaPASS, full365PASS/2emulator opt-in SKIP965.970s GhidraON; independent17areaPASS with original compiler ELF/pyelftools and strict Zod. Original RELR ELF source and fresh external installed MCP123/UI/transfer PASS. All QA owners/ports/tabs closed; no target ELF execution.",
+        "external_installed_wheel_sha256": "73f8fd8e035e2d863055d6449c65c2617703c3d7590f63786beb78dd2f96c397",
+        "proofs": [
+          "elf1068-full20.xml",
+          "elf1068-installed20.json",
+          "elf1068-installed-mcp20-proof.json",
+          "elf1068-installed-qa20-final.json"
+        ]
       },
       "group": "binary-layout"
     },
@@ -1665,12 +1685,34 @@
         "line": 11,
         "kind": "apktool-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "theseus_client_inspect family=apktool",
+        "POST /theseus/api/engines/inspect"
+      ],
+      "status": "independent-review-pending",
       "scope": "Expose selected free client/Java identity and version without requiring a target artifact or decoding it.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "CAS2-source-tested-MCP-UI-awaiting-independent-review-full-rerun-and-package",
+        "task": 1070,
+        "submission_revision": 2,
+        "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
+        "commits": [
+          "8335c42b43e2f7f21f34fbed4efe3db490b9486d",
+          "305778a015becd65a1dbedcb52e6fdb724c32ccd"
+        ],
+        "tests": [
+          "theseus_tests/test_client_inspection.py",
+          "theseus_tests/test_workbench.py",
+          "tests/test_software_workspace.py"
+        ],
+        "normal_ui": "Readers installed before any project, explicit version query, main-workspace report, complete JSON download and dismissal/focus return",
+        "evidence": "8new and23owner PASS; CAS1full355PASS/1FAIL/2SKIP681s solely stale38-tool test. CAS2test-only correction,23focusedPASS2.54s; fresh full2 running. ColdMCP124/no profile, real Java/Apktool/TShark/capinfos file/output hashes and UI/downloads PASS without artifacts or projects. All source QA closed; wheel/install/review pending.",
+        "proofs": [
+          "clients1070-cas2-area20.xml",
+          "clients1070-owner20.xml",
+          "clients1070-mcp20-proof.json",
+          "clients1070-qa20-final.json"
+        ]
       },
       "group": "client-diagnostics"
     },
@@ -1700,12 +1742,34 @@
         "line": 16,
         "kind": "pcap-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "theseus_client_inspect family=pcap",
+        "POST /theseus/api/engines/inspect"
+      ],
+      "status": "independent-review-pending",
       "scope": "Expose selected TShark/capinfos paths, selection sources and versions without requiring a capture artifact.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "CAS2-source-tested-MCP-UI-awaiting-independent-review-full-rerun-and-package",
+        "task": 1070,
+        "submission_revision": 2,
+        "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
+        "commits": [
+          "8335c42b43e2f7f21f34fbed4efe3db490b9486d",
+          "305778a015becd65a1dbedcb52e6fdb724c32ccd"
+        ],
+        "tests": [
+          "theseus_tests/test_client_inspection.py",
+          "theseus_tests/test_workbench.py",
+          "tests/test_software_workspace.py"
+        ],
+        "normal_ui": "Readers installed before any project, explicit version query, main-workspace report, complete JSON download and dismissal/focus return",
+        "evidence": "8new and23owner PASS; CAS1full355PASS/1FAIL/2SKIP681s solely stale38-tool test. CAS2test-only correction,23focusedPASS2.54s; fresh full2 running. ColdMCP124/no profile, real Java/Apktool/TShark/capinfos file/output hashes and UI/downloads PASS without artifacts or projects. All source QA closed; wheel/install/review pending.",
+        "proofs": [
+          "clients1070-cas2-area20.xml",
+          "clients1070-owner20.xml",
+          "clients1070-mcp20-proof.json",
+          "clients1070-qa20-final.json"
+        ]
       },
       "group": "client-diagnostics"
     },
@@ -3239,7 +3303,7 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c external acceptance subsequently PASS; final4c094708 shared install, exact members/pipcheck/MCP/UI and manual/graph PASS with all QA closed. submission1064-cas1-20.md",
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
@@ -3316,7 +3380,7 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c external acceptance subsequently PASS; final4c094708 shared install, exact members/pipcheck/MCP/UI and manual/graph PASS with all QA closed. submission1064-cas1-20.md",
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
@@ -3394,7 +3458,7 @@
           "theseus_tests/test_retained_evidence.py"
         ],
         "normal_ui": "Análisis > Comparar funciones guardadas; selección de dos dossieres con dirección/hash; agregación e hipótesis con alineación explícita",
-        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c built; installed acceptance pending. submission1064-cas1-20.md",
+        "evidence": "7new+21previous area PASS; complete348PASS/2emulatorSKIP623.324s GhidraON. Real original C7x/8x/Ghidra8dimensions, real Python21/24, unchanged stable.txt from both validated inventories, function dimension/path hypotheses with explicit reversed alignment; portable fresh comparison identical after original files/directories retired. New UI pair/correlation PASS, all QA closed. Wheel78d8cc9c external acceptance subsequently PASS; final4c094708 shared install, exact members/pipcheck/MCP/UI and manual/graph PASS with all QA closed. submission1064-cas1-20.md",
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
