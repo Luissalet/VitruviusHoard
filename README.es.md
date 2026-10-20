@@ -18,6 +18,8 @@ El análisis de estructura ELF64 little-endian x86-64 conserva bytes originales,
 
 Consulta los lectores Java/Apktool y TShark/capinfos instalados sin seleccionar un artefacto ni crear un proyecto. El espacio de trabajo muestra versiones observadas, rutas elegidas y su procedencia, y descarga los diagnósticos completos con sus bytes originales. Descubrir el catálogo no ejecuta los lectores. Consulta [Lectores instalados](docs/CLIENT-INSPECTION.md).
 
+El contexto de navegación y de una dirección conserva las observaciones secuenciales del motor, la función envolvente, nombres analizados, comentarios y marcadores coincidentes. Las consultas mantienen su revisión de origen y siguen legibles tras transferir las evidencias. Consulta [Contexto nativo](docs/NATIVE-CONTEXT.md).
+
 Inspección incorpora también el lector síncrono de firmware y las observaciones guardadas de fuentes main/preload/renderer. Una aplicación Electron original de prueba contrasta resultados IPC independientes y permite transferir y comparar las fuentes retenidas después de cerrarla. Estas observaciones no demuestran equivalencia de toda la aplicación. Consulta la [adaptación972 y sus pruebas](tasks/submission972.md).
 
 Los casos de reconstrucción permiten elegir dos capturas guardadas de escenarios de página, comparar sus respuestas exactas y probar capturas con defectos deliberados después de cerrar los originales. Los dos hashes permanecen visibles; una observación incompleta o desalineada sigue siendo desconocida. Las evidencias portables permiten una nueva verificación tras importarlas; los recibos importados siguen siendo históricos. Consulta la [verificación con escenarios retenidos](docs/RETAINED-SCENARIO-ORACLE.md).

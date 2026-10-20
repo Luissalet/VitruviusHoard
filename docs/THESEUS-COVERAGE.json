@@ -20,10 +20,11 @@
   ],
   "status_counts": {
     "semantic-review-pending": 168,
-    "implementation-pending": 19,
+    "implementation-pending": 17,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 13,
-    "excluded-by-user": 4
+    "excluded-by-user": 4,
+    "source-integrated-release-pending": 2
   },
   "contracts": [
     {
@@ -3626,12 +3627,31 @@
         "line": 165,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "theseus_binary_call:get_navigation_context"
+      ],
+      "status": "source-integrated-release-pending",
       "scope": "Sequential bound-document/current-address/containing-procedure observations, with procedure:null outside any function.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "task": 1073,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "a791961dcba6bdaaa1d1431c40f5e3c41690723c"
+        ],
+        "application_head": "3f986f6bb3ed99b0b86160dc092e1331d2551809",
+        "evidence": "Author380PASS2emulatorSKIP701.843s GhidraON;15new/18regression PASS. IndependentCAS1 repeated14pure+1realGhidra, inspected author full/MCP/UI but did not claim another full or liveMCP/UI. Actual stdioMCP123/52binaryops and both native UI submissions PASS; sourceJSON/parsedresponses/commentsUnicode/matchingbookmarks exact after closeGhidra/retireoriginals/export/import, MCP records and retainedUI PASS. QA64218/tabs26,28 closed. Final combined package/shared installation still pending; accepted shared4e remains50binaryops.",
+        "proofs": [
+          "context1073-review-cas1-receipt20.json",
+          "context1073-full20.xml",
+          "context1073-retained20.xml",
+          "context1073-regression20.xml",
+          "context1073-live-mcp20-proof.json",
+          "context1073-ui-live20.json",
+          "context1073-transfer20-proof.json",
+          "context1073-ui-retained20.json",
+          "context1073-qa20-final.json"
+        ]
       },
       "group": "navigation-context"
     },
@@ -3643,12 +3663,31 @@
         "line": 170,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "theseus_binary_call:inspect_address_context"
+      ],
+      "status": "source-integrated-release-pending",
       "scope": "One explicit address with analyzed name, containing function, regular/inline comments and matching bookmarks; unavailable facets typed.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "task": 1073,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "a791961dcba6bdaaa1d1431c40f5e3c41690723c"
+        ],
+        "application_head": "3f986f6bb3ed99b0b86160dc092e1331d2551809",
+        "evidence": "Author380PASS2emulatorSKIP701.843s GhidraON;15new/18regression PASS. IndependentCAS1 repeated14pure+1realGhidra, inspected author full/MCP/UI but did not claim another full or liveMCP/UI. Actual stdioMCP123/52binaryops and both native UI submissions PASS; sourceJSON/parsedresponses/commentsUnicode/matchingbookmarks exact after closeGhidra/retireoriginals/export/import, MCP records and retainedUI PASS. QA64218/tabs26,28 closed. Final combined package/shared installation still pending; accepted shared4e remains50binaryops.",
+        "proofs": [
+          "context1073-review-cas1-receipt20.json",
+          "context1073-full20.xml",
+          "context1073-retained20.xml",
+          "context1073-regression20.xml",
+          "context1073-live-mcp20-proof.json",
+          "context1073-ui-live20.json",
+          "context1073-transfer20-proof.json",
+          "context1073-ui-retained20.json",
+          "context1073-qa20-final.json"
+        ]
       },
       "group": "navigation-context"
     },
