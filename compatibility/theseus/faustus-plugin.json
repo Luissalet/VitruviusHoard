@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "id": "theseus",
+  "name": "Theseus's Hoard \u00b7 Vitruvius's Hoard",
+  "purpose": "Local reverse engineering workspace: inspect source files, PE binaries, archives and captured traffic; retain cited findings and editable behavior specifications; decompile functions with installed free engines; compare an independent reconstruction through reproducible local scenarios. Ingenieria inversa, binarios, funciones, oraculos locales.",
+  "capabilities": [
+    "armed-finite-page-precise-coverage",
+    "source-bound-utf16-function-counters",
+    "explicit-page-cdp-scenarios",
+    "saved-scenario-step-response-comparison",
+    "saved-artifact-inventory-comparison",
+    "page-cdp-network-dom-observations",
+    "saved-page-capture-comparison",
+    "portable-source-bound-png-images",
+    "v8-inspector-script-context-observations",
+    "saved-static-runtime-source-reconciliation",
+    "persistent-runtime-instrumentation",
+    "runtime-device-process-discovery",
+    "script-message-captures",
+    "firmware-regions-entropy",
+    "nested-firmware-extraction-provenance",
+    "interrupted-firmware-recording-recovery",
+    "offline-qlog-events-stream-ranges",
+    "android-runtime-observations",
+    "android-device-package-file-actions",
+    "runtime-recording-recovery-citations",
+    "android-static-dex-members-references",
+    "android-resource-decoding",
+    "local-artifact-inspection",
+    "binary-function-analysis",
+    "call-relations",
+    "evidence",
+    "behavior-specifications",
+    "differential-scenarios",
+    "comparison-jobs",
+    "project-export",
+    "native-format-analysis",
+    "retained-binary-sessions",
+    "referenced-data-comparison",
+    "reconstruction-obligations",
+    "behavior-handoffs",
+    "oracle-perturbations",
+    "linked-verification-retry",
+    "portable-evidence-import-export",
+    "directory-artifacts",
+    "artifact-extraction-links",
+    "javascript-source-recovery",
+    "sqlite-query-observations",
+    "application-package-graphs",
+    "typed-wasm-comparison",
+    "source-distribution-comparison",
+    "managed-reconstruction-import",
+    "retained-navigation-bookmarks-comments",
+    "native-call-graph-path",
+    "batch-decompilation",
+    "offline-pcap-dissection",
+    "protocol-field-discovery",
+    "pe-resource-analysis",
+    "cross-procedure-native-value-traces",
+    "trace-source-observations",
+    "apple-dispatch-metadata",
+    "xml-binary-plist",
+    "macos-signature-observations",
+    "recorded-elf-crash-analysis",
+    "recorded-memory-and-stack-candidates",
+    "offline-signal-recording-decode",
+    "signal-decoder-discovery",
+    "managed-native-observation-contrast"
+  ],
+  "placeholders": [
+    "COMPAT_DIR",
+    "VITRUVIUS_DIR",
+    "OWNER_URL",
+    "APP_URL",
+    "TOKEN_FILE",
+    "DATA_DIR",
+    "PYTHON"
+  ],
+  "defaults": {
+    "VITRUVIUS_DIR": "{COMPAT_DIR}/../..",
+    "OWNER_URL": "http://127.0.0.1:5191",
+    "APP_URL": "{OWNER_URL}/compat/theseus",
+    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/design/mcp-token",
+    "DATA_DIR": "{VITRUVIUS_DIR}/data/theseus",
+    "PYTHON": "{VITRUVIUS_DIR}/venv/Scripts/python.exe"
+  },
+  "app": {
+    "url_default": "{APP_URL}",
+    "ui_url": null,
+    "health": {
+      "path": "/api/health",
+      "expect": {
+        "service": "vitruvius-hoard"
+      }
+    }
+  },
+  "mcp": {
+    "transport": "stdio",
+    "command": "{PYTHON}",
+    "args": [
+      "-I",
+      "-m",
+      "vitruvius_hoard.compat_mcp",
+      "--module",
+      "theseus"
+    ],
+    "env": {
+      "VITRUVIUS_URL": "{OWNER_URL}",
+      "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
+    }
+  },
+  "x-family": {
+    "standalone": false,
+    "agent_contract": true,
+    "absorbed_by": {
+      "id": "vitruvius",
+      "module": "theseus",
+      "standalone": false,
+      "repository": "https://github.com/Luissalet/VitruviusHoard"
+    }
+  },
+  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner."
+}

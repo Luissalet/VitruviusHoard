@@ -27,5 +27,6 @@
   "public_revisions":{"owner":"13983c31e30e1c0b0f5f425120dc1c98083c0918","babel":"582bacdcbd8404ace171654a69c692cd542dbb31","theseus":"3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc"},
   "excluded_private_sdk_commits":["Babel7607321","Babel817e2a4"],
   "pending_root":["independent CAS review","browser/CUA and visual finish","independent installed-package review (author synthetic smoke PASS CAS3)","real-data and binary inventory/relocation","deployed938 global-model trial","alias/Hub installation and publication"],
-  "theseus":"Development incomplete and paused by Luis due to usage; pending reverse-engineering scope is not resumed by933."
+  "theseus":"Development incomplete and in progress, resumed by Luis on 20 October 2026. Integration933 does not complete the pending scope.",
+  "theseus_source_update":{"task":967,"revision":"7f202978af91b035f5db5bfd8ed36c2a853ec844","provenance":"provenance/software/THESEUS-SYNC.json"}
 }

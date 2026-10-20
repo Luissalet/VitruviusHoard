@@ -78,7 +78,8 @@ async def test_native_project_revision_environment_artifact_result_roundtrip(tmp
                 assert page.status_code==200,page.text
                 assert marker in page.text
                 assert '/'+module+'/'+module+'/' not in page.text
-            assert 'pausado' in (await client.get('/theseus/')).text
+            assert 'incompleto y en curso' in (await client.get('/theseus/')).text
+            assert '20 de octubre de 2026' in (await client.get('/theseus/')).text
             fetched=await client.get('/design/api/app-projects/'+project['id'])
             # The normal JSON source API must not rewrite user literals.
             assert '/api/keep-exact' in fetched.text and '/design/api/keep-exact' not in fetched.text
@@ -149,7 +150,10 @@ async def test_stdio_catalog_and_native_handlers(tmp_path):
                 res=await session.call_tool(name,args or {})
                 assert not res.isError,res.content
                 return json.loads(res.content[0].text)
-            assert all(not m['enabled'] for m in (await call('software_modules'))['modules'])
+            status=await call('software_modules')
+            assert all(not m['enabled'] for m in status['modules'])
+            assert 'incomplete and in progress' in status['theseus_status']
+            assert '20 October 2026' in status['theseus_status']
             await call('software_module_set',{'module':'design','enabled':True})
             project=await call('app_project_create',{'name':'MCP synthetic project'})
             await call('software_module_set',{'module':'theseus','enabled':True})

@@ -60,6 +60,7 @@ step, and compares the MCP/UI captures with both source hashes. Desktop/mobile
 form, step/error and comparison segments are independently reviewed at that scope.
 
 Finite precise Profiler counters and UTF-16 ranges are described in
-[page coverage](BROWSER-COVERAGE.md). WebSocket stream comparison, Electron
+[page coverage](BROWSER-COVERAGE.md). Retained WebSocket message streams are
+described in [WebSocket comparison](BROWSER-WEBSOCKETS.md). Electron
 renderer/main/preload correlation and general reconstruction parity remain
 separate capabilities. No LLM, model endpoint or GPU is needed for this workflow.

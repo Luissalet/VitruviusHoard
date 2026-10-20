@@ -22,7 +22,7 @@ def control(name,description,props,required=(),read=False):
 
 
 CONTROLS=[
- control('software_modules','Read independent module states and Theseus incomplete/paused status without loading engines.',{},read=True),
+ control('software_modules','Read independent module states and Theseus incomplete/in-progress status without loading engines.',{},read=True),
  control('software_module_set','Explicitly enable or drain a native module.',{'module':{'enum':['design','babel','theseus']},'enabled':{'type':'boolean'},'automatic':{'type':'boolean'}},('module','enabled')),
  control('software_projects','List native source projects.',{},read=True),
  control('software_project_read','Read selected project revision, files and retained linked results.',PROJECT,('project_id',),True),
@@ -30,7 +30,7 @@ CONTROLS=[
  control('software_environment_link','Bind an explicit existing or newly registered Babel environment to a project source revision.',{**PROJECT,**VERSION,'environment_id':S,'path':S},('project_id',)),
  control('software_check','Check a retained source file against its explicitly linked Babel environment and retain exact findings.',{**PROJECT,**VERSION,'environment_id':S,'file':S,'language':{'enum':['python','typescript']}},('project_id','file','environment_id')),
  control('software_inspect','Associate a retained source file with a native Theseus project/artifact, preserving exact SHA and revision.',{**PROJECT,**VERSION,'file':S,'native_project_id':S},('project_id','file')),
- control('software_analysis_start','Request an existing Theseus operation for an associated source artifact; no paused-scope development.',{**ARTIFACT,'operation':S,'parameters':{'type':'object'}},('project_id','file','native_project_id','artifact_id','operation')),
+ control('software_analysis_start','Request an existing Theseus operation for an associated source artifact; development remains incomplete.',{**ARTIFACT,'operation':S,'parameters':{'type':'object'}},('project_id','file','native_project_id','artifact_id','operation')),
  control('software_result_retain','Retain a native analysis job/result under its original project/source revision and artifact hash.',{**ARTIFACT,'job_id':S},('project_id','file','native_project_id','artifact_id','job_id')),
 ]
 
@@ -63,7 +63,7 @@ def create_app(runtime=None):
             raise ValueError('Unknown tool')
         validate(args,entry['inputSchema'])
         if name=='software_modules':
-            return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and paused by Luis due to usage.'}
+            return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed by Luis on 20 October 2026.'}
         if name=='software_module_set':
             return await runtime.modules[args['module']].set(args['enabled'],args.get('automatic',False))
         if name=='software_references':

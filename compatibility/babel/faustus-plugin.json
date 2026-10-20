@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "id": "babel",
+  "name": "Babel's Hoard \u00b7 Vitruvius's Hoard",
+  "purpose": "Gives the model the exact, version-installed API signatures and docs for this project instead of its training-data guesses, and can check code it wrote for hallucinated APIs.",
+  "capabilities": [
+    "api-lookup",
+    "code-check",
+    "docs-search",
+    "docsets",
+    "environments",
+    "localization-audit"
+  ],
+  "placeholders": [
+    "COMPAT_DIR",
+    "VITRUVIUS_DIR",
+    "OWNER_URL",
+    "APP_URL",
+    "TOKEN_FILE",
+    "DATA_DIR",
+    "PYTHON"
+  ],
+  "defaults": {
+    "VITRUVIUS_DIR": "{COMPAT_DIR}/../..",
+    "OWNER_URL": "http://127.0.0.1:5191",
+    "APP_URL": "{OWNER_URL}/compat/babel",
+    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/design/mcp-token",
+    "DATA_DIR": "{VITRUVIUS_DIR}/data/babel",
+    "PYTHON": "{VITRUVIUS_DIR}/venv/Scripts/python.exe"
+  },
+  "app": {
+    "url_default": "{APP_URL}",
+    "ui_url": null,
+    "health": {
+      "path": "/api/health",
+      "expect": {
+        "service": "vitruvius-hoard"
+      }
+    }
+  },
+  "mcp": {
+    "transport": "stdio",
+    "command": "{PYTHON}",
+    "args": [
+      "-I",
+      "-m",
+      "vitruvius_hoard.compat_mcp",
+      "--module",
+      "babel"
+    ],
+    "env": {
+      "VITRUVIUS_URL": "{OWNER_URL}",
+      "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
+    }
+  },
+  "x-family": {
+    "standalone": false,
+    "agent_contract": true,
+    "absorbed_by": {
+      "id": "vitruvius",
+      "module": "babel",
+      "standalone": false,
+      "repository": "https://github.com/Luissalet/VitruviusHoard"
+    }
+  },
+  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner."
+}
