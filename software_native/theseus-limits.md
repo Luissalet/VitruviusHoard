@@ -23,11 +23,11 @@ revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
 The native catalogue contains67 static/retained operations,40 runtime operations
-and50 binary-session operations, behind38 Theseus tools and123 owner tools.
+and50 binary-session operations, behind39 Theseus tools and124 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
 and [evidence/function acceptance](../tasks/submission1059-1064.md).
-Delivery1068 adds the builtin ELF64 little-endian x86-64 layout reader, preserving original section/symbol/REL/RELA/RELR bytes and identities, declared linkage names and scoped inferred mitigation indicators. CAS1 passed independent17area tests and author365PASS/2emulatorSKIP, plus fresh external installed MCP/UI and original-retired transfer. Source2004dbbe integrates the exact approved0cc6097; the final shared release is still pending. Delivery1070 client inspection remains outside Main in CAS2 review; its full rerun and package acceptance are pending. See [ELF layout](../docs/ELF-LAYOUT.md).
+Delivery1068 adds the builtin ELF64 little-endian x86-64 layout reader, preserving original section/symbol/REL/RELA/RELR bytes and identities, declared linkage names and scoped inferred mitigation indicators. CAS1 passed independent17area tests and author365PASS/2emulatorSKIP, plus fresh external installed MCP/UI and original-retired transfer. Source2004dbbe integrates the exact approved0cc6097; the final shared release is still pending. Delivery1070 CAS2 is independently approved and integrated in source345ac3c6: artifact-independent free decoder identity/version inspection, with356 author tests and23 independent focused tests passing, plus actual external installed MCP124/UI/downloads and cold discovery without a profile. The combined final shared release is pending. See [ELF layout](../docs/ELF-LAYOUT.md).
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current
@@ -97,7 +97,7 @@ host must not be advertised as locally available.
 | Clean-room workflow | Immutable behavior handoff for a named builder workspace, separate reader evidence and builder-only document; linked verification/retry receipts and reported contract changes; UI/API/MCP exercised | No automatic source-independence guarantee for analyst-authored prose; broader runtime/package builder scenarios remain open |
 | Reconstruction completeness | Native obligations, boundary scenarios, owners, dependency graph and unknown lifecycle; current case/specification/program identity determines observed coverage, with oracle sensitivity and unresolved dependencies retained | Completeness describes the recorded claim graph only; add whole runtime/package observations and evidence portability before claiming the complete source workflow |
 | Reusable investigation knowledge | Projects retain findings/specifications | Transfer useful patterns and tested workflows across related projects and the existing Faustus skill/knowledge facilities |
-| Normal product surface | Web workspace, 38 MCP tools, static/runtime discovery/start/paged records, persistent binary session/byte-comparison forms, reconstruction/oracle workflow and evidence transfer | Complete the normal UI/MCP verification for added operation families and preserve every initial tool; no ad hoc script required for product capabilities |
+| Normal product surface | Web workspace, 39 MCP tools, static/runtime discovery/start/paged records, persistent binary session/byte-comparison forms, reconstruction/oracle workflow and evidence transfer | Complete the normal UI/MCP verification for added operation families and preserve every initial tool; no ad hoc script required for product capabilities |
 
 ## Verification that must accompany completion
 

@@ -22,18 +22,26 @@ ports and browser tabs closed. Independent review repeated17 area tests with
 its own isolated dependencies and original compiler/oracle path; it did not
 claim another full suite, MCP/UI or installed-package run.
 
-Delivery1070 remains outside Main in CAS2 review, exact commits
+Delivery1070 CAS2 was independently approved against revision2 and exact commits
 `8335c42b43e2f7f21f34fbed4efe3db490b9486d` and
-`305778a015becd65a1dbedcb52e6fdb724c32ccd`. Its proposed native API/MCP/UI action
-inspects selected Java/Apktool and TShark/capinfos identities, selection sources
-and exact version diagnostics without an artifact or project. Eight area and23
-owner tests passed, as did actual cold MCP124 without profile creation, both
-real decoder families and normal UI/JSON downloads before creating a project.
-All source QA closed. CAS1 full suite355PASS/1FAIL/2SKIP681s exposed a stale
-38-tool assertion after the new action correctly exposed39. CAS2 changes only
-that test, with23 focused tests passing; a new complete run is pending. The old
-failure remains recorded. Independent review and installed-package acceptance
-are still pending for this delivery.
+`305778a015becd65a1dbedcb52e6fdb724c32ccd`, integrated in source
+`345ac3c68ea4be1ef4e00625272cde32976f51a9`. Its native API/MCP/UI action inspects
+selected Java/Apktool and TShark/capinfos identities, selection sources and exact
+version diagnostics without an artifact or project. Missing/error/timeout and
+changed-file states remain explicit. Cold discovery creates no profile and never
+runs a decoder. Version probes receive no artifact, capture interface or stdin.
+See [client inspection](../docs/CLIENT-INSPECTION.md).
+
+Eight area and23 owner tests passed, plus actual cold MCP124/no profile and both
+real decoder families through native tool calls and normal UI/downloads. CAS1
+full355PASS/1FAIL/2SKIP681s exposed a stale38-tool test; its failure remains
+recorded. CAS2 only corrects that test expectation for the new39th tool, with a
+fresh full356PASS/2emulator opt-in SKIP569.20s and Ghidra enabled. Independent
+review ran23 focused workbench/client tests in its own isolated environment and
+did not claim a second full suite, MCP or UI run. Candidate wheel57bd0683 from
+8335c42 has identical packaged runtime to the test-only305778a;3810 exact member
+checks, pip dependency validation and fresh installed real MCP124/UI/downloads
+passed. All private owners, requests, ports and tabs closed.
 
 The shared installation remains the previously accepted wheel4c094708 while
 the final combined source/documentation release is prepared. These selected

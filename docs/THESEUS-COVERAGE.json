@@ -22,8 +22,7 @@
     "semantic-review-pending": 168,
     "implementation-pending": 19,
     "platform-required-implementation-pending": 3,
-    "source-integrated-release-pending": 1,
-    "independent-review-pending": 2,
+    "source-integrated-release-pending": 3,
     "excluded-by-user": 4,
     "integrated-tested-published": 10
   },
@@ -1689,10 +1688,10 @@
         "theseus_client_inspect family=apktool",
         "POST /theseus/api/engines/inspect"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "Expose selected free client/Java identity and version without requiring a target artifact or decoding it.",
       "acceptance": {
-        "state": "CAS2-source-tested-MCP-UI-awaiting-independent-review-full-rerun-and-package",
+        "state": "independent-CAS2-approved-source-integrated-external-wheel-tested-awaiting-final-release",
         "task": 1070,
         "submission_revision": 2,
         "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
@@ -1706,13 +1705,17 @@
           "tests/test_software_workspace.py"
         ],
         "normal_ui": "Readers installed before any project, explicit version query, main-workspace report, complete JSON download and dismissal/focus return",
-        "evidence": "8new and23owner PASS; CAS1full355PASS/1FAIL/2SKIP681s solely stale38-tool test. CAS2test-only correction,23focusedPASS2.54s; fresh full2 running. ColdMCP124/no profile, real Java/Apktool/TShark/capinfos file/output hashes and UI/downloads PASS without artifacts or projects. All source QA closed; wheel/install/review pending.",
+        "evidence": "CAS2author356PASS/2emulator opt-in SKIP569.20s GhidraON after preserving CAS1 stale-tool-count failure;23focused and23owner PASS. IndependentCAS2 repeated23focused, not full/MCP/UI. Source+fresh external installed coldMCP124/no profile, real Java/Apktool/TShark/capinfos and normal UI/exact JSON downloads PASS without projects/artifacts. All QA closed; final combined shared release pending.",
         "proofs": [
-          "clients1070-cas2-area20.xml",
+          "clients1070-full2-20.xml",
           "clients1070-owner20.xml",
-          "clients1070-mcp20-proof.json",
-          "clients1070-qa20-final.json"
-        ]
+          "clients1070-installed20.json",
+          "clients1070-installed-mcp20-proof.json",
+          "clients1070-installed-qa20-final.json"
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "345ac3c68ea4be1ef4e00625272cde32976f51a9",
+        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe"
       },
       "group": "client-diagnostics"
     },
@@ -1746,10 +1749,10 @@
         "theseus_client_inspect family=pcap",
         "POST /theseus/api/engines/inspect"
       ],
-      "status": "independent-review-pending",
+      "status": "source-integrated-release-pending",
       "scope": "Expose selected TShark/capinfos paths, selection sources and versions without requiring a capture artifact.",
       "acceptance": {
-        "state": "CAS2-source-tested-MCP-UI-awaiting-independent-review-full-rerun-and-package",
+        "state": "independent-CAS2-approved-source-integrated-external-wheel-tested-awaiting-final-release",
         "task": 1070,
         "submission_revision": 2,
         "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
@@ -1763,13 +1766,17 @@
           "tests/test_software_workspace.py"
         ],
         "normal_ui": "Readers installed before any project, explicit version query, main-workspace report, complete JSON download and dismissal/focus return",
-        "evidence": "8new and23owner PASS; CAS1full355PASS/1FAIL/2SKIP681s solely stale38-tool test. CAS2test-only correction,23focusedPASS2.54s; fresh full2 running. ColdMCP124/no profile, real Java/Apktool/TShark/capinfos file/output hashes and UI/downloads PASS without artifacts or projects. All source QA closed; wheel/install/review pending.",
+        "evidence": "CAS2author356PASS/2emulator opt-in SKIP569.20s GhidraON after preserving CAS1 stale-tool-count failure;23focused and23owner PASS. IndependentCAS2 repeated23focused, not full/MCP/UI. Source+fresh external installed coldMCP124/no profile, real Java/Apktool/TShark/capinfos and normal UI/exact JSON downloads PASS without projects/artifacts. All QA closed; final combined shared release pending.",
         "proofs": [
-          "clients1070-cas2-area20.xml",
+          "clients1070-full2-20.xml",
           "clients1070-owner20.xml",
-          "clients1070-mcp20-proof.json",
-          "clients1070-qa20-final.json"
-        ]
+          "clients1070-installed20.json",
+          "clients1070-installed-mcp20-proof.json",
+          "clients1070-installed-qa20-final.json"
+        ],
+        "reviewed_submission_revision": 2,
+        "application_head": "345ac3c68ea4be1ef4e00625272cde32976f51a9",
+        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe"
       },
       "group": "client-diagnostics"
     },
