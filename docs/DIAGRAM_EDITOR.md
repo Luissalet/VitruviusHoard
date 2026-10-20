@@ -29,18 +29,45 @@ The common Faustus panel receives document identity/revision, selection and the 
 
 The first visual surface edits graph types: flowcharts, architecture, state, ER and swimlane graphs. Templates cover review processes, architecture, organisation charts, concept maps and comparison. Shape creation, pointer dragging/resizing, labels, connections and their endpoints/ports, styles, multi-selection with Shift, arrow-key nudging, duplication, grouping/alignment, zoom, pan and automatic layout are available. Pinned boxes survive automatic layout. Native source and previous structured render controls remain available for all diagram types.
 
-100% uses document pixels. **Fit** shows the whole drawing; large diagrams otherwise extend beyond the viewport and can be panned. The mobile inspector moves below the canvas. This is the first graph delivery: multipage infographic composition, authored isometric states and linked insertion into other Hoards are subsequent work, not implemented by these controls.
+100% uses document pixels. **Fit** shows the whole drawing or current editorial page; large diagrams otherwise extend beyond the viewport and can be panned. The mobile inspector moves below the canvas. Authored isometric states and linked insertion into other Hoards remain separate work.
+
+## Editorial pages
+
+Four infographic templates cover comparison, timeline, process and relationships.
+They use the same graph source with `view.kind="infographic"`. `view.pages` holds
+stable IDs, title, order and pixel width/height. Each `view.nodes[id].page_id`
+chooses a page; font_size, font_weight, align, ink, border and show_label control
+its text and appearance. Labels in editable documents can hold longer body copy;
+legacy structured render requests keep their existing short-label contract.
+`view.assets` retains PNG/JPEG/WebP as embedded data URIs. Blocks refer to these
+assets by ID; native JSON and exports do not require the original image file.
+
+Page selection, creation, duplication, order, title, dimensions and deletion use
+the existing editor. Page options hold less frequent settings. Deleting a page
+in the UI deletes its blocks and incident links; native object edits can instead
+move blocks to another page first. Local and saved undo share the existing
+history. Object-edit collections also include pages, assets and view. A page
+object uses set/add/remove; view properties use set, and assets use keyed IDs.
+Each page draws its own nodes and internal links. Cross-page relationships stay
+in the semantic source and interactive reader. Automatic graph layout remains
+available for graphs; editorial templates retain their manually authored layout.
+
+Text remains editable. The renderer uses approximate character wrapping, not
+font shaping or desktop-publishing line layout. Saved renders report blocks
+outside page bounds and text that needs a larger box. These findings inform
+correction without blocking a save. Fit can make small-page labels small on a
+phone; zoom, pan and the inspector remain available.
 
 ## Interchange
 
 | Format | Preserved/tested scope | Limit |
 |---|---|---|
 | Native JSON | Source, IDs, profile, manual layout, ports/points and captured revision | Import creates a new document; it does not copy server-side revision history |
-| draw.io | Graph nodes, group membership, labels, shape subset, geometry, edge identity and intermediate points | Full draw.io style vocabulary, nested container semantics and arbitrary extensions are not claimed; original retained and warning returned |
+| draw.io | Graph nodes, group membership, labels, shape subset, geometry, edge identity and intermediate points; editorial pages, text styles and embedded raster images | Full draw.io style vocabulary and arbitrary external extensions are not claimed; cross-page links use native extension metadata; original retained and warning returned |
 | Mermaid | Graph labels and relationships on export; existing import types | Layout, stable native IDs, profile and authored explanations remain in native JSON |
 | Excalidraw | Existing supported shape/arrow import subset | Original retained; no general style/layout fidelity claim |
-| SVG | Frozen light/dark revision and manual geometry | Vector output, not native semantic source |
-| PNG/PDF | Browser render of frozen SVG with no remote asset/model request | Requires the render extra and an available Chromium browser |
+| SVG | Frozen light/dark revision and manual geometry; editorial pages stacked vertically | Vector output, not native semantic source |
+| PNG/PDF | Browser render with no remote asset/model request; PNG stacks pages, PDF uses one page per authored page with its own size | Requires the render extra and an available Chromium browser |
 | HTML | Self-contained frozen SVG plus keyboard/clickable authored graph traversal | Authored relations do not establish measured runtime dependencies |
 
 Exports always name a revision. Editing the document does not alter already exported figures. MCP reads return source, export and viewer URLs for the same revision. No source, runtime, CLI or service from the research reference projects is required.
@@ -49,4 +76,10 @@ Exports always name a revision. Editing the document does not alter already expo
 
 Area tests cover immutable reopening, simultaneous writers, same-field rollback, selective undo, object deletion, graph exchange (including colliding IDs across object kinds), malformed inputs and REST revisions. Existing diagram tests remain included. The isolated Chromium/MCP acceptance uses a synthetic twelve-node document: pointer and keyboard edit, native stdio edit concurrent with a manual size change, exact deep-link reopening, revision history, five export formats and interactive reading. Desktop1440 and mobile390 have no page overflow or JavaScript errors in that run.
 
-Evidence is recorded under `D:/LocalAI/research-inbox/expansiones-fusiones-20261020/`. It does not certify LLM reasoning quality, infographic workflows or insertion into all other Hoards. Main-app activation and live profile migration are coordinated separately with the installation owner.
+Editorial area tests also cover independent page edits, selective undo, long
+Spanish text, retained raster bytes, page dimensions and actual PNG/PDF output.
+The synthetic browser case saves/reopens two pages, ten blocks and an image at
+1440/390 without JavaScript errors or overflow. Evidence is recorded under
+`D:/LocalAI/research-inbox/expansiones-fusiones-20261020/`. It does not certify LLM
+reasoning quality or insertion into all other Hoards. Main-app activation and
+live profile migration are coordinated separately with the installation owner.

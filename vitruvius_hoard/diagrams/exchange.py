@@ -18,6 +18,20 @@ def import_document(source, format="auto"):
             return normalize(parsed), []
         if "type" in parsed and "nodes" in parsed:
             return normalize({"diagram": parsed}), []
+    if text.startswith('<'):
+        root = ET.fromstring(text)
+        pages = root.findall('./diagram') if root.tag == 'mxfile' else []
+        if pages:
+            from .editorial import import_pages
+            content = import_pages(pages, source)
+            ids = {n['id'] for n in content['diagram']['nodes']}
+            # Cross-page semantic links have no visible connector on a draw.io page.
+            # Retain them explicitly, never resurrect links to deleted objects.
+            for cell in root.findall('./vitruviusLinks/edge'):
+                edge = json.loads(cell.text or '{}')
+                if edge.get('from') in ids and edge.get('to') in ids:
+                    content['diagram']['edges'].append(edge)
+            return normalize(content), ['Draw.io pages, text and raster images are imported; unsupported external styles are not preserved.']
     diagram = load(text, format)
     content = {"diagram": diagram.model_dump(by_alias=True), "source": source, "view": {"nodes": {}, "edges": {}}}
     warnings = ["The source is retained; unsupported style and shape data may not be represented."]
@@ -66,6 +80,21 @@ def import_document(source, format="auto"):
 
 def drawio(row):
     content = row["content"]
+    if content.get("view", {}).get("kind") == "infographic":
+        from .editorial import ordered_pages, project
+        file = ET.Element("mxfile")
+        for page in ordered_pages(content):
+            child = ET.SubElement(file, "diagram", id=page['id'], name=page.get('title', ''))
+            model = ET.fromstring(drawio({'content': project(content, page)}))
+            model.set('pageWidth', str(page['width']))
+            model.set('pageHeight', str(page['height']))
+            model.set('page', '1')
+            child.append(model)
+        links = ET.SubElement(file, 'vitruviusLinks')
+        for edge in content['diagram']['edges']:
+            if content['view']['nodes'][edge['from']]['page_id'] != content['view']['nodes'][edge['to']]['page_id']:
+                ET.SubElement(links, 'edge').text = json.dumps(edge, ensure_ascii=False)
+        return ET.tostring(file, encoding='unicode')
     d, lay = document_layout(content)
     from .spec import GRAPH_TYPES
     if d.type not in GRAPH_TYPES:
@@ -84,7 +113,15 @@ def drawio(row):
     for node in d.nodes:
         box = lay.boxes[node.id]
         frame = frames.get(node.group)
-        cell = ET.SubElement(root, "mxCell", id="n:" + node.id, vitruviusId=node.id, parent="g:" + node.group if frame else "1", value=node.label, vertex="1", style=shapes.get(node.shape, "rounded=0;"))
+        style = content.get('view', {}).get('nodes', {}).get(node.id, {})
+        extra = ''.join(f'{dest}={style[key]};' for key,dest in (('font_size','fontSize'),('font_weight','fontWeight'),('align','align'),('fill','fillColor'),('stroke','strokeColor'),('ink','fontColor')) if key in style)
+        if not style.get('border', True):
+            extra += 'strokeColor=none;fillColor=none;'
+        if style.get('asset_id'):
+            extra += 'shape=image;image=' + content['view']['assets'][style['asset_id']]['data'] + ';'
+        if not style.get('show_label',True):
+            extra += 'labelPosition=none;'
+        cell = ET.SubElement(root, "mxCell", id="n:" + node.id, vitruviusId=node.id, parent="g:" + node.group if frame else "1", value=node.label, vertex="1", style=shapes.get(node.shape, "rounded=0;") + extra)
         ET.SubElement(cell, "mxGeometry", x=str(box.x - (frame.x if frame else 0)), y=str(box.y - (frame.y if frame else 0)), width=str(box.w), height=str(box.h), **{"as": "geometry"})
     for edge, route in zip(d.edges, lay.routes):
         cell = ET.SubElement(root, "mxCell", id="e:" + edge.id, vitruviusId=edge.id, parent="1", source="n:" + edge.source, target="n:" + edge.target, value=edge.label, edge="1", style="edgeStyle=orthogonalEdgeStyle;" + ("dashed=1;" if edge.style == "dashed" else ""))
@@ -121,6 +158,13 @@ def image(row, kind, mode="light"):
             page.evaluate("document.fonts.ready")
             if kind == "png":
                 return page.screenshot(full_page=True)
+            pages = row['rendering'].get('pages')
+            if pages:
+                styles = ''.join(f'@page p{i}{{size:{p["width"]}px {p["height"]}px;margin:0}}.p{i}{{page:p{i};break-after:page;width:{p["width"]}px;height:{p["height"]}px}}' for i,p in enumerate(pages))
+                body = ''.join(f'<section class="p{i}">{p["svg"][mode]}</section>' for i,p in enumerate(pages))
+                page.set_content('<meta charset="utf-8"><style>html,body{margin:0}svg{display:block}'+styles+'</style>'+body)
+                page.evaluate('document.fonts.ready')
+                return page.pdf(prefer_css_page_size=True, print_background=True)
             return page.pdf(width=f"{width}px", height=f"{height}px", print_background=True, margin={"top": "0", "bottom": "0", "left": "0", "right": "0"})
         finally:
             browser.close()

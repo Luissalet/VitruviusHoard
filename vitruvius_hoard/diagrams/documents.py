@@ -12,6 +12,7 @@ from html import escape
 import json
 import math
 from pathlib import Path
+from pydantic import Field
 import re
 import sqlite3
 import time
@@ -20,11 +21,16 @@ import uuid
 from ..hoard_link.agentkit import AppError
 from .layout import Box, Frame, Layout, Route, MARGIN, GROUP_PAD, GROUP_LABEL_H, wrap
 from .render import DEFAULT, FONT_STACK, gates, layout_of, svg
-from .spec import Diagram, GRAPH_TYPES
+from .spec import Diagram, Node, GRAPH_TYPES
+
+
+class EditorNode(Node):
+    label: str = Field("", max_length=6000)
 
 
 class EditorDiagram(Diagram):
     """An empty graph is a valid new editor document, unlike a render request."""
+    nodes: list[EditorNode] = Field(default_factory=list, max_length=80)
     def _consistent(self):
         if self.type in GRAPH_TYPES and not self.nodes and not self.edges:
             return self
@@ -93,6 +99,14 @@ def normalize(content):
         for key in ("fill", "stroke", "ink"):
             if key in item and (not isinstance(item[key], str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", item[key])):
                 raise ValueError("node colours must be six-digit hex colours")
+        for key, low, high in (("font_size", 8, 144), ("font_weight", 100, 900)):
+            if key in item and (not isinstance(item[key], (int, float)) or not math.isfinite(item[key]) or not low <= item[key] <= high):
+                raise ValueError(f"Invalid node {key}.")
+        if item.get("align", "center") not in ("left", "center", "right"):
+            raise ValueError("Unknown node text alignment.")
+        for key in ("border", "show_label"):
+            if key in item and not isinstance(item[key], bool):
+                raise ValueError(f"Node {key} must be true or false.")
     for item in view["edges"].values():
         if not isinstance(item, dict):
             raise ValueError("edge view must be an object")
@@ -118,6 +132,8 @@ def normalize(content):
         if not isinstance(series, list) or not series or any(not isinstance(c, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", c) for c in series):
             raise ValueError("profile series needs hex colours")
     raw.setdefault("source", "")
+    from .editorial import validate_view
+    validate_view(raw)
     return raw
 
 
@@ -186,6 +202,9 @@ def document_layout(content):
 
 
 def drawing(content):
+    if content.get("view", {}).get("kind") == "infographic":
+        from .editorial import drawing as editorial_drawing
+        return editorial_drawing(content)
     d, lay = document_layout(content)
     profile = content["profile"]
     report = gates(d, profile, lay) if d.nodes or d.type not in GRAPH_TYPES else []

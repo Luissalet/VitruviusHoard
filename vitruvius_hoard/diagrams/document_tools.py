@@ -39,7 +39,7 @@ class DocumentImport(BaseModel):
 
 
 class ObjectEdit(BaseModel):
-    collection: Literal["nodes", "edges", "groups", "view_nodes", "view_edges", "diagram"]
+    collection: Literal["nodes", "edges", "groups", "view_nodes", "view_edges", "pages", "assets", "view", "diagram"]
     id: str = ""
     action: Literal["set", "add", "remove"] = "set"
     values: dict[str, Any] = Field(default_factory=dict)
@@ -60,6 +60,8 @@ def public(row, include_svg=False):
     result = deepcopy(row)
     if not include_svg:
         result.get("rendering", {}).pop("svg", None)
+        for page in result.get("rendering", {}).get("pages", []):
+            page.pop("svg", None)
     result["files"] = {mode: f"/design/api/diagrams/documents/{row['id']}/export.svg?revision={row['revision']}&mode={mode}" for mode in ("light", "dark")}
     result["viewer_url"] = f"/design/api/diagrams/documents/{row['id']}/viewer?revision={row['revision']}"
     result["exports"] = {kind: f"/design/api/diagrams/documents/{row['id']}/export.{kind}?revision={row['revision']}" for kind in ("svg", "png", "pdf", "drawio", "mmd", "html")}
@@ -79,7 +81,17 @@ def save(services, args):
 def edit(services, args):
     content = store(services).get(args.id, args.base_revision)["content"]
     for change in args.edits:
-        if change.collection.startswith("view_"):
+        if change.collection in ("view", "assets"):
+            target = content["view"] if change.collection == "view" else content["view"].setdefault("assets", {})
+            if change.collection == "view":
+                if change.action != "set":
+                    raise ValueError("View properties use action=set.")
+                target.update(change.values)
+            elif change.action == "remove":
+                target.pop(change.id, None)
+            else:
+                target[change.id] = {**target.get(change.id, {}), **change.values}
+        elif change.collection.startswith("view_"):
             target = content["view"][change.collection[5:]]
             if change.action == "remove":
                 target.pop(change.id, None)
@@ -90,7 +102,7 @@ def edit(services, args):
                 raise ValueError("Diagram properties use action=set.")
             content["diagram"].update(change.values)
         else:
-            values = content["diagram"][change.collection]
+            values = content["view"].setdefault("pages", []) if change.collection == "pages" else content["diagram"][change.collection]
             item = next((item for item in values if item["id"] == change.id), None)
             if change.action == "add":
                 if item is not None:
