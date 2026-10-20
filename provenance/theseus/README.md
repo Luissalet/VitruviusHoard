@@ -9,6 +9,10 @@ Explicit page scenarios execute caller-authored CDP steps on a selected target,
 retain step responses/errors and compare saved recordings without reconnecting
 or replaying actions. See [browser scenarios](docs/BROWSER-SCENARIOS.md).
 
+Saved browser comparisons also preserve WebSocket message order inside each
+connection and exact stream multiplicities per reported URL, with explicit
+unknown history. See [retained WebSocket streams](docs/BROWSER-WEBSOCKETS.md).
+
 Persistent Frida sessions and finite observation windows are available in
 Ejecuciones and the runtime API/MCP: explicit devices/PIDs, paused spawn,
 caller-authored scripts, full recorded message prefixes, unload/resume/detach,

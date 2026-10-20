@@ -5,6 +5,7 @@ import json
 
 from javascript_runtime import saved_pair
 from browser_capture import network_inventory
+from browser_websocket import compare as compare_websockets
 
 
 def canonical(value):return json.dumps(value,ensure_ascii=True,sort_keys=True,separators=(',',':'))
@@ -34,6 +35,10 @@ def scripts(result):
 
 
 def network(result):
+    socket_ids={event['parameters']['requestId'] for event in result['events']
+        if event['method'].startswith('Network.webSocket') and 'requestId' in event['parameters']}
+    rows=[row for row in result.get('network',network_inventory(result['events'],'not-recorded'))
+        if row.get('request_id') not in socket_ids or 'request' in row or 'response' in row]
     return [{'url':row.get('request',{}).get('url',row.get('response',{}).get('url')),'method':row.get('request',{}).get('method'),
         'request_headers':row.get('request',{}).get('headers'),
         'post_data':row.get('request',{}).get('postData'),
@@ -41,7 +46,7 @@ def network(result):
         'response_headers':row.get('response',{}).get('headers'),
         'status':row.get('response',{}).get('status'),'loading':row.get('loading','unknown'),
         'body_state':row['body']['state'],'body_sha256':row['body'].get('sha256'),
-        'body_representation':row['body'].get('representation')} for row in result.get('network',network_inventory(result['events'],'not-recorded'))]
+        'body_representation':row['body'].get('representation')} for row in rows]
 
 
 def dom_tree(node):
@@ -109,6 +114,10 @@ def compare(request,source_bytes):
         'scenario_step_alignment':{'state':'literal-positional-requests' if reference['operation']==candidate['operation']=='browser.scenario' else 'unknown-no-two-scenario-definitions'},
         'scenario_steps':scenario_steps(reference,candidate),
         'scripts':differences(scripts(a),scripts(b)),'network':differences(network(a),network(b)),
+        'websocket_streams':compare_websockets(a,b),
+        'websocket_scope':{'projection':'retained-event-message-streams','collection':'unordered-streams-with-multiplicity',
+            'ordering':'exact-inside-each-stream','reference_capture_status':a['status'],'candidate_capture_status':b['status'],
+            'absence':'No retained events establish neither absent traffic nor complete connection history'},
         'listeners':{'state':'selected-observations' if known else 'unknown',
             'reference_selection':selections[0],'candidate_selection':selections[1],
             'records':differences(listener_rows(a),listener_rows(b)) if known else []},
@@ -120,6 +129,8 @@ def compare(request,source_bytes):
             'Unexecuted, incomplete or differently defined steps remain unknown, including a recovered response whose observation interval did not complete.',
             'Equal tuples describe selected observations, not behavioral equivalence or coverage of a whole process.',
             'URL groups and repeated observation counts are not authenticated request or script identities.',
+            'WebSocket comparison preserves ordered reported messages inside each connection and unordered stream multiplicities per reported URL. IDs and clocks are capture-local; payload values stay literal.',
+            'CDP WebSocketFrame reports complete messages, not authenticated wire fragments. Missing boundaries and journal gaps remain unknown even when retained streams match.',
             'Listener tuples describe metadata for the caller-selected selectors, not callback invocations or authenticated element identity.',
             'Capture-local script/request IDs, clocks and ordering are excluded from tuple comparison; original events remain in each source.',
             'Missing script texts and response bodies remain unknown even if their metadata tuples match.',
