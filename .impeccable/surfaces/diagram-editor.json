@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T12:27:07.273793Z",
+  "generatedAt": "2026-10-20T12:42:47.513126Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -380,7 +380,7 @@
         "rerun": false
       },
       "excludedCapture": "cicero-mobile-figure-controls.png (R1, header obstructed)",
-      "documenterActivity": "Source/receipt inspection and eleven supplied R2/detail captures opened; no new context/detector, browser, server, model, GPU or functional execution.",
+      "documenterActivity": "Source/receipt inspection; eleven initial supplied R2/detail captures and two subsequent pagefix captures opened. No new context/detector, browser, server, model, GPU or functional execution.",
       "notCanonized": [
         "Native synthetic QA diagram/PNG is content, not stock imagery or a new AI/decorative illustration.",
         "No real profiles, LLM inference or figure-generation quality tested.",
@@ -403,7 +403,8 @@
         ],
         "pageBoundary": "Selected editorial page controls PNG preview only; full native document with all pages retained. Graphs have no page selection.",
         "origin": "Editor document link and revision-specific native source link; package retains source and PNG independently.",
-        "dirtyState": "Save first; use returned ID/revision; do not download if saving fails; later local edits may remain dirty."
+        "dirtyState": "Save first; use returned ID/revision; do not download if saving fails; later local edits may remain dirty.",
+        "pageResolution": "selectedPage(content,id) uses a valid ID from the current document, otherwise first by order without mutating the page array. Canvas, Faustus selected_page context and clean export URL share this result. After saving, export resolves the page again against accepted saved.content and uses its revision."
       },
       "import": "Native parser accepts figure and diagram JSON envelopes. Browser file input explicitly includes .vfigure; imports native content as a new document.",
       "roundtrip": {
@@ -436,7 +437,40 @@
           "width": 356,
           "height": 222
         }
-      ]
+      ],
+      "pageSelectionFix": {
+        "finding": "Technical review #952 CAS9 P2: export could select another page or reuse a page ID from another document.",
+        "source": [
+          "client/src/components/diagram-editor/DiagramEditor.jsx",
+          "client/src/components/diagram-editor/editorial.js"
+        ],
+        "buildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/figure-producer-pagefix-build.log",
+        "buildResult": "Successful frontend build.",
+        "functionalReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/pagefix-results.json",
+        "functionalResult": "Author native UI: ordered-clean/ordered-dirty visible and exported second, PNG 800x600, revisions 1/2; switched-clean/switched-dirty visible and exported other-first, PNG 640x480, revisions 1/2. All four retain full source; selected_page context other-first; no JS or HTTP errors.",
+        "captures": [
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/pagefix-desktop.png",
+            "width": 1440,
+            "height": 1604,
+            "openedByDocumenter": true
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/pagefix-mobile.png",
+            "width": 390,
+            "height": 2585,
+            "openedByDocumenter": true
+          }
+        ],
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/FINISH-PAGEFIX.txt",
+          "disposition": "ship",
+          "finding": "resolved",
+          "remaining": "clear for page-selection P2 only",
+          "scope": "Only this P2; source and recaptures inspected, functional receipts attributed to author. No visible regression observed. Does not replace pending technical CAS vote, extend FINISH.txt to other states, or certify integration/installed activation."
+        },
+        "documenterActivity": "Inspected corrected source, build and functional receipts; opened both supplied pagefix captures. No detector, browser/server, functional tests, model or GPU execution."
+      }
     }
   },
   "components": [
@@ -559,6 +593,11 @@
       {
         "name": "The Accepted Revision Rule",
         "body": "Output actions with outstanding changes save first and identify the accepted revision, retaining any later edits as a draft.",
+        "section": "components"
+      },
+      {
+        "name": "The Visible Page Rule",
+        "body": "Resolve the current document's page consistently for the canvas, Faustus context and figure export; resolve it again against the accepted source after saving.",
         "section": "components"
       }
     ],
