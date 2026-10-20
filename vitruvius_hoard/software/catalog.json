@@ -715,7 +715,7 @@
           "type": "integer"
         },
         "criteria": {
-          "description": "Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.",
+          "description": "Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.",
           "items": {
             "additionalProperties": true,
             "type": "object"
@@ -3021,7 +3021,7 @@
           "type": "integer"
         },
         "criteria": {
-          "description": "Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.",
+          "description": "Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.",
           "items": {
             "additionalProperties": true,
             "type": "object"

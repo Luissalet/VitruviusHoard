@@ -96,7 +96,7 @@ class AssayArgs(BaseModel):
     render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
     timeout_s: int = Field(300, ge=30, le=900)
-    criteria: list[dict[str, Any]] = Field(default_factory=list, description="Optional explicit cases: id, what, acts (click/fill/press), expect (want/unchanged/painted), control. These supplement measured coverage with the requested behavior.")
+    criteria: list[dict[str, Any]] = Field(default_factory=list, description="Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.")
 
 
 class CritiqueArgs(BaseModel):

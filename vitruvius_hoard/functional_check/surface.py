@@ -129,6 +129,8 @@ class Case:
     #: Which control it exercises, when it exercises one. Blank for a case
     #: about the artefact as a whole.
     control: str = ""
+    #: Browser conditions for this explicit case; every case still opens fresh.
+    environment: Dict[str, Any] = field(default_factory=dict)
 
     def render(self) -> str:
         """One line for the record."""
