@@ -3,7 +3,10 @@ import {wasmInterfaceSchema,type WasmInterfaceEntry} from './src/domain/wasm/was
 
 export function compareWasm(reference:unknown,candidate:unknown,scope='both') {
   if(!['both','imports','exports'].includes(scope)) throw new Error('Choose imports, exports or both');
-  const left=wasmInterfaceSchema.parse(reference),right=wasmInterfaceSchema.parse(candidate);
+  const observed=(value:unknown)=>value==null
+    ? {state:'partial' as const,entries:[],issues:['The retained observation did not include producer-owned typed interface facts.']}
+    : wasmInterfaceSchema.parse(value);
+  const left=observed(reference),right=observed(candidate);
   const groups=new Map<string,{left:WasmInterfaceEntry[];right:WasmInterfaceEntry[]}>();
   for(const [side,value] of [['left',left],['right',right]] as const) for(const entry of value.entries) {
     if(scope!=='both' && entry.direction!==(scope==='imports'?'import':'export')) continue;
@@ -19,6 +22,8 @@ export function compareWasm(reference:unknown,candidate:unknown,scope='both') {
     summary[state]++;
     return {key,state,...group,reason:unresolved?'Incomplete, duplicate or unresolved interface facts cannot establish equality or absence.':null};
   });
-  return {scope,changes,summary,coverage:summary.unknown?'partial':'complete-within-inputs',
+  return {scope,changes,summary,
+    input_coverage:{left:left.state,right:right.state},input_issues:{left:left.issues,right:right.issues},
+    coverage:left.state!=='complete'||right.state!=='complete'||summary.unknown?'partial':'complete-within-inputs',
     limitations:['Declared interface equality is not successful linking, runtime behavior or general ABI compatibility.']};
 }

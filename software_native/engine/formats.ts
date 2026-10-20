@@ -1,7 +1,6 @@
 /** Native format operations over inert bytes and installed free analysis libraries. */
 import {createHash} from 'node:crypto';
 import {open} from 'node:fs/promises';
-import wabtFactory from 'wabt';
 import {contractInfo} from 'evmole';
 import {readGoBinaryImage} from './src/go/GoBinaryImage.js';
 import {parseGoModuleBytes} from './src/go/GoModuleText.js';
@@ -13,7 +12,7 @@ import {decodeNibArchive} from './src/artifacts/apple/NibArchive.js';
 import {InterfaceBuilderDecodeBudget} from './src/artifacts/apple/InterfaceBuilderDecodeBudget.js';
 import {decodeEvmBytecodeCarrier} from './src/evm/EvmBytecodeCarrier.js';
 import {inspectSolidityMetadata} from './src/evm/SolidityMetadata.js';
-import {parseWabtWat} from './src/wasm/WabtWat.js';
+import {inspectWasm} from './wasm-inspection.js';
 import {readElfHeader,readElfSymbols,readSnapshotHeader} from './src/flutter/DartElf.js';
 import {readElfBuildIds} from './src/flutter/ElfBuildId.js';
 import {ArtifactResourceScope} from './src/artifacts/ArtifactResourceScope.js';
@@ -31,6 +30,7 @@ export interface FormatParameters {
   encoding?:'raw'|'hex'|undefined; root?:string|undefined; offset?:number|undefined; limit?:number|undefined;
   symbols?:string[]|undefined; snapshot_offsets?:number[]|undefined;
   source_paths?:string[]|undefined;
+  glue_paths?:string[]|undefined;candidate_paths?:string[]|undefined;
   query?:unknown;
   architecture?:'arm64'|'x86_64'|undefined;max_records?:number|undefined;
 }
@@ -95,18 +95,7 @@ export async function analyzeFormat(operation:string,bytes:Buffer,path:string,pa
       limitations:['Selectors, argument types, storage layout and control flow are static inferences, not original Solidity source. Offsets identify decoded bytecode; hex-carrier character positions differ. No network or chain is queried.',
         'State mutability is a conservative static inference; a pure source function can be reported as view. An independently known ABI can contradict this inference.']};
   }
-  if (operation==='wasm.artifact') {
-    const wabt=await wabtFactory();
-    const module=wabt.readWasm(bytes,{readDebugNames:true});
-    try {
-      module.generateNames();module.applyNames();
-      const text=module.toText({foldExprs:false,inlineExport:false});
-      const parsed=parseWabtWat(text);
-      return {...parsed,wat:text,interface_entries:parsed.interface.entries,
-        definitions:parsed.forms.map((definition,index)=>({name:/^\(\w+\s+([^\s()]+)/.exec(definition)?.[1]||String(index),definition})),
-        limitations:['WAT is a disassembly; generated names are not proof of original source identifiers. No module is instantiated.']};
-    } finally {module.destroy();}
-  }
+  if (operation==='wasm.artifact') return inspectWasm(bytes,path,parameters);
   if (operation==='flutter.elf') {
     const header=readElfHeader(bytes);
     if (header.failure) throw new Error(header.failure.reason);

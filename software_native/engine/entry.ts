@@ -18,6 +18,8 @@ import {managedNativeVerification} from './managed-native.js';
 import {traceWebSources} from './web-sources.js';
 import {callPaths,retainedInputSchema} from './retained-evidence.js';
 import {compareRetainedFunctions} from './retained-functions.js';
+import {inspectWasm} from './wasm-inspection.js';
+import {publishWasmPrefix} from './wasm-recording.js';
 
 const portfolioOperations=['artifact.inventory','artifact.extract','managed.graph','apple.application',
   'android.application','harmony.application','apple.interface_builder','apple.assets','apple.dylibs'] as const;
@@ -33,6 +35,7 @@ const requestSchema = z.object({
     encoding:z.enum(['raw','hex']).optional(), root:z.string().optional(), offset:z.number().int().min(0).optional(),
     limit:z.number().int().min(0).optional(), symbols:z.array(z.string()).optional(),
     snapshot_offsets:z.array(z.number().int().min(0)).optional(),source_paths:z.array(z.string()).optional(),query:z.unknown().optional(),
+    glue_paths:z.array(z.string().min(1)).optional(),candidate_paths:z.array(z.string().min(1)).optional(),
     output_directory:z.string().optional(),architecture:z.enum(['arm64','x86_64']).optional(),max_records:z.number().int().min(1).optional()}).strict().default({}),
   expected_input_sha256:z.string().optional(),source_artifact_sha256:z.string().optional(),
   candidate_path:z.string().optional(),expected_candidate_sha256:z.string().optional(),
@@ -51,6 +54,8 @@ async function main() {
   const inputSha256 = directory ? await directoryIdentity(path) : createHash('sha256').update(bytes).digest('hex');
   if (request.expected_input_sha256 && request.expected_input_sha256!==inputSha256) throw new Error('Retained analysis document changed; its receipt hash no longer matches');
   const sha256=request.source_artifact_sha256??inputSha256;
+  const envelope={operation:request.operation,artifact_sha256:sha256,input_sha256:inputSha256,
+    engine:'Theseus native analysis core',runtime:process.version};
   const parameters = request.parameters;
   let result:unknown;
   if(request.operation==='evidence.compare_functions') {
@@ -85,9 +90,10 @@ async function main() {
         ...(parameters.method_offset===undefined ? {} : {methodOffset:parameters.method_offset}),
         ...(parameters.method_limit===undefined ? {} : {methodLimit:parameters.method_limit}),
         ...(parameters.user_strings===undefined ? {} : {userStrings:parameters.user_strings})});
+  } else if(request.operation==='wasm.artifact') {
+    result=await inspectWasm(bytes,path,parameters,observation=>publishWasmPrefix(outputFile,envelope,observation));
   } else result=await analyzeFormat(request.operation,bytes,path,parameters);
-  const output = {operation:request.operation,artifact_sha256:sha256,input_sha256:inputSha256,engine:'Theseus native analysis core',
-    runtime:process.version,result};
+  const output = {...envelope,result};
   const temporary = outputFile + '.' + process.pid + '.tmp';
   await writeFile(temporary,JSON.stringify(output,null,2),'utf8');
   await rename(temporary,outputFile);

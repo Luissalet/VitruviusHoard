@@ -165,6 +165,14 @@ class Comparisons:
                 self._terminate(process)
         timed_out = False
         try:
+            observer = definition.get("spawn_observer")
+            if callable(observer):
+                try:
+                    observer(process)
+                except BaseException:
+                    self._terminate(process)
+                    process.communicate()
+                    raise
             stdout, stderr = process.communicate(definition.get("stdin", ""), timeout=definition.get("timeout_seconds"))
         except subprocess.TimeoutExpired:
             timed_out = True
