@@ -1,6 +1,6 @@
 # Software workspace API/MCP
 
-GET /api/agent/tools exposes a cold static catalogue:52 design,10 API-documentation and38 existing reverse-engineering tools, plus10 software-workspace controls (110 total). POST /api/agent/call accepts {name,arguments} with the existing root or migrated native bearer; POST /api/ui/call uses identical handlers. Discovery starts no host, engine, database, factory, recovery or worker. Native operations require an explicitly enabled module. Routes and complete native editors remain under /design/, /babel/ and /theseus/.
+GET /api/agent/tools exposes a cold static catalogue:65 design,10 API-documentation and38 existing reverse-engineering tools, plus10 software-workspace controls (123 total). POST /api/agent/call accepts {name,arguments} with the existing root or migrated native bearer; POST /api/ui/call uses identical handlers. Discovery starts no host, engine, database, factory, recovery or worker. Native operations require an explicitly enabled module. Routes and complete native editors remain under /design/, /babel/ and /theseus/.
 
 Native schemas/annotations are retained in vitruvius_hoard/software/catalog.json. Theseus HTTP/MCP keeps its {ok,result} envelope and artifact-image MCP ImageContent. Babel keeps its native result/error shape and explicit environment IDs. Native API/format behavior remains authoritative; do not infer that a catalogue operation means its optional engine is installed.
 

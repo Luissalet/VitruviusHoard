@@ -170,13 +170,16 @@ def image(row, kind, mode="light"):
             browser.close()
 
 
-def figure(row, mode="light", page_id=None, origin_url=""):
+def figure(row, mode="light", page_id=None, origin_url="", state_id=None):
     """Portable revision and PNG. Selecting a page never changes the saved source."""
     import base64
     from urllib.parse import urlsplit
     if mode not in ("light", "dark"):
         raise ValueError("Unknown colour mode.")
-    captured = deepcopy(row)
+    from .mechanism import selected
+    captured = deepcopy(selected(row, state_id))
+    if page_id is not None and state_id:
+        raise ValueError("Select either an infographic page or an isometric state.")
     if page_id is not None:
         page = next((p for p in row["rendering"].get("pages", []) if p["id"] == page_id), None)
         if page is None:
@@ -191,6 +194,7 @@ def figure(row, mode="light", page_id=None, origin_url=""):
         origin = {"editor_url": f"{base}/design/#/diagrams?document={row['id']}",
                   "source_url": f"{base}/design/api/diagrams/documents/{row['id']}/source.json?revision={row['revision']}"}
     return {"format": "vitruvius.figure/1", "document_id": row["id"], "revision": row["revision"],
+            **({"state_id": state_id} if state_id else {}),
             "title": row["content"]["diagram"].get("title", ""), "page_id": page_id,
             "content": deepcopy(row["content"]), "origin": origin,
             "preview": {"mime": "image/png", "data": base64.b64encode(image(captured, "png", mode)).decode("ascii")}}

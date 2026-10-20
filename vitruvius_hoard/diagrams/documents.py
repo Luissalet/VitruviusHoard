@@ -134,6 +134,8 @@ def normalize(content):
     raw.setdefault("source", "")
     from .editorial import validate_view
     validate_view(raw)
+    from .mechanism import validate as validate_mechanism
+    validate_mechanism(raw)
     return raw
 
 
@@ -142,8 +144,9 @@ def _port(box, side):
             "left": (box.x, box.cy), "right": (box.x + box.w, box.cy)}[side]
 
 
-def document_layout(content):
-    d = EditorDiagram.model_validate(content["diagram"])
+def document_layout(content, state_id=None):
+    from .mechanism import diagram_for
+    d = EditorDiagram.model_validate(diagram_for(content, state_id))
     if not d.nodes and d.type in GRAPH_TYPES:
         return d, Layout(960, 640, {}, [], [], 36 if d.title else 0)
     lay = layout_of(d)
@@ -201,11 +204,13 @@ def document_layout(content):
     return d, lay
 
 
-def drawing(content):
+def drawing(content, state_id=None):
+    if state_id and content["diagram"]["type"] != "isometric":
+        raise ValueError("States apply to isometric diagrams.")
     if content.get("view", {}).get("kind") == "infographic":
         from .editorial import drawing as editorial_drawing
         return editorial_drawing(content)
-    d, lay = document_layout(content)
+    d, lay = document_layout(content, state_id)
     profile = content["profile"]
     report = gates(d, profile, lay) if d.nodes or d.type not in GRAPH_TYPES else []
     result = {"svg": {mode: svg(d, profile, mode, lay, content["view"]["nodes"]) for mode in ("light", "dark")},

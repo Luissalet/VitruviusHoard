@@ -3,7 +3,12 @@ from html import escape
 import json
 
 
-def reader(row):
+def reader(row, state_id=None):
+    if row["content"]["diagram"]["type"] == "isometric":
+        from .isometric_reader import reader as isometric_reader
+        return isometric_reader(row, state_id)
+    if state_id:
+        raise ValueError("States apply to isometric diagrams.")
     title = row["content"]["diagram"].get("title") or "Diagrama"
     data = json.dumps(row["content"]["diagram"], ensure_ascii=False).replace("<", "\\u003c")
     return """<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -36,5 +41,6 @@ def compare(before, after):
         changes[name] = {"added": sorted(b.keys() - a.keys()), "removed": sorted(a.keys() - b.keys()),
                          "changed": [{"id": key, "before": a[key], "after": b[key]} for key in sorted(a.keys() & b.keys()) if a[key] != b[key]]}
     return {"id": after["id"], "before_revision": before["revision"], "after_revision": after["revision"],
+            "mechanism_changed": before["content"].get("mechanism") != after["content"].get("mechanism"),
             "changes": changes, "view_changed": before["content"]["view"] != after["content"]["view"],
             "title_changed": before["content"]["diagram"].get("title") != after["content"]["diagram"].get("title")}
