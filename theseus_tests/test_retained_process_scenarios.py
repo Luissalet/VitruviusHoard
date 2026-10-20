@@ -65,8 +65,11 @@ def test_process_workflow_detects_constant_mutant_then_requires_fresh_transfer_v
     for name in ('reference','candidate','constant-mutant'):(tmp_path/name/'original.py').unlink()
     fresh=wait(store,manager.start(new_pid));assert fresh['result']['passed']==1
     moved=loaded['id_map'];new_scenario=moved[scenario['id']]
-    variants=[{'name':'Constant output','captures':[{'scenario_id':new_scenario,'candidate_job_id':moved[mutant['id']],
-        'candidate_sha256':mutant['result']['analysis_sha256']}]}]
+    imported_test=store.job(moved[tested['id']])
+    variants=imported_test['result']['variants']
+    assert variants[0]['captures'][0]['candidate_job_id']==moved[mutant['id']]
+    assert variants[0]['captures'][0]['scenario_id']==new_scenario
+    assert variants[0]['captures'][0]['candidate_sha256']==mutant['result']['analysis_sha256']
     fresh_test=wait(store,flow.selftest(new_pid,variants));assert fresh_test['result']['sensitive']
     assert flow.read(new_pid)['claims'][0]['complete']
     assert all(job['state'] not in {'queued','running'} for job in store.items('jobs',new_pid))
