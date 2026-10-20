@@ -157,6 +157,29 @@ class Evidence:
                 record_keys.add(key)
                 json.loads(row["record"])
             jobs = {row["id"]: row for row in payload["jobs"]}
+            for row in payload['jobs']:
+                result=row['result']
+                if result.get('kind')!='oracle_selftest':continue
+                snapshots={scenario['id']:scenario['definition'] for scenario in result.get('scenarios',[])}
+                for variant in result.get('variants',[]):
+                    if 'captures' not in variant:continue
+                    if set(variant)!={'name','captures'} or not isinstance(variant['captures'],list):
+                        raise ValueError('Malformed retained oracle variant')
+                    captures=variant['captures']
+                    if len(captures)!=len(snapshots) or {capture['scenario_id'] for capture in captures}!=set(snapshots):
+                        raise ValueError('Retained oracle variant does not cover its frozen scenarios')
+                    for capture in captures:
+                        if set(capture)!={'scenario_id','candidate_job_id','candidate_sha256'}:
+                            raise ValueError('Malformed retained oracle capture binding')
+                        links([capture['scenario_id']],'scenarios');links([capture['candidate_job_id']],'jobs')
+                        definition=snapshots[capture['scenario_id']]
+                        if not retained_scenarios.selected(definition):raise ValueError('Retained oracle capture has an incompatible scenario')
+                        candidate=jobs[capture['candidate_job_id']]['result']
+                        operation='process.capture' if definition['kind']=='retained-process-scenarios' else 'browser.scenario'
+                        if candidate.get('kind')!='runtime_analysis' or candidate.get('operation')!=operation:
+                            raise ValueError('Retained oracle candidate has an incompatible capture operation')
+                        if candidate.get('analysis_sha256')!=capture['candidate_sha256']:
+                            raise ValueError('Retained oracle candidate SHA-256 differs from its selected identity')
             documents = {}
             for key, entry in payload["analysis_documents"].items():
                 links([key], "jobs")
@@ -200,6 +223,13 @@ class Evidence:
                         else remap(child) for key, child in value.items()}
             return value
 
+        def remap_observation(value):
+            if not isinstance(value,dict) or not retained_scenarios.selected(value):return value
+            # This envelope has typed links; its captured requests/responses,
+            # process record, query and arbitrary returned IDs stay byte-literal.
+            return {**value,'capture_job_id':mapping.get(value['capture_job_id'],value['capture_job_id']),
+                'sources':remap(value.get('sources',[]))}
+
         try:
             folder.mkdir(parents=True)
             folder_created = True
@@ -230,6 +260,22 @@ class Evidence:
                 for row in payload["jobs"]:
                     key = mapping[row["id"]]
                     result = remap(row["result"])
+                    for source_case,case in zip(row['result'].get('cases',[]),result.get('cases',[])):
+                        if not isinstance(source_case,dict) or not isinstance(case,dict):continue
+                        for side in ('reference','candidate'):
+                            if isinstance(source_case.get(side),dict) and retained_scenarios.selected(source_case[side]):
+                                case[side]=remap_observation(source_case[side])
+                    if row['result'].get('kind')=='oracle_selftest':
+                        if 'references' in row['result']:
+                            result['references']={mapping.get(scenario_id,scenario_id):remap_observation(observation)
+                                for scenario_id,observation in row['result']['references'].items()}
+                        # Only this typed variant binding is a candidate job link.
+                        # A similarly named field inside a command, raw result or
+                        # captured payload remains literal historical content.
+                        for source_variant,variant in zip(row['result'].get('variants',[]),result.get('variants',[])):
+                            if 'captures' in source_variant:
+                                variant['captures']=[{**remap(capture),'candidate_job_id':mapping[capture['candidate_job_id']]}
+                                    for capture in source_variant['captures']]
                     for collection in ("scenarios", "derived_artifacts"):
                         if isinstance(result.get(collection), list):
                             for case in result[collection]:
