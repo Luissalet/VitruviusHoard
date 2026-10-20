@@ -1,4 +1,4 @@
-> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process deliveries are integrated and published in application source `5ff5b02ce74f218649f447b9f4ce593b109c9875`.
+> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`.
 
 # Source coverage and completion
 
@@ -12,13 +12,21 @@ counts and matching operation names do not certify individual contract parity.
 
 The offline web-source export, generated-position trace and literal import trace
 in1043 and process capture/comparison plus typed evidence transfer in1046 passed
-independent revision2 review, integration and publication. The shared venv has
-the approved wheel25a50de7,3804 exact installed files and123 cold MCP tools;
-the shared owner remains OFF and port5191 was never started for deployment.
-Whole-bundle/retained-call-path delivery1059 and native-function/correlation
-delivery1064 have author MCP/UI acceptance and remain in review; they are not
-advertised as part of the installed shared product yet. Free debugger backends
-and the other explicit gaps remain open. See [reviewed acceptance](../tasks/submission1043-1046.md).
+independent revision2 review, integration and publication. The earlier shared
+release25a50de7 was verified with3804 exact files and123 cold MCP tools, without
+starting the shared owner. Delivery1059 adds retained evidence sets, exact
+membership/declared pairs and complete unknown histories, and all shortest direct
+call paths from complete dossiers. Delivery1064 adds eight function dimensions,
+recomputed process/artifact/function aggregation, unchanged inventory occurrences
+and explicitly side-aligned static/runtime hypotheses. Both passed independent
+revision1 review and source/external-wheel MCP/UI acceptance and are integrated
+in the source above. No original path or live analysis session is needed for
+these retained queries; partial facets and missing evidence remain unknown.
+The native catalogue contains66 static/retained operations,40 runtime operations
+and50 binary-session operations, behind38 Theseus tools and123 owner tools.
+These counts do not certify the remaining source contracts. Free debugger
+backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
+and [evidence/function acceptance](../tasks/submission1059-1064.md).
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current
