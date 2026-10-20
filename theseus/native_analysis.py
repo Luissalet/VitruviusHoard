@@ -18,6 +18,7 @@ from .firmware import OPERATIONS as FIRMWARE_OPERATIONS, available as firmware_a
 from .process_compare import QUERY as PROCESS_QUERY
 from .retained_evidence import OPERATIONS as EVIDENCE_OPERATIONS
 from .elf_layout import OPERATIONS as ELF_OPERATIONS
+from .objdump_inspection import OPERATIONS as OBJDUMP_OPERATIONS, engine as objdump_engine
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -166,6 +167,7 @@ OPERATIONS += [{"name": name, "title": title, "description": description,
 
 OPERATIONS += STRUCTURED_OPERATIONS
 OPERATIONS += ELF_OPERATIONS
+OPERATIONS += OBJDUMP_OPERATIONS
 OPERATIONS += EVIDENCE_OPERATIONS
 OPERATIONS += RECORDING_OPERATIONS
 OPERATIONS += SIGNAL_OPERATIONS
@@ -229,6 +231,8 @@ def catalog():
             reason = android_availability(row["name"])
         elif row["name"].startswith("firmware."):
             reason = firmware_availability(row["name"])
+        elif row["name"] == "binary.objdump" and not objdump_engine()['available']:
+            reason = "Instala GNU objdump o configura THESEUS_OBJDUMP."
         rows.append({**row, "available": not reason, "availability_reason": reason})
     return {"engine": engine(), "operations": rows}
 
@@ -364,14 +368,24 @@ def _run(manager, project_id, job_id, artifact, folder, result):
             stopped = job_id in manager.cancelled
         failed_execution = bool(execution["exit_code"]) or not output.is_file()
         retained_firmware = False
+        retained_objdump = False
+        if result['operation'] == 'binary.objdump':
+            from .objdump_inspection import recording
+            value = recording(folder, interrupted=stopped or failed_execution)
+            if value is not None:
+                document = {'operation': result['operation'], 'artifact_sha256': value['artifact']['sha256'],
+                    'runtime': sys.version.split()[0], 'result': value}
+                output = folder / 'objdump-retained.json'
+                output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding='utf8')
+                retained_objdump = True
         if result["operation"].startswith("firmware."):
             from .firmware import recording_file
             checkpoint = recording_file(folder, output)
             retained_firmware = checkpoint is not None
             if retained_firmware: output = checkpoint
-        if stopped and not retained_firmware:
+        if stopped and not (retained_firmware or retained_objdump):
             state = "cancelled"
-        elif failed_execution and not retained_firmware:
+        elif failed_execution and not (retained_firmware or retained_objdump):
             state = "failed"
             result["error"] = "The native analysis did not complete; inspect the engine diagnostic"
         else:
@@ -401,6 +415,9 @@ def _run(manager, project_id, job_id, artifact, folder, result):
 
 def retain(store, project_id, job_id, artifact, folder, output, result):
     document = json.loads(output.read_text(encoding="utf-8"))
+    if result['operation'] == 'binary.objdump':
+        result['reader_observation'] = {key: document['result'][key] for key in
+            ['exit_code', 'completion_status', 'stream_complete', 'artifact_changed']}
     result.update(artifact_sha256=document["artifact_sha256"], analysis_file=str(output),
                   analysis_sha256=digest(output), runtime=document["runtime"])
     result["source_changed"] = document["artifact_sha256"] != artifact["sha256"]
@@ -434,6 +451,24 @@ def recover(store):
     for project in store.projects():
         for job in store.items('jobs',project['id']):
             result=job['result']
+            if job['state'] == 'interrupted' and result.get('operation') == 'binary.objdump' and not result.get('analysis_file'):
+                from . import objdump_inspection
+                folder = store.directory / 'analyses' / job['id']
+                try:
+                    cleanup = objdump_inspection.stop_interrupted_worker(folder)
+                    value = objdump_inspection.recording(folder, interrupted=True)
+                    if value is not None:
+                        value['recovery_cleanup'] = cleanup
+                        output = folder / 'objdump-recovered.json'
+                        output.write_text(json.dumps({'operation': result['operation'],
+                            'artifact_sha256': value['artifact']['sha256'], 'runtime': sys.version.split()[0],
+                            'result': value}, ensure_ascii=False, indent=2), encoding='utf8')
+                        retain(store, project['id'], job['id'], store.artifact(project['id'], result['artifact_id']), folder, output, result)
+                        result['recovered_recording'] = True
+                except (OSError, ValueError, KeyError) as exc:
+                    result['recovery_error'] = str(exc)
+                store.save_job(project['id'], job['id'], 'interrupted', result)
+                continue
             if job['state']!='interrupted' or not result.get('operation','').startswith('firmware.') or result.get('analysis_file'):
                 continue
             folder=store.directory/'analyses'/job['id'];output=recording_file(folder,folder/'analysis.json')

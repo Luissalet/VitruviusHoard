@@ -42,6 +42,10 @@ def selected(path, candidates):
 
 
 def selection(family):
+    if family == 'objdump':
+        from .objdump_inspection import engine
+        tool = engine()
+        return [('objdump', selected(tool['path'], tool['candidates']))]
     if family == 'apktool':
         tools = android.engines()
         home_source = 'THESEUS_JAVA_HOME' if 'THESEUS_JAVA_HOME' in os.environ else 'JAVA_HOME' if 'JAVA_HOME' in os.environ else 'bundled-default'
@@ -60,7 +64,7 @@ def selection(family):
             candidate(shutil.which('capinfos'), 'PATH'), candidate('C:/Program Files/Wireshark/capinfos.exe', 'system-default')]
         capinfos = next((row['path'] for row in cap_candidates if row['path'] and Path(row['path']).is_file()), None)
         return [('tshark', selected(tshark, tshark_candidates)), ('capinfos', selected(capinfos, cap_candidates))]
-    raise ValueError('Select apktool or pcap')
+    raise ValueError('Select apktool, pcap or objdump')
 
 
 def output(raw):
@@ -108,7 +112,21 @@ def inspect_clients(family):
                 row.update(status='changed-during-inspection', reason='Selected executable or JAR identity changed during its version observation')
         except (OSError, ValueError) as error:
             row.update(status='error', reason=str(error))
-    return {'format': 'vitruvius.decoder-client-inspection/1', 'family': family, 'clients': clients,
+    result = {'format': 'vitruvius.decoder-client-inspection/1', 'family': family, 'clients': clients,
         'artifact_accessed': False, 'target_executed': False,
         'limitations': ['Versions and diagnostics describe these selected local client invocations, not successful decoding of a target.',
             'Reported program output is untrusted data. File hashes identify observed bytes and do not authenticate the software publisher.']}
+    if family == 'objdump':
+        from .objdump_inspection import inspect
+        if clients[0]['status'] != 'ok':
+            result['advertised_targets'] = {'status': 'unavailable', 'reason': 'Selected reader version query did not succeed'}
+        else:
+            try:
+                with tempfile.TemporaryDirectory(prefix='vitruvius-bfd-targets-') as directory:
+                    observed = inspect('architectures', directory)
+                observed['client_identity_consistent'] = (observed['engine']['path'] == clients[0]['selection']['path'] and
+                    observed['engine']['identity']['sha256'] == clients[0]['identity']['sha256'])
+                result['advertised_targets'] = observed
+            except (OSError, ValueError) as error:
+                result['advertised_targets'] = {'status': 'unavailable', 'reason': str(error)}
+    return result

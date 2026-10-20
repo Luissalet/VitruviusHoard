@@ -5103,14 +5103,15 @@
   },
   {
     "name": "theseus_client_inspect",
-    "description": "Explicitly inspect selected free Java/Apktool or TShark/capinfos client paths, selection sources, file hashes and real version diagnostics. No project, artifact, decoding or capture is required. Cold catalog discovery never invokes these clients.",
+    "description": "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "family": {
           "enum": [
             "apktool",
-            "pcap"
+            "pcap",
+            "objdump"
           ]
         }
       },
