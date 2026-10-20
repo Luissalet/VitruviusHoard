@@ -97,14 +97,14 @@ def inspect(operation, folder, source=None, expected_sha256=None, follow_debug_l
     selected = engine()
     if not selected['available']:
         raise ValueError('GNU objdump is unavailable; configure THESEUS_OBJDUMP or install the free binary reader')
-    reader = process_capture._file(Path(selected['path']))
+    reader = process_capture._file(Path(selected['path']), include_content=False)
     if reader.get('state') != 'file':
         raise ValueError('Selected binary reader identity is unavailable or unstable')
     selected['identity'] = reader
     artifact = None
     if source is not None:
         source = Path(source).resolve()
-        observed = process_capture._file(source)
+        observed = process_capture._file(source, include_content=False)
         if observed.get('state') != 'file' or expected_sha256 is not None and observed['sha256'] != expected_sha256:
             raise ValueError('Artifact changed or has no stable readable file identity')
         artifact = {'path': str(source), 'sha256': observed['sha256'], 'bytes': observed['bytes']}
@@ -128,7 +128,7 @@ def inspect(operation, folder, source=None, expected_sha256=None, follow_debug_l
                            ([{'label': 'artifact', 'path': str(source)}] if source else [])}
     _write(context_file, context)
     _write(folder / 'objdump-observer.json', process_capture._identity(os.getpid()))
-    capture = process_capture.capture_process(parameters, folder / 'objdump-capture', cancelled)
+    capture = process_capture.capture_process(parameters, folder / 'objdump-capture', cancelled, include_file_content=False)
     return normalize(context, capture)
 
 
