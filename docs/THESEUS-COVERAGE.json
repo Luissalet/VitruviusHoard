@@ -22,9 +22,8 @@
     "semantic-review-pending": 168,
     "implementation-pending": 16,
     "platform-required-implementation-pending": 3,
-    "integrated-tested-published": 13,
-    "excluded-by-user": 4,
-    "source-integrated-release-pending": 3
+    "integrated-tested-published": 16,
+    "excluded-by-user": 4
   },
   "contracts": [
     {
@@ -3630,10 +3629,10 @@
       "counterparts": [
         "theseus_binary_call:get_navigation_context"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Sequential bound-document/current-address/containing-procedure observations, with procedure:null outside any function.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1073,
         "reviewed_submission_revision": 1,
         "reviewed_commits": [
@@ -3650,8 +3649,22 @@
           "context1073-ui-live20.json",
           "context1073-transfer20-proof.json",
           "context1073-ui-retained20.json",
-          "context1073-qa20-final.json"
-        ]
+          "context1073-qa20-final.json",
+          "release1076-full20.xml",
+          "release1076-wheel20.json",
+          "release1076-installed20.json",
+          "release1076-installed-mcp20-proof.json",
+          "release1076-installed-ui20.json",
+          "release1076-ui-transfer20.json",
+          "release1076-ui-retained-final20.json",
+          "release1076-installed-qa20-final.json",
+          "shared1076-installed20.json",
+          "manual1073-1076-proof20.json"
+        ],
+        "published_runtime_head": "aa81a5152f50a7466e757aa978c33256122140ba",
+        "packaged_source_head": "a273fdec87117f6549e65c8482619540f37b58f1",
+        "final_wheel_sha256": "a4e665000191b749d0379a24e82508b21a81e59ea44789a34d9c572125a4278e",
+        "final_acceptance": "Combined final runtime415PASS2emulatorSKIP636.28s GhidraON including7owner tests; packaged source differs only in five reviewed-source documentation files. Fresh installed wheel3813exact members except pip RECORD/pipcheck, actual coldMCP124 without profile, three reader families,68static/52binary/40runtime. Seven GNU observations and both native contexts retained qualified names and exact JSON after nativeclose/original retirement/export/import; nine documents and MCP records exact. Normal UI BFD beforeartifact/download/dismissfocus, validexit0/invalidexit1, retainedGNU and bothcontextfacets PASS; UI-created two docs also exported/originals retired/imported exact/read through MCP/UI. Private64226/PIDs72148,99556,91028/Tabs31,32closed. Same shared wheel3813exact/dependencies unchanged/cold124/no profile/appOFF/5191free. Manual39MCP/68static/52binary/40runtime;189other paragraphs/native structure/styles/links exact. No Sparks/substitute model/GPU/shared device."
       },
       "group": "navigation-context"
     },
@@ -3666,10 +3679,10 @@
       "counterparts": [
         "theseus_binary_call:inspect_address_context"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "One explicit address with analyzed name, containing function, regular/inline comments and matching bookmarks; unavailable facets typed.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1073,
         "reviewed_submission_revision": 1,
         "reviewed_commits": [
@@ -3686,8 +3699,22 @@
           "context1073-ui-live20.json",
           "context1073-transfer20-proof.json",
           "context1073-ui-retained20.json",
-          "context1073-qa20-final.json"
-        ]
+          "context1073-qa20-final.json",
+          "release1076-full20.xml",
+          "release1076-wheel20.json",
+          "release1076-installed20.json",
+          "release1076-installed-mcp20-proof.json",
+          "release1076-installed-ui20.json",
+          "release1076-ui-transfer20.json",
+          "release1076-ui-retained-final20.json",
+          "release1076-installed-qa20-final.json",
+          "shared1076-installed20.json",
+          "manual1073-1076-proof20.json"
+        ],
+        "published_runtime_head": "aa81a5152f50a7466e757aa978c33256122140ba",
+        "packaged_source_head": "a273fdec87117f6549e65c8482619540f37b58f1",
+        "final_wheel_sha256": "a4e665000191b749d0379a24e82508b21a81e59ea44789a34d9c572125a4278e",
+        "final_acceptance": "Combined final runtime415PASS2emulatorSKIP636.28s GhidraON including7owner tests; packaged source differs only in five reviewed-source documentation files. Fresh installed wheel3813exact members except pip RECORD/pipcheck, actual coldMCP124 without profile, three reader families,68static/52binary/40runtime. Seven GNU observations and both native contexts retained qualified names and exact JSON after nativeclose/original retirement/export/import; nine documents and MCP records exact. Normal UI BFD beforeartifact/download/dismissfocus, validexit0/invalidexit1, retainedGNU and bothcontextfacets PASS; UI-created two docs also exported/originals retired/imported exact/read through MCP/UI. Private64226/PIDs72148,99556,91028/Tabs31,32closed. Same shared wheel3813exact/dependencies unchanged/cold124/no profile/appOFF/5191free. Manual39MCP/68static/52binary/40runtime;189other paragraphs/native structure/styles/links exact. No Sparks/substitute model/GPU/shared device."
       },
       "group": "navigation-context"
     },
@@ -3737,10 +3764,10 @@
         "theseus_analysis_start:binary.objdump",
         "theseus_client_inspect:objdump"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Explicit GNU headers, sections, symbols, relocations, DWARF and code/all-section disassembly; artifact-independent advertised BFD formats. Complete raw streams, reader/input identities, nonzero observations, unknown interruptions and exact portable evidence without target execution.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-awaiting-combined-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1076,
         "reviewed_submission_revision": 1,
         "reviewed_commits": [
@@ -3760,8 +3787,22 @@
           "objdump1076-live-mcp2-20-proof.json",
           "objdump1076-ui-transfer2-20.json",
           "objdump1076-ui-retained-final2-20.json",
-          "objdump1076-qa2-20-final.json"
-        ]
+          "objdump1076-qa2-20-final.json",
+          "release1076-full20.xml",
+          "release1076-wheel20.json",
+          "release1076-installed20.json",
+          "release1076-installed-mcp20-proof.json",
+          "release1076-installed-ui20.json",
+          "release1076-ui-transfer20.json",
+          "release1076-ui-retained-final20.json",
+          "release1076-installed-qa20-final.json",
+          "shared1076-installed20.json",
+          "manual1073-1076-proof20.json"
+        ],
+        "published_runtime_head": "aa81a5152f50a7466e757aa978c33256122140ba",
+        "packaged_source_head": "a273fdec87117f6549e65c8482619540f37b58f1",
+        "final_wheel_sha256": "a4e665000191b749d0379a24e82508b21a81e59ea44789a34d9c572125a4278e",
+        "final_acceptance": "Combined final runtime415PASS2emulatorSKIP636.28s GhidraON including7owner tests; packaged source differs only in five reviewed-source documentation files. Fresh installed wheel3813exact members except pip RECORD/pipcheck, actual coldMCP124 without profile, three reader families,68static/52binary/40runtime. Seven GNU observations and both native contexts retained qualified names and exact JSON after nativeclose/original retirement/export/import; nine documents and MCP records exact. Normal UI BFD beforeartifact/download/dismissfocus, validexit0/invalidexit1, retainedGNU and bothcontextfacets PASS; UI-created two docs also exported/originals retired/imported exact/read through MCP/UI. Private64226/PIDs72148,99556,91028/Tabs31,32closed. Same shared wheel3813exact/dependencies unchanged/cold124/no profile/appOFF/5191free. Manual39MCP/68static/52binary/40runtime;189other paragraphs/native structure/styles/links exact. No Sparks/substitute model/GPU/shared device."
       },
       "group": "free-debugger-backends"
     },
