@@ -4,5 +4,5 @@
     "strict": true, "exactOptionalPropertyTypes": true, "noEmit": true, "esModuleInterop": true, "skipLibCheck": true,
     "lib": ["ES2023"], "types": ["node"]
   },
-  "include": ["entry.ts", "src/**/*.ts"]
+  "include": ["entry.ts", "process-terminal.ts", "src/**/*.ts"]
 }

@@ -125,3 +125,10 @@ Page DOM/listener/network/screenshot composition, selected-protocol JSONL
 journals, saved-capture projections and source-bound PNG delivery are original
 product code over the same generic free CDP transport. Chromium/Playwright is
 an independently installed test engine, not a reference-app runtime dependency.
+
+Process terminal rendering uses the maintained MIT packages @xterm/headless6.0.0
+and @xterm/addon-serialize0.14.0, both published from xterm.js revision
+f447274f430fd22513f6adbf9862d19524471c04. Their complete license is retained in
+LICENSE-XTERM. The process capture, Win32 ConPTY handle lifecycle and retained
+observation format are original product code; no reference application runtime
+or process transport is invoked.

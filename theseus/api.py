@@ -47,7 +47,10 @@ RETAINED_SCENARIO={'type':'object','properties':{'kind':{'const':'retained-page-
     **{key:{'type':'string','pattern':'^[0-9a-f]{64}$'} for key in ('reference_sha256','candidate_sha256')}},
     'required':['kind','reference_job_id','reference_sha256','candidate_job_id','candidate_sha256'],
     'additionalProperties':False}
-SCENARIO={'oneOf':[SCENARIO,RETAINED_SCENARIO]}
+from .process_compare import QUERY as PROCESS_QUERY
+RETAINED_PROCESS_SCENARIO={**RETAINED_SCENARIO,'properties':{**RETAINED_SCENARIO['properties'],
+    'kind':{'const':'retained-process-scenarios'},'query':PROCESS_QUERY},'required':[*RETAINED_SCENARIO['required'],'query']}
+SCENARIO={'oneOf':[SCENARIO,RETAINED_SCENARIO,RETAINED_PROCESS_SCENARIO]}
 IDS = {"type": "array", "items": S}
 CLAIM = {"kind": {"type": "string", "enum": ["obligation", "unknown"]}, "statement": S,
          "claim_id": S, "owner": S, "finding_ids": IDS, "scenario_ids": IDS, "depends_on": IDS, "resolution": S}
@@ -72,7 +75,7 @@ TOOLS = [
     tool("theseus_artifact_image", "Read a registered PNG with its exact recorded SHA-256; MCP returns native image content and identity metadata. No target or URL is accessed.", ARTIFACT, ["project_id", "artifact_id"]),
     tool("theseus_finding_add", "Save an observed fact at an artifact location; interpretation is separate. Pass source_sha256 from a newer excerpt/analysis when citing that version; source_refs preserves all artifact identities in a comparison. Evidencia y observacion.", {**ARTIFACT, "location": S, "observation": S, "interpretation": S, "source_sha256": S, "source_refs": SOURCE_REFS}, ["project_id", "artifact_id", "location", "observation"], False),
     tool("theseus_specification_write", "Save the editable behavior specification, citing finding IDs and separating unknowns.", {**PROJECT, "content": S}, ["project_id", "content"], False),
-    tool("theseus_scenario_save", "Save explicit command arrays/shared input or hash-bound retained browser.scenario captures. Retained cases compare complete, literally aligned step responses without connecting or replaying. Escenario diferencial.", {**PROJECT, "name": S, "definition": SCENARIO, "scenario_id": S}, ["project_id", "name", "definition"], False),
+    tool("theseus_scenario_save", "Save explicit commands/shared input, hash-bound retained page scenarios or process captures with selected comparison dimensions. Retained cases compare complete aligned observations without connecting or replaying. Escenario diferencial.", {**PROJECT, "name": S, "definition": SCENARIO, "scenario_id": S}, ["project_id", "name", "definition"], False),
     tool("theseus_comparison_start", "Run saved scenarios as a recoverable background comparison. Returns a job ID; read it until finished. Compara original y reconstruccion.", {**PROJECT, "scenario_ids": {"type": "array", "items": S}}, ["project_id"], False),
     tool("theseus_job_read", "Read background analysis/comparison progress, retained sources, frozen inputs, program hashes and diagnostics.", {"job_id": S}, ["job_id"]),
     tool("theseus_job_cancel", "Stop owned host clients of an active analysis or comparison. Completed observations can remain; cancellation does not undo target-side effects.", {"job_id": S}, ["job_id"], False),
@@ -94,7 +97,7 @@ TOOLS = [
     tool("theseus_claim_save", "Create or revise a behavior obligation or unknown with finding/scenario dependencies and owner. Unknown resolution keeps evidence links. Obligaciones y preguntas abiertas.", {**PROJECT, **CLAIM}, ["project_id", "kind", "statement"], False),
     tool("theseus_handoff_create", "Freeze the current behavior specification and claims for a builder workspace. Reader findings and original paths remain separate from the builder document. Does not generate or copy source code.", {**PROJECT, "builder_directory": S, "finding_ids": IDS}, ["project_id", "builder_directory"], False),
     tool("theseus_handoff_read", "Read a saved immutable handoff; builder_only returns only the behavior document, without reader findings/artifact paths.", {**PROJECT, "handoff_id": S, "builder_only": {"type": "boolean"}}, ["project_id", "handoff_id"]),
-    tool("theseus_oracle_selftest", "Test deliberately wrong command candidates or explicitly mapped retained page captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.", {**PROJECT, "variants": VARIANTS, "scenario_ids": IDS}, ["project_id", "variants"], False),
+    tool("theseus_oracle_selftest", "Test deliberately wrong commands or explicitly mapped retained page/process captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.", {**PROJECT, "variants": VARIANTS, "scenario_ids": IDS}, ["project_id", "variants"], False),
     tool("theseus_reconstruction_verify", "Run saved differential scenarios linked to an immutable behavior handoff. Each retry preserves the original handoff identity and complete observations; a newer specification is explicitly reported.", {**PROJECT, "handoff_id": S, "scenario_ids": IDS}, ["project_id", "handoff_id"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
@@ -155,9 +158,14 @@ class RetainedScenarioDefinition(Payload):
     candidate_sha256: str = Field(pattern='^[0-9a-f]{64}$')
 
 
+class RetainedProcessScenarioDefinition(RetainedScenarioDefinition):
+    kind: Literal['retained-process-scenarios']
+    query: dict
+
+
 class ScenarioSave(Payload):
     name: str
-    definition: ScenarioDefinition | RetainedScenarioDefinition
+    definition: ScenarioDefinition | RetainedScenarioDefinition | RetainedProcessScenarioDefinition
     scenario_id: str = ""
 
 
