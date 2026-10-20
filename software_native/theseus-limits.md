@@ -1,4 +1,4 @@
-> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`.
+> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`. Reviewed native-context source: `3f986f6bb3ed99b0b86160dc092e1331d2551809`.
 
 # Source coverage and completion
 
@@ -23,7 +23,7 @@ revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
 The native catalogue contains67 static/retained operations,40 runtime operations
-and50 binary-session operations, behind39 Theseus tools and124 owner tools.
+and52 binary-session operations, behind39 Theseus tools and124 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
 and [evidence/function acceptance](../tasks/submission1059-1064.md).
@@ -354,3 +354,5 @@ were exercised after originals closed through native MCP and desktop UI. The
 area passes40 tests; the complete suite passes269 with2 emulator opt-ins skipped.
 See docs/RETAINED-SCENARIO-ORACLE.md and tasks/submission993.md. Whole-runtime and
 package observation coverage beyond these selected page responses remains open.
+
+Delivery1073 CAS1 independently approved and integrated the two native context compositions. They preserve sequential observations, source bindings, available nulls and unavailable facets; explicit address queries leave the cursor and revision unchanged. Author380PASS/2emulatorSKIP and independent14pure+1realGhidra passed. Actual MCP and live/retained UI passed after closing the native session and retiring the authored original. See [native context](../docs/NATIVE-CONTEXT.md). Distribution deployment identity remains in the root coverage ledger.
