@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T15:28:09Z",
+  "generatedAt": "2026-10-20T15:40:56Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -623,11 +623,12 @@
         "inspection": "Short label where supported, unrestricted long explanation/sources textarea, original geometry disclosure, state title/explanation, visible checkbox, dx/dy/dz and visible highlight selector.",
         "stateActions": "Add state from original, duplicate current authored state with new stable ID, delete selected state and return to original.",
         "history": "Existing local change/undo/redo and native saved revision merge/selective undo; no parallel state store.",
-        "faustusContext": "Existing draft context includes selected_state and selected_piece."
+        "faustusContext": "Existing draft context includes selected_state and selected_piece.",
+        "colour": "Native Color/Colour select, Claro/Oscuro or Light/Dark, uses setMode for figure and mode-aware exports; state changes retain chosen mode."
       },
       "layout": {
         "editorColumns": "minmax(0,1fr) 260px",
-        "selectors": "Two equal native-select columns, 12px gap/padding, labelled above figure.",
+        "selectors": "State and Part use two minmax(0,1fr) columns plus 80px Color/Colour; 12px gap/padding, labelled above figure.",
         "figure": "280px minimum area; responsive SVG width and 560px maximum height; white authored figure ground.",
         "reading": "After figure, max-width 75ch; preserved line breaks and anywhere wrapping.",
         "editorBreakpoint": "850px: inspector after figure/explanation, top border, 44px action targets.",
@@ -715,7 +716,55 @@
         "No technical CAS approval, integration or installed activation claimed.",
         "No global Faustus, memory or Manual acceptance inferred.",
         "Earlier surface history and its scope remain retained."
-      ]
+      ],
+      "colorCorrectionAfterCas1": {
+        "chronology": "After initial documentation and scoped FINISH.txt, independent technical CAS1 returned CHANGES for P2; author restored Color in three UI files; subsequent FINISH-COLOR.txt is a correction-only SHIP. Technical approval still unestablished.",
+        "technicalReview": {
+          "submissionRevision": 1,
+          "commit": "350b3e3e6b1d3d9d370515af9a4f8ba7c76c8b30",
+          "decision": "changes",
+          "report": "review-r1049/REPORT-R1.txt",
+          "vote": "review-r1049/vote-r1.txt",
+          "finding": "P2: hiding graph toolbar removed inherited isometric Claro/Oscuro selector; mode change required visiting another diagram type.",
+          "independentValidation": "88 Python area passed/1 skipped, two JS model checks, build and real native/API/MCP/browser/offline-reader checks in reviewer private environment; attributed to reviewer, separate from author 529/2 and final 16. Covers CAS1 source, not approval of correction.",
+          "receipts": [
+            "review-r1049/area-tests.log",
+            "review-r1049/js-tests.log",
+            "review-r1049/native-proof.json",
+            "review-r1049/schema-proof.json",
+            "review-r1049/browser-proof.json"
+          ]
+        },
+        "built": "DiagramEditor passes setMode; IsometricControls shows labelled Color/Colour beside State/Part; CSS uses two flexible columns plus 80px. Three UI files only, no Python change.",
+        "authorEvidence": {
+          "receipts": [
+            "qa1049/color-results.json",
+            "qa1049-color-r1.log"
+          ],
+          "reported": "Visible at 1440/390, selected open state retains mode, dark PNG bytes exact to API and different from light, return to light, no JavaScript errors."
+        },
+        "captures": [
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-color-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-color-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          }
+        ],
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/FINISH-COLOR.txt",
+          "disposition": "ship",
+          "finding": "P2 resolved; no visible material regression in four reviewer-opened full/detail captures.",
+          "scope": "Color correction only; does not broaden initial FINISH.txt or replace technical CAS review, integration or installed activation."
+        },
+        "documenterActivity": "Corrected source and supplied receipt inspection only; no capture reopening, detector/context, browser/server, build/test rerun."
+      }
     }
   },
   "components": [
