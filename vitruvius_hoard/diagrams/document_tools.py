@@ -141,5 +141,5 @@ def tools(empty):
         Tool("diagram_document_undo", "Reverse one saved change, preserving unrelated later edits. Deshacer una revisión.", DocumentUndo, ann(False), undo),
         Tool("diagram_document_history", "List retained revisions of an editable diagram. Versiones de diagrama.", DocumentGet, ann(True), history),
         Tool("diagram_document_compare", "Compare authored objects and layout between two saved revisions. Comparar versiones de diagrama.", DocumentCompare, ann(True), compare),
-        Tool("diagram_document_import", "Import an editable native, Mermaid, draw.io or Excalidraw source; retains original and reports limits. Importar diagrama.", DocumentImport, ann(False), import_document),
+        Tool("diagram_document_import", "Import an editable source, retaining the original and reporting limits. Importar diagrama.", DocumentImport, ann(False), import_document),
     ]
