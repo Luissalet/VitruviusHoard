@@ -118,7 +118,7 @@
       "VITRUVIUS_DATA_DIR"
     ]
   },
-  "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and paused by Luis due to usage; this incorporation does not complete its pending reverse-engineering scope.",
+  "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026; this incorporation does not complete its pending reverse-engineering scope.",
   "x-family": {
     "copilot": {
       "contract_version": "1.0",
