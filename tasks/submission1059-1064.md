@@ -46,3 +46,16 @@ The [207-contract worklist](../docs/THESEUS-COVERAGE.json) preserves all remaini
 semantic reviews, implementations, real platform requirements and explicit user
 exclusions. Theseus is incomplete. No Sparks, substitute text model, GPU or
 shared device was used for these checks.
+
+Final combined release accepted: wheel `4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd`
+from published `adec326fde065bf186203f075a4f70cb7bac215f`. A fresh external venv passed
+3,809 exact file checks, pip dependency validation, actual MCP123, fresh function,
+aggregation and correlation queries, and new normal UI function/hypothesis queries
+with both original artifacts absent. Reversed side alignment and unchanged paths
+retain their actual SHA-256 sources; causality remains unestablished. All private
+owners, requests, sessions, ports and tabs closed. The dedicated shared venv received
+the exact wheel while its owner stayed OFF: existing dependency versions unchanged,
+3,809 member checks and cold MCP123 without creating a profile or starting port5191.
+The native manual was updated and read back under revision control, with the other
+189 paragraphs and tab structure/styles/links unchanged. This closes these selected
+contracts, not the complete207-contract Theseus scope.
