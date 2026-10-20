@@ -3114,10 +3114,10 @@
       "status": "independent-review-pending",
       "scope": "Interactive terminal, lifecycle, files, declared command shims and HTTP/WebSocket observations; retain incomplete prefixes and causality boundaries.",
       "acceptance": {
-        "state": "author-tested-awaiting-review-integration-and-installed-acceptance",
+        "state": "author-and-installed-tested-awaiting-review-and-integration",
         "task": 1046,
-        "submission_revision": 1,
-        "commit": "e189a2091849aa3117b472d7e76c3efc8e121a54",
+        "submission_revision": 2,
+        "commit": "15d663a285d63f4a36be8ce496e26ea56569518f",
         "tests": [
           "theseus_tests/test_process_capture.py",
           "theseus_tests/test_process_compare.py",
@@ -3125,12 +3125,16 @@
           "theseus_tests/test_retained_process_scenarios.py"
         ],
         "normal_ui": "Ejecuciones > Procesos; Escenarios > Capturas de procesos guardadas; Reconstrucción",
-        "evidence": "Native Windows pipes/ConPTY/Jobs, HTTP/WebSocket/C# command shims, MCP123 and UI original captures, constant/branch mutants, transfer/new verification; complete suite316PASS/2emulatorSKIP853.139s with Ghidra enabled. See docs/PROCESS-CAPTURES.md in1046 and process1046-qa20-final.json.",
+        "evidence": "CAS2 complete suite320PASS/2emulatorSKIP651.649s with Ghidra enabled; typed variants/envelopes survive two imports without mutating literal IDs. Fresh installed wheel25a50de7:3804 exact files, pipcheck, real MCP123/direct imported variants/HTTP/WebSocket/compiled command shim/ConPTY and desktop frame selection PASS. All private owners/ports/tabs closed. CAS1 installed acceptance failed and remains retained. See process1046-installed-final20b.json and submission1046-cas2-20.md.",
         "platforms": {
           "windows": "native runtime tested",
           "linux": "pipe implementation present; no live-platform certification",
           "macos": "no live-platform certification"
-        }
+        },
+        "commits": [
+          "e189a2091849aa3117b472d7e76c3efc8e121a54",
+          "15d663a285d63f4a36be8ce496e26ea56569518f"
+        ]
       },
       "group": "process-observations"
     },
@@ -3148,10 +3152,10 @@
       "status": "independent-review-pending",
       "scope": "Compare explicit process observations, file effects and trace partial orders without inventing timestamp causality.",
       "acceptance": {
-        "state": "author-tested-awaiting-review-integration-and-installed-acceptance",
+        "state": "author-and-installed-tested-awaiting-review-and-integration",
         "task": 1046,
-        "submission_revision": 1,
-        "commit": "e189a2091849aa3117b472d7e76c3efc8e121a54",
+        "submission_revision": 2,
+        "commit": "15d663a285d63f4a36be8ce496e26ea56569518f",
         "tests": [
           "theseus_tests/test_process_capture.py",
           "theseus_tests/test_process_compare.py",
@@ -3159,12 +3163,16 @@
           "theseus_tests/test_retained_process_scenarios.py"
         ],
         "normal_ui": "Ejecuciones > Procesos; Escenarios > Capturas de procesos guardadas; Reconstrucción",
-        "evidence": "Native Windows pipes/ConPTY/Jobs, HTTP/WebSocket/C# command shims, MCP123 and UI original captures, constant/branch mutants, transfer/new verification; complete suite316PASS/2emulatorSKIP853.139s with Ghidra enabled. See docs/PROCESS-CAPTURES.md in1046 and process1046-qa20-final.json.",
+        "evidence": "CAS2 complete suite320PASS/2emulatorSKIP651.649s with Ghidra enabled; typed variants/envelopes survive two imports without mutating literal IDs. Fresh installed wheel25a50de7:3804 exact files, pipcheck, real MCP123/direct imported variants/HTTP/WebSocket/compiled command shim/ConPTY and desktop frame selection PASS. All private owners/ports/tabs closed. CAS1 installed acceptance failed and remains retained. See process1046-installed-final20b.json and submission1046-cas2-20.md.",
         "platforms": {
           "windows": "native runtime tested",
           "linux": "pipe implementation present; no live-platform certification",
           "macos": "no live-platform certification"
-        }
+        },
+        "commits": [
+          "e189a2091849aa3117b472d7e76c3efc8e121a54",
+          "15d663a285d63f4a36be8ce496e26ea56569518f"
+        ]
       },
       "group": "process-observations"
     },
