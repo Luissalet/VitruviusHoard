@@ -2407,6 +2407,9 @@
                 "groups",
                 "view_nodes",
                 "view_edges",
+                "pages",
+                "assets",
+                "view",
                 "diagram"
               ],
               "title": "Collection",
