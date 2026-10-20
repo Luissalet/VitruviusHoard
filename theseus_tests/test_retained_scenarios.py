@@ -75,14 +75,19 @@ def test_retained_responses_compare_without_running_programs(workspace,monkeypat
 @pytest.mark.parametrize('side',['reference','candidate'])
 @pytest.mark.parametrize('damage',['missing','changed'])
 def test_changed_or_missing_capture_never_passes(workspace,side,damage):
-    store,manager,_,pid=workspace
+    store,manager,flow,pid=workspace
     pair={s:capture(store,pid,128) for s in ('reference','candidate')}
-    store.save_scenario(pid,'Keep identities',definition(pair['reference'],pair['candidate']))
+    scenario=store.save_scenario(pid,'Keep identities',definition(pair['reference'],pair['candidate']))
+    flow.save_claim(pid,'obligation','Selected recorded response',scenario_ids=[scenario['id']])
     path=Path(pair[side]['result']['analysis_file'])
+    original=path.read_bytes()
     if damage=='missing':path.unlink()
     else:path.write_bytes(path.read_bytes()+b' ')
     result=wait(store,manager.start(pid))['result'];case=result['cases'][0]
     assert result['passed']==0 and not case['valid'] and case['state']=='unknown'
+    path.write_bytes(original)
+    # Restoring a document does not turn an invalid receipt into a measured difference.
+    assert flow.read(pid)['claims'][0]['status']=='unknown'
 
 
 @pytest.mark.parametrize('change',[
