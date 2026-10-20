@@ -4,7 +4,7 @@ import { clone, uid } from './model.js';
 
 export const selectedState = (content, id) => content?.diagram?.type === 'isometric' && content.mechanism?.states.some(s => s.id === id) ? id : '';
 
-export function IsometricControls({ draft, change, stateId, setStateId, partId, setPartId, mode, lang, inspector, error }) {
+export function IsometricControls({ draft, change, stateId, setStateId, partId, setPartId, mode, setMode, lang, inspector, error }) {
   const en = lang === 'en', figure = useRef(null);
   const [preview, setPreview] = useState(null), [busy, setBusy] = useState(true);
   const states = draft.mechanism?.states || [], parts = draft.diagram.pieces;
@@ -38,6 +38,7 @@ export function IsometricControls({ draft, change, stateId, setStateId, partId, 
       <div className="de-mechanism-selectors">
         <label>{en ? 'State' : 'Estado'}<select className="field" aria-label={en ? 'State' : 'Estado'} value={currentId} onChange={e => setStateId(e.target.value)}><option value="">{en ? 'Original figure' : 'Figura original'}</option>{states.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
         <label>{en ? 'Part' : 'Pieza'}<select className="field" aria-label={en ? 'Part' : 'Pieza'} value={part.id} onChange={e => setPartId(e.target.value)}>{parts.map(p => <option key={p.id} value={p.id}>{p.label || p.id}{state?.hidden.includes(p.id) ? (en ? ' · hidden' : ' · oculta') : ''}</option>)}</select></label>
+        <label>{en ? 'Colour' : 'Color'}<select className="field" aria-label={en ? 'Colour' : 'Color'} value={mode} onChange={e => setMode(e.target.value)}><option value="light">{en ? 'Light' : 'Claro'}</option><option value="dark">{en ? 'Dark' : 'Oscuro'}</option></select></label>
       </div>
       <div ref={figure} className="de-mechanism-figure" aria-label={en ? 'Isometric figure' : 'Figura isométrica'} aria-busy={busy} onClick={pick} onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-piece]')) { e.preventDefault(); pick(e); } }} dangerouslySetInnerHTML={{ __html: preview?.svg[mode] || '' }}/>
       <div className="de-mechanism-reading"><p role="status">{busy ? (en ? 'Updating figure…' : 'Actualizando figura…') : state?.title || (en ? 'Original figure' : 'Figura original')}</p>{state?.description && <p>{state.description}</p>}<strong>{part.label || part.id}</strong><p>{description || (en ? 'Add a part explanation in the inspector.' : 'Añade la explicación de esta pieza en el inspector.')}</p></div>
