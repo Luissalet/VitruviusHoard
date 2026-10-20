@@ -23,3 +23,8 @@ Public source/licence inventory: provenance/software/SOURCES.json. Private Babel
 Package933 CAS3: an own wheel was installed outside the checkout and exercised with Python -I and a synthetic profile: cold stdio110, three exact UI/build sets, project/environment/real Node analysis with historical IDs/SHA and complete ON/OFF/ON closure. See tasks/submission933-cas3.md. This does not establish CUA or broad optional-engine acceptance. The installed default profile is LOCALAPPDATA/VitruviusHoard/data (or ~/.local/share/VitruviusHoard/data); VITRUVIUS_PROFILE_DIR and --data-dir take precedence. Checkouts retain their existing data/ default. The wheel includes source/compiled engine and Node metadata, without node_modules: install own dependencies with npm ci in the installed software_native/engine before Node use. Ghidra/JDK and real source roots are never copied or linked.
 
 Shutdown correction CAS4: a failed native lifespan retains its app and resources in error; ON is rejected until an effective OFF completes. Retry OFF invokes an explicit per-factory shutdown with completed-step checkpoints, never an exhausted async generator. The common UI exposes Retry OFF. Three actual factories passed two injected failures and a third effective close, including installed-wheel checks. See tasks/submission933-cas4.md; Theseus development remains incomplete and paused.
+
+
+## Native connections
+
+Former MCP and Hub identities can use the incorporated cold compatibility adapters without the retired repositories. See [native connections](docs/NATIVE-CONNECTIONS.md). Modules still require explicit activation.
