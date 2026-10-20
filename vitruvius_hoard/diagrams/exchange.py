@@ -12,7 +12,7 @@ def import_document(source, format="auto"):
     text = source.strip()
     if text.startswith("{"):
         parsed = json.loads(text)
-        if parsed.get("format") == "vitruvius.diagram/1":
+        if parsed.get("format") in ("vitruvius.diagram/1", "vitruvius.figure/1"):
             return normalize(parsed["content"]), []
         if "diagram" in parsed:
             return normalize(parsed), []
@@ -168,6 +168,32 @@ def image(row, kind, mode="light"):
             return page.pdf(width=f"{width}px", height=f"{height}px", print_background=True, margin={"top": "0", "bottom": "0", "left": "0", "right": "0"})
         finally:
             browser.close()
+
+
+def figure(row, mode="light", page_id=None, origin_url=""):
+    """Portable revision and PNG. Selecting a page never changes the saved source."""
+    import base64
+    from urllib.parse import urlsplit
+    if mode not in ("light", "dark"):
+        raise ValueError("Unknown colour mode.")
+    captured = deepcopy(row)
+    if page_id is not None:
+        page = next((p for p in row["rendering"].get("pages", []) if p["id"] == page_id), None)
+        if page is None:
+            raise ValueError("Unknown figure page.")
+        captured["rendering"] = {"svg": page["svg"]}
+    origin = {}
+    if origin_url:
+        address = urlsplit(origin_url)
+        if address.scheme not in ("http", "https") or not address.netloc or address.username or address.password:
+            raise ValueError("The figure origin must be an HTTP(S) address without credentials.")
+        base = f"{address.scheme}://{address.netloc}"
+        origin = {"editor_url": f"{base}/design/#/diagrams?document={row['id']}",
+                  "source_url": f"{base}/design/api/diagrams/documents/{row['id']}/source.json?revision={row['revision']}"}
+    return {"format": "vitruvius.figure/1", "document_id": row["id"], "revision": row["revision"],
+            "title": row["content"]["diagram"].get("title", ""), "page_id": page_id,
+            "content": deepcopy(row["content"]), "origin": origin,
+            "preview": {"mime": "image/png", "data": base64.b64encode(image(captured, "png", mode)).decode("ascii")}}
 
 
 def mermaid(row):

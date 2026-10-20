@@ -101,7 +101,7 @@ def document_source(request: Request, did: str, revision: int | None = None):
 
 
 @router.get("/diagrams/documents/{did}/export.{kind}")
-def document_export(request: Request, did: str, kind: str, revision: int | None = None, mode: str = "light"):
+def document_export(request: Request, did: str, kind: str, revision: int | None = None, mode: str = "light", page_id: str | None = None):
     from ..diagrams import exchange
     from ..diagrams.reader import reader
     if mode not in ("light", "dark"):
@@ -109,6 +109,13 @@ def document_export(request: Request, did: str, kind: str, revision: int | None 
     row = _found(lambda: documents.store(services(request)).get(did, revision))
     if kind in ("png", "pdf"):
         payload, mime = exchange.image(row, kind, mode), {"png": "image/png", "pdf": "application/pdf"}[kind]
+    elif kind == "vfigure":
+        import json
+        try:
+            payload = json.dumps(exchange.figure(row, mode, page_id, str(request.base_url)), ensure_ascii=False)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        mime = "application/json"
     elif kind == "drawio":
         payload, mime = exchange.drawio(row), "application/xml"
     elif kind == "html":

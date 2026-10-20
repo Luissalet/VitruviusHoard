@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T11:33:24.555738Z",
+  "generatedAt": "2026-10-20T12:27:07.273793Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -11,7 +11,11 @@
         "client/src/components/diagram-editor/model.js",
         "client/src/pages/Diagrams.jsx",
         "client/src/components/diagram-editor/EditorialControls.jsx",
-        "client/src/components/diagram-editor/editorial.js"
+        "client/src/components/diagram-editor/editorial.js",
+        "client/src/api.js",
+        "vitruvius_hoard/diagrams/exchange.py",
+        "vitruvius_hoard/diagrams/document_tools.py",
+        "vitruvius_hoard/api/diagrams.py"
       ],
       "briefPath": "docs/design/diagrams.md",
       "authorities": [
@@ -19,7 +23,7 @@
         "DESIGN.md"
       ],
       "scope": "Surface-only record; does not replace root authority or imply context-loader discovery.",
-      "visualAuthority": "Incumbent Hoard; ordinary Operate extension; external before-code contract EDITORIAL-C.txt; short scoped brief after first implementation; no approved comp or new decorative raster"
+      "visualAuthority": "Incumbent Hoard; ordinary Operate extension; external before-code contract EDITORIAL-C.txt; short scoped brief after first implementation; no approved comp or new decorative raster; portable figures extend incumbent image/export controls, no new identity"
     },
     "colorMeta": {
       "primary": {
@@ -251,7 +255,7 @@
       "Document-local palettes and graph geometry are not shell tokens.",
       "Missing visible captions beside the paired selects are not a labelling rule.",
       "Zoom glyph controls do not define a general icon system.",
-      "Uncaptured states, authored isometric states and downstream consumers are not certified delivery; phase C editorial evidence is recorded separately."
+      "Uncaptured states, authored isometric states and installed downstream activation are not certified delivery; phase C editorial evidence is recorded separately."
     ],
     "editorialPhaseC": {
       "contract": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/EDITORIAL-C.txt",
@@ -349,6 +353,90 @@
         "Scoped SHIP does not certify the complete surface, source faces, exports, unseen states or model inference.",
         "No downstream consumer integration or authored isometric states asserted."
       ]
+    },
+    "figures": {
+      "mode": "Operate",
+      "status": "Implemented in isolated worktrees; not integrated or installed at this checkpoint.",
+      "visualAuthority": "Incumbent workbench extension; no formal THESIS/OWN-WORLD/STORY/FIRST VIEWPORT/FORM, QUALITY BAR or approved comp supplied; no replacement identity inferred.",
+      "browserReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/browser-results.json",
+      "browserResult": "Author: desktop/mobile no overflow, JS or HTTP errors; save/reopen, source-retaining download, caption/notes/crop/other-block retention on replacement and dirty export saving.",
+      "nativeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/native-results.json",
+      "nativeResult": "Author: Vitruvius 118/Cicero 68 native tools; exact API/MCP source, retained revisions 1/2, identical preview with distinct source, targeted replacement, selective undo preserving manual edits. Real PPTX 39205 bytes, PDF 33681 bytes, HTML 204816 bytes.",
+      "finish": {
+        "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/FINISH.txt",
+        "disposition": "ship",
+        "scope": "Added export/import/provenance controls only; five sections persistence, fidelity, ceiling, material_fixes and keep; no remaining material fixes in scope; not whole-surface/installed/unseen-state/font certification."
+      },
+      "typography": {
+        "observedBodyStack": "Source Sans 3, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Liberation Sans, Arial, sans-serif",
+        "documentFonts": [],
+        "scope": "Body CSS stack in both apps; no proof Source Sans 3 or Cinzel was loaded."
+      },
+      "detector": {
+        "cicero": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/cicero-detector.json",
+        "ciceroFindings": 0,
+        "vitruvius": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-detector.json",
+        "vitruviusFindings": "Three advisories for pre-existing document-local shape/connector colors; no new shell tokens.",
+        "rerun": false
+      },
+      "excludedCapture": "cicero-mobile-figure-controls.png (R1, header obstructed)",
+      "documenterActivity": "Source/receipt inspection and eleven supplied R2/detail captures opened; no new context/detector, browser, server, model, GPU or functional execution.",
+      "notCanonized": [
+        "Native synthetic QA diagram/PNG is content, not stock imagery or a new AI/decorative illustration.",
+        "No real profiles, LLM inference or figure-generation quality tested.",
+        "Authored document palette/geometry does not establish shell tokens.",
+        "Loaded webfonts, unseen-state accessibility and installed activation are not certified."
+      ],
+      "export": {
+        "label": "Figura con fuente / Figure with source",
+        "format": "vitruvius.figure/1",
+        "filenameRoute": "export.vfigure",
+        "placement": "First action in incumbent export row after canvas and inspector; wraps with existing mobile actions.",
+        "sourceFields": [
+          "document_id",
+          "revision",
+          "title",
+          "page_id",
+          "content",
+          "origin",
+          "preview"
+        ],
+        "pageBoundary": "Selected editorial page controls PNG preview only; full native document with all pages retained. Graphs have no page selection.",
+        "origin": "Editor document link and revision-specific native source link; package retains source and PNG independently.",
+        "dirtyState": "Save first; use returned ID/revision; do not download if saving fails; later local edits may remain dirty."
+      },
+      "import": "Native parser accepts figure and diagram JSON envelopes. Browser file input explicitly includes .vfigure; imports native content as a new document.",
+      "roundtrip": {
+        "receipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/roundtrip.json",
+        "result": "Author native UI import through .vfigure filter, all pages and source exact in a new document, no JS errors. Last change only accept attribute, no visible DOM/CSS change; R2 captures remain applicable."
+      },
+      "captures": [
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-desktop-full-r2.png",
+          "width": 1440,
+          "height": 1604
+        },
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-desktop-viewport-r2.png",
+          "width": 1440,
+          "height": 1000
+        },
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-mobile-full-r2.png",
+          "width": 390,
+          "height": 2585
+        },
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-mobile-viewport-r2.png",
+          "width": 390,
+          "height": 844
+        },
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/vitruvius-mobile-export-controls.png",
+          "width": 356,
+          "height": 222
+        }
+      ]
     }
   },
   "components": [
@@ -425,18 +513,27 @@
       "description": "Illustrative mobile page row and native options disclosure; actual page operations need product runtime. Document size fields extend the incumbent field treatment.",
       "html": "<section class=\"ds-pages\" aria-label=\"Páginas\"><div class=\"ds-page-row\"><select class=\"ds-field\" aria-label=\"Página\"><option>Página 1</option></select><button class=\"ds-button\">Añadir página</button><button class=\"ds-button\">Duplicar página</button></div><details class=\"ds-options\"><summary>Opciones de página</summary><div class=\"ds-dimensions\"><label>Ancho de página<input class=\"ds-field\" type=\"number\" min=\"200\" value=\"960\"></label><label>Alto de página<input class=\"ds-field\" type=\"number\" min=\"200\" value=\"720\"></label></div></details></section>",
       "css": ".ds-pages{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);color:var(--hoard-text,#e1e4ec);font-size:12px;margin-block:4px;padding-block:6px}.ds-page-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}.ds-field{min-width:0;width:100%;padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec)}.ds-button{font:600 13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);padding:7px 8px;min-height:36px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:transparent;color:var(--hoard-text,#e1e4ec);cursor:pointer}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible,.ds-field:focus-visible,.ds-options summary:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-options{margin-top:8px}.ds-options summary{cursor:pointer;padding:4px 0}.ds-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ds-dimensions label{display:grid;gap:5px;color:var(--hoard-text-muted,#b4b7be)}"
+    },
+    {
+      "name": "Portable figure export",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "First action in the existing export row. Illustrative link; runtime saves a dirty draft and exports selected-page preview with full native source.",
+      "html": "<a class=\"ds-button\" href=\"#figure\" download>Figura con fuente</a>",
+      "css": ".ds-button{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border-radius:8px;border:1px solid var(--hoard-border,#333845);background:transparent;color:var(--hoard-text,#e1e4ec);font-weight:600;cursor:pointer;transition:background .16s,border-color .16s;}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-button{text-decoration:none}"
     }
   ],
   "narrative": {
     "northStar": "Existing Hoard workbench",
-    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. Authored isometric states and linked insertion into other Hoards remain outside this record; no downstream consumer is asserted here.",
+    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Authored isometric states remain outside this record. This figures extension is implemented and verified in isolated worktrees; integration and installed activation are not established here.",
     "keyCharacteristics": [
       "An independent versioned document with a visible name, save state and selected revision.",
       "A native SVG canvas between a shape palette and selection inspector on wide screens.",
       "A recoverable mobile shape palette and useful drawing area in the first viewport.",
       "Shared shape activation for pointer and keyboard, with explicit connection and selection modes.",
       "Output actions save an outstanding draft and use the accepted revision.",
-      "Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector."
+      "Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.",
+      "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview."
     ],
     "rules": [
       {
@@ -473,7 +570,8 @@
       "Do keep reciprocal routes visually distinct and preserve access through Fit and pan.",
       "Do save outstanding changes before output and use the accepted revision in its URL.",
       "Do retain the earlier diagram source, brand and recent-result tools below the editor.",
-      "Do keep page controls and editorial inspection in the existing workbench, preserving full text and embedded image identity in native source."
+      "Do keep page controls and editorial inspection in the existing workbench, preserving full text and embedded image identity in native source.",
+      "Do keep figure export in the existing output group and preserve the full source when selecting a page for its preview."
     ],
     "donts": [
       "Don't promote a graph template's palette or shape vocabulary into a new shell identity.",
@@ -481,7 +579,7 @@
       "Don't describe every diagram type as object-editable from the graph canvas implementation.",
       "Don't turn five resolved finish findings into certification of LLM inference or untested runtime exports.",
       "Don't treat phase B's historical graph-only scope as phase C's current capability, or promote phase C's one resolved visual fix into full functional/installed acceptance.",
-      "Don't imply arbitrary draw.io extension parity, loaded webfonts or downstream consumers from these source and capture receipts."
+      "Don't imply arbitrary draw.io extension parity, loaded webfonts or installed downstream activation from these source and capture receipts."
     ]
   }
 }
