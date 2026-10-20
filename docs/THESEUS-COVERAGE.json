@@ -20,10 +20,10 @@
   ],
   "status_counts": {
     "semantic-review-pending": 169,
-    "implementation-pending": 28,
+    "implementation-pending": 26,
     "platform-required-implementation-pending": 3,
     "excluded-by-user": 4,
-    "independent-review-pending": 3
+    "independent-review-pending": 5
   },
   "contracts": [
     {
@@ -2867,13 +2867,17 @@
       "acceptance": {
         "state": "author-tested-awaiting-review-and-integration",
         "task": 1043,
-        "submission_revision": 1,
-        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "submission_revision": 2,
+        "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
         "tests": [
           "theseus_tests/test_web_sources.py"
         ],
         "normal_ui": "Inspección > Análisis > Web",
-        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+        "evidence": "CAS2 old-path guard plus real installed MCP/UI on transferred evidence, all private owners closed; docs/WEB-SOURCES.md and web1043-installed-final20b.json. Independent review/integration remain pending.",
+        "commits": [
+          "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+          "b4e73e73e8813c1975ff32e73a32f73fd507981b"
+        ]
       }
     },
     {
@@ -2892,13 +2896,17 @@
       "acceptance": {
         "state": "author-tested-awaiting-review-and-integration",
         "task": 1043,
-        "submission_revision": 1,
-        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "submission_revision": 2,
+        "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
         "tests": [
           "theseus_tests/test_web_sources.py"
         ],
         "normal_ui": "Inspección > Análisis > Web",
-        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+        "evidence": "CAS2 old-path guard plus real installed MCP/UI on transferred evidence, all private owners closed; docs/WEB-SOURCES.md and web1043-installed-final20b.json. Independent review/integration remain pending.",
+        "commits": [
+          "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+          "b4e73e73e8813c1975ff32e73a32f73fd507981b"
+        ]
       }
     },
     {
@@ -2917,13 +2925,17 @@
       "acceptance": {
         "state": "author-tested-awaiting-review-and-integration",
         "task": 1043,
-        "submission_revision": 1,
-        "commit": "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+        "submission_revision": 2,
+        "commit": "b4e73e73e8813c1975ff32e73a32f73fd507981b",
         "tests": [
           "theseus_tests/test_web_sources.py"
         ],
         "normal_ui": "Inspección > Análisis > Web",
-        "evidence": "Original Chromium, native API, MCPstdio, desktop UI and two historical evidence transfers; see docs/WEB-SOURCES.md."
+        "evidence": "CAS2 old-path guard plus real installed MCP/UI on transferred evidence, all private owners closed; docs/WEB-SOURCES.md and web1043-installed-final20b.json. Independent review/integration remain pending.",
+        "commits": [
+          "ed3510fb4376c12f04025558e1e3751f6e54f1de",
+          "b4e73e73e8813c1975ff32e73a32f73fd507981b"
+        ]
       }
     },
     {
@@ -3096,12 +3108,29 @@
         "line": 95,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "process.capture"
+      ],
+      "status": "independent-review-pending",
       "scope": "Interactive terminal, lifecycle, files, declared command shims and HTTP/WebSocket observations; retain incomplete prefixes and causality boundaries.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "author-tested-awaiting-review-integration-and-installed-acceptance",
+        "task": 1046,
+        "submission_revision": 1,
+        "commit": "e189a2091849aa3117b472d7e76c3efc8e121a54",
+        "tests": [
+          "theseus_tests/test_process_capture.py",
+          "theseus_tests/test_process_compare.py",
+          "theseus_tests/test_process_services.py",
+          "theseus_tests/test_retained_process_scenarios.py"
+        ],
+        "normal_ui": "Ejecuciones > Procesos; Escenarios > Capturas de procesos guardadas; Reconstrucción",
+        "evidence": "Native Windows pipes/ConPTY/Jobs, HTTP/WebSocket/C# command shims, MCP123 and UI original captures, constant/branch mutants, transfer/new verification; complete suite316PASS/2emulatorSKIP853.139s with Ghidra enabled. See docs/PROCESS-CAPTURES.md in1046 and process1046-qa20-final.json.",
+        "platforms": {
+          "windows": "native runtime tested",
+          "linux": "pipe implementation present; no live-platform certification",
+          "macos": "no live-platform certification"
+        }
       },
       "group": "process-observations"
     },
@@ -3113,12 +3142,29 @@
         "line": 100,
         "kind": "session"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
+      "counterparts": [
+        "process.compare"
+      ],
+      "status": "independent-review-pending",
       "scope": "Compare explicit process observations, file effects and trace partial orders without inventing timestamp causality.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "author-tested-awaiting-review-integration-and-installed-acceptance",
+        "task": 1046,
+        "submission_revision": 1,
+        "commit": "e189a2091849aa3117b472d7e76c3efc8e121a54",
+        "tests": [
+          "theseus_tests/test_process_capture.py",
+          "theseus_tests/test_process_compare.py",
+          "theseus_tests/test_process_services.py",
+          "theseus_tests/test_retained_process_scenarios.py"
+        ],
+        "normal_ui": "Ejecuciones > Procesos; Escenarios > Capturas de procesos guardadas; Reconstrucción",
+        "evidence": "Native Windows pipes/ConPTY/Jobs, HTTP/WebSocket/C# command shims, MCP123 and UI original captures, constant/branch mutants, transfer/new verification; complete suite316PASS/2emulatorSKIP853.139s with Ghidra enabled. See docs/PROCESS-CAPTURES.md in1046 and process1046-qa20-final.json.",
+        "platforms": {
+          "windows": "native runtime tested",
+          "linux": "pipe implementation present; no live-platform certification",
+          "macos": "no live-platform certification"
+        }
       },
       "group": "process-observations"
     },
