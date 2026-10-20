@@ -13,6 +13,8 @@ class DocumentGet(BaseModel):
     id: str = Field(..., pattern=r"^[0-9a-f]{12}$")
     revision: int | None = Field(None, ge=1)
     include_svg: bool = False
+    include_figure: bool = Field(False, description="Include a portable vitruvius.figure/1 source revision and PNG for another Hoard.")
+    page_id: str | None = Field(None, description="Select one infographic page for the figure preview; full source is retained.")
 
 
 class DocumentSave(BaseModel):
@@ -64,14 +66,19 @@ def public(row, include_svg=False):
             page.pop("svg", None)
     result["files"] = {mode: f"/design/api/diagrams/documents/{row['id']}/export.svg?revision={row['revision']}&mode={mode}" for mode in ("light", "dark")}
     result["viewer_url"] = f"/design/api/diagrams/documents/{row['id']}/viewer?revision={row['revision']}"
-    result["exports"] = {kind: f"/design/api/diagrams/documents/{row['id']}/export.{kind}?revision={row['revision']}" for kind in ("svg", "png", "pdf", "drawio", "mmd", "html")}
+    result["exports"] = {kind: f"/design/api/diagrams/documents/{row['id']}/export.{kind}?revision={row['revision']}" for kind in ("svg", "png", "pdf", "drawio", "mmd", "html", "vfigure")}
     result["source_url"] = f"/design/api/diagrams/documents/{row['id']}/source.json?revision={row['revision']}"
     result["editor_url"] = f"/design/#/diagrams?document={row['id']}"
     return result
 
 
 def get(services, args):
-    return public(store(services).get(args.id, args.revision), args.include_svg)
+    row = store(services).get(args.id, args.revision)
+    result = public(row, args.include_svg)
+    if args.include_figure:
+        from .exchange import figure
+        result["figure"] = figure(row, page_id=args.page_id, origin_url=f"http://127.0.0.1:{services.config.port}")
+    return result
 
 
 def save(services, args):
@@ -147,7 +154,7 @@ def import_document(services, args):
 def tools(empty):
     return [
         Tool("diagram_document_list", "List editable diagram documents without starting models. Lista de diagramas editables.", empty, ann(True), list_documents),
-        Tool("diagram_document_get", "Read source, manual layout and revision of an editable diagram. Leer diagrama editable.", DocumentGet, ann(True), get),
+        Tool("diagram_document_get", "Read source, manual layout and revision of an editable diagram. Leer diagrama editable.", DocumentGet, ann(True), get, capped=False),
         Tool("diagram_document_save", "Create or save an editable diagram; unrelated edits merge from base_revision. Guardar diagrama.", DocumentSave, ann(False), save),
         Tool("diagram_document_edit", "Change selected diagram objects or geometry by stable ID. Conserva otras ediciones. Editar selección.", DocumentEdit, ann(False), edit),
         Tool("diagram_document_undo", "Reverse one saved change, preserving unrelated later edits. Deshacer una revisión.", DocumentUndo, ann(False), undo),

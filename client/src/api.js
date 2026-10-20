@@ -74,7 +74,7 @@ export const api = {
   diagramDocumentCompare: (id, before_revision) => request("GET", `/design/api/diagrams/documents/${encodeURIComponent(id)}/compare`, { params: { before_revision } }),
   diagramDocumentPreview: (content) => request("POST", "/design/api/diagrams/documents/preview", { body: { content } }),
   diagramDocumentImport: (source, format = "auto") => request("POST", "/design/api/diagrams/documents/import", { body: { source, format } }),
-  diagramDocumentExport: (id, format, revision, mode = "light") => `/design/api/diagrams/documents/${encodeURIComponent(id)}/export.${format}?revision=${revision}&mode=${mode}`,
+  diagramDocumentExport: (id, format, revision, mode = "light", pageId = "") => `/design/api/diagrams/documents/${encodeURIComponent(id)}/export.${format}?revision=${revision}&mode=${mode}${pageId ? `&page_id=${encodeURIComponent(pageId)}` : ''}`,
   diagramDocumentSource: (id, revision) => `/design/api/diagrams/documents/${encodeURIComponent(id)}/source.json?revision=${revision}`,
   diagramDocumentViewer: (id, revision) => `/design/api/diagrams/documents/${encodeURIComponent(id)}/viewer?revision=${revision}`,
 

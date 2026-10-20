@@ -88,7 +88,7 @@ This Operate surface lets a person edit an independent diagram document directly
 
 This is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.
 
-The code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. Authored isometric states and linked insertion into other Hoards remain outside this record; no downstream consumer is asserted here.
+The code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Authored isometric states remain outside this record. This figures extension is implemented and verified in isolated worktrees; integration and installed activation are not established here.
 
 **Key Characteristics:**
 - An independent versioned document with a visible name, save state and selected revision.
@@ -97,6 +97,7 @@ The code-led direction preserves the existing world without an approved comp or 
 - Shared shape activation for pointer and keyboard, with explicit connection and selection modes.
 - Output actions save an outstanding draft and use the accepted revision.
 - Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.
+- Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.
 
 ## Colors
 
@@ -178,6 +179,26 @@ Import image embeds PNG, JPEG or WebP data in `view.assets` and references its i
 
 Each page draws its own blocks and internal connectors. Cross-page semantic relationships remain in native source and the full HTML reader; they are not drawn as connectors across separate page canvases. Native JSON retains pages, styles, assets and identities. Combined SVG/PNG stack ordered pages; PDF produces separate pages with their own dimensions. Draw.io exchanges the supported page/text/shape/raster subset, with explicit unsupported-style limits; it is not an arbitrary-extension round trip. MMD expresses the semantic graph and labels, retaining manual layout/styles in native JSON. These are format boundaries, not proof that every output was exercised in this documentation pass.
 
+### Portable figure with source — figures extension
+
+Figura con fuente / Figure with source is the first action in the existing export row after the canvas and inspector. It uses the same bordered secondary button as the adjacent formats. On mobile, the row wraps and retains the existing larger export targets; it does not change the workbench palette, typography or composition. The current page selector also selects the figure preview for an editorial document. Graph documents export their diagram preview without a page selection.
+
+The action downloads `export.vfigure` as `vitruvius.figure/1`: document ID, accepted revision, title, selected page ID when applicable, the full native `content`, a base64 PNG preview and origin links. Selecting one page changes the preview only; all pages, identities, text, geometry, styles and embedded assets remain in the native source. The editor link opens the originating document; the source link identifies the exported revision. These links are references, while the package itself retains the source and preview. A later edit of the origin does not rewrite an imported Cicero asset.
+
+A dirty figure export reuses the accepted save-before-output handler: save must succeed before the download URL is built with the returned ID and revision. Later local edits may remain dirty. Native JSON import accepts the figure envelope as well as the diagram envelope and recovers its native content. The browser import selector explicitly includes `.vfigure`, so the downloaded package can be selected directly and imported as a new editable document.
+
+### Evidence and scope — figures extension, tasks 952/1021
+
+Ground truth for this addition is the current `DiagramEditor.jsx`, `client/src/api.js`, native exchange/document/API code, and the final R2 captures under `D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1021/`. Opened here: Vitruvius and Cicero desktop/mobile `full-r2.png` and `viewport-r2.png`, Cicero desktop/mobile `source-r2.png`, and `vitruvius-mobile-export-controls.png`. The full captures include the header; the viewport and detail captures provide readable controls. The obstructed R1 `cicero-mobile-figure-controls.png` is excluded.
+
+`FINISH.txt` records `disposition: ship` for this incumbent Operate extension, with persistence, fidelity, ceiling, material_fixes and keep sections. No material fixes remain within that review's scope. No formal direction contract, approved comp or new identity is inferred. The verdict covers the added export/import/provenance controls, not a global redesign, unseen states or installed activation.
+
+Author receipts read here: `browser-results.json` records desktop/mobile without horizontal overflow, no JavaScript or HTTP errors, save/reopen, source-retaining download, retained caption/notes/crop/other blocks on replacement, and dirty-export saving. The body CSS stack starts with Source Sans 3 and system fallbacks; `document.fonts` is empty in both apps. This does not prove Source Sans 3 or Cinzel was loaded.
+
+`native-results.json` records the native API/MCP catalogs (Vitruvius 118 tools, Cicero 68), exact retained source through API/MCP, revisions 1 and 2, identical preview with distinct source, targeted replacement and selective undo preserving manual edits. It records real PPTX (39,205 bytes), PDF (33,681 bytes) and HTML (204,816 bytes) exports. The subsequent `roundtrip.json` records native UI import through the explicit `.vfigure` file filter, all pages and native source exact in a new document, and no JavaScript errors. The last import change affects only the file input's accept attribute; the R2 visual captures remain applicable to its visible layout. These are author results, not fresh functional executions by this documenter. No model, GPU, real profile or LLM-generated figure quality was tested. The diagram/PNG is synthetic native QA content, not a stock image or newly authored illustration.
+
+The supplied single detector run reports no Cicero findings and three Vitruvius advisories for existing document-local shape/connector colors. Those colors are already described above and do not become shell tokens. No new detector, context scan, browser, server or functional run was performed here. Figures code remains unintegrated and uninstalled at this checkpoint; the earlier phase B/C records below retain their historical scope.
+
 ### Evidence and scope — phase B retained checkpoint
 
 Source inspected: `DiagramEditor.jsx`, `diagram-editor.css`, `model.js`, `pages/Diagrams.jsx`, `index.css` and the Vitruvius block in `hoard-theme.css`. Existing root product/design files and the supplied `context-editor960.txt` were read without modification. Evidence directory: `D:/LocalAI/research-inbox/expansiones-fusiones-20261020/`. Both final `editor952-desktop.png` and `editor952-mobile.png` were opened by this documenter; their final file dimensions are recorded in the sidecar. No new browser, server, detector, model or functional suite was run in this documentation pass.
@@ -211,6 +232,7 @@ The single supplied `editorial-detector.json` run contains ten advisories agains
 - **Do** save outstanding changes before output and use the accepted revision in its URL.
 - **Do** retain the earlier diagram source, brand and recent-result tools below the editor.
 - **Do** keep page controls and editorial inspection in the existing workbench, preserving full text and embedded image identity in native source.
+- **Do** keep figure export in the existing output group and preserve the full source when selecting a page for its preview.
 
 ### Don't:
 - **Don't** promote a graph template's palette or shape vocabulary into a new shell identity.
@@ -218,4 +240,4 @@ The single supplied `editorial-detector.json` run contains ten advisories agains
 - **Don't** describe every diagram type as object-editable from the graph canvas implementation.
 - **Don't** turn five resolved finish findings into certification of LLM inference or untested runtime exports.
 - **Don't** treat phase B's historical graph-only scope as phase C's current capability, or promote phase C's one resolved visual fix into full functional/installed acceptance.
-- **Don't** imply arbitrary draw.io extension parity, loaded webfonts or downstream consumers from these source and capture receipts.
+- **Don't** imply arbitrary draw.io extension parity, loaded webfonts or installed downstream activation from these source and capture receipts.

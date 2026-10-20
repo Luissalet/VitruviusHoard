@@ -2324,6 +2324,25 @@
           "default": false,
           "title": "Include Svg",
           "type": "boolean"
+        },
+        "include_figure": {
+          "default": false,
+          "description": "Include a portable vitruvius.figure/1 source revision and PNG for another Hoard.",
+          "title": "Include Figure",
+          "type": "boolean"
+        },
+        "page_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select one infographic page for the figure preview; full source is retained.",
+          "title": "Page Id"
         }
       },
       "required": [
@@ -2542,6 +2561,25 @@
           "default": false,
           "title": "Include Svg",
           "type": "boolean"
+        },
+        "include_figure": {
+          "default": false,
+          "description": "Include a portable vitruvius.figure/1 source revision and PNG for another Hoard.",
+          "title": "Include Figure",
+          "type": "boolean"
+        },
+        "page_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select one infographic page for the figure preview; full source is retained.",
+          "title": "Page Id"
         }
       },
       "required": [
