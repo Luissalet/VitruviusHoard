@@ -52,12 +52,14 @@
     "VITRUVIUS_DIR",
     "APP_URL",
     "TOKEN_FILE",
-    "PYTHON"
+    "PYTHON",
+    "DATA_DIR"
   ],
   "defaults": {
     "APP_URL": "http://127.0.0.1:5191",
-    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/mcp-token",
-    "PYTHON": "{VITRUVIUS_DIR}/.venv/Scripts/python.exe"
+    "TOKEN_FILE": "{VITRUVIUS_DIR}/data/design/mcp-token",
+    "PYTHON": "{VITRUVIUS_DIR}/venv/Scripts/python.exe",
+    "DATA_DIR": "{VITRUVIUS_DIR}/data"
   },
   "app": {
     "url_default": "http://127.0.0.1:5191",
@@ -81,6 +83,7 @@
       "kind": "process",
       "executable": "{PYTHON}",
       "argv": [
+        "-I",
         "-m",
         "vitruvius_hoard"
       ],
@@ -88,7 +91,7 @@
       "env": {
         "PORT_STRICT": "1",
         "VITRUVIUS_PORT": "5191",
-        "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data",
+        "VITRUVIUS_PROFILE_DIR": "{DATA_DIR}",
         "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}"
       },
       "readiness": {
@@ -101,12 +104,14 @@
     "transport": "stdio",
     "command": "{PYTHON}",
     "args": [
-      "{VITRUVIUS_DIR}/mcp_server.py"
+      "-I",
+      "-m",
+      "mcp_server"
     ],
     "env": {
       "VITRUVIUS_URL": "{APP_URL}",
       "VITRUVIUS_TOKEN_FILE": "{TOKEN_FILE}",
-      "VITRUVIUS_PROFILE_DIR": "{VITRUVIUS_DIR}/data"
+      "VITRUVIUS_PROFILE_DIR": "{DATA_DIR}"
     },
     "optional_env": [
       "VITRUVIUS_BRIDGE_AUTOSTART",
