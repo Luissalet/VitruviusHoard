@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T12:42:47.513126Z",
+  "generatedAt": "2026-10-20T14:06:40Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -11,6 +11,7 @@
         "client/src/components/diagram-editor/model.js",
         "client/src/pages/Diagrams.jsx",
         "client/src/components/diagram-editor/EditorialControls.jsx",
+        "client/src/components/diagram-editor/StyleControls.jsx",
         "client/src/components/diagram-editor/editorial.js",
         "client/src/api.js",
         "vitruvius_hoard/diagrams/exchange.py",
@@ -354,6 +355,78 @@
         "No downstream consumer integration or authored isometric states asserted."
       ]
     },
+    "reusableStyles": {
+      "task": 1038,
+      "mode": "Operate",
+      "status": "Implemented in isolated worktree codex/styles1038 relative to efb85ea; formal technical review, integration and installed acceptance pending.",
+      "visualAuthority": "Incumbent inspector extension; no new visual contract, approved comp or independent quality bar. Root PRODUCT.md/DESIGN.md and existing tokens retain authority.",
+      "source": [
+        "client/src/components/diagram-editor/StyleControls.jsx",
+        "client/src/components/diagram-editor/DiagramEditor.jsx (import and selected-shape placement)",
+        "client/src/components/diagram-editor/diagram-editor.css (.de-style-library)"
+      ],
+      "placement": "Native secondary disclosure below selected-shape properties and before selection actions; library selector with visible name/revision, named field and separate apply/refresh versus save/update/remove groups.",
+      "appearance": "Existing flat inspector surfaces, fields, secondary buttons, focus and disabled/busy states; no new palette, shadows or decorative effects.",
+      "layout": {
+        "separator": "Thin inherited top border; 8px top padding and min-width 0.",
+        "summary": "44px minimum height; 12px vertical padding; inherited 13px control type.",
+        "spacing": "10px above labels/action groups; 12px above help.",
+        "buttons": "Long labels wrap and align left within max-width 100%.",
+        "responsive": "At 1100px and below, spans all inspector columns, including both mobile columns. Existing workspace and canvas unchanged."
+      },
+      "typography": {
+        "convention": "Inherited local 13px controls / 12px labels and helper text; helper line-height 1.5. No root type-ramp addition.",
+        "declaredBodyStack": "Source Sans 3, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Liberation Sans, Arial, sans-serif",
+        "fontsLoaded": [],
+        "scope": "Author browser result reports a CSS stack and loaded: []; no loaded Source Sans 3 or Cinzel claim."
+      },
+      "behavior": {
+        "library": "Named appearance presets independent of documents in the Design profile; immutable retained revisions support reuse across documents, create, rename/update and removal.",
+        "apply": "Copies fill/stroke/ink, font_size/font_weight/align, border/show_label to every selected shape in one local change and undo/redo step; normal document save publishes those values.",
+        "preservation": "Text, geometry, pinning, page, image and relationships remain on each shape. Library updates/removal leave saved documents and figures unchanged; exact retained style revisions remain readable.",
+        "refresh": "Adopts a remote name only if the name field still matches the previous selected style name; preserves a manual name draft.",
+        "nativeTools": ["diagram_style_list", "diagram_style_get", "diagram_style_save", "diagram_style_remove", "diagram_style_apply"],
+        "nativeBoundary": "Native apply saves an exact style snapshot through the ordinary conflict-aware document revision contract; distinct from UI local undo."
+      },
+      "evidence": {
+        "directory": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/",
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/FINISH.txt",
+          "disposition": "ship",
+          "sections": ["persistence", "fidelity", "ceiling", "material_fixes", "keep"],
+          "materialFixes": "None within the new control and visible inspector integration.",
+          "scope": "Scoped finish only; does not replace technical review or certify other editor states, integration or installed acceptance."
+        },
+        "captures": [
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/desktop-r1.png", "width": 1440, "height": 2817, "state": "Full desktop capture; viewport 1440x1000"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/mobile-r1.png", "width": 390, "height": 3714, "state": "Full mobile capture; viewport 390x844"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/desktop-r1-styles.png", "width": 207, "height": 533, "state": "Native-size inspector detail"},
+          {"path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/mobile-r1-styles.png", "width": 328, "height": 470, "state": "Native-size inspector detail"}
+        ],
+        "captureInspection": "Opened by author and finish reviewer as recorded in FINISH.txt; this documenter read the receipts and file dimensions without reopening images.",
+        "browserReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/browser-results.json",
+        "browserResult": "Author: cross-document reuse, one-step undo/redo, geometry/pages/assets/text preserved, saved documents exact after library changes/removal, untouched remote name adopted and manual name draft retained; no JS/HTTP errors. Accompanying script/log records 1440/390 viewport overflow assertions passing.",
+        "browserLog": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-browser-r2.log",
+        "nativeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/native-results.json",
+        "nativeResult": "Author: 123 MCP tools; manual move/text and assets/pages preserved; native apply document revision 3.",
+        "buildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-build-r3.log",
+        "buildResult": "Author: successful frontend build.",
+        "areaReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-area-r3.log",
+        "areaResult": "Author: 12 new style tests included in area coverage.",
+        "fullSuiteReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-suite-counts.json",
+        "fullSuiteResult": "Author: 518 passed, 2 skipped, exit 0, counted from completed run progress statuses because double-quiet output printed no summary.",
+        "collectionReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-collected.log",
+        "collectionResult": "520 collected tests.",
+        "detector": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-detector.json",
+        "detectorResult": "One supplied run; 11 advisories for existing document-local colours, heading/control sizes and error fallback, including local 13px disclosure type. Retain inherited 13/12 inspector convention; no global drift repair or new root tokens.",
+        "documenterActivity": "Read source and supplied author/finish receipts; checked image file dimensions and documentation consistency. No new context scan, detector, browser, server, model, GPU, tests or capture."
+      },
+      "notCanonized": [
+        "Authored style appearance is document content, not a shell palette or type system.",
+        "Scoped SHIP and author QA do not establish independent technical acceptance, integration or installed activation.",
+        "Loaded fonts, model-generated quality, unseen states and isometric origin are not certified."
+      ]
+    },
     "figures": {
       "mode": "Operate",
       "status": "Implemented in isolated worktrees; not integrated or installed at this checkpoint.",
@@ -549,6 +622,13 @@
       "css": ".ds-pages{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);color:var(--hoard-text,#e1e4ec);font-size:12px;margin-block:4px;padding-block:6px}.ds-page-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px}.ds-field{min-width:0;width:100%;padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec)}.ds-button{font:600 13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);padding:7px 8px;min-height:36px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:transparent;color:var(--hoard-text,#e1e4ec);cursor:pointer}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible,.ds-field:focus-visible,.ds-options summary:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-options{margin-top:8px}.ds-options summary{cursor:pointer;padding:4px 0}.ds-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ds-dimensions label{display:grid;gap:5px;color:var(--hoard-text-muted,#b4b7be)}"
     },
     {
+      "name": "Reusable shape styles",
+      "kind": "custom",
+      "description": "Illustrative open inspector disclosure with inherited fields, separate application/library actions and wrapping labels. Library persistence and one-step selection undo require the product runtime.",
+      "html": "<details class=\"ds-style-library\" open><summary>Estilos reutilizables</summary><label>Estilo de la biblioteca<select class=\"ds-style-field\"><option>Evidencia actual · r4</option></select></label><div class=\"ds-style-actions\"><button class=\"ds-style-button\">Aplicar a la selección</button><button class=\"ds-style-button\">Actualizar biblioteca</button></div><label>Nombre del estilo<input class=\"ds-style-field\" value=\"Borrador manual de nombre\" maxlength=\"160\"></label><div class=\"ds-style-actions\"><button class=\"ds-style-button\">Guardar forma como estilo nuevo</button><button class=\"ds-style-button\">Actualizar estilo con esta forma</button><button class=\"ds-style-button\">Retirar de la biblioteca</button></div><p class=\"ds-style-help\">Copia sólo el aspecto. Cada forma conserva texto, posición, página e imagen. Cambiar la biblioteca conserva los estilos ya aplicados.</p></details>",
+      "css": ".ds-style-library{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);border-top:1px solid var(--line,var(--hoard-border,#333845));padding-top:8px;min-width:0;color:var(--ink,var(--hoard-text,#e1e4ec))}.ds-style-library summary{cursor:pointer;min-height:44px;padding:12px 0;font-size:13px}.ds-style-library label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted,var(--hoard-text-muted,#b4b7be));margin-top:10px}.ds-style-field{width:100%;min-width:0;box-sizing:border-box;font:13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec)}.ds-style-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}.ds-style-button{font:600 13px/18px var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);min-height:36px;padding:7px 14px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:transparent;color:var(--hoard-text,#e1e4ec);white-space:normal;text-align:left;max-width:100%;cursor:pointer;transition:background .16s,border-color .16s}.ds-style-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-style-button:focus-visible,.ds-style-field:focus-visible,.ds-style-library summary:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-style-button:disabled{opacity:.45;cursor:not-allowed}.ds-style-help{font-size:12px;line-height:1.5;margin-top:12px;color:var(--muted,var(--hoard-text-muted,#b4b7be))}@media(max-width:1100px){.ds-style-library{grid-column:1/-1}}@media(max-width:650px){.ds-style-button{min-height:44px}}@media(prefers-reduced-motion:reduce){.ds-style-button{transition:none}}"
+    },
+    {
       "name": "Portable figure export",
       "kind": "button",
       "refersTo": "button-secondary",
@@ -567,7 +647,8 @@
       "Shared shape activation for pointer and keyboard, with explicit connection and selection modes.",
       "Output actions save an outstanding draft and use the accepted revision.",
       "Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.",
-      "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview."
+      "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.",
+      "Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents."
     ],
     "rules": [
       {

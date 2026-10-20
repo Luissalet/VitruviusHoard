@@ -54,6 +54,31 @@ class DocumentEdit(BaseModel):
     reason: str = "Edit selected diagram objects"
 
 
+class StyleGet(BaseModel):
+    id: str = Field(...,pattern=r"^[0-9a-f]{12}$")
+    revision: int | None = Field(None,ge=1)
+
+
+class StyleSave(BaseModel):
+    id: str | None = Field(None,pattern=r"^[0-9a-f]{12}$")
+    base_revision: int | None = Field(None,ge=1)
+    name: str = Field(...,min_length=1,max_length=160)
+    values: dict[str,Any]
+
+
+class StyleRemove(BaseModel):
+    id: str = Field(...,pattern=r"^[0-9a-f]{12}$")
+    base_revision: int = Field(...,ge=1)
+
+
+class StyleApply(BaseModel):
+    id: str = Field(...,pattern=r"^[0-9a-f]{12}$",description="Document to change.")
+    base_revision: int = Field(...,ge=1)
+    style_id: str = Field(...,pattern=r"^[0-9a-f]{12}$")
+    style_revision: int = Field(...,ge=1)
+    node_ids: list[str] = Field(...,min_length=1)
+
+
 def store(services):
     return DocumentStore(services.config.data_dir)
 
@@ -151,8 +176,30 @@ def import_document(services, args):
     return {**public(store(services).save(content, reason="Import diagram")), "warnings": warnings}
 
 
+def style_store(services):
+    from .styles import StyleStore
+    return StyleStore(services.config.data_dir)
+
+
+def style_save(services,args):
+    return style_store(services).save(args.name,args.values,sid=args.id,base_revision=args.base_revision)
+
+
+def style_apply(services,args):
+    from .styles import apply
+    source=store(services).get(args.id,args.base_revision)['content']
+    style=style_store(services).get(args.style_id,args.style_revision)
+    content=apply(source,args.node_ids,style['values'])
+    return public(store(services).save(content,did=args.id,base_revision=args.base_revision,reason=f"Apply style {style['name']} r{style['revision']}"))
+
+
 def tools(empty):
     return [
+        Tool("diagram_style_list","List reusable named shape styles. Estilos reutilizables.\nDoes not create a store.",empty,ann(True),lambda s,a:{'styles':style_store(s).list()}),
+        Tool("diagram_style_get","Read an immutable style revision. Leer estilo.\nRetained revisions remain readable after removal.",StyleGet,ann(True),lambda s,a:style_store(s).get(a.id,a.revision)),
+        Tool("diagram_style_save","Create or revise a named shape style. Guardar estilo.\nSupply complete appearance values, excluding geometry, content, images and page.",StyleSave,ann(False),style_save),
+        Tool("diagram_style_remove","Remove a style from the library. Retirar estilo.\nRetains its revisions and all styled documents.",StyleRemove,ann(False),lambda s,a:style_store(s).remove(a.id,a.base_revision)),
+        Tool("diagram_style_apply","Copy a style onto selected shapes. Aplicar estilo.\nOne undoable document change; preserves geometry, text, resources and independent later edits.",StyleApply,ann(False),style_apply),
         Tool("diagram_document_list", "List editable diagram documents without starting models. Lista de diagramas editables.", empty, ann(True), list_documents),
         Tool("diagram_document_get", "Read source, manual layout and revision of an editable diagram. Leer diagrama editable.", DocumentGet, ann(True), get, capped=False),
         Tool("diagram_document_save", "Create or save an editable diagram; unrelated edits merge from base_revision. Guardar diagrama.", DocumentSave, ann(False), save),

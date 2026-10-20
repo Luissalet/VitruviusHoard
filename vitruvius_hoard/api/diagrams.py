@@ -27,6 +27,31 @@ def _found(fn, *args):
 router = APIRouter(prefix="/api")
 
 
+@router.get("/diagrams/styles")
+def styles_list(request: Request):
+    return {"styles":documents.style_store(services(request)).list()}
+
+
+@router.get("/diagrams/styles/{sid}")
+def style_get(request: Request,sid: str,revision: int | None=None):
+    return _found(lambda:documents.style_store(services(request)).get(sid,revision))
+
+
+@router.post("/diagrams/styles",status_code=201)
+def style_save(request: Request,body: documents.StyleSave):
+    return documents.style_save(services(request),body)
+
+
+@router.post("/diagrams/styles/remove")
+def style_remove(request: Request,body: documents.StyleRemove):
+    return documents.style_store(services(request)).remove(body.id,body.base_revision)
+
+
+@router.post("/diagrams/styles/apply")
+def style_apply(request: Request,body: documents.StyleApply):
+    return documents.style_apply(services(request),body)
+
+
 @router.post("/diagrams/documents/preview")
 def document_preview(request: Request, body: documents.DocumentSave):
     from ..diagrams.documents import normalize, drawing
