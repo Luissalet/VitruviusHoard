@@ -4,6 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ConfirmButton } from "../components/ui.jsx";
 import { clock } from "../format.js";
+import DiagramEditor from "../components/diagram-editor/DiagramEditor.jsx";
 
 const SAMPLE = `flowchart TD
   A([Start]) --> B[Review order]
@@ -161,6 +162,7 @@ export default function Diagrams() {
         <h1 className="text-[20px] font-semibold">{t("nav_diagrams")}</h1>
         <p className="help mt-1">{t("dg_intro")}</p>
       </header>
+      <DiagramEditor />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4 min-w-0">
           <div className="panel flex flex-col gap-3">

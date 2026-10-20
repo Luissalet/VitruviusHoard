@@ -45,6 +45,7 @@ export const OBJECT_KINDS = {
   render: { get: (api, id) => api.render(id), title: (r) => r.title || r.url, url: "#/critique" },
   "design-system": { get: (api, id) => api.tokensGet(id), title: (r) => r.name, url: "#/tokens" },
   diagram: { get: (api, id) => api.diagram(id), title: (r) => r.title || r.type, url: "#/diagrams" },
+  "diagram-document": { get: (api, id) => api.diagramDocument(id), title: (r) => r.content?.diagram?.title, url: (r) => `#/diagrams?document=${r.id}` },
   reference: { get: (api, id) => api.reference(id), title: (r) => r.title || r.url, url: "#/gallery" },
   motion: { get: (api, id) => api.motion(id), title: (r) => r.composition?.title, url: "#/motion" },
 };

@@ -1,0 +1,370 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T08:41:57.431Z",
+  "title": "Vitruvius diagram editor — surface record",
+  "extensions": {
+    "surface": {
+      "mode": "Operate",
+      "primaryTarget": "client/src/components/diagram-editor/DiagramEditor.jsx",
+      "relatedTargets": [
+        "client/src/components/diagram-editor/diagram-editor.css",
+        "client/src/components/diagram-editor/model.js",
+        "client/src/pages/Diagrams.jsx"
+      ],
+      "briefPath": "docs/design/diagrams.md",
+      "authorities": [
+        "PRODUCT.md",
+        "DESIGN.md"
+      ],
+      "scope": "Surface-only record; does not replace root authority or imply context-loader discovery.",
+      "visualAuthority": "Incumbent Hoard; code-led; no approved comp; no raster assets"
+    },
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "#6a8ced",
+        "tonalRamp": [
+          "oklch(15.00% 0.14953 267.64)",
+          "oklch(26.43% 0.14953 267.64)",
+          "oklch(37.86% 0.14953 267.64)",
+          "oklch(49.29% 0.14953 267.64)",
+          "oklch(60.71% 0.14953 267.64)",
+          "oklch(72.14% 0.14953 267.64)",
+          "oklch(83.57% 0.14953 267.64)",
+          "oklch(95.00% 0.14953 267.64)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "primary hover",
+        "canonical": "#8ea8f1",
+        "tonalRamp": [
+          "oklch(15.00% 0.11008 268.64)",
+          "oklch(26.43% 0.11008 268.64)",
+          "oklch(37.86% 0.11008 268.64)",
+          "oklch(49.29% 0.11008 268.64)",
+          "oklch(60.71% 0.11008 268.64)",
+          "oklch(72.14% 0.11008 268.64)",
+          "oklch(83.57% 0.11008 268.64)",
+          "oklch(95.00% 0.11008 268.64)"
+        ]
+      },
+      "primary-ink": {
+        "role": "primary",
+        "displayName": "primary ink",
+        "canonical": "#12151c",
+        "tonalRamp": [
+          "oklch(15.00% 0.01492 266.81)",
+          "oklch(26.43% 0.01492 266.81)",
+          "oklch(37.86% 0.01492 266.81)",
+          "oklch(49.29% 0.01492 266.81)",
+          "oklch(60.71% 0.01492 266.81)",
+          "oklch(72.14% 0.01492 266.81)",
+          "oklch(83.57% 0.01492 266.81)",
+          "oklch(95.00% 0.01492 266.81)"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "neutral bg",
+        "canonical": "#13161d",
+        "tonalRamp": [
+          "oklch(15.00% 0.01483 266.83)",
+          "oklch(26.43% 0.01483 266.83)",
+          "oklch(37.86% 0.01483 266.83)",
+          "oklch(49.29% 0.01483 266.83)",
+          "oklch(60.71% 0.01483 266.83)",
+          "oklch(72.14% 0.01483 266.83)",
+          "oklch(83.57% 0.01483 266.83)",
+          "oklch(95.00% 0.01483 266.83)"
+        ]
+      },
+      "neutral-surface": {
+        "role": "neutral",
+        "displayName": "neutral surface",
+        "canonical": "#1a1d26",
+        "tonalRamp": [
+          "oklch(15.00% 0.01801 270.53)",
+          "oklch(26.43% 0.01801 270.53)",
+          "oklch(37.86% 0.01801 270.53)",
+          "oklch(49.29% 0.01801 270.53)",
+          "oklch(60.71% 0.01801 270.53)",
+          "oklch(72.14% 0.01801 270.53)",
+          "oklch(83.57% 0.01801 270.53)",
+          "oklch(95.00% 0.01801 270.53)"
+        ]
+      },
+      "neutral-elevated": {
+        "role": "neutral",
+        "displayName": "neutral elevated",
+        "canonical": "#232731",
+        "tonalRamp": [
+          "oklch(15.00% 0.01947 267.96)",
+          "oklch(26.43% 0.01947 267.96)",
+          "oklch(37.86% 0.01947 267.96)",
+          "oklch(49.29% 0.01947 267.96)",
+          "oklch(60.71% 0.01947 267.96)",
+          "oklch(72.14% 0.01947 267.96)",
+          "oklch(83.57% 0.01947 267.96)",
+          "oklch(95.00% 0.01947 267.96)"
+        ]
+      },
+      "neutral-border": {
+        "role": "neutral",
+        "displayName": "neutral border",
+        "canonical": "#333845",
+        "tonalRamp": [
+          "oklch(15.00% 0.02385 268.58)",
+          "oklch(26.43% 0.02385 268.58)",
+          "oklch(37.86% 0.02385 268.58)",
+          "oklch(49.29% 0.02385 268.58)",
+          "oklch(60.71% 0.02385 268.58)",
+          "oklch(72.14% 0.02385 268.58)",
+          "oklch(83.57% 0.02385 268.58)",
+          "oklch(95.00% 0.02385 268.58)"
+        ]
+      },
+      "neutral-border-hover": {
+        "role": "neutral",
+        "displayName": "neutral border hover",
+        "canonical": "#555b6d",
+        "tonalRamp": [
+          "oklch(15.00% 0.03008 270.71)",
+          "oklch(26.43% 0.03008 270.71)",
+          "oklch(37.86% 0.03008 270.71)",
+          "oklch(49.29% 0.03008 270.71)",
+          "oklch(60.71% 0.03008 270.71)",
+          "oklch(72.14% 0.03008 270.71)",
+          "oklch(83.57% 0.03008 270.71)",
+          "oklch(95.00% 0.03008 270.71)"
+        ]
+      },
+      "neutral-text": {
+        "role": "neutral",
+        "displayName": "neutral text",
+        "canonical": "#e1e4ec",
+        "tonalRamp": [
+          "oklch(15.00% 0.01130 269.54)",
+          "oklch(26.43% 0.01130 269.54)",
+          "oklch(37.86% 0.01130 269.54)",
+          "oklch(49.29% 0.01130 269.54)",
+          "oklch(60.71% 0.01130 269.54)",
+          "oklch(72.14% 0.01130 269.54)",
+          "oklch(83.57% 0.01130 269.54)",
+          "oklch(95.00% 0.01130 269.54)"
+        ]
+      },
+      "neutral-muted": {
+        "role": "neutral",
+        "displayName": "neutral muted",
+        "canonical": "#b4b7be",
+        "tonalRamp": [
+          "oklch(15.00% 0.01045 267.34)",
+          "oklch(26.43% 0.01045 267.34)",
+          "oklch(37.86% 0.01045 267.34)",
+          "oklch(49.29% 0.01045 267.34)",
+          "oklch(60.71% 0.01045 267.34)",
+          "oklch(72.14% 0.01045 267.34)",
+          "oklch(83.57% 0.01045 267.34)",
+          "oklch(95.00% 0.01045 267.34)"
+        ]
+      }
+    },
+    "tonalRampNote": "Synthetic OKLCH preview strips preserve each sampled hue/chroma while stepping lightness. These strips are not new product tokens or a contrast certification.",
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Workbench headline",
+        "purpose": "Inherited Cinzel page heading."
+      },
+      "body": {
+        "displayName": "Workbench body",
+        "purpose": "Inherited Source Sans 3 body and helper copy."
+      },
+      "control": {
+        "displayName": "Compact controls",
+        "purpose": "Native editor button text."
+      },
+      "label": {
+        "displayName": "Labels and status",
+        "purpose": "Inspector, export and canvas help."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "shell-state",
+        "value": "background 0.16s, border-color 0.16s",
+        "purpose": "Inherited button state changes; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "inspector-below",
+        "value": "1100px"
+      },
+      {
+        "name": "single-column-and-palette-disclosure",
+        "value": "650px"
+      }
+    ],
+    "layout": {
+      "wideColumns": "144px minmax(0,1fr) 236px",
+      "intermediateColumns": "120px minmax(0,1fr)",
+      "canvasHeight": "480px",
+      "mobileCanvasHeight": "390px",
+      "mobileInspectorColumns": 2,
+      "source": "diagram-editor.css"
+    },
+    "evidence": {
+      "captures": [
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editor952-desktop.png",
+          "width": 1440,
+          "height": 1442
+        },
+        {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/editor952-mobile.png",
+          "width": 390,
+          "height": 2495
+        }
+      ],
+      "openedByDocumenter": true,
+      "context": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/context-editor960.txt",
+      "review": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/finish-review960.txt",
+      "verdict": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/finish-verdict960.txt",
+      "disposition": "ship",
+      "verdictScope": "Five listed corrections resolved only; not whole-surface, LLM inference or activated Python/export routing certification.",
+      "documenterActivity": "Code and supplied-image inspection; no new detector, browser, server, model or functional tests."
+    },
+    "notCanonized": [
+      "Document-local palettes and graph geometry are not shell tokens.",
+      "Missing visible captions beside the paired selects are not a labelling rule.",
+      "Zoom glyph controls do not define a general icon system.",
+      "Uncaptured states, future infographics, page/state work and consumers are not certified delivery."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary save button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Accepted save action; disabled is the saved or unavailable state.",
+      "html": "<button class=\"ds-button ds-primary\">Guardar</button>",
+      "css": ".ds-button{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border-radius:8px;border:1px solid var(--hoard-border,#333845);background:transparent;color:var(--hoard-text,#e1e4ec);font-weight:600;cursor:pointer;transition:background .16s,border-color .16s;}.ds-primary{background:var(--hoard-accent,#6a8ced);border-color:var(--hoard-accent,#6a8ced);color:var(--hoard-accent-ink,#12151c)}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-primary:hover{background:var(--hoard-accent-strong,#8ea8f1);border-color:var(--hoard-accent-strong,#8ea8f1)}"
+    },
+    {
+      "name": "Secondary editor button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Native secondary actions for create, history, inspector and output.",
+      "html": "<button class=\"ds-button\">Versiones</button>",
+      "css": ".ds-button{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border-radius:8px;border:1px solid var(--hoard-border,#333845);background:transparent;color:var(--hoard-text,#e1e4ec);font-weight:600;cursor:pointer;transition:background .16s,border-color .16s;}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Diagram name field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "The editable document name uses the inherited field treatment.",
+      "html": "<label class=\"ds-name\">Nombre del diagrama<input class=\"ds-field\" value=\"Proceso con revisión\"></label>",
+      "css": ".ds-name{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:grid;gap:5px;color:var(--hoard-text-muted,#b4b7be)}.ds-field{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;padding:7px 10px;border:1px solid var(--hoard-border,#333845);border-radius:8px;background:var(--hoard-surface,#1a1d26);color:var(--hoard-text,#e1e4ec);min-width:0}.ds-field:focus{border-color:var(--hoard-accent,#6a8ced);outline:none}"
+    },
+    {
+      "name": "Current diagram navigation",
+      "kind": "nav",
+      "description": "Incumbent current section, including its inline vector icon.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Secciones\"><a class=\"ds-current\" href=\"#diagrams\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M3 3h6v6H3zM15 3h6v6h-6zM9 15h6v6H9zM6 9v3h12V9M12 12v3\"/></svg>Diagramas</a></nav>",
+      "css": ".ds-current{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border-radius:8px;background:var(--hoard-elevated,#232731);color:var(--hoard-text,#e1e4ec);text-decoration:none;font-weight:500}.ds-current svg{color:var(--hoard-accent,#6a8ced)}.ds-current:hover{background:var(--hoard-elevated,#232731)}.ds-current:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}"
+    },
+    {
+      "name": "Inherited status chip",
+      "kind": "chip",
+      "description": "Existing diagram-result status primitive, retained below the editor.",
+      "html": "<span class=\"ds-chip\">flowchart</span>",
+      "css": ".ds-chip{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;font-size:11px;font-weight:600;border-radius:6px;background:var(--hoard-elevated,#232731);color:var(--hoard-text-muted,#b4b7be)}"
+    },
+    {
+      "name": "Workbench panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Flat bordered container shared by the editor and retained source tools.",
+      "html": "<section class=\"ds-panel\"><p class=\"ds-help\">Selecciona una forma o conexión para editarla.</p></section>",
+      "css": ".ds-panel{background:var(--hoard-surface,#1a1d26);border:1px solid var(--hoard-border,#333845);border-radius:10px;padding:16px}.ds-help{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;font-size:12px;color:var(--hoard-text-muted,#b4b7be);margin:0}"
+    },
+    {
+      "name": "Active selection tool",
+      "kind": "button",
+      "description": "The selected mode uses inherited primary treatment and pressed semantics.",
+      "html": "<button class=\"ds-button ds-tool\" aria-pressed=\"true\">Seleccionar</button>",
+      "css": ".ds-button{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border-radius:8px;border:1px solid var(--hoard-border,#333845);background:transparent;color:var(--hoard-text,#e1e4ec);font-weight:600;cursor:pointer;transition:background .16s,border-color .16s;}.ds-tool{background:var(--hoard-accent,#6a8ced);border-color:var(--hoard-accent,#6a8ced);color:var(--hoard-accent-ink,#12151c);text-align:left}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-tool:hover{background:var(--hoard-accent-strong,#8ea8f1);border-color:var(--hoard-accent-strong,#8ea8f1)}"
+    },
+    {
+      "name": "Mobile palette disclosure",
+      "kind": "button",
+      "description": "Closed mobile palette remains reachable through Formas; snippet is an illustrative state.",
+      "html": "<button class=\"ds-button\" aria-expanded=\"false\">Formas</button>",
+      "css": ".ds-button{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;line-height:18px;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:7px 14px;border-radius:8px;border:1px solid var(--hoard-border,#333845);background:transparent;color:var(--hoard-text,#e1e4ec);font-weight:600;cursor:pointer;transition:background .16s,border-color .16s;}.ds-button:hover{background:var(--hoard-elevated,#232731);border-color:var(--hoard-border-hover,#555b6d)}.ds-button:focus-visible{outline:2px solid var(--hoard-accent,#6a8ced);outline-offset:2px}.ds-button:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Editable graph material",
+      "kind": "custom",
+      "description": "Illustrative SVG geometry from the light document profile; editor behavior requires the product runtime.",
+      "html": "<svg class=\"ds-graph\" viewBox=\"0 0 280 160\" aria-label=\"Dos formas conectadas\" role=\"img\"><defs><marker id=\"ds-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#2f5bd3\"/></marker></defs><rect x=\"20\" y=\"15\" width=\"176\" height=\"48\" rx=\"24\"/><path d=\"M108 63V91\" fill=\"none\" stroke=\"#2f5bd3\" marker-end=\"url(#ds-arrow)\"/><polygon points=\"108,94 196,122 108,150 20,122\"/><text x=\"108\" y=\"43\">Recibir solicitud</text><text x=\"108\" y=\"126\">¿Está completa?</text></svg>",
+      "css": ".ds-graph{display:block;width:100%;max-width:360px;background:#ffffff}.ds-graph rect,.ds-graph polygon{fill:#f3f5f9;stroke:#8a94a6;stroke-width:1.4}.ds-graph text{font-family:var(--hoard-font-sans,Source Sans 3,Segoe UI,sans-serif);font-size:13px;fill:#1d2433;text-anchor:middle}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Existing Hoard workbench",
+    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, Cinzel headings and Source Sans 3 controls extend the incumbent workbench. The drawing is editable SVG; no raster asset establishes its identity.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. This delivery records the first graph editing core; infographic composition, page/state work and downstream consumers remain later scope.",
+    "keyCharacteristics": [
+      "An independent versioned document with a visible name, save state and selected revision.",
+      "A native SVG canvas between a shape palette and selection inspector on wide screens.",
+      "A recoverable mobile shape palette and useful drawing area in the first viewport.",
+      "Shared shape activation for pointer and keyboard, with explicit connection and selection modes.",
+      "Output actions save an outstanding draft and use the accepted revision."
+    ],
+    "rules": [
+      {
+        "name": "The Document Ground Rule",
+        "body": "The drawing profile belongs to the document; changing it does not replace the surrounding Hoard theme.",
+        "section": "colors"
+      },
+      {
+        "name": "The Workbench Type Rule",
+        "body": "Preserve the inherited serif heading and sans control relationship; document labels remain legible working content rather than a new display voice.",
+        "section": "typography"
+      },
+      {
+        "name": "The Available Canvas Rule",
+        "body": "Compact secondary controls on narrow screens while keeping the drawing and the Formas disclosure available; preserve desktop working columns.",
+        "section": "layout"
+      },
+      {
+        "name": "The Distinct Return Rule",
+        "body": "Give the reciprocal return its own visible route so each arrow can be followed independently.",
+        "section": "components"
+      },
+      {
+        "name": "The Accepted Revision Rule",
+        "body": "Output actions with outstanding changes save first and identify the accepted revision, retaining any later edits as a draft.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do preserve the incumbent Hoard shell, navigation, language switch and Faustus integration.",
+      "Do keep the document profile separate from the workbench palette.",
+      "Do retain a useful mobile drawing area with the shape controls recoverable through Formas.",
+      "Do keep pointer and keyboard activation consistent for node selection and connection creation.",
+      "Do keep reciprocal routes visually distinct and preserve access through Fit and pan.",
+      "Do save outstanding changes before output and use the accepted revision in its URL.",
+      "Do retain the earlier diagram source, brand and recent-result tools below the editor."
+    ],
+    "donts": [
+      "Don't promote a graph template's palette or shape vocabulary into a new shell identity.",
+      "Don't silently export the previously saved revision when the action promises to save the current draft.",
+      "Don't describe every diagram type as object-editable from the graph canvas implementation.",
+      "Don't turn five resolved finish findings into certification of LLM inference or untested runtime exports.",
+      "Don't represent future infographics, page/state work or downstream consumers as delivered by this first graph core."
+    ]
+  }
+}
