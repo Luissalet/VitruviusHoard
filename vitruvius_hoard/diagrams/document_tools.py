@@ -60,10 +60,11 @@ def public(row, include_svg=False):
     result = deepcopy(row)
     if not include_svg:
         result.get("rendering", {}).pop("svg", None)
-    result["files"] = {mode: f"/api/diagrams/documents/{row['id']}/export.svg?revision={row['revision']}&mode={mode}" for mode in ("light", "dark")}
-    result["viewer_url"] = f"/api/diagrams/documents/{row['id']}/viewer?revision={row['revision']}"
-    result["exports"] = {kind: f"/api/diagrams/documents/{row['id']}/export.{kind}?revision={row['revision']}" for kind in ("svg", "png", "pdf", "drawio", "mmd", "html")}
-    result["source_url"] = f"/api/diagrams/documents/{row['id']}/source.json?revision={row['revision']}"
+    result["files"] = {mode: f"/design/api/diagrams/documents/{row['id']}/export.svg?revision={row['revision']}&mode={mode}" for mode in ("light", "dark")}
+    result["viewer_url"] = f"/design/api/diagrams/documents/{row['id']}/viewer?revision={row['revision']}"
+    result["exports"] = {kind: f"/design/api/diagrams/documents/{row['id']}/export.{kind}?revision={row['revision']}" for kind in ("svg", "png", "pdf", "drawio", "mmd", "html")}
+    result["source_url"] = f"/design/api/diagrams/documents/{row['id']}/source.json?revision={row['revision']}"
+    result["editor_url"] = f"/design/#/diagrams?document={row['id']}"
     return result
 
 

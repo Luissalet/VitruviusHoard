@@ -130,8 +130,6 @@ def document_layout(content):
         return d, lay
     view = content.get("view", {})
     positions = view.get("nodes", {})
-    if not positions and not view.get("edges"):
-        return d, lay
     for key, position in positions.items():
         box = lay.boxes.get(key)
         if box is None:
@@ -141,19 +139,25 @@ def document_layout(content):
         if box.shape != "er":
             box.lines = wrap(next(n.label for n in d.nodes if n.id == key), max(3, int((box.w - 28) / 7.6)))
     lay.routes = []
-    for edge in d.edges:
+    for index, edge in enumerate(d.edges):
         a, b = lay.boxes[edge.source], lay.boxes[edge.target]
         ev = view.get("edges", {}).get(edge.id, {})
+        returning = any(other.source == edge.target and other.target == edge.source for other in d.edges[:index]) and edge.source != edge.target
         if abs(b.cx - a.cx) >= abs(b.cy - a.cy):
             start_side, end_side = ("right", "left") if b.cx >= a.cx else ("left", "right")
         else:
             start_side, end_side = ("bottom", "top") if b.cy >= a.cy else ("top", "bottom")
+        if returning:
+            start_side = end_side = "right"
         start_side = ev.get("source_port", "auto") if ev.get("source_port", "auto") != "auto" else start_side
         end_side = ev.get("target_port", "auto") if ev.get("target_port", "auto") != "auto" else end_side
         start, end = _port(a, start_side), _port(b, end_side)
         middle = ev.get("points")
         if middle:
             points = [start, *(tuple(p) for p in middle), end]
+        elif returning:
+            lane = max(a.x + a.w, b.x + b.w) + 40
+            points = [start, (lane, start[1]), (lane, end[1]), end]
         elif edge.source == edge.target:
             points = [start, (a.x + a.w + 36, start[1]), (a.x + a.w + 36, a.y - 24), (a.cx, a.y - 24), (a.cx, a.y)]
         elif start_side in ("left", "right"):
@@ -171,8 +175,8 @@ def document_layout(content):
             frame.y = min(b.y for b in boxes) - GROUP_PAD - GROUP_LABEL_H
             frame.w = max(b.x + b.w for b in boxes) - frame.x + GROUP_PAD
             frame.h = max(b.y + b.h for b in boxes) - frame.y + GROUP_PAD
-    lay.width = max(640, *(b.x + b.w + MARGIN for b in lay.boxes.values()), *(f.x + f.w + MARGIN for f in lay.frames))
-    lay.height = max(400, *(b.y + b.h + MARGIN for b in lay.boxes.values()), *(f.y + f.h + MARGIN for f in lay.frames))
+    lay.width = max(640, *(b.x + b.w + MARGIN for b in lay.boxes.values()), *(f.x + f.w + MARGIN for f in lay.frames), *(x + MARGIN for r in lay.routes for x, y in r.points))
+    lay.height = max(400, *(b.y + b.h + MARGIN for b in lay.boxes.values()), *(f.y + f.h + MARGIN for f in lay.frames), *(y + MARGIN for r in lay.routes for x, y in r.points))
     return d, lay
 
 
