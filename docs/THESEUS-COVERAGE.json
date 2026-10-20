@@ -22,9 +22,8 @@
     "semantic-review-pending": 168,
     "implementation-pending": 19,
     "platform-required-implementation-pending": 3,
-    "source-integrated-release-pending": 3,
-    "excluded-by-user": 4,
-    "integrated-tested-published": 10
+    "integrated-tested-published": 13,
+    "excluded-by-user": 4
   },
   "contracts": [
     {
@@ -1184,10 +1183,10 @@
       "counterparts": [
         "binary.layout"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Preserve original section/symbol/relocation/RELR bytes and identities, dependency/interpreter names and scoped mitigation facts.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-wheel-tested-awaiting-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1068,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1203,8 +1202,18 @@
           "elf1068-full20.xml",
           "elf1068-installed20.json",
           "elf1068-installed-mcp20-proof.json",
-          "elf1068-installed-qa20-final.json"
-        ]
+          "elf1068-installed-qa20-final.json",
+          "release1070-full20.xml",
+          "release1070-installed20.json",
+          "release1070-installed-mcp20-proof.json",
+          "release1070-installed-ui20.json",
+          "release1070-installed-qa20-final.json",
+          "shared1070-installed20.json",
+          "manual1068-1070-proof20.json"
+        ],
+        "published_runtime_head": "c0edece2e3aedc6c704a73cf6542438e111e7854",
+        "final_wheel_sha256": "4e1e8dca814d668fbc62cba8bca1eef4c1e77b4b79ac16357ddb4119ab695528",
+        "final_acceptance": "Combined373PASS2emulatorSKIP601.31s GhidraON. Fresh installed wheel3811exact/pipcheck/actualMCP124, bothreader UI/JSONdownloads and importedELF50rawrecords/RELR1 after original retirement PASS; all privateowners/tabs/ports closed. Shared samewheel3811exact, all prior dependencyversions unchanged, MCP124cold/no profile/no owner start/5191free. Manual39MCP/67static/50binary/40runtime;189other paragraphs and native structure/styles/links exact. No Sparks or substitute LLM."
       },
       "group": "binary-layout"
     },
@@ -1688,10 +1697,10 @@
         "theseus_client_inspect family=apktool",
         "POST /theseus/api/engines/inspect"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Expose selected free client/Java identity and version without requiring a target artifact or decoding it.",
       "acceptance": {
-        "state": "independent-CAS2-approved-source-integrated-external-wheel-tested-awaiting-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1070,
         "submission_revision": 2,
         "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
@@ -1711,11 +1720,21 @@
           "clients1070-owner20.xml",
           "clients1070-installed20.json",
           "clients1070-installed-mcp20-proof.json",
-          "clients1070-installed-qa20-final.json"
+          "clients1070-installed-qa20-final.json",
+          "release1070-full20.xml",
+          "release1070-installed20.json",
+          "release1070-installed-mcp20-proof.json",
+          "release1070-installed-ui20.json",
+          "release1070-installed-qa20-final.json",
+          "shared1070-installed20.json",
+          "manual1068-1070-proof20.json"
         ],
         "reviewed_submission_revision": 2,
         "application_head": "345ac3c68ea4be1ef4e00625272cde32976f51a9",
-        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe"
+        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe",
+        "published_runtime_head": "c0edece2e3aedc6c704a73cf6542438e111e7854",
+        "final_wheel_sha256": "4e1e8dca814d668fbc62cba8bca1eef4c1e77b4b79ac16357ddb4119ab695528",
+        "final_acceptance": "Combined373PASS2emulatorSKIP601.31s GhidraON. Fresh installed wheel3811exact/pipcheck/actualMCP124, bothreader UI/JSONdownloads and importedELF50rawrecords/RELR1 after original retirement PASS; all privateowners/tabs/ports closed. Shared samewheel3811exact, all prior dependencyversions unchanged, MCP124cold/no profile/no owner start/5191free. Manual39MCP/67static/50binary/40runtime;189other paragraphs and native structure/styles/links exact. No Sparks or substitute LLM."
       },
       "group": "client-diagnostics"
     },
@@ -1749,10 +1768,10 @@
         "theseus_client_inspect family=pcap",
         "POST /theseus/api/engines/inspect"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Expose selected TShark/capinfos paths, selection sources and versions without requiring a capture artifact.",
       "acceptance": {
-        "state": "independent-CAS2-approved-source-integrated-external-wheel-tested-awaiting-final-release",
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
         "task": 1070,
         "submission_revision": 2,
         "commit": "305778a015becd65a1dbedcb52e6fdb724c32ccd",
@@ -1772,11 +1791,21 @@
           "clients1070-owner20.xml",
           "clients1070-installed20.json",
           "clients1070-installed-mcp20-proof.json",
-          "clients1070-installed-qa20-final.json"
+          "clients1070-installed-qa20-final.json",
+          "release1070-full20.xml",
+          "release1070-installed20.json",
+          "release1070-installed-mcp20-proof.json",
+          "release1070-installed-ui20.json",
+          "release1070-installed-qa20-final.json",
+          "shared1070-installed20.json",
+          "manual1068-1070-proof20.json"
         ],
         "reviewed_submission_revision": 2,
         "application_head": "345ac3c68ea4be1ef4e00625272cde32976f51a9",
-        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe"
+        "external_installed_wheel_sha256": "57bd06836e4f92c41ff10f0e92846eff9a7012fb030a3a342b6448aca08fa3fe",
+        "published_runtime_head": "c0edece2e3aedc6c704a73cf6542438e111e7854",
+        "final_wheel_sha256": "4e1e8dca814d668fbc62cba8bca1eef4c1e77b4b79ac16357ddb4119ab695528",
+        "final_acceptance": "Combined373PASS2emulatorSKIP601.31s GhidraON. Fresh installed wheel3811exact/pipcheck/actualMCP124, bothreader UI/JSONdownloads and importedELF50rawrecords/RELR1 after original retirement PASS; all privateowners/tabs/ports closed. Shared samewheel3811exact, all prior dependencyversions unchanged, MCP124cold/no profile/no owner start/5191free. Manual39MCP/67static/50binary/40runtime;189other paragraphs and native structure/styles/links exact. No Sparks or substitute LLM."
       },
       "group": "client-diagnostics"
     },

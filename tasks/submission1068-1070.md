@@ -43,7 +43,21 @@ did not claim a second full suite, MCP or UI run. Candidate wheel57bd0683 from
 checks, pip dependency validation and fresh installed real MCP124/UI/downloads
 passed. All private owners, requests, ports and tabs closed.
 
-The shared installation remains the previously accepted wheel4c094708 while
-the final combined source/documentation release is prepared. These selected
-deliveries do not certify the remaining207-contract scope. No Sparks, substitute
-text model, GPU, shared device or retired reference application was used.
+The approved functional source and packaged documentation were published as
+`c0edece2e3aedc6c704a73cf6542438e111e7854`. Its final combined wheel
+`4e1e8dca814d668fbc62cba8bca1eef4c1e77b4b79ac16357ddb4119ab695528`
+passed373 tests and two emulator opt-in skips in601.31s with Ghidra enabled.
+Fresh installed acceptance checked3811 exact members excluding pip RECORD,
+dependencies, actual MCP124, both installed-reader reports and exact diagnostic
+downloads, and retained ELF RELR/original50 records through the normal UI after
+the original fixture was retired. All private owners, tabs and ports closed.
+The same wheel replaced the shared distribution while its owner stayed OFF:
+3811 member bytes exact, prior dependencies unchanged, MCP124 cold discovery
+without a profile or a listener on5191. The native manual now records39 Theseus
+MCP tools,67 static,50 binary and40 runtime operations;189 other paragraphs and
+the native structure, styles and links remained exact.
+
+The ledger records13 individually accepted and published contracts. These
+selected deliveries do not certify the remaining207-contract scope. Native
+context1073 is still a separate unreviewed prototype. No Sparks, substitute text
+model, GPU, shared device or retired reference application was used.
