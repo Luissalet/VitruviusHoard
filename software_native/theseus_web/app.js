@@ -8,6 +8,28 @@ const escape = (value) =>
       ],
   );
 const json = (value) => JSON.stringify(value, null, 2);
+let clientInspectionDownload = null;
+async function inspectClientForm(form) {
+  const button = form.querySelector('button[type="submit"]');
+  const result = $("#client-inspection-result");
+  button.disabled = true;
+  result.setAttribute("aria-busy", "true");
+  result.textContent = "Consultando versiones…";
+  try {
+    const observed = await api("/engines/inspect", {family: new FormData(form).get("family")});
+    if (clientInspectionDownload) URL.revokeObjectURL(clientInspectionDownload);
+    clientInspectionDownload = URL.createObjectURL(new Blob([json(observed)], {type: "application/json"}));
+    state.clientInspection = observed;
+    result.innerHTML = '<a href="#client-inspection-report">Consulta disponible en el espacio de trabajo</a>';
+    render();
+    $("#client-inspection-report").scrollIntoView({block:"start"});
+  } catch (error) {
+    result.textContent = error.message;
+  } finally {
+    result.removeAttribute("aria-busy");
+    button.disabled = false;
+  }
+}
 const state = {
   projects: [],
   data: null,
@@ -21,6 +43,7 @@ const state = {
   analysisPage: null,
   analysisRecord: null,
   webSourceChoices: null,
+  clientInspection: null,
   showArchived: false,
   busy: false,
   sequence: 0,
@@ -298,6 +321,19 @@ function differenceLabel(diagnostic) {
   return "Los resultados difieren. Consulta el diagnóstico original en «Recibo reproducible».";
 }
 
+function renderClientInspection() {
+  const observed = state.clientInspection;
+  if (!observed) return "";
+  const statuses = {ok:"Disponible", unavailable:"No disponible", error:"No se pudo consultar", timeout:"Consulta agotada", "nonzero-exit":"El lector devolvió un error", "changed-during-inspection":"El archivo cambió durante la consulta"};
+  const names = {java:"Java",apktool:"Apktool",tshark:"TShark",capinfos:"capinfos"};
+  const rows = observed.clients.map(client => {
+    const version = (client.stdout.text || client.stderr.text).split(/\r?\n/).find(line=>line.trim()) || "Sin texto de versión";
+    const source = {"bundled-default":"Ubicación predeterminada", "system-default":"Instalación del sistema", "selected-tshark-directory":"Junto al TShark seleccionado"}[client.selection.source] || client.selection.source || "Sin selección";
+    return `<tr><td><strong>${escape(names[client.client] || client.client)}</strong><br>${escape(statuses[client.status] || client.status)}</td><td>${escape(version)}</td><td><code>${escape(client.selection.path || "Sin lector seleccionado")}</code><br><span class="small">${escape(source)}</span></td></tr>`;
+  }).join("");
+  return `<section id="client-inspection-report" class="reading"><div class="toolbar"><h2>Lectores instalados · ${observed.family === "apktool" ? "Android" : "Capturas"}</h2><button data-action="dismiss-client-inspection">Cerrar consulta</button></div><p>Versiones consultadas sin abrir un artefacto. La consulta no demuestra que el lector pueda decodificar un archivo concreto.</p><table><thead><tr><th>Lector</th><th>Versión observada</th><th>Ruta y selección</th></tr></thead><tbody>${rows}</tbody></table><p><a href="${escape(clientInspectionDownload)}" download="lectores-${escape(observed.family)}.json">Descargar consulta completa</a></p><details><summary>Diagnósticos y hashes</summary><pre>${escape(json(observed))}</pre></details></section>`;
+}
+
 function render() {
   const view = captureView();
   renderRail();
@@ -305,11 +341,11 @@ function render() {
   main.removeAttribute("aria-busy");
   if (!state.data) {
     main.innerHTML =
-      '<section class="empty"><h1>Inspecciona un programa local</h1><p>Crea un proyecto con la pregunta que quieres resolver. Añade archivos, anota lo que encuentras y compara el comportamiento de una reconstrucción.</p><button class="primary" data-action="new-project">Crear proyecto</button></section>';
+      renderClientInspection() + '<section class="empty"><h1>Inspecciona un programa local</h1><p>Crea un proyecto con la pregunta que quieres resolver. Añade archivos, anota lo que encuentras y compara el comportamiento de una reconstrucción.</p><button class="primary" data-action="new-project">Crear proyecto</button></section>';
     return;
   }
   const p = state.data.project;
-  main.innerHTML = `<div class="project-heading"><div><h1>${escape(p.name)}</h1><p class="muted">${escape(p.question || "Añade una pregunta para orientar la investigación.")}</p></div><div class="toolbar"><a class="button" href="/theseus/api/projects/${p.id}/export" download>Exportar proyecto</a><a class="button" href="/theseus/api/projects/${p.id}/evidence" download>Exportar evidencias</a><button data-action="archive">${p.archived ? "Restaurar" : "Archivar"}</button></div></div>
+  main.innerHTML = `${renderClientInspection()}<div class="project-heading"><div><h1>${escape(p.name)}</h1><p class="muted">${escape(p.question || "Añade una pregunta para orientar la investigación.")}</p></div><div class="toolbar"><a class="button" href="/theseus/api/projects/${p.id}/export" download>Exportar proyecto</a><a class="button" href="/theseus/api/projects/${p.id}/evidence" download>Exportar evidencias</a><button data-action="archive">${p.archived ? "Restaurar" : "Archivar"}</button></div></div>
     ${state.data.evidence_import ? `<p class="small">Evidencias importadas. Los recibos conservan lo observado en origen; vuelve a ejecutar los escenarios para verificar el entorno actual. <a href="/theseus/api/projects/${p.id}/evidence/original" download>Descargar documento de origen</a>.</p>` : ""}
     <details id="project-editor"><summary>Editar proyecto</summary><form id="edit-project" class="reading"><label>Nombre<input name="name" data-draft="project-name" value="${attr("project-name", p.name)}" required></label><label>Pregunta<textarea name="question" data-draft="project-question" rows="2">${attr("project-question", p.question)}</textarea></label><button type="submit">Guardar proyecto</button></form></details>
     <nav class="tabs" role="tablist" aria-label="Secciones del proyecto">${Object.entries(
@@ -855,6 +891,15 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
   const { action, id, view, page } = button.dataset;
+  if (action === "dismiss-client-inspection") {
+    state.clientInspection = null;
+    if (clientInspectionDownload) URL.revokeObjectURL(clientInspectionDownload);
+    clientInspectionDownload = null;
+    $("#client-inspection-result").textContent = "";
+    render();
+    $("#client-inspection-form button").focus();
+    return;
+  }
   if (action === "load-web-sources") return act(async () => {
     const source=state.data.jobs.find(row=>row.id===id);
     const response=await fetch(`/theseus/api/jobs/${id}/analysis.json`);
@@ -1091,6 +1136,10 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("submit", (event) => {
   const form = event.target;
   event.preventDefault();
+  if (form.id === "client-inspection-form") {
+    void inspectClientForm(form);
+    return;
+  }
   if (form.id === "strings-filter") {
     render();
     return;
