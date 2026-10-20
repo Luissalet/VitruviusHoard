@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=70.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -38,6 +38,10 @@ vitruvius-hoard = "vitruvius_hoard.__main__:main"
 [tool.setuptools]
 py-modules = ["mcp_server"]
 
+[tool.setuptools.cmdclass]
+build_py = "software_native.firmware_build.BuildPy"
+bdist_wheel = "software_native.firmware_build.BdistWheel"
+
 [tool.setuptools.packages.find]
 include = ["vitruvius_hoard*", "babels_hoard*", "theseus*", "hoard_link*", "software_native*", "babel_client*"]
 exclude = ["theseus_tests*", "babel_tests*"]
@@ -51,7 +55,7 @@ namespaces = false
 "vitruvius_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "babel_client" = ["dist/*", "dist/assets/*"]
-"software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/dist/*.js", "engine/dist/**/*.js"]
+"software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/dist/*.js", "engine/dist/**/*.js", "engine/firmware-scanner/Cargo.toml", "engine/firmware-scanner/Cargo.lock", "engine/firmware-scanner/LICENSE-BINWALK", "engine/firmware-scanner/NOTICE.md", "engine/firmware-scanner/PROVENANCE.json", "engine/firmware-scanner/src/*.rs"]
 vitruvius_hoard = ["LICENSE", "static/*", "static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
 
 [tool.pytest.ini_options]

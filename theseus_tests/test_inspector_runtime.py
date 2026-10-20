@@ -171,11 +171,13 @@ def test_passive_node_metadata_preserves_sources_and_running_target(tmp_path):
         assert all(s['source']['state']=='excluded' for s in record['scripts'])
         methods=[row['message']['method'] for row in record['observations'] if row.get('direction')=='sent']
         assert methods==['Runtime.enable','Debugger.enable']
-        tick=json.loads(target['marker'].read_text())['tick'];deadline=time.monotonic()+2
+        tick=None;deadline=time.monotonic()+2
         while True:
             assert target['process'].poll() is None
             try:
-                if json.loads(target['marker'].read_text())['tick']>tick:break
+                observed=json.loads(target['marker'].read_text())['tick']
+                if tick is None:tick=observed
+                elif observed>tick:break
             except json.JSONDecodeError:pass  # The independent fixture may be writing its marker.
             assert time.monotonic()<deadline,'The live fixture heartbeat did not advance'
             time.sleep(.025)
