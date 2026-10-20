@@ -50,6 +50,8 @@ def create_app(runtime=None):
         finally:
             await runtime.close()
     app=FastAPI(title="Vitruvius's Hoard",lifespan=lifespan)
+    from ..compat_mcp import install
+    install(app)
     app.state.runtime=runtime
     from hoard_link.guard import install_guard
     from .native import port
