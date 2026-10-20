@@ -37,6 +37,7 @@ class Node(BaseModel):
     group: str = Field("", max_length=60, description="architecture: the box it sits in; swimlane: its lane.")
     shape: Literal["box", "round", "diamond", "pill", "cylinder"] = "box"
     fields: list[Field_] = Field(default_factory=list, max_length=30, description="er: the entity's columns.")
+    details: str = Field("", description="Authored explanation or source notes shown in the interactive reader.")
 
     @model_validator(mode="after")
     def _label(self):
@@ -46,6 +47,7 @@ class Node(BaseModel):
 
 
 class Edge(BaseModel):
+    id: str = Field("", max_length=60)
     source: str = Field(..., alias="from", min_length=1, max_length=60)
     target: str = Field(..., alias="to", min_length=1, max_length=60)
     label: str = Field("", max_length=80)
@@ -194,6 +196,16 @@ class Diagram(BaseModel):
 
     @model_validator(mode="after")
     def _consistent(self):
+        reserved = {edge.id for edge in self.edges if edge.id}
+        edge_ids = set()
+        for index, edge in enumerate(self.edges):
+            if not edge.id:
+                edge.id = f"edge-{index + 1}"
+                while edge.id in edge_ids or edge.id in reserved:
+                    edge.id += "-copy"
+            if edge.id in edge_ids:
+                raise ValueError(f"edge id '{edge.id}' appears twice")
+            edge_ids.add(edge.id)
         ids = {n.id for n in self.nodes}
         if self.type in GRAPH_TYPES:
             if not self.nodes:

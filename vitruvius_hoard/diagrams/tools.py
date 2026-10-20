@@ -192,7 +192,9 @@ def run_brand_delete(services, args: BrandNameArgs) -> dict:
 
 
 def tools(empty_model) -> list[Tool]:
+    from .document_tools import tools as document_tools
     return [
+        *document_tools(empty_model),
         Tool("diagram_types",
              "Pick a diagram: pattern first, then type; returns only that type's card. Elegir tipo de diagrama.\n"
              "9 types: flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric (an idea as one object).\n"

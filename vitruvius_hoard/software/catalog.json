@@ -2275,6 +2275,360 @@
     "module": "design"
   },
   {
+    "name": "diagram_document_list",
+    "description": "List editable diagram documents without starting models. Lista de diagramas editables.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_get",
+    "description": "Read source, manual layout and revision of an editable diagram. Leer diagrama editable.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "include_svg": {
+          "default": false,
+          "title": "Include Svg",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DocumentGet",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_save",
+    "description": "Create or save an editable diagram; unrelated edits merge from base_revision. Guardar diagrama.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "base_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Revision"
+        },
+        "content": {
+          "additionalProperties": true,
+          "title": "Content",
+          "type": "object"
+        },
+        "reason": {
+          "default": "Edit diagram",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "title": "DocumentSave",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_edit",
+    "description": "Change selected diagram objects or geometry by stable ID. Conserva otras ediciones. Editar selección.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "ObjectEdit": {
+          "properties": {
+            "collection": {
+              "enum": [
+                "nodes",
+                "edges",
+                "groups",
+                "view_nodes",
+                "view_edges",
+                "diagram"
+              ],
+              "title": "Collection",
+              "type": "string"
+            },
+            "id": {
+              "default": "",
+              "title": "Id",
+              "type": "string"
+            },
+            "action": {
+              "default": "set",
+              "enum": [
+                "set",
+                "add",
+                "remove"
+              ],
+              "title": "Action",
+              "type": "string"
+            },
+            "values": {
+              "additionalProperties": true,
+              "title": "Values",
+              "type": "object"
+            }
+          },
+          "required": [
+            "collection"
+          ],
+          "title": "ObjectEdit",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "base_revision": {
+          "minimum": 1,
+          "title": "Base Revision",
+          "type": "integer"
+        },
+        "edits": {
+          "items": {
+            "$ref": "#/$defs/ObjectEdit"
+          },
+          "title": "Edits",
+          "type": "array"
+        },
+        "reason": {
+          "default": "Edit selected diagram objects",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "base_revision",
+        "edits"
+      ],
+      "title": "DocumentEdit",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_undo",
+    "description": "Reverse one saved change, preserving unrelated later edits. Deshacer una revisión.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "description": "The specific change to reverse, preserving unrelated later edits.",
+          "minimum": 2,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "revision"
+      ],
+      "title": "DocumentUndo",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_history",
+    "description": "List retained revisions of an editable diagram. Versiones de diagrama.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "include_svg": {
+          "default": false,
+          "title": "Include Svg",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "DocumentGet",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_compare",
+    "description": "Compare authored objects and layout between two saved revisions. Comparar versiones de diagrama.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[0-9a-f]{12}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "before_revision": {
+          "minimum": 1,
+          "title": "Before Revision",
+          "type": "integer"
+        },
+        "after_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After Revision"
+        }
+      },
+      "required": [
+        "id",
+        "before_revision"
+      ],
+      "title": "DocumentCompare",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "diagram_document_import",
+    "description": "Import an editable native, Mermaid, draw.io or Excalidraw source; retains original and reports limits. Importar diagrama.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "format": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "mermaid",
+            "drawio",
+            "excalidraw"
+          ],
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "DocumentImport",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "diagram_types",
     "description": "Pick a diagram: pattern first, then type; returns only that type's card. Elegir tipo de diagrama.\n9 types: flowchart, architecture, state, er, swimlane, sequence, timeline, gantt, isometric (an idea as one object).\nSinónimos: diagrama, esquema, flujo, arquitectura, secuencia, cronología, gantt, isométrico, cómo funciona, mecanismo.",
     "annotations": {

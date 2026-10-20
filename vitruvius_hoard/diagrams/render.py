@@ -167,7 +167,7 @@ def _label_chip(x: float, y: float, s: str, p: dict) -> str:
             + _text(x, y, s, p["muted"], size=FONT - 1))
 
 
-def _graph_svg(d: Diagram, lay: Layout, p: dict) -> list[str]:
+def _graph_svg(d: Diagram, lay: Layout, p: dict, styles: Optional[dict] = None) -> list[str]:
     out = []
     for i, f in enumerate(lay.frames):
         color = p["series"][i % len(p["series"])]
@@ -179,13 +179,15 @@ def _graph_svg(d: Diagram, lay: Layout, p: dict) -> list[str]:
             out.append(f'<rect x="{_f(f.x)}" y="{_f(f.y)}" width="{_f(f.w)}" height="{_f(f.h)}" rx="10" fill="none" '
                        f'stroke="{color}" stroke-width="1.6" stroke-dasharray="6 4"/>')
             out.append(_text(f.x + 12, f.y + 12, f.label, p["ink"], anchor="start", weight=600, size=FONT - 1))
-    for r in lay.routes:
+    for index, r in enumerate(lay.routes):
         d_attr = "M" + " L".join(f"{_f(x)},{_f(y)}" for x, y in r.points)
         dash = ' stroke-dasharray="6 4"' if r.style == "dashed" else ""
-        out.append(f'<path d="{d_attr}" fill="none" stroke="{p["accent"]}" stroke-width="1.6"{dash} marker-end="url(#arrow)"/>')
+        edge_id = escape(d.edges[index].id, quote=True) if index < len(d.edges) else str(index)
+        out.append(f'<path data-edge-id="{edge_id}" d="{d_attr}" fill="none" stroke="{p["accent"]}" stroke-width="1.6"{dash} marker-end="url(#arrow)"/>')
     for b in lay.boxes.values():
-        out.append(_shape(b, p))
-        out.append(_box_text(b, p))
+        style = (styles or {}).get(b.id, {})
+        colours = {**p, **{role: style[key] for key, role in (("fill", "surface"), ("stroke", "border"), ("ink", "ink")) if key in style}}
+        out.append(f'<g data-node-id="{escape(b.id, quote=True)}">{_shape(b, colours)}{_box_text(b, colours)}</g>')
     for r in lay.routes:
         if r.label and r.label_at:
             out.append(_label_chip(r.label_at[0], r.label_at[1], r.label, p))
@@ -271,14 +273,14 @@ def layout_of(d: Diagram) -> Any:
     return {"sequence": _sequence, "timeline": _timeline, "gantt": _gantt}[d.type](d)
 
 
-def svg(d: Diagram, profile: dict, mode: str = "light", lay: Any = None) -> str:
+def svg(d: Diagram, profile: dict, mode: str = "light", lay: Any = None, node_styles: Optional[dict] = None) -> str:
     p = profile[mode]
     font = profile.get("font") or FONT_STACK
     lay = lay if lay is not None else layout_of(d)
     if d.type == "isometric":
         return isometric.svg(d, profile, mode, lay, font)
     if isinstance(lay, Layout):
-        width, height, body = lay.width, lay.height, _graph_svg(d, lay, p)
+        width, height, body = lay.width, lay.height, _graph_svg(d, lay, p, node_styles)
     else:
         width, height = lay["width"], lay["height"]
         body = {"sequence": _sequence_svg, "timeline": _timeline_svg, "gantt": _gantt_svg}[d.type](d, lay, p)
