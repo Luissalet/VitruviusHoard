@@ -60,6 +60,23 @@ components:
     padding: "{spacing.panel}"
 ---
 
+## Isometric extension direction — task 1049
+
+Operate and Read, within the incumbent workbench. The technical figure leads;
+native state and part selectors remain beside it, with authored explanations
+below and editing in the existing inspector vocabulary. On narrow screens the
+inspector follows the figure. Retain the shell, palette, typography, revision
+actions, Faustus and exports. State selection changes a derived drawing; base
+geometry remains editable and retained. Parts are selectable on the SVG and by
+a native select, including hidden parts. No new visual world, physics claims,
+animation or WebGL. Acceptance uses the same saved state for UI, reading HTML,
+MCP and exported figure, desktop and phone. Implementation and verification
+are in progress; this direction is not a completion record.
+
+The preceding block is retained as the historical direction. The built source
+and supplied verification for task 1049 are recorded under Components below;
+they do not establish technical CAS approval, integration or installed activation.
+
 # Diagram editor surface brief and design record
 
 ## Editorial extension contract — phase C
@@ -88,7 +105,7 @@ This Operate surface lets a person edit an independent diagram document directly
 
 This is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.
 
-The code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Authored isometric states remain outside this record. This figures extension is implemented and verified in isolated worktrees; integration and installed activation are not established here.
+The code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Task 1049 adds selectable isometric parts, long explanations and authored states to the same document. Its implementation and supplied verification are in the author worktree; technical CAS approval, integration and installed activation are not established by this record. Earlier phase and extension receipts retain their own scope.
 
 **Key Characteristics:**
 - An independent versioned document with a visible name, save state and selected revision.
@@ -99,6 +116,7 @@ The code-led direction preserves the existing world without an approved comp or 
 - Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.
 - Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.
 - Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents.
+- Isometric parts retain original geometry and explanations while authored states derive translated, hidden and highlighted views for editing, reading and export.
 
 ## Colors
 
@@ -138,9 +156,11 @@ In the final phase C 390×844 capture at `scrollY: 0`, the white canvas begins a
 
 Reusable styles sits below the selected shape's properties and above selection actions. Its native disclosure has a thin top separator, 8px top padding and a 44px minimum summary target with 12px vertical padding. Labels/action groups gain 10px top spacing; help follows with 12px. Long button labels wrap within the inspector. At 1100px and below the group spans all inspector columns, including both mobile columns; it does not change the canvas or the surrounding working layout.
 
+The isometric workspace replaces the graph palette/canvas arrangement with a flexible figure column and a 260px inspector. Labelled State and Part selects share two columns above the figure. The SVG scales to available width, with a 280px minimum figure area and 560px maximum SVG height. Reading text follows the figure within 75ch, preserving line breaks and wrapping long notes. Below 850px the inspector follows the figure and explanation, separated by a top border; its buttons retain 44px targets. The standalone reader uses a flexible figure and 320px reading sidebar, stacking below 700px. Its light reading ground and white figure are document presentation, not replacement shell tokens.
+
 ## Elevation & Depth
 
-The editor uses flat tonal surfaces and thin borders. Palette, canvas controls, inspector and exports share the enclosing panel instead of becoming floating cards. Selection and focus use outlines and stronger strokes rather than new shadows. Shell button state transitions remain short (0.16s); reduced-motion rules remove transitions. The document provides the visual contrast against its shell through its own paper ground.
+The editor uses flat tonal surfaces and thin borders. Palette, canvas controls, inspector and exports share the enclosing panel instead of becoming floating cards. Graph selection and focus use outlines and stronger strokes. Isometric part selection adds a local SVG drop shadow; keyboard focus has a visible outline. These content states do not establish a shell elevation scale. Shell button state transitions remain short (0.16s); reduced-motion rules remove transitions. The document provides the visual contrast against its shell through its own paper ground.
 
 ## Shapes
 
@@ -154,7 +174,7 @@ Primary Save and active tool controls reuse the inherited accent/ink treatment; 
 
 ### Canvas, selection and connections
 
-The palette offers the five node shapes, Select, Connect, Pan and automatic arrangement. Graph types `flowchart`, `architecture`, `state`, `er` and `swimlane` enter the editable SVG path; other types use an exported preview image in this component. That fallback is not evidence of object editing for every diagram type.
+The palette offers the five node shapes, Select, Connect, Pan and automatic arrangement. Graph types `flowchart`, `architecture`, `state`, `er` and `swimlane` enter the editable SVG path. Isometric diagrams use the part/state controls documented below; remaining types use an exported preview image in this component. That fallback is not evidence of object editing for every diagram type.
 
 Pointer drag moves nodes; a selected corner handle resizes. Enter/Space activates a focused node; Shift adds/removes it from selection through the same activation function. Arrow keys move the selection (1 unit, or 10 with Shift); Delete/Backspace removes it. Connect takes a source followed by a target; Escape returns to selection and clears the connection selection. Nodes expose button semantics and pressed state; connectors are focusable and selectable with Enter. Help text documents the principal shortcuts. This records implemented interaction, not an exhaustive assistive-technology certification.
 
@@ -203,6 +223,28 @@ Independent `review-r1038/REPORT-R2.txt` records CAS2 APPROVE against the exact 
 Installed-package author receipts under `qa1038-installed/` (`native-results.json`, `browser-results.json`, `conflict-results.json`, `final-results.json`) record 123 MCP tools, Edge at 1440/390, cross-document reuse, one-step undo/redo, retained content/source and the corrected name-race cases. No JavaScript/HTTP errors are recorded; font loading remains unproven (`loaded: []`). The final receipt has Design, Babel and Theseus OFF, automation disabled and zero active requests, with zero model calls. Root subsequently stopped the private QA processes on ports 54574 and 54577. These are supplied installed acceptance receipts, read without repeating QA here; they do not broaden the earlier visual SHIP.
 
 `manual-styles1038-proof.json` records the functional manual addition in paragraph 87, with the other 189 paragraphs' text, styles and links exact. The manual describes the usable style library without implementation hashes, CAS or deployment-test detail. This update concerns reusable styles only; other editor functions and their historical acceptance records remain outside this addition.
+
+### Selectable isometric parts and authored states — task 1049
+
+This Operate/Read extension keeps the technical SVG as the principal artifact. The Mecanismo isométrico / Isometric mechanism template creates an editable assembly. State and Part are labelled native selects; visible pieces can also be selected by click or Enter/Space, with button semantics, `aria-pressed` and visible focus. Part selection is distinct from the state's authored highlight. Hidden parts remain reachable by the selector, marked as hidden in the editor; the standalone reader explicitly explains their absence. Selecting a part or state changes viewing context rather than editing the source.
+
+The inspector edits a part's short label where its kind supports labels, and its long explanation and sources without imposing the label's 24-character limit on the explanation. Geometría original / Original geometry is a native disclosure containing applicable plan coordinates/dimensions and z/h. These fields edit the base piece. State fields instead author dx/dy/dz translations, a visibility list and an optional visible highlighted piece. Add state starts from the original view; Duplicate state copies the current state's authored values under a new stable identity; Delete state returns to the original figure. Titles and state explanations remain editable. The renderer derives each state from a copy of base geometry; it does not bake poses into that base. The source validates references, finite geometry, a visible highlighted part and at least one visible piece. These are authored positions and explanations, without simulation, forces, collision, rotation, animation or physics claims.
+
+Pieces, part notes and states use stable IDs in the native document. The inspector uses the existing local change/undo/redo path, and saved changes use the same revision store, conflict-aware merge and selective saved-change undo as other diagram edits. API/MCP object operations extend the existing `diagram_document_edit` collections with `pieces`, `mechanism_parts` and `mechanism_states`; `diagram_document_get` accepts `state_id`, and preview accepts it without mutating source. The Faustus draft context includes selected state and piece. These are schema extensions to the existing source catalog of 123 tools, not an increase in tool count.
+
+The source download retains original geometry, all notes and every state. Save-before-output resolves the selected state against accepted content and supplies its ID to SVG/PNG/PDF, HTML, interactive view and `.vfigure` export. A portable figure carries the selected state's PNG preview and `state_id` alongside the complete native source revision. The standalone isometric HTML embeds the full source and prerendered original/state SVG frames, with state and part selectors, authored text and keyboard selection; it requires no server or network to read those embedded states after export. Explicit invalid state requests fail rather than silently falling back. Editable draw.io and Mermaid retain their graph-format boundaries; the visible output row does not establish isometric support for those formats.
+
+**The Authored State Rule.** Preserve original geometry, explanations and every state in source; a selected state's rendering is a derived view of the accepted document revision.
+
+### Evidence and scope — isometric extension, task 1049
+
+The built record follows the historical 1049 direction above. Source inspected: `IsometricControls.jsx`, `DiagramEditor.jsx`, `diagram-editor.css`, `model.js`, `mechanism.py`, `isometric_reader.py`, `document_tools.py`, `exchange.py` and the API routes. Root `PRODUCT.md` and `DESIGN.md` remain unchanged. Implementation is in the author's isolated worktree, with technical CAS approval, integration and installed activation still unestablished. No global Faustus, memory or Manual acceptance is inferred.
+
+Supplied evidence is under `D:/LocalAI/research-inbox/expansiones-fusiones-20261020/`. `qa1049/FINISH.txt` returns `disposition: ship` for this local Operate/Read extension, with no material visual fixes. Its reviewer opened `desktop-full.png`, `mobile-full.png`, `desktop-reader-r1.png` and `mobile-reader-r1.png` in that directory. The parent author also opened those captures; this documenter read the source and receipts without reopening them. SHIP covers their visible figure, selector, inspector and reader integration only. It does not certify uncaptured states, inference, technical API/MCP/CAS approval or activation. Concrete webfont loading is not established.
+
+Author `qa1049/native-results.json` and `qa1049-native-final.log` record 123 MCP tools, complete source retained, independent edits merged, selective undo preserving unrelated edits, selected state `inside`, a 640×420 PNG and native SVG/PNG/PDF/HTML/vfigure exports. `qa1049/browser-results.json` records selected-state save/reopen, keyboard part selection, local undo/redo, dirty-state export, Faustus selection context, standalone reader and explanation of a hidden part at widths 1440 and 390, with empty JavaScript and HTTP error lists. These are attributed author executions; the finish reviewer and documenter did not repeat functional QA.
+
+The completed full Python receipt `isometric1049-suite-r1.log` is reported by the author as 529 passed/2 skipped (531 collected) before the final two narrow backend corrections. The subsequent `isometric1049-final-area.log` records 16 passed; the author also reports two final JavaScript area checks. This composition is not a second full run of the final code. The single supplied `isometric1049-detector.json` contains 11 advisory findings for incumbent sizes, document-local white/selection colours and an existing error fallback. No detector rerun or root token repair occurred. This documentation pass performed source/receipt inspection and documentation consistency checks only; no context scan, browser, server, build, test, model or GPU execution.
 
 ### Editorial pages, text and imported images — phase C
 
