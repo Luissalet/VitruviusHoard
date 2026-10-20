@@ -13,6 +13,7 @@ recording. The plan comes from what the page actually renders.
 from __future__ import annotations
 
 import contextlib
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -141,9 +142,18 @@ class Browser:
         self._exit.close()
 
     @contextlib.contextmanager
-    def open(self) -> Any:
+    def open(self, environment=None) -> Any:
         """One tab, loaded and settled, with its faults collected."""
-        page = self._engine.new_page(viewport={"width": 1100, "height": 760})
+        options = {"viewport": {"width": 1100, "height": 760}, **(environment or {})}
+        if set(options) - {"viewport", "reduced_motion", "color_scheme"}:
+            raise ValueError("Case environment supports viewport, reduced_motion and color_scheme")
+        page = self._engine.new_page(**options)
+        page.add_init_script("""(() => {
+          window.__vitruviusStateShifts = [];
+          try { new PerformanceObserver(list => {
+            for (const entry of list.getEntries()) window.__vitruviusStateShifts.push(entry.value);
+          }).observe({type: 'layout-shift', buffered: true}); } catch (_) {}
+        })();""")
         crashes: List[str] = []
         console: List[str] = []
         failed: List[str] = []
@@ -305,7 +315,17 @@ def judge(case: Case, before: Dict[str, Any], after: Dict[str, Any],
     # fires first, so its complaint is what gets reported. That is how the
     # off-by-one case came to fail every button on a working painter with
     # `the first press: changed the page` printed in its own evidence.
-    own_rule = any(case.expect.get(k) for k in ("again", "same_each"))
+    own_rule = any(case.expect.get(k) for k in ("again", "same_each", "focused", "no_overflow", "no_motion"))
+    state = after.get("state")
+    if state is not None:
+        if state.get("error"):
+            return Result(case=case, outcome=UNKNOWN, detail="state could not be measured: " + state["error"])
+        if case.expect.get("focused") and not state.get("focused"):
+            bad.append("the requested element does not hold keyboard focus")
+        if case.expect.get("no_overflow") and state.get("overflow_px", 0) > 1:
+            bad.append(f"the page overflows its viewport by {state['overflow_px']} px")
+        if case.expect.get("no_motion") and state.get("active_animations", 0):
+            bad.append(f"{state['active_animations']} animation(s) remain active in the requested state")
 
     # **A program that ran to a stop on its own reached a state it chose,
     # and what it does afterwards is not evidence it was never wired.** A
@@ -646,7 +666,7 @@ def check(folder: str | Path, entry: str = "index.html",
         entries: List[Tuple[str, List[str], Dict[str, Any]]] = []
 
         def carry_out(case: Case) -> Result:
-            with engine.open() as (page, crashes, console, failed):
+            with engine.open(**({"environment": case.environment} if case.environment else {})) as (page, crashes, console, failed):
                 before = browser.signature(page)
                 shot_before = _shoot(page, shots, f"{case.id}-before")
                 # **A case asserts about its last act, not about its own
@@ -900,6 +920,9 @@ def check(folder: str | Path, entry: str = "index.html",
                 if browser.moved(before, after) or answered_setup:
                     answered.add(case.id)
                 drew.append(_drew(before) or _drew(after))
+                state_requested = case.environment or any(case.expect.get(k) for k in ("focused", "no_overflow", "no_motion"))
+                if state_requested:
+                    after["state"] = browser.state_facts(page, case.expect.get("focused", ""))
                 result = judge(case, before, after, crashes, could_not,
                                was_off, text, answered_setup=answered_setup,
                                stirred=stirred, self_stopped=self_stopped,
@@ -909,6 +932,8 @@ def check(folder: str | Path, entry: str = "index.html",
                                unmeasurable=opened.unmeasurable,
                                nothing_to_try=nothing_to_try)
                 result.artifacts = _kept(shots, shot_before, shot_after)
+                if state_requested:
+                    result.evidence += "\nState: " + json.dumps({"requested": case.environment, "measured": after["state"]}, ensure_ascii=False)
                 return result
 
         run = QA(measure=lambda: opened.surface, build_plan=lambda _: cases,

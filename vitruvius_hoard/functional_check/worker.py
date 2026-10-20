@@ -27,7 +27,8 @@ def main():
         "unchecked": len(result.unchecked),
         "surface": [{"kind": row.kind, "selector": row.selector, "label": row.label, "enabled": row.enabled} for row in result.surface.controls] if result.surface else [],
         "cases": [{"id": row.case.id, "what": row.case.what, "outcome": row.outcome,
-                   "detail": row.detail, "measured": row.evidence, "acts": row.case.acts} for row in result.results.values()],
+                   "detail": row.detail, "measured": row.evidence, "acts": row.case.acts,
+                   "environment": row.case.environment} for row in result.results.values()],
     }
     print(json.dumps(payload, ensure_ascii=False))
     return 0 if payload["works"] else 1

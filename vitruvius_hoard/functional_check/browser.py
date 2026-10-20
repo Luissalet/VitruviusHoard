@@ -1201,6 +1201,29 @@ def signature(page: Any) -> Dict[str, Any]:
         return {}
 
 
+def state_facts(page: Any, focused: str = "") -> Dict[str, Any]:
+    """Measure the requested browser state; no inferred design/quality score."""
+    try:
+        return page.evaluate("""selector => {
+          const nav = performance.getEntriesByType('navigation')[0];
+          const paint = performance.getEntriesByName('first-contentful-paint')[0];
+          return {
+            viewport: {width: innerWidth, height: innerHeight},
+            reduced_motion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+            focused: selector ? !!document.activeElement?.matches(selector) : null,
+            focus_visible: !!document.activeElement?.matches(':focus-visible'),
+            overflow_px: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+            active_animations: document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().duration > 0).length,
+            dom_ready_ms: nav?.domContentLoadedEventEnd ?? null,
+            load_ms: nav?.loadEventEnd ?? null,
+            first_contentful_paint_ms: paint?.startTime ?? null,
+            observed_layout_shift_sum: (window.__vitruviusStateShifts || []).reduce((sum, value) => sum + value, 0)
+          };
+        }""", focused)
+    except Exception as error:
+        return {"error": str(error).splitlines()[0][:200]}
+
+
 # --------------------------------------------------------------------------
 # Acting
 # --------------------------------------------------------------------------
@@ -1322,6 +1345,10 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
                         page.click(f"text={sel}", timeout=timeout)
                 elif verb == "press":
                     page.keyboard.press(arg)
+                elif verb == "focus":
+                    page.locator(arg).focus(timeout=timeout)
+                elif verb == "hover":
+                    page.locator(arg).hover(timeout=timeout)
                 elif verb == "fill":
                     sel, _, value = arg.partition("=")
                     page.fill(sel.strip(), value.strip(), timeout=timeout)
@@ -1350,7 +1377,7 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
                 else:
                     could_not.append(
                         f"{verb} {raw}: {str(exc).splitlines()[0][:120]}")
-    if acts:
+    if acts and not any("hover" in step for step in acts):
         with contextlib.suppress(Exception):
             # **The pointer is moved off before anything is measured.** A
             # canvas that draws a hover highlight repaints wherever the mouse

@@ -73,8 +73,9 @@ def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
         "surface": [{"kind": s.get("kind"), "label": s.get("label"), "selector": s.get("selector"), "enabled": s.get("enabled")}
                     for s in (run.get("surface") or [])][:80],
         "failing": [{"id": c.get("id"), "what": c.get("what"), "detail": c.get("detail"), "measured": c.get("measured"),
-                     "acts": c.get("acts")} for c in failing][:max_cases],
-        "cases_sample": [{"id": c.get("id"), "what": c.get("what"), "outcome": c.get("outcome")} for c in cases[:max_cases]],
+                     "acts": c.get("acts"), "environment": c.get("environment", {})} for c in failing][:max_cases],
+        "cases_sample": [{"id": c.get("id"), "what": c.get("what"), "outcome": c.get("outcome"),
+                          "environment": c.get("environment", {}), "measured": c.get("measured")} for c in cases[:max_cases]],
     }
 
 
