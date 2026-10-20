@@ -242,7 +242,8 @@ def judge(case: Case, before: Dict[str, Any], after: Dict[str, Any],
           answered_once: Optional[bool] = None,
           itself: Tuple[Optional[str], ...] = (None, None, None),
           page_back: Optional[bool] = None,
-          rows: Tuple[Any, Any] = (None, None)) -> Result:
+          rows: Tuple[Any, Any] = (None, None),
+          state: Optional[Dict[str, Any]] = None) -> Result:
     """Whether one case came out right, and the numbers either way.
 
     The rules are narrow on purpose, and each one is narrow because a wider
@@ -316,7 +317,6 @@ def judge(case: Case, before: Dict[str, Any], after: Dict[str, Any],
     # off-by-one case came to fail every button on a working painter with
     # `the first press: changed the page` printed in its own evidence.
     own_rule = any(case.expect.get(k) for k in ("again", "same_each", "focused", "no_overflow", "no_motion"))
-    state = after.get("state")
     if state is not None:
         if state.get("error"):
             return Result(case=case, outcome=UNKNOWN, detail="state could not be measured: " + state["error"])
@@ -921,8 +921,7 @@ def check(folder: str | Path, entry: str = "index.html",
                     answered.add(case.id)
                 drew.append(_drew(before) or _drew(after))
                 state_requested = case.environment or any(case.expect.get(k) for k in ("focused", "no_overflow", "no_motion"))
-                if state_requested:
-                    after["state"] = browser.state_facts(page, case.expect.get("focused", ""))
+                measured_state = browser.state_facts(page, case.expect.get("focused", "")) if state_requested else None
                 result = judge(case, before, after, crashes, could_not,
                                was_off, text, answered_setup=answered_setup,
                                stirred=stirred, self_stopped=self_stopped,
@@ -930,10 +929,10 @@ def check(folder: str | Path, entry: str = "index.html",
                                itself=(itself_before, itself_after),
                                rows=(row_before, row_after),
                                unmeasurable=opened.unmeasurable,
-                               nothing_to_try=nothing_to_try)
+                               nothing_to_try=nothing_to_try, state=measured_state)
                 result.artifacts = _kept(shots, shot_before, shot_after)
                 if state_requested:
-                    result.evidence += "\nState: " + json.dumps({"requested": case.environment, "measured": after["state"]}, ensure_ascii=False)
+                    result.evidence += "\nState: " + json.dumps({"requested": case.environment, "measured": measured_state}, ensure_ascii=False)
                 return result
 
         run = QA(measure=lambda: opened.surface, build_plan=lambda _: cases,
