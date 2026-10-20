@@ -22,6 +22,7 @@ dependencies = [
   "psutil>=5.9",
   "jsonschema>=4.20,<5",
   "websocket-client>=1.9",
+  "websockets>=14",
   "pillow>=10",
 ]
 
@@ -50,7 +51,7 @@ namespaces = false
 [tool.setuptools.package-data]
 "vitruvius_hoard.software" = ["catalog.json", "web/*"]
 "babels_hoard" = ["probes/*", "LICENSE"]
-"theseus" = ["LICENSE"]
+"theseus" = ["LICENSE", "process_shim.cs"]
 "babels_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "vitruvius_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
