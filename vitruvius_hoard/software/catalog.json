@@ -5100,5 +5100,30 @@
       "openWorldHint": false
     },
     "module": "theseus"
+  },
+  {
+    "name": "theseus_client_inspect",
+    "description": "Explicitly inspect selected free Java/Apktool or TShark/capinfos client paths, selection sources, file hashes and real version diagnostics. No project, artifact, decoding or capture is required. Cold catalog discovery never invokes these clients.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "enum": [
+            "apktool",
+            "pcap"
+          ]
+        }
+      },
+      "required": [
+        "family"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
   }
 ]

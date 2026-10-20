@@ -52,6 +52,15 @@
         <nav id="project-list" aria-label="Elegir proyecto">
           <p class="muted">Cargando proyectos…</p>
         </nav>
+        <details id="client-inspection">
+          <summary>Lectores instalados</summary>
+          <form id="client-inspection-form">
+            <label>Lector<select name="family"><option value="apktool">Android · Java y Apktool</option><option value="pcap">PCAP · TShark/capinfos</option></select></label>
+            <p class="small">Consulta rutas, versiones y disponibilidad sin seleccionar ni decodificar un archivo.</p>
+            <button type="submit">Consultar versiones</button>
+          </form>
+          <div id="client-inspection-result" role="status" aria-live="polite"></div>
+        </details>
         <p class="rail-note">
           Los artefactos se inspeccionan sin ejecutarlos. Las comparaciones usan
           los programas que indiques en cada escenario.
