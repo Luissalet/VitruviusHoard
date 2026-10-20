@@ -55,7 +55,7 @@ def style_apply(request: Request,body: documents.StyleApply):
 @router.post("/diagrams/documents/preview")
 def document_preview(request: Request, body: documents.DocumentSave):
     from ..diagrams.documents import normalize, drawing
-    return {"rendering": drawing(normalize(body.content))}
+    return {"rendering": drawing(normalize(body.content), body.state_id)}
 
 
 @router.post("/diagrams/documents/import", status_code=201)
@@ -74,8 +74,8 @@ def documents_save(request: Request, body: documents.DocumentSave):
 
 
 @router.get("/diagrams/documents/{did}")
-def document_get(request: Request, did: str, revision: int | None = None, svg: bool = False):
-    return _found(lambda: documents.get(services(request), documents.DocumentGet(id=did, revision=revision, include_svg=svg)))
+def document_get(request: Request, did: str, revision: int | None = None, svg: bool = False, state_id: str | None = None):
+    return _found(lambda: documents.get(services(request), documents.DocumentGet(id=did, revision=revision, include_svg=svg, state_id=state_id)))
 
 
 @router.post("/diagrams/documents/{did}/edit")
@@ -98,18 +98,20 @@ def document_history(request: Request, did: str):
 
 
 @router.get("/diagrams/documents/{did}/export.svg")
-def document_svg(request: Request, did: str, revision: int | None = None, mode: str = "light"):
+def document_svg(request: Request, did: str, revision: int | None = None, mode: str = "light", state_id: str | None = None):
     row = _found(lambda: documents.store(services(request)).get(did, revision))
     if mode not in ("light", "dark"):
         raise HTTPException(status_code=400, detail="Unknown colour mode.")
+    from ..diagrams.mechanism import selected
+    row = _found(lambda: selected(row, state_id))
     return Response(row["rendering"]["svg"][mode], media_type="image/svg+xml")
 
 
 @router.get("/diagrams/documents/{did}/viewer")
-def document_viewer(request: Request, did: str, revision: int | None = None):
+def document_viewer(request: Request, did: str, revision: int | None = None, state_id: str | None = None):
     from ..diagrams.reader import reader
     row = _found(lambda: documents.store(services(request)).get(did, revision))
-    return HTMLResponse(reader(row))
+    return HTMLResponse(_found(lambda: reader(row, state_id)))
 
 
 @router.get("/diagrams/documents/{did}/compare")
@@ -126,25 +128,27 @@ def document_source(request: Request, did: str, revision: int | None = None):
 
 
 @router.get("/diagrams/documents/{did}/export.{kind}")
-def document_export(request: Request, did: str, kind: str, revision: int | None = None, mode: str = "light", page_id: str | None = None):
+def document_export(request: Request, did: str, kind: str, revision: int | None = None, mode: str = "light", page_id: str | None = None, state_id: str | None = None):
     from ..diagrams import exchange
     from ..diagrams.reader import reader
     if mode not in ("light", "dark"):
         raise HTTPException(status_code=400, detail="Unknown colour mode.")
     row = _found(lambda: documents.store(services(request)).get(did, revision))
     if kind in ("png", "pdf"):
-        payload, mime = exchange.image(row, kind, mode), {"png": "image/png", "pdf": "application/pdf"}[kind]
+        from ..diagrams.mechanism import selected
+        captured = _found(lambda: selected(row, state_id))
+        payload, mime = exchange.image(captured, kind, mode), {"png": "image/png", "pdf": "application/pdf"}[kind]
     elif kind == "vfigure":
         import json
         try:
-            payload = json.dumps(exchange.figure(row, mode, page_id, str(request.base_url)), ensure_ascii=False)
+            payload = json.dumps(exchange.figure(row, mode, page_id, str(request.base_url), state_id), ensure_ascii=False)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         mime = "application/json"
     elif kind == "drawio":
         payload, mime = exchange.drawio(row), "application/xml"
     elif kind == "html":
-        payload, mime = reader(row), "text/html"
+        payload, mime = _found(lambda: reader(row, state_id)), "text/html"
     elif kind == "mmd":
         payload, mime = exchange.mermaid(row), "text/plain"
     else:

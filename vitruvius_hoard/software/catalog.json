@@ -2540,6 +2540,19 @@
           "default": null,
           "description": "Select one infographic page for the figure preview; full source is retained.",
           "title": "Page Id"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select an authored isometric state; the complete source remains unchanged.",
+          "title": "State Id"
         }
       },
       "required": [
@@ -2596,6 +2609,19 @@
           "default": "Edit diagram",
           "title": "Reason",
           "type": "string"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Preview only: select an authored isometric state.",
+          "title": "State Id"
         }
       },
       "title": "DocumentSave",
@@ -2621,6 +2647,9 @@
                 "nodes",
                 "edges",
                 "groups",
+                "pieces",
+                "mechanism_parts",
+                "mechanism_states",
                 "view_nodes",
                 "view_edges",
                 "pages",
@@ -2777,6 +2806,19 @@
           "default": null,
           "description": "Select one infographic page for the figure preview; full source is retained.",
           "title": "Page Id"
+        },
+        "state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Select an authored isometric state; the complete source remains unchanged.",
+          "title": "State Id"
         }
       },
       "required": [

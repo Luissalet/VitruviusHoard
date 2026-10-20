@@ -14,6 +14,15 @@
 @media(max-width:1100px){.de-no-palette{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:650px){.de-tools-toggle{display:inline-flex}.de-heading{flex-direction:row;align-items:center;padding:10px 12px;gap:8px}.de-heading h2{font-size:18px}.de-heading p{display:none}.de-heading .de-actions{gap:5px;flex-wrap:nowrap}.de-documentbar{padding:8px 10px;gap:6px}.de-documentbar select{min-width:100px}.de-toolbar{padding:8px 10px;gap:6px}.de-toolbar .de-title{flex:1;flex-basis:auto;min-width:150px;width:calc(100% - 88px)}.de-toolbar .de-status{order:2;flex-basis:auto;margin-right:auto}.de-toolbar .de-tools-toggle{order:3}.de-toolbar button:not(.btn-primary){font-size:11px;min-height:36px}.de-no-palette{grid-template-columns:minmax(0,1fr)}}
 .de-pages { border-block: 1px solid var(--border); padding-block: 12px; margin-block: 12px; }
+.de-workspace.de-isometric{grid-template-columns:minmax(0,1fr)}
+.de-mechanism{display:grid;grid-template-columns:minmax(0,1fr) 260px;min-width:0}.de-mechanism-wide{grid-template-columns:minmax(0,1fr)}
+.de-mechanism-main{min-width:0}.de-mechanism-selectors{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-bottom:1px solid var(--line)}
+.de-mechanism-selectors label{display:grid;gap:6px;min-width:0;font-size:12px;color:var(--muted)}.de-mechanism-selectors .field{width:100%;min-width:0}
+.de-mechanism-figure{min-height:280px;background:#fff}.de-mechanism-figure svg{display:block;width:100%;height:auto;max-height:560px}
+.de-mechanism-figure [data-piece]{cursor:pointer}.de-mechanism-figure [data-piece]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.de-mechanism-figure [aria-pressed=true]{filter:drop-shadow(0 2px 2px #2f5bd3)}
+.de-mechanism-reading{padding:14px 18px;max-width:75ch}.de-mechanism-reading p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;margin:6px 0 16px}.de-mechanism-reading [role=status]{font-size:12px;color:var(--muted)}
+.de-mechanism .de-mechanism-inspector{display:flex;grid-column:auto}.de-mechanism-inspector summary{cursor:pointer;min-height:44px;padding-block:12px;font-size:13px}.de-mechanism-inspector .de-geometry{margin-top:8px}.de-mechanism-inspector .help{font-size:12px;line-height:1.5;color:var(--muted)}
+@media(max-width:850px){.de-mechanism{grid-template-columns:minmax(0,1fr)}.de-mechanism .de-mechanism-inspector{border-left:0;border-top:1px solid var(--line)}.de-mechanism-inspector .btn{min-height:44px}}
 .de-page-options { margin-top: 8px; font-size: 12px; }
 .de-style-library{border-top:1px solid var(--line);padding-top:8px;min-width:0}
 .de-style-library summary{cursor:pointer;min-height:44px;padding:12px 0;font-size:13px;color:var(--ink)}
