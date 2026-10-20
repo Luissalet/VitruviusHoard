@@ -8,6 +8,7 @@ def network_inventory(events,body_state='excluded'):
     inventory={}
     for index,event in enumerate(events):
         if not event['method'].startswith('Network.'):continue
+        if event['method'].startswith('Network.webSocket'):continue
         params=event['parameters'];request_id=params.get('requestId')
         if request_id is None:continue
         row=inventory.setdefault(request_id,{'request_id':request_id,'event_indices':[],'body':{'state':body_state}})

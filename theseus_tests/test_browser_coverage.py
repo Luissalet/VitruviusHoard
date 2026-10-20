@@ -112,6 +112,40 @@ def test_navigation_ends_document_window_with_transition_unknown(tmp_path):
         assert result['instrumentation']['cleanup']=='confirmed' and target['process'].poll() is None
 
 
+def test_coverage_receipts_publish_while_an_armed_receipt_is_open(tmp_path):
+    with browser_fixture(tmp_path/'fixture',extra_script=SCRIPT) as target,TestClient(create_app(tmp_path/'data'),base_url='http://127.0.0.1:5217') as client:
+        client.get('/');project=client.app.state.store.create_project('Concurrent progress reader')['id'];chosen=target_id(client,project,target)
+        job=client.post(f'/api/projects/{project}/runtime',json={'operation':'browser.coverage','parameters':{
+            'inspector_endpoint':target['endpoint'],'target_id':chosen,'observation_ms':1000}}).json()
+        receipt=armed(client,job)['result']['progress']
+        folder=client.app.state.store.directory/'analyses'/job['id']
+        versions=sorted(folder.glob('progress-*.json'));path=versions[-1] if versions else folder/'progress.json'
+        # A real Windows reader holds this handle across later publications.
+        # New job receipts must advance without replacing its open snapshot.
+        with path.open(encoding='utf8') as reader:
+            original=reader.read();assert json.loads(original)['armed_at']==receipt['armed_at']
+            terminal=wait(client,job)
+            assert terminal['state']=='finished',terminal
+            assert terminal['result']['progress']['state']=='ended'
+            reader.seek(0);assert reader.read()==original
+        assert target['process'].poll() is None
+
+
+def test_legacy_progress_receipt_and_unpublished_temporary_remain_readable(tmp_path):
+    app=create_app(tmp_path/'data');store=app.state.store
+    project=store.create_project('Legacy progress receipt')['id'];job_id=identifier()
+    store.save_job(project,job_id,'running',{'kind':'runtime_analysis','operation':'browser.coverage'})
+    folder=store.directory/'analyses'/job_id;folder.mkdir(parents=True)
+    original={'state':'armed','armed_at':'original receipt'}
+    legacy=folder/'progress.json';legacy.write_text(json.dumps(original),encoding='utf8')
+    (folder/'progress-00000000000000000001.tmp').write_text('{"state":',encoding='utf8')
+    assert store.job(job_id)['result']['progress']==original
+    published=folder/'progress-00000000000000000002.json'
+    published.write_text(json.dumps({'state':'sampling','armed_at':original['armed_at']}),encoding='utf8')
+    assert store.job(job_id)['result']['progress']['state']=='sampling'
+    assert json.loads(legacy.read_text())==original
+
+
 def test_orphan_coverage_stops_only_observer_and_keeps_cleanup_unknown(tmp_path,monkeypatch):
     with browser_fixture(tmp_path/'fixture',extra_script=SCRIPT) as target:
         app=create_app(tmp_path/'data');store=app.state.store;project=store.create_project('Orphan precise coverage')['id'];job_id=identifier()
@@ -122,8 +156,8 @@ def test_orphan_coverage_stops_only_observer_and_keeps_cleanup_unknown(tmp_path,
         worker=subprocess.Popen([sys.executable,str(Path(__file__).parents[1]/'theseus/inspector_runtime.py'),str(folder/'request.json'),str(folder/'analysis.json')],creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         try:
             deadline=time.monotonic()+10
-            while not (folder/'progress.json').exists():assert worker.poll() is None and time.monotonic()<deadline;time.sleep(.02)
-            assert json.loads((folder/'progress.json').read_text())['state']=='armed'
+            while not list(folder.glob('progress-*.json')):assert worker.poll() is None and time.monotonic()<deadline;time.sleep(.02)
+            assert json.loads(sorted(folder.glob('progress-*.json'))[-1].read_text())['state']=='armed'
             external_command(target,chosen,'Runtime.evaluate',{'expression':"fetch('/once',{method:'POST',body:'once'}).then(()=>true)",'awaitPromise':True,'returnByValue':True})
             store.save_job(project,job_id,'running',{'kind':'runtime_analysis','operation':'browser.coverage'})
             def no_spawn(*args,**kwargs):raise AssertionError('Recovery must not start a replacement observer')

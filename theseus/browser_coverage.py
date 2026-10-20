@@ -9,9 +9,10 @@ from websocket import WebSocketException
 def progress(capture,state,**fields):
     receipt={**capture.result.get('progress',{}),'state':state,**fields}
     capture.result['progress']=receipt
-    temporary=capture.folder/'progress.tmp'
+    path=capture.folder/('progress-'+str(capture.sequence+1).zfill(20)+'.json')
+    temporary=path.with_suffix('.tmp')
     temporary.write_text(json.dumps(receipt,ensure_ascii=True),encoding='utf8')
-    temporary.replace(capture.folder/'progress.json')
+    temporary.replace(path)
     capture.checkpoint()
 
 

@@ -1,0 +1,109 @@
+{
+  "task": 967,
+  "owner_base": "1547d3fa6fa4398153d00a0e98902ade08c8852c",
+  "previous_source": "3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc",
+  "source_revision": "7f202978af91b035f5db5bfd8ed36c2a853ec844",
+  "status": "incomplete_in_progress_resumed_2026-10-20",
+  "scope": "Five native Python modules and selected tests/docs; no schema or operation catalog change. Initial SOURCES.json remains a historical snapshot.",
+  "excluded": [
+    "Pending scanner submission 26 not in pinned Main",
+    "Electron work not in pinned Main",
+    "Real data, Git and runtime state of source repository"
+  ],
+  "preserved": [
+    "Owner routing/lifecycle/import adaptations from integration 933",
+    "theseus/LICENSE and historical provenance/license records"
+  ],
+  "files": [
+    {
+      "source": "README.md",
+      "source_sha256": "005c240dc29e92d969d9edb36cc1c861d8d7e35a4fbfb419473f650970e49e7d",
+      "destination": "provenance/theseus/README.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "docs/BROWSER-COVERAGE.md",
+      "source_sha256": "1bf6aa0b93a73da0579540d6034d709acf4f12aba2aeb00433b65f7f4679a934",
+      "destination": "provenance/theseus/docs/BROWSER-COVERAGE.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "docs/BROWSER-SCENARIOS.md",
+      "source_sha256": "5c5622e42dad0e984d135fa6a2774c333647570cdaeb3efbd5f739dbf2a06951",
+      "destination": "provenance/theseus/docs/BROWSER-SCENARIOS.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "docs/BROWSER-WEBSOCKETS.md",
+      "source_sha256": "c992ff6ef4be6511aff8b8d6a24b753bbb2376c660daf9d24567211d0b67ffc9",
+      "destination": "provenance/theseus/docs/BROWSER-WEBSOCKETS.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "docs/PAUSE-CHECKPOINT.md",
+      "source_sha256": "35cd31fdbd1cc2ebf272ac3cabdf30a3e62bbd498f3dad03cc0f5005721d5da6",
+      "destination": "provenance/theseus/docs/PAUSE-CHECKPOINT.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "docs/SOURCE-COVERAGE.md",
+      "source_sha256": "a8c659f5fd01692f9449dbfa61513bc94d2714c627522acaf71bef3f88207084",
+      "destination": "provenance/theseus/docs/SOURCE-COVERAGE.md",
+      "mode": "retained source document"
+    },
+    {
+      "source": "requirements-dev.txt",
+      "source_sha256": "f556a20d1dec97d71e29782b1462bb7fd6b26c3a5c2f5c8b84da3bfcb7de5c13",
+      "destination": "theseus_tests/requirements.txt",
+      "mode": "test dependency selected"
+    },
+    {
+      "source": "tests/test_browser_coverage.py",
+      "source_sha256": "e52c7c2e9bb223bbd12e131e3aff1b297113894cdfa5d9e59f814a9abd2d9ab8",
+      "destination": "theseus_tests/test_browser_coverage.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "tests/test_browser_websocket.py",
+      "source_sha256": "350db01d7201978930c5ef6c675f0d34c26fc169ac7b7d444bc62d47c0989452",
+      "destination": "theseus_tests/test_browser_websocket.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "tests/websocket_fixture.py",
+      "source_sha256": "f2e7d388c83fefa4fae39a6c6a27756f606ce17113c144e330b3baec9d4fd4ea",
+      "destination": "theseus_tests/websocket_fixture.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "theseus/browser_capture.py",
+      "source_sha256": "96b224b7098d8afd2f889ce3e454871b44c8196de8ffe20b8b010c8a18af0b6e",
+      "destination": "theseus/browser_capture.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "theseus/browser_compare.py",
+      "source_sha256": "1d02769765f38fd0c43ec4ccdc0b3d7ac5e3781998ac01eb9efcbe163657ee35",
+      "destination": "theseus/browser_compare.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "theseus/browser_coverage.py",
+      "source_sha256": "00b17fc02c29ed00a811a32df96807e0dfad2cb18e4979d51d3183dca4990ed9",
+      "destination": "theseus/browser_coverage.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "theseus/browser_websocket.py",
+      "source_sha256": "5189b45d1e826a5dec56f9b2d52d1f09f25b5244b94b40c72e3e79673ea323de",
+      "destination": "theseus/browser_websocket.py",
+      "mode": "delta patch"
+    },
+    {
+      "source": "theseus/store.py",
+      "source_sha256": "bd625973dfc7a1825355099d967bcaddd9fd55b7d01c02b898d0bc0cfa8d4dcd",
+      "destination": "theseus/store.py",
+      "mode": "delta patch"
+    }
+  ]
+}

@@ -187,7 +187,9 @@ class Store:
 
     def _runtime_progress(self, job):
         if job['state'] not in {'queued','running'} or job['result'].get('operation')!='browser.coverage':return
-        path=self.directory/'analyses'/job['id']/'progress.json'
+        folder=self.directory/'analyses'/job['id']
+        versions=sorted(folder.glob('progress-*.json'))
+        path=versions[-1] if versions else folder/'progress.json'
         try:job['result']['progress']=json.loads(path.read_text(encoding='utf8'))
         except (OSError,ValueError):pass
 

@@ -1,0 +1,2 @@
+# Independent loopback WebSocket fixture; production uses websocket-client.
+websockets==17.2

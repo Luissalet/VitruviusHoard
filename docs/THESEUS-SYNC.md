@@ -1,0 +1,19 @@
+# Theseus source synchronization
+
+Theseus remains incomplete and in development. Luis resumed its separate development on 20 October 2026. Incorporation into Vitruvius preserves available capabilities and does not complete the reverse-engineering programme.
+
+The original integration retained snapshot `3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc`. This synchronization applies its exact delta through source Main `7f202978af91b035f5db5bfd8ed36c2a853ec844` to owner base `1547d3fa6fa4398153d00a0e98902ade08c8852c`. It updates five Python modules, their selected tests and retained source documentation. The operation catalogue and database schema remain unchanged. Pending scanner submission 26 and unpublished Electron work are outside this pinned source.
+
+Saved browser comparisons now retain WebSocket message order inside each connection and exact unordered stream multiplicities per reported URL. Payloads, directions, opcodes and masks stay literal; missing boundaries, capture gaps and whole-connection completeness remain unknown. Saved comparisons and transferred evidence read retained recordings without reconnecting. WebSocket events no longer create placeholder HTTP-body rows; historical receipts stay unchanged. See [the retained contract](../provenance/theseus/docs/BROWSER-WEBSOCKETS.md).
+
+Coverage progress publishes immutable numbered receipts so a Windows reader can keep an earlier snapshot open while later phases advance. Legacy progress receipts remain readable and unpublished temporary files are ignored. Job/project reads expose the newest published receipt.
+
+The owner retains integration 933's paths, lifecycle, mounted editors, native source identities and licences. `provenance/software/SOURCES.json` remains the original historical inventory; [THESEUS-SYNC.json](../provenance/software/THESEUS-SYNC.json) records this explicit 15-path source delta and source SHA256 values. Retained source documents contain historical verification and pause details; these are attributed source history, not fresh owner acceptance. [The owner limits ledger](../software_native/theseus-limits.md) includes the current snapshot and remaining gaps.
+
+Reproduction uses a separate owner worktree with its own virtual environment and engine dependencies: install `.[dev]`, `pytest-asyncio`, `numpy` and `-r theseus_tests/requirements.txt`, then run `npm ci` and `npm run build` in `software_native/engine`. Add the owner root and `theseus_tests` to `PYTHONPATH` for the retained native test modules. The focused browser suite uses owned software-rendered Chromium profiles, original loopback HTTP/WebSocket fixtures and synthetic stores; no real profile, model or application is used.
+
+Independent root review and installed-package verification are required before installation. This synchronization alone does not establish complete Theseus acceptance, live model quality or every optional runtime.
+
+Author verification: the four retained browser/WebSocket/scenario/coverage modules pass 32 tests in 89.30s; the owner workspace module passes 7 tests in 6.07s, including actual stdio MCP, cold discovery, mounted status text and source/result persistence. The two owner frontend builds and the native engine build pass; workspace JavaScript syntax and `git diff --check` pass. All 14 named source/test/document files match the pinned source after Git line-ending normalization, with the test-only WebSocket dependency recorded separately. No model or real store was used.
+
+Initial QA preparation failures are retained separately: one test required the own Node engine build, stdio required NumPy in the own virtual environment, and the full mounted workflow required both own frontend builds. The complete reruns above passed after those dependencies were prepared; these setup failures were not treated as product fixes. Dependency versions and private synthetic receipts are retained for independent review.
