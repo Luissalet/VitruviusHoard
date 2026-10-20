@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T14:06:40Z",
+  "generatedAt": "2026-10-20T14:18:23Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -358,7 +358,7 @@
     "reusableStyles": {
       "task": 1038,
       "mode": "Operate",
-      "status": "Implemented in isolated worktree codex/styles1038 relative to efb85ea; formal technical review, integration and installed acceptance pending.",
+      "status": "Implemented in isolated worktree codex/styles1038 relative to efb85ea; CAS1 technical review requested CHANGES for the name draft revision base. Correction implemented, pending new technical review; integration and installed acceptance pending.",
       "visualAuthority": "Incumbent inspector extension; no new visual contract, approved comp or independent quality bar. Root PRODUCT.md/DESIGN.md and existing tokens retain authority.",
       "source": [
         "client/src/components/diagram-editor/StyleControls.jsx",
@@ -384,7 +384,7 @@
         "library": "Named appearance presets independent of documents in the Design profile; immutable retained revisions support reuse across documents, create, rename/update and removal.",
         "apply": "Copies fill/stroke/ink, font_size/font_weight/align, border/show_label to every selected shape in one local change and undo/redo step; normal document save publishes those values.",
         "preservation": "Text, geometry, pinning, page, image and relationships remain on each shape. Library updates/removal leave saved documents and figures unchanged; exact retained style revisions remain readable.",
-        "refresh": "Adopts a remote name only if the name field still matches the previous selected style name; preserves a manual name draft.",
+        "refresh": "Adopts a remote name and advances draftStyle only if the name field still matches its base name. A manual name retains its original draftStyle revision while the library head advances; Update submits that base. Divergent names conflict at /name without overwriting remote or local draft; independent local-name/remote-stroke edits can merge.",
         "nativeTools": ["diagram_style_list", "diagram_style_get", "diagram_style_save", "diagram_style_remove", "diagram_style_apply"],
         "nativeBoundary": "Native apply saves an exact style snapshot through the ordinary conflict-aware document revision contract; distinct from UI local undo."
       },
@@ -417,6 +417,20 @@
         "fullSuiteResult": "Author: 518 passed, 2 skipped, exit 0, counted from completed run progress statuses because double-quiet output printed no summary.",
         "collectionReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-collected.log",
         "collectionResult": "520 collected tests.",
+        "cas1Correction": {
+          "review": "CAS1 CHANGES: refresh had advanced the revision used by a pending name and could overwrite a remote rename.",
+          "source": "StyleControls.jsx retains draftStyle as the pending name's original base across refresh and uses its revision in Update.",
+          "status": "Implemented; pending a new technical review. No integration or installed acceptance.",
+          "authorEdgeReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1038/conflict-results.json",
+          "authorEdgeLog": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-conflict-r3.log",
+          "authorEdgeResult": "PASS in real Edge: divergent /name preserves remote revision 2 and local draft; independent local-name/remote-stroke changes merge; clean remote name adopted; JavaScript errors empty.",
+          "historicalFailures": "r1/r2 receipts retained: HTTP oracles expected 400/200 instead of the actual conflict/save contract 409/201. Not relabelled as passing.",
+          "authorBuildReceipt": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-build-r4.log",
+          "authorBuildResult": "Successful frontend build after correction.",
+          "suiteScope": "Backend unchanged; prior 518 passed/2 skipped receipt retains its original scope. No new Python suite run claimed.",
+          "visualScope": "No UI markup or CSS change; existing captures and FINISH.txt retain visual scope. Prior SHIP did not functionally review this later correction and does not replace pending technical review.",
+          "documenterActivity": "Read corrected source and author receipts only. No new tests, browser, captures, detector, context scan or finish round."
+        },
         "detector": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/styles1038-detector.json",
         "detectorResult": "One supplied run; 11 advisories for existing document-local colours, heading/control sizes and error fallback, including local 13px disclosure type. Retain inherited 13/12 inspector convention; no global drift repair or new root tokens.",
         "documenterActivity": "Read source and supplied author/finish receipts; checked image file dimensions and documentation consistency. No new context scan, detector, browser, server, model, GPU, tests or capture."
