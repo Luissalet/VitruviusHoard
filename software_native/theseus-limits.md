@@ -22,11 +22,12 @@ and explicitly side-aligned static/runtime hypotheses. Both passed independent
 revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
-The native catalogue contains66 static/retained operations,40 runtime operations
+The native catalogue contains67 static/retained operations,40 runtime operations
 and50 binary-session operations, behind38 Theseus tools and123 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
 and [evidence/function acceptance](../tasks/submission1059-1064.md).
+Delivery1068 adds the builtin ELF64 little-endian x86-64 layout reader, preserving original section/symbol/REL/RELA/RELR bytes and identities, declared linkage names and scoped inferred mitigation indicators. CAS1 passed independent17area tests and author365PASS/2emulatorSKIP, plus fresh external installed MCP/UI and original-retired transfer. Source2004dbbe integrates the exact approved0cc6097; the final shared release is still pending. Delivery1070 client inspection remains outside Main in CAS2 review; its full rerun and package acceptance are pending. See [ELF layout](../docs/ELF-LAYOUT.md).
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current

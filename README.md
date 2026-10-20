@@ -14,6 +14,8 @@ The [complete declared contract inventory](docs/THESEUS-COVERAGE.json) records i
 
 Retained evidence sets preserve original document bytes, duplicate occurrences and complete unknown histories. Compare explicitly selected function dossiers across eight dimensions, enumerate every shortest direct-callee path from complete dossiers and contrast declared static/runtime hypotheses with explicit side alignment. Queries retain their evidence closure and work after import without original files or live sessions. See [retained evidence](docs/RETAINED-EVIDENCE.md) and [function comparisons](docs/RETAINED-FUNCTIONS.md).
 
+ELF64 little-endian x86-64 layout analysis retains original section, symbol and REL/RELA/RELR bytes, indices and physical ranges. Dependencies and interpreter names remain declarations; runtime load base is unknown and mitigation indicators are scoped inferences. See [ELF layout evidence](docs/ELF-LAYOUT.md).
+
 Inspection also includes the synchronous firmware scanner and retained main/preload/renderer source observations. An original Electron fixture checks explicit IPC results independently, then transfers and compares retained sources after the application closes. These observations do not establish whole-application equivalence. See [adaptation972 and its verification](tasks/submission972.md).
 
 Reconstruction cases can also select two saved page-scenario captures, compare their exact recorded responses and test deliberately defective captures after the original pages close. Both source hashes remain visible; incomplete or unaligned observations stay unknown. Portable evidence supports a new verification after import, while imported receipts remain historical. See [retained scenario verification](docs/RETAINED-SCENARIO-ORACLE.md).
