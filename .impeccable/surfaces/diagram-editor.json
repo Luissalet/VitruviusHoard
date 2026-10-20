@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T14:33:05Z",
+  "generatedAt": "2026-10-20T15:28:09Z",
   "title": "Vitruvius diagram editor — surface record",
   "extensions": {
     "surface": {
@@ -16,7 +16,10 @@
         "client/src/api.js",
         "vitruvius_hoard/diagrams/exchange.py",
         "vitruvius_hoard/diagrams/document_tools.py",
-        "vitruvius_hoard/api/diagrams.py"
+        "vitruvius_hoard/api/diagrams.py",
+        "client/src/components/diagram-editor/IsometricControls.jsx",
+        "vitruvius_hoard/diagrams/mechanism.py",
+        "vitruvius_hoard/diagrams/isometric_reader.py"
       ],
       "briefPath": "docs/design/diagrams.md",
       "authorities": [
@@ -595,6 +598,124 @@
         },
         "documenterActivity": "Inspected corrected source, build and functional receipts; opened both supplied pagefix captures. No detector, browser/server, functional tests, model or GPU execution."
       }
+    },
+    "isometric1049": {
+      "task": 1049,
+      "modes": [
+        "Operate",
+        "Read"
+      ],
+      "status": "Implemented and verified in author isolated worktree; technical CAS approval, integration and installed activation not established.",
+      "direction": {
+        "path": "docs/design/diagrams.md",
+        "heading": "Isometric extension direction — task 1049",
+        "timing": "Existing direction retained verbatim as historical intention; built record appended afterward, without backdating completion."
+      },
+      "visualAuthority": "Incumbent Hoard workbench and root PRODUCT.md/DESIGN.md unchanged; no new world, approved comp, seed or decorative raster.",
+      "model": {
+        "source": "Stable diagram.pieces IDs with original geometry; mechanism.parts holds long explanations by piece ID; mechanism.states holds stable state IDs, titles, explanations, hidden IDs, dx/dy/dz poses and optional visible focus_piece.",
+        "derivedRendering": "Copy original geometry, apply authored translation and highlight, filter hidden pieces; retain complete source unchanged.",
+        "validation": "Known stable piece references, unique part/state identities, finite valid geometry, at least one visible piece and visible focus_piece.",
+        "semantics": "Authored positions and explanations; no physics or simulation claim."
+      },
+      "interaction": {
+        "selection": "Labelled native State/Part selects; visible SVG pieces support click and Enter/Space with button role, aria-pressed and visible focus. Hidden parts remain selectable; reader explains absence.",
+        "inspection": "Short label where supported, unrestricted long explanation/sources textarea, original geometry disclosure, state title/explanation, visible checkbox, dx/dy/dz and visible highlight selector.",
+        "stateActions": "Add state from original, duplicate current authored state with new stable ID, delete selected state and return to original.",
+        "history": "Existing local change/undo/redo and native saved revision merge/selective undo; no parallel state store.",
+        "faustusContext": "Existing draft context includes selected_state and selected_piece."
+      },
+      "layout": {
+        "editorColumns": "minmax(0,1fr) 260px",
+        "selectors": "Two equal native-select columns, 12px gap/padding, labelled above figure.",
+        "figure": "280px minimum area; responsive SVG width and 560px maximum height; white authored figure ground.",
+        "reading": "After figure, max-width 75ch; preserved line breaks and anywhere wrapping.",
+        "editorBreakpoint": "850px: inspector after figure/explanation, top border, 44px action targets.",
+        "readerColumns": "minmax(0,1fr) 320px",
+        "readerBreakpoint": "700px: sequential figure and reading sidebar.",
+        "selectionTreatment": "Local SVG drop shadow for selected part and visible focus outline; not a new shell elevation token."
+      },
+      "nativeContract": {
+        "catalogTools": 123,
+        "countMeaning": "Existing catalog count; new collection/state selection schemas do not add tools.",
+        "objectCollections": [
+          "pieces",
+          "mechanism_parts",
+          "mechanism_states"
+        ],
+        "selection": "diagram_document_get and preview accept state_id; state-aware derived SVG/PNG/PDF, HTML, viewer and vfigure URLs use accepted revision; source download retains complete source.",
+        "portableFigure": "Selected-state PNG and state_id with full native source and retained revision.",
+        "standaloneReader": "Full source plus embedded original/state SVG frames, native selectors, authored notes, keyboard part selection and explicit hidden-part explanation; no server/network needed to read exported embedded states.",
+        "invalidState": "Explicit invalid state requests fail rather than silently selecting original.",
+        "formatBoundary": "Editable draw.io and Mermaid remain graph formats; no isometric parity inferred from visible export row."
+      },
+      "evidence": {
+        "directory": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/",
+        "captures": [
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-full.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/desktop-reader-r1.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          },
+          {
+            "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/mobile-reader-r1.png",
+            "openedByParentAuthor": true,
+            "openedByFinishReviewer": true,
+            "openedByDocumenter": false
+          }
+        ],
+        "finish": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/qa1049/FINISH.txt",
+          "disposition": "ship",
+          "materialFixes": "None in scoped visual review.",
+          "scope": "Four supplied captures and visible local Operate/Read integration only; not uncaptured states, inference, technical API/MCP/CAS approval, integration or installed activation."
+        },
+        "authorNative": {
+          "paths": [
+            "qa1049/native-results.json",
+            "qa1049-native-final.log"
+          ],
+          "reported": "123 MCP tools; complete source retained; independent edits merge and selective undo preserves unrelated edits; selected inside state; 640x420 PNG; SVG/PNG/PDF/HTML/vfigure exports."
+        },
+        "authorBrowser": {
+          "path": "qa1049/browser-results.json",
+          "reported": "Saved-state reopen, keyboard part selection, local undo/redo, dirty-state export, Faustus selection context, standalone reader and hidden-part explanation at widths 1440 and 390; empty JS/HTTP error lists."
+        },
+        "authorTests": {
+          "fullReceipt": "isometric1049-suite-r1.log",
+          "fullReported": "529 passed/2 skipped, 531 collected, before last two narrow backend corrections; progress output has no printed summary.",
+          "finalAreaReceipt": "isometric1049-final-area.log",
+          "finalArea": "16 passed in 20.59s plus two JavaScript area checks reported by author.",
+          "limit": "Composed validation; no second full run of final code asserted."
+        },
+        "detector": {
+          "path": "D:/LocalAI/research-inbox/expansiones-fusiones-20261020/isometric1049-detector.json",
+          "runs": 1,
+          "findings": 11,
+          "severity": "advisory only",
+          "scope": "Incumbent sizes, document-local white/selection colours and existing error fallback; no root repair or rerun."
+        },
+        "documenterActivity": "Read source and supplied receipts, then checked documentation consistency. No capture reopening, context scan, detector, browser/server, build, functional tests, model or GPU execution."
+      },
+      "limits": [
+        "Concrete webfont loading is not established.",
+        "No technical CAS approval, integration or installed activation claimed.",
+        "No global Faustus, memory or Manual acceptance inferred.",
+        "Earlier surface history and its scope remain retained."
+      ]
     }
   },
   "components": [
@@ -690,7 +811,7 @@
   ],
   "narrative": {
     "northStar": "Existing Hoard workbench",
-    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Authored isometric states remain outside this record. This figures extension is implemented and verified in isolated worktrees; integration and installed activation are not established here.",
+    "overview": "This Operate surface lets a person edit an independent diagram document directly, with the same document available to Faustus through the native product integration. Its dark shell, restrained blue selection, serif headings and sans controls extend the incumbent workbench. The declared stacks begin with Cinzel and Source Sans 3; the captures do not prove those webfonts loaded. The drawing is editable SVG; no decorative raster asset establishes its identity. Imported raster images are authored document content.\n\nThis is a surface-specific record for `client/src/pages/Diagrams.jsx` and `client/src/components/diagram-editor/`. Root `PRODUCT.md` and `DESIGN.md` retain authority. The companion `.impeccable/surfaces/diagram-editor.json` records this surface only; neither it nor this brief replaces the root system, repairs its reported drift, or establishes automatic discovery by the current Impeccable context loader.\n\nThe code-led direction preserves the existing world without an approved comp or a replacement visual identity. The task sequence is open/create/import, edit shapes and relationships, inspect properties, save a revision, then export or open the interactive view. The first viewport prioritizes a visible working drawing; secondary controls remain available. Earlier source rendering, type suggestions, brand profiles and recent diagrams continue below the editor. Phase B established the graph editing core. Phase C extends its native document with ordered editorial pages, text and embedded raster blocks. The figures extension adds a portable source revision and PNG preview for Cicero's existing image blocks. Task 1049 adds selectable isometric parts, long explanations and authored states to the same document. Its implementation and supplied verification are in the author worktree; technical CAS approval, integration and installed activation are not established by this record. Earlier phase and extension receipts retain their own scope.",
     "keyCharacteristics": [
       "An independent versioned document with a visible name, save state and selected revision.",
       "A native SVG canvas between a shape palette and selection inspector on wide screens.",
@@ -699,7 +820,8 @@
       "Output actions save an outstanding draft and use the accepted revision.",
       "Ordered pages, four editable editorial templates and text/image properties extend the existing document and inspector.",
       "Figure with source extends the existing export row with a portable revision and the selected page's PNG preview.",
-      "Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents."
+      "Reusable shape styles extend the selection inspector with a named, revisioned library shared across documents.",
+      "Isometric parts retain original geometry and explanations while authored states derive translated, hidden and highlighted views for editing, reading and export."
     ],
     "rules": [
       {
@@ -730,6 +852,11 @@
       {
         "name": "The Visible Page Rule",
         "body": "Resolve the current document's page consistently for the canvas, Faustus context and figure export; resolve it again against the accepted source after saving.",
+        "section": "components"
+      },
+      {
+        "name": "The Authored State Rule",
+        "body": "Preserve original geometry, explanations and every state in source; a selected state's rendering is a derived view of the accepted document revision.",
         "section": "components"
       }
     ],
