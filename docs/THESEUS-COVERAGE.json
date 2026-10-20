@@ -23,8 +23,7 @@
     "implementation-pending": 22,
     "platform-required-implementation-pending": 3,
     "excluded-by-user": 4,
-    "integrated-tested-published": 5,
-    "source-integrated-release-pending": 5
+    "integrated-tested-published": 10
   },
   "contracts": [
     {
@@ -3227,10 +3226,10 @@
         "theseus_binary_compare",
         "evidence.compare_functions"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Eight explicit static dimensions from two complete retained native function dossiers; preserve provider/profile and facet uncertainty, source citations and portable closure. Static differences do not establish runtime equivalence.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
+        "state": "approved-exact-source-published-final-wheel-installed-MCP-UI-PASS",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3244,7 +3243,15 @@
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
-        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md",
+        "final_wheel_sha256": "4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd",
+        "shared_installed_members": 3809,
+        "shared_owner_started": false,
+        "final_proofs": [
+          "release1064-installed-final20.json",
+          "shared1064-installed20.json",
+          "manual1059-1064-proof20.json"
+        ]
       }
     },
     {
@@ -3258,10 +3265,10 @@
       "counterparts": [
         "evidence.compare_bundles"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Exact bundle membership, declared one-to-one observation pairs, full residual unknowns and digest-bound comparison history.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
+        "state": "approved-exact-source-published-final-wheel-installed-MCP-UI-PASS",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3273,7 +3280,15 @@
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "d75f255122062d8b17ae75a1e5366e53b7977a3f18d2b5266bdcd77eb78b3564",
-        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md",
+        "final_wheel_sha256": "4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd",
+        "shared_installed_members": 3809,
+        "shared_owner_started": false,
+        "final_proofs": [
+          "release1064-installed-final20.json",
+          "shared1064-installed20.json",
+          "manual1059-1064-proof20.json"
+        ]
       },
       "group": "bundle-correlation"
     },
@@ -3288,10 +3303,10 @@
       "counterparts": [
         "evidence.changed_behavior"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Aggregate validated artifact/process deltas while separating observed behavior, static candidates and incomplete evidence.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
+        "state": "approved-exact-source-published-final-wheel-installed-MCP-UI-PASS",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3305,7 +3320,15 @@
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
-        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md",
+        "final_wheel_sha256": "4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd",
+        "shared_installed_members": 3809,
+        "shared_owner_started": false,
+        "final_proofs": [
+          "release1064-installed-final20.json",
+          "shared1064-installed20.json",
+          "manual1059-1064-proof20.json"
+        ]
       },
       "group": "bundle-correlation"
     },
@@ -3320,10 +3343,10 @@
       "counterparts": [
         "evidence.call_paths"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "All shortest direct-callee paths from complete retained dossiers with exact addresses and source evidence; missing/mixed providers remain unknown.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
+        "state": "approved-exact-source-published-final-wheel-installed-MCP-UI-PASS",
         "task": 1059,
         "submission_revision": 1,
         "commit": "afee248a5396645b065a464bcf0dfb9524360dbc",
@@ -3335,7 +3358,15 @@
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "d75f255122062d8b17ae75a1e5366e53b7977a3f18d2b5266bdcd77eb78b3564",
-        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md",
+        "final_wheel_sha256": "4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd",
+        "shared_installed_members": 3809,
+        "shared_owner_started": false,
+        "final_proofs": [
+          "release1064-installed-final20.json",
+          "shared1064-installed20.json",
+          "manual1059-1064-proof20.json"
+        ]
       },
       "group": "retained-call-paths"
     },
@@ -3350,10 +3381,10 @@
       "counterparts": [
         "evidence.correlate"
       ],
-      "status": "source-integrated-release-pending",
+      "status": "integrated-tested-published",
       "scope": "Explicit caller hypotheses bound to exact static findings and runtime dimensions; co-change is not causation.",
       "acceptance": {
-        "state": "independent-CAS1-approved-source-integrated-external-installed-tested-awaiting-final-release",
+        "state": "approved-exact-source-published-final-wheel-installed-MCP-UI-PASS",
         "task": 1064,
         "submission_revision": 1,
         "commit": "94311f8475268b01a6bd7943f94eafd903adb96a",
@@ -3367,7 +3398,15 @@
         "reviewed_submission_revision": 1,
         "application_head": "2d623d1639716d7ce3033b1c5b11a36de0632ce9",
         "external_installed_wheel_sha256": "78d8cc9c9575b70a7c2147a2cd7f520bb6c4845694b07234906ef50c12ec33d0",
-        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md"
+        "external_acceptance": "Exact member/pipcheck/real MCP123 and new normal UI queries PASS; all private owners, ports and tabs closed. tasks/submission1059-1064.md",
+        "final_wheel_sha256": "4c0947083dfbf8254962fd2fe428a700d7c1080c991c488559c4ab9c16d603fd",
+        "shared_installed_members": 3809,
+        "shared_owner_started": false,
+        "final_proofs": [
+          "release1064-installed-final20.json",
+          "shared1064-installed20.json",
+          "manual1059-1064-proof20.json"
+        ]
       },
       "group": "bundle-correlation"
     },
