@@ -20,6 +20,7 @@ const state = {
   runtimeCatalog: null,
   analysisPage: null,
   analysisRecord: null,
+  webSourceChoices: null,
   showArchived: false,
   busy: false,
   sequence: 0,
@@ -573,24 +574,43 @@ function nativeAnalyses() {
       return `<label>${side === "reference" ? "Análisis de referencia" : "Análisis candidato"}<select name="${side}_job_id" data-draft="analysis-${side}-${selected.name}">${choices.map(row=>`<option value="${row.id}" ${draft("analysis-"+side+"-"+selected.name,side === "reference" ? choices.at(-1)?.id : choices[0]?.id)===row.id?"selected":""}>${escape(row.result.artifact_name)}${mixed?" · "+escape(row.result.title||row.result.operation):""}${row.state==="finished"?"":" · "+escape(statusLabels[row.state]||row.state)} · SHA ${escape(row.result.artifact_sha256?.slice(0,8))} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>`;
     }).join("") + (!sources.length || !candidateSources.length ? '<p class="warning">Primero guarda los análisis de referencia y candidato del tipo indicado para poder compararlos.</p>' : "")
     : derived
-    ? `<label>Análisis de origen<select name="source_job_id" data-draft="analysis-source-job">${sources.map(row => `<option value="${row.id}" ${draft("analysis-source-job") === row.id ? "selected" : ""}>${escape(row.result.artifact_name)} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>${!sources.length ? '<p class="warning">Primero guarda un análisis del tipo indicado. La consulta reutiliza sus observaciones guardadas.</p>' : ""}`
+    ? `<label>Análisis de origen<select id="analysis-source-job" name="source_job_id" data-draft="analysis-source-job">${sources.map(row => `<option value="${row.id}" ${draft("analysis-source-job") === row.id ? "selected" : ""}>${escape(row.result.artifact_name)} · ${new Date(row.created_at).toLocaleString("es")} · ${row.id.slice(0,8)}</option>`).join("")}</select></label>${!sources.length ? '<p class="warning">Primero guarda un análisis del tipo indicado. La consulta reutiliza sus observaciones guardadas.</p>' : ""}`
     : `<label>Artefacto<select name="artifact_id" data-draft="analysis-artifact">${state.data.artifacts.map(row => `<option value="${row.id}" ${draft("analysis-artifact", state.artifact) === row.id ? "selected" : ""}>${escape(row.name)}</option>`).join("")}</select></label>`;
   const parameterDraft = "analysis-parameters-" + selected?.name;
+  const source = sources.find(row=>row.id===draft("analysis-source-job")) || sources[0];
+  const webTrace = ["javascript.trace_source", "javascript.trace_imports"].includes(selected?.name);
+  const webChoices = source && state.webSourceChoices?.job_id===source.id && state.webSourceChoices.sha256===source.result.analysis_sha256 ? state.webSourceChoices : null;
   let body = `<div class="reading"><h2>Análisis estático local</h2><p>Inspecciona archivos y aplicaciones con ubicaciones originales, o consulta los análisis guardados. El análisis estático no ejecuta el programa.</p>`;
   if (!state.data.artifacts.length) return body + '<p>Añade un archivo desde Artefactos para analizarlo.</p><button data-action="tab" data-view="artifacts">Añadir artefacto</button></div>';
   body += `<form id="native-analysis-form">
     <label>Operación<select id="analysis-operation" name="operation" data-draft="analysis-operation">${operations.map(row => `<option value="${escape(row.name)}" ${row.name === selected?.name ? "selected" : ""}>${escape(row.title)}</option>`).join("")}</select></label>
     <p class="small">${escape(selected?.description)}</p>${selected?.available === false ? '<p class="warning">'+escape(selected.availability_reason || 'Requiere '+selected.platforms?.join(", "))+'</p>' : ""}${targetPicker}
-    <details id="analysis-parameters" ${derived && selected?.example ? "open" : ""}><summary>Parámetros de la operación</summary>
+    ${webTrace ? webSourceFields(source, selected.name, webChoices) : ""}
+    <details id="analysis-parameters" ${derived && selected?.example && !webTrace ? "open" : ""}><summary>${webTrace ? "Contexto adicional · JSON" : "Parámetros de la operación"}</summary>
       <label>Parámetros JSON<textarea class="mono" name="parameters" data-draft="${escape(parameterDraft)}" rows="6">${attr(parameterDraft, json(selected?.example || {}))}</textarea></label>
       <pre>${escape(json(selected?.inputSchema))}</pre>
     </details>
-    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : "Iniciar análisis"}</button>
+    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) || (webTrace && !webChoices?.entries.some(row=>row.kind!=="inline-source-map" && row.state==="captured")) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : "Iniciar análisis"}</button>
     ${!state.catalog?.engine.available && selected?.worker !== "python" ? '<p class="warning">El núcleo de análisis no está compilado. Ejecuta Install.ps1 y vuelve a abrir esta página.</p>' : ""}
   </form><h2>Análisis guardados</h2>`;
   body += runs.length ? runs.map(job => nativeAnalysisJob(job)).join("") : '<p class="muted">Todavía no hay análisis nativos en este proyecto.</p>';
   body += analysisBrowser(runs);
   return body + '</div>';
+}
+
+function webSourceFields(source, operation, choices) {
+  if(!source) return "";
+  if(!choices) return `<button type="button" data-action="load-web-sources" data-id="${source.id}">Cargar fuentes del análisis</button><p class="small">Carga el manifiesto guardado para seleccionar sus scripts y mapas.</p>`;
+  const scripts=choices.entries.filter(row=>row.kind!=="inline-source-map");
+  const maps=choices.entries.filter(row=>row.kind!=="page-script");
+  const picker=(rows,name,label)=>`<label>${label}<select name="web-${name}" data-draft="web-${name}-${source.id}" required><option value="">Seleccionar…</option>${rows.map(row=>`<option value="${escape(row.id)}" ${row.state!=="captured"?"disabled":""} ${draft("web-"+name+"-"+source.id)===row.id?"selected":""}>${escape(row.kind==="inline-source-map"?"Mapa incrustado de "+row.script_entry_id:row.url||"Script sin URL")} · ${escape(row.id)}${row.state==="captured"?"":" · "+escape(row.state)}</option>`).join("")}</select></label>`;
+  let body=picker(scripts,"script","Script guardado");
+  if(!scripts.some(row=>row.state==="captured")) body+='<p class="warning">Esta exportación no contiene scripts capturados. Selecciona una captura que incluya sus fuentes y vuelve a exportarla.</p>';
+  if(operation==="javascript.trace_source") {
+    body+=picker(maps,"map","Mapa o respuesta guardada")+
+      `<label>Línea generada<input type="number" name="web-line" min="1" step="1" required data-draft="web-line" value="${attr("web-line",1)}"></label><label>Columna generada · UTF-16<input type="number" name="web-column" min="0" step="1" required data-draft="web-column" value="${attr("web-column",0)}"></label><p class="small">La línea empieza en 1 y la columna en 0. La selección del mapa declara una correspondencia; no acredita qué se desplegó.</p>`;
+  } else body+='<p class="small">Se usa la URL guardada del script. Puedes indicar importer_url, import_map e import_map_base_url en el contexto adicional.</p>';
+  return body;
 }
 
 function analysisBrowser(runs) {
@@ -814,6 +834,20 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
   const { action, id, view, page } = button.dataset;
+  if (action === "load-web-sources") return act(async () => {
+    const source=state.data.jobs.find(row=>row.id===id);
+    const response=await fetch(`/theseus/api/jobs/${id}/analysis.json`);
+    if(!response.ok) throw Error("No se pudo cargar el manifiesto. Consulta el recibo del análisis de origen.");
+    const bytes=await response.arrayBuffer();
+    const sha=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),value=>value.toString(16).padStart(2,"0")).join("");
+    if(sha!==source.result.analysis_sha256) throw Error("El manifiesto cambió respecto al recibo guardado. Vuelve a exportar la captura.");
+    const document=JSON.parse(new TextDecoder().decode(bytes));
+    if(document.result?.format!=="vitruvius.web-sources/1") throw Error("Selecciona una exportación de fuentes web guardadas.");
+    state.webSourceChoices={job_id:id,sha256:sha,entries:document.result.entries.map(row=>({
+      id:row.id,kind:row.kind,url:row.url,state:row.state,sha256:row.sha256,script_entry_id:row.script_entry_id}))};
+    render();
+    notice("Fuentes cargadas. Selecciona el script que quieres consultar.");
+  });
   if (["claim-finding","claim-dependency","claim-job"].includes(action)) {
     state.view=action==="claim-finding"?"findings":action==="claim-job"?"jobs":"reconstruction";
     route();render();
@@ -1112,8 +1146,14 @@ document.addEventListener("submit", (event) => {
     if (form.id === "native-analysis-form") {
       const source = (fields.source_job_id || fields.reference_job_id) && state.data.jobs.find(row => row.id === (fields.source_job_id || fields.reference_job_id));
       const selectedSources = fields.reference_job_id ? {reference_job_id:fields.reference_job_id,candidate_job_id:fields.candidate_job_id} : source ? {source_job_id:source.id} : {};
+      const parameters=JSON.parse(fields.parameters || "{}");
+      if(["javascript.trace_source","javascript.trace_imports"].includes(fields.operation)) {
+        parameters.query={...parameters.query,script_id:fields["web-script"]};
+        if(fields.operation==="javascript.trace_source") Object.assign(parameters.query,{
+          map_id:fields["web-map"],line:Number(fields["web-line"]),column:Number(fields["web-column"])});
+      }
       await api(`/projects/${projectId()}/artifacts/${source ? source.result.artifact_id : fields.artifact_id}/analyses`, {
-        operation: fields.operation, parameters: {...JSON.parse(fields.parameters || "{}"), ...selectedSources},
+        operation: fields.operation, parameters: {...parameters, ...selectedSources},
       });
       await refresh();
       notice("Análisis nativo iniciado.");
@@ -1234,7 +1274,7 @@ document.addEventListener("change", (event) => {
     render();
   }
   if (["binary-session","binary-operation"].includes(event.target.id)) render();
-  if (event.target.id === "analysis-operation") render();
+  if (["analysis-operation","analysis-source-job"].includes(event.target.id)) render();
   if (event.target.id === "runtime-operation" || (event.target.form?.id==="runtime-form" && ['runtime-param-mode','runtime-param-session_id'].includes(event.target.name))) render();
   if (event.target.id === "show-archived") {
     state.showArchived = event.target.checked;
