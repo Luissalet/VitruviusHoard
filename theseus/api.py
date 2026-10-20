@@ -42,11 +42,23 @@ SCENARIO = {"type": "object", "properties": {
     "stdin": S, "cwd": S, "mode": {"type": "string", "enum": ["text", "json"]},
     "timeout_seconds": {"type": "number", "exclusiveMinimum": 0}, "expected_stdout": {}, "expected_exit_code": {"type": "integer"}},
     "required": ["reference", "candidate"], "additionalProperties": False}
+RETAINED_SCENARIO={'type':'object','properties':{'kind':{'const':'retained-page-scenarios'},
+    **{key:{'type':'string','minLength':1} for key in ('reference_job_id','candidate_job_id')},
+    **{key:{'type':'string','pattern':'^[0-9a-f]{64}$'} for key in ('reference_sha256','candidate_sha256')}},
+    'required':['kind','reference_job_id','reference_sha256','candidate_job_id','candidate_sha256'],
+    'additionalProperties':False}
+SCENARIO={'oneOf':[SCENARIO,RETAINED_SCENARIO]}
 IDS = {"type": "array", "items": S}
 CLAIM = {"kind": {"type": "string", "enum": ["obligation", "unknown"]}, "statement": S,
          "claim_id": S, "owner": S, "finding_ids": IDS, "scenario_ids": IDS, "depends_on": IDS, "resolution": S}
 VARIANTS = {"type": "array", "items": {"type": "object", "additionalProperties": False,
     "properties": {"name": S, "candidate": IDS, "expected_exit_code": {"type": "integer"}}, "required": ["name", "candidate"]}}
+RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'name':S,
+    'captures':{'type':'array','minItems':1,'items':{'type':'object','additionalProperties':False,
+        'properties':{**{key:{'type':'string','minLength':1} for key in ('scenario_id','candidate_job_id')},
+            'candidate_sha256':{'type':'string','pattern':'^[0-9a-f]{64}$'}},
+        'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
+VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 TOOLS = [
     tool("theseus_runtime_catalog", "Discover explicit runtime observation operations, target selection, side effects and installed clients. Separate from execution-free static analysis.", {}),
     tool("theseus_runtime_start", "Run an explicitly selected Android, instrumentation, V8 Inspector or browser CDP operation in a project. ADB requires an exact serial; Frida requires a selected device, PID/argv or live project session; Inspector requires an explicit endpoint and exact target ID. Inspector/CDP metadata never evaluates, pauses or closes the target; script text, page DOM/listeners, completed response bodies and PNG are explicit choices. Device actions and instrumentation scripts can change their targets. Captures are historical, not behavioral equivalence; cancellation cannot undo effects. Remote tokens are ephemeral and excluded from recordings.", {**PROJECT, "operation": S, "parameters": {"type": "object"}}, ["project_id", "operation"], False, True),
@@ -60,7 +72,7 @@ TOOLS = [
     tool("theseus_artifact_image", "Read a registered PNG with its exact recorded SHA-256; MCP returns native image content and identity metadata. No target or URL is accessed.", ARTIFACT, ["project_id", "artifact_id"]),
     tool("theseus_finding_add", "Save an observed fact at an artifact location; interpretation is separate. Pass source_sha256 from a newer excerpt/analysis when citing that version; source_refs preserves all artifact identities in a comparison. Evidencia y observacion.", {**ARTIFACT, "location": S, "observation": S, "interpretation": S, "source_sha256": S, "source_refs": SOURCE_REFS}, ["project_id", "artifact_id", "location", "observation"], False),
     tool("theseus_specification_write", "Save the editable behavior specification, citing finding IDs and separating unknowns.", {**PROJECT, "content": S}, ["project_id", "content"], False),
-    tool("theseus_scenario_save", "Save or revise explicit local reference/candidate command arrays and shared input. No shell interpolation. Escenario diferencial.", {**PROJECT, "name": S, "definition": SCENARIO, "scenario_id": S}, ["project_id", "name", "definition"], False),
+    tool("theseus_scenario_save", "Save explicit command arrays/shared input or hash-bound retained browser.scenario captures. Retained cases compare complete, literally aligned step responses without connecting or replaying. Escenario diferencial.", {**PROJECT, "name": S, "definition": SCENARIO, "scenario_id": S}, ["project_id", "name", "definition"], False),
     tool("theseus_comparison_start", "Run saved scenarios as a recoverable background comparison. Returns a job ID; read it until finished. Compara original y reconstruccion.", {**PROJECT, "scenario_ids": {"type": "array", "items": S}}, ["project_id"], False),
     tool("theseus_job_read", "Read background analysis/comparison progress, retained sources, frozen inputs, program hashes and diagnostics.", {"job_id": S}, ["job_id"]),
     tool("theseus_job_cancel", "Stop owned host clients of an active analysis or comparison. Completed observations can remain; cancellation does not undo target-side effects.", {"job_id": S}, ["job_id"], False),
@@ -82,7 +94,7 @@ TOOLS = [
     tool("theseus_claim_save", "Create or revise a behavior obligation or unknown with finding/scenario dependencies and owner. Unknown resolution keeps evidence links. Obligaciones y preguntas abiertas.", {**PROJECT, **CLAIM}, ["project_id", "kind", "statement"], False),
     tool("theseus_handoff_create", "Freeze the current behavior specification and claims for a builder workspace. Reader findings and original paths remain separate from the builder document. Does not generate or copy source code.", {**PROJECT, "builder_directory": S, "finding_ids": IDS}, ["project_id", "builder_directory"], False),
     tool("theseus_handoff_read", "Read a saved immutable handoff; builder_only returns only the behavior document, without reader findings/artifact paths.", {**PROJECT, "handoff_id": S, "builder_only": {"type": "boolean"}}, ["project_id", "handoff_id"]),
-    tool("theseus_oracle_selftest", "Run deliberately wrong local candidates against saved reference scenarios. Retains each input and observation, reports detected and surviving defects; an invalid reference or timeout cannot certify sensitivity.", {**PROJECT, "variants": VARIANTS, "scenario_ids": IDS}, ["project_id", "variants"], False),
+    tool("theseus_oracle_selftest", "Test deliberately wrong command candidates or explicitly mapped retained page captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.", {**PROJECT, "variants": VARIANTS, "scenario_ids": IDS}, ["project_id", "variants"], False),
     tool("theseus_reconstruction_verify", "Run saved differential scenarios linked to an immutable behavior handoff. Each retry preserves the original handoff identity and complete observations; a newer specification is explicitly reported.", {**PROJECT, "handoff_id": S, "scenario_ids": IDS}, ["project_id", "handoff_id"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
@@ -135,9 +147,17 @@ class ScenarioDefinition(Payload):
     expected_exit_code: int | None = None
 
 
+class RetainedScenarioDefinition(Payload):
+    kind: Literal['retained-page-scenarios']
+    reference_job_id: str = Field(min_length=1)
+    reference_sha256: str = Field(pattern='^[0-9a-f]{64}$')
+    candidate_job_id: str = Field(min_length=1)
+    candidate_sha256: str = Field(pattern='^[0-9a-f]{64}$')
+
+
 class ScenarioSave(Payload):
     name: str
-    definition: ScenarioDefinition
+    definition: ScenarioDefinition | RetainedScenarioDefinition
     scenario_id: str = ""
 
 
@@ -167,8 +187,19 @@ class Perturbation(Payload):
     expected_exit_code: int | None = None
 
 
+class RetainedPerturbationCapture(Payload):
+    scenario_id: str = Field(min_length=1)
+    candidate_job_id: str = Field(min_length=1)
+    candidate_sha256: str = Field(pattern='^[0-9a-f]{64}$')
+
+
+class RetainedPerturbation(Payload):
+    name: str
+    captures: list[RetainedPerturbationCapture] = Field(min_length=1)
+
+
 class OracleSelftest(Payload):
-    variants: list[Perturbation]
+    variants: list[Perturbation | RetainedPerturbation]
     scenario_ids: list[str] | None = None
 
 
@@ -253,11 +284,15 @@ def create_app(data=None, port=5217, recover=True):
             return store.create_project(**args)
         if name == "theseus_project_read":
             key = args["project_id"]
-            return {"project": store.project(key), "workflow": workflow.read(key), "artifact_links": store.artifact_links(key),
+            snapshot = {"project": store.project(key), "artifact_links": store.artifact_links(key),
                     "runtime_sessions": comparisons.frida_sessions.connections(key),
                     "evidence_import": {"original_bundle": f"/api/projects/{key}/evidence/original"}
                     if (store.directory / "imports" / key / "evidence.json").is_file() else None,
                     **{kind: store.items(kind, key) for kind in ("artifacts", "findings", "scenarios", "jobs")}}
+            # A fast job can finish while reading the collections. Derive its
+            # workflow afterwards so finished jobs never carry precompletion claims.
+            snapshot['workflow']=workflow.read(key)
+            return snapshot
         if name == "theseus_project_update":
             key = args.pop("project_id")
             return store.update_project(key, **args)

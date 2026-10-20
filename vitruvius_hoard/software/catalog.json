@@ -3785,7 +3785,7 @@
   },
   {
     "name": "theseus_scenario_save",
-    "description": "Save or revise explicit local reference/candidate command arrays and shared input. No shell interpolation. Escenario diferencial.",
+    "description": "Save explicit command arrays/shared input or hash-bound retained browser.scenario captures. Retained cases compare complete, literally aligned step responses without connecting or replaying. Escenario diferencial.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -3796,47 +3796,83 @@
           "type": "string"
         },
         "definition": {
-          "type": "object",
-          "properties": {
-            "reference": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "reference": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "candidate": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "stdin": {
+                  "type": "string"
+                },
+                "cwd": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "timeout_seconds": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "expected_stdout": {},
+                "expected_exit_code": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "reference",
+                "candidate"
+              ],
+              "additionalProperties": false
             },
-            "candidate": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "stdin": {
-              "type": "string"
-            },
-            "cwd": {
-              "type": "string"
-            },
-            "mode": {
-              "type": "string",
-              "enum": [
-                "text",
-                "json"
-              ]
-            },
-            "timeout_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            },
-            "expected_stdout": {},
-            "expected_exit_code": {
-              "type": "integer"
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "retained-page-scenarios"
+                },
+                "reference_job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "candidate_job_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reference_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "candidate_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "kind",
+                "reference_job_id",
+                "reference_sha256",
+                "candidate_job_id",
+                "candidate_sha256"
+              ],
+              "additionalProperties": false
             }
-          },
-          "required": [
-            "reference",
-            "candidate"
-          ],
-          "additionalProperties": false
+          ]
         },
         "scenario_id": {
           "type": "string"
@@ -4435,7 +4471,7 @@
   },
   {
     "name": "theseus_oracle_selftest",
-    "description": "Run deliberately wrong local candidates against saved reference scenarios. Retains each input and observation, reports detected and surviving defects; an invalid reference or timeout cannot certify sensitivity.",
+    "description": "Test deliberately wrong command candidates or explicitly mapped retained page captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4445,25 +4481,69 @@
         "variants": {
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string"
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "candidate": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "expected_exit_code": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "name",
+                  "candidate"
+                ]
               },
-              "candidate": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "expected_exit_code": {
-                "type": "integer"
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "captures": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "scenario_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "candidate_job_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "candidate_sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        }
+                      },
+                      "required": [
+                        "scenario_id",
+                        "candidate_job_id",
+                        "candidate_sha256"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "captures"
+                ]
               }
-            },
-            "required": [
-              "name",
-              "candidate"
             ]
           }
         },
