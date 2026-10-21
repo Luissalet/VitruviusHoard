@@ -75,5 +75,5 @@ def demangle(symbols):
             'limitations': ['A symbol is invalid when it carries a Swift mangling prefix and swift-demangle returns it unchanged; '
                             'a mangling that decodes to an unexpected but well-formed tree is reported as demangled.',
                             'Classification comes from swift-demangle --classify: swift_symbol is false without a Swift prefix, '
-                            'thunk_target names the forwarded symbol when the thunk records one, and foreign_calling_convention marks C or Objective-C entry points.',
+                            'thunk_target names the forwarded symbol when the thunk records one, and foreign_calling_convention marks entry points without the Swift calling convention, such as C, Objective-C and value witness functions.',
                             'Demangling restores declared names and types only; it does not prove the symbol exists in any binary.']}
