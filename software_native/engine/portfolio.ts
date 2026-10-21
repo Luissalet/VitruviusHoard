@@ -1,5 +1,6 @@
 /** Native inventory and application projections over directly incorporated readers. */
-import {dirname} from 'node:path';
+import {basename,dirname} from 'node:path';
+import {stat} from 'node:fs/promises';
 import {z} from 'zod';
 import {ArtifactResourceScope} from './src/artifacts/ArtifactResourceScope.js';
 import {inventoryArtifact} from './src/artifacts/inventory/ArtifactInventory.js';
@@ -21,6 +22,16 @@ import type {JsonValue} from './src/domain/jsonValue.js';
 
 const provider={id:'theseus-static',name:'Theseus static application analysis',version:'1'};
 
+const BUNDLE_SUFFIXES=['.app','.framework','.bundle','.appex','.xpc','.plugin'];
+
+/** Outermost Apple bundle folder that contains the image, or the image's own folder. */
+const bundleRoot=(path:string):string=>{
+  let root=dirname(path);
+  for(let folder=dirname(path);dirname(folder)!==folder;folder=dirname(folder))
+    if(BUNDLE_SUFFIXES.some(suffix=>basename(folder).toLowerCase().endsWith(suffix))) root=folder;
+  return root;
+};
+
 export async function analyzePortfolio(operation:string,bytes:Buffer,path:string,sha256:string,
   parameters:{output_directory?:string|undefined;query?:unknown}):Promise<unknown> {
   const resources=new ArtifactResourceScope();
@@ -39,8 +50,13 @@ export async function analyzePortfolio(operation:string,bytes:Buffer,path:string
     }
     if(operation==='apple.interface_builder') return await analyzeInterfaceBuilderBundle({bundlePath:path,targetSha256:sha256,limits:parameters.query});
     if(operation==='apple.assets') return await analyzeAppleAssetCatalogs({bundlePath:path,targetSha256:sha256,environment:process.env,page:parameters.query});
-    if(operation==='apple.dylibs') return await traceDylibResolution({rootPath:dirname(path),targetPath:path,
-      targetSha256:sha256,enumerateRoots:false,parameters:z.record(z.string(),z.unknown()).parse(parameters.query??{}),resourceScope:resources});
+    if(operation==='apple.dylibs') {
+      // A selected folder is the analyzed root and every executable in it is traced. A selected image is
+      // traced inside its outermost enclosing bundle, so @executable_path/../Frameworks stays inside the root.
+      const directory=(await stat(path)).isDirectory();
+      return await traceDylibResolution({rootPath:directory ? path : bundleRoot(path),targetPath:path,
+        targetSha256:sha256,enumerateRoots:directory,parameters:z.record(z.string(),z.unknown()).parse(parameters.query??{}),resourceScope:resources});
+    }
     const inventory=await inventoryArtifact(path,{resourceScope:resources,environment:process.env,integrity:{mode:'record-and-continue'}});
     if(operation==='artifact.inventory') return inventory;
     if(operation==='artifact.extract') {
