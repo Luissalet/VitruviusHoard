@@ -272,7 +272,8 @@ class Store:
                     else:
                         name = None
                     name = name or str(_identity(row.get("name")) or row.get("package_name") or row.get("serial") or row.get("path") or row.get("url") or row.get("label") or row.get("declaring_type") or row.get("selector") or row.get("instruction") or opcode or
-                               (identity_names[0].lstrip(".") if identity_names else None) or row.get("mnemonic") or section)
+                               (identity_names[0].lstrip(".") if identity_names else None) or row.get("mnemonic") or row.get("query") or row.get("protocol") or
+                               ((row["address"] if row["port"] is None else f"{row['address']}:{row['port']}") if isinstance(row.get("address"), str) and "port" in row else None) or section)
                     search = (name + " " + " ".join(identity_names) + " " + str(row.get("declaring_type", "")) + " " + str(row.get("selector", "")) + " " + str(row.get("kind", "")) + " " + str(evidence_id or row.get("evidence_id", ""))).casefold()
                     source = row.get("row_offset", row.get("file_offset"))
                     db.execute("INSERT INTO analysis_records VALUES (?,?,?,?,?,?,?,?)",

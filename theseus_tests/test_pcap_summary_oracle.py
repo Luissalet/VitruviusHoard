@@ -218,3 +218,14 @@ def test_bytes_that_are_not_a_capture_fail(lab):
     job = lab.job('not-a-capture.bin', b'MZ' + bytes(100), 'capture.summary')
     assert job['state'] == 'failed'
     assert 'Not a PCAP or PCAPNG capture' in str(job['result'])
+
+
+def test_summary_records_are_named_by_query_protocol_and_endpoint(lab, summary):
+    job = lab.job('records.pcap', CAPTURE, 'capture.summary')
+    def names(section):
+        reply = lab.client.get(f"/api/jobs/{job['id']}/records/{section}", params={'limit': 1000})
+        reply.raise_for_status()
+        return [row['name'] for row in reply.json()['records']]
+    assert names('dns_queries') == [row['query'] for row in summary['dns_queries']]
+    assert names('protocol_distribution') == [row['protocol'] for row in summary['protocol_distribution']]
+    assert names('endpoints') == [f"{row['address']}:{row['port']}" for row in summary['endpoints']]
