@@ -83,6 +83,9 @@ export const inventoryCoverage = (
     };
   return {
     coverage: { scope: "root", status: "complete" },
-    limitations: ["Artifact has no child container entries."],
+    // Formats without an entry reader (tar, 7z, cpio and others) can still hold entries; only the root is observed.
+    limitations: [
+      "No entry reader applies to this format; entries it may contain are not listed.",
+    ],
   };
 };

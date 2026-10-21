@@ -140,3 +140,20 @@ def test_extraction_writes_every_member_with_its_original_bytes(tmp_path, tree):
         assert written[name]['sha256'] == sha(data) and written[name]['bytes_written'] == len(data) and written[name]['created']
     assert {path.relative_to(output).as_posix() for path in output.rglob('*') if path.is_file()} == set(expected)
     assert any('nested archive contents remain represented by their containing file' in text for text in result['limitations'])
+
+
+def test_a_tar_root_is_observed_without_claiming_it_has_no_entries(tmp_path):
+    stream = io.BytesIO()
+    with tarfile.open(fileobj=stream, mode='w', format=tarfile.USTAR_FORMAT) as archive:
+        body = b'tar member\n'
+        entry = tarfile.TarInfo('member.txt')
+        entry.size = len(body)
+        archive.addfile(entry, io.BytesIO(body))
+    target = tmp_path / 'archive.tar'
+    target.write_bytes(stream.getvalue())
+    (tmp_path / 'run').mkdir()
+    result = analyze(tmp_path / 'run', target, 'artifact.inventory')
+    assert [row['logical_path'] for row in result['occurrences']] == ['.']
+    assert result['coverage']['scope'] == 'root'
+    assert result['limitations'] == ['No entry reader applies to this format; entries it may contain are not listed.']
+    assert not any('no child container entries' in text for text in result['limitations'])
