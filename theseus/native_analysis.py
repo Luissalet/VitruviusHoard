@@ -22,7 +22,7 @@ from .objdump_inspection import OPERATIONS as OBJDUMP_OPERATIONS, engine as objd
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
-    "type_names": {"type": "array", "items": {"type": "string"}},
+    "type_names": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "method_offset": {"type": "integer", "minimum": 0},
     "method_limit": {"type": "integer", "minimum": 0},
     "user_strings": {"type": "boolean"}}}

@@ -279,8 +279,10 @@ export const readMetadataUserString = (
   // Check the serialized flag independently of literal decoding. A difference
   // from ECMA-335 is observable metadata, not proof of runtime rejection.
   let expectedFlag = 0;
+  let latin1High = false;
   for (let unitIndex = 0; unitIndex < units; unitIndex++) {
     const unit = bytes.readUInt16LE(content + unitIndex * 2);
+    if (unit >= 0x80 && unit <= 0xff) latin1High = true;
     if (
       unit > 0xff ||
       (unit >= 0x01 && unit <= 0x08) ||
@@ -296,7 +298,11 @@ export const readMetadataUserString = (
   const flagOffset = content + units * 2;
   const actualFlag = bytes[flagOffset];
   const issues = conformance();
-  if (actualFlag !== expectedFlag) {
+  // Roslyn and the .NET Framework compiler write 1 for a string whose only
+  // trigger is a unit in 0x80-0xFF, where the specification text gives 0.
+  // Both values are accepted for such strings; any other difference is reported.
+  const compilerFlag = expectedFlag === 0 && latin1High && actualFlag === 1;
+  if (actualFlag !== expectedFlag && !compilerFlag) {
     budget.reserve(512, flagOffset);
     issues.push({
       code: "invalid-string",
