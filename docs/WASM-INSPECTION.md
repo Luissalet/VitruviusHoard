@@ -10,7 +10,21 @@ The observation records the actual library version, Node runtime, enabled
 advertised features, package and implementation file identities, and the selected
 module's path, SHA-256 and byte count. These identities describe the reader used;
 they do not certify another WABT release or a target execution environment.
-The engine enables all features advertised by its bundled reader.
+The engine enables all features advertised by its bundled reader for both reading
+and validation, including threads and shared memories, memory64, multiple
+memories, exception tags, SIMD and reference types. The reader always receives an
+exact copy of the selected bytes, also when the caller passes a view into a larger
+buffer.
+
+`host_validation` records the separate verdict of `WebAssembly.validate` in the
+Node runtime that runs the reader, with its Node and V8 versions. The module is
+decoded and validated only; nothing is instantiated or executed.
+`validators_agree` compares that verdict with the bundled reader's. A module that
+the host accepts but the reader cannot decode, such as a typed reference parameter
+outside the pinned reader, fails the inspection with `validation:
+not-established` and `validators_agree: false`; it is not reported invalid and no
+interface is invented for it. `validation: valid` remains the bundled reader's
+claim.
 
 `module_header` and `sections` preserve the selected bytes as base64, with each
 section's original header, payload range, length and SHA-256. Section `start`
@@ -77,8 +91,11 @@ as unavailable; an internal identity contradicting the document's bound
 artifact SHA-256 is rejected.
 
 Comparison groups preserve import module and name separately, interface kind,
-all repeated occurrences and producer-owned typed signatures. Missing typed
-facts, partial interfaces, duplicates and unresolved signatures yield unknown
+all repeated occurrences and producer-owned typed signatures. Repeated imports of
+one module and name are compared as their ordered occurrences, because the order
+defines their indices: the same kinds and signatures in the same order are
+unchanged, any other sequence is changed, and `occurrences` reports both counts.
+Missing typed facts, partial interfaces and unresolved signatures yield unknown
 results instead of proving equality or absence. Empty partial interfaces keep
 partial coverage even when there are no rows. An observed complete empty module
 has a complete empty interface. Interface equality describes declared facts
@@ -91,9 +108,15 @@ independent host-validation oracle, actual reader identities, glue coordinates,
 ambiguous candidates, malformed glue, retained comparisons after original
 retirement, failed-reader transfer, actual worker cancellation and restart,
 process-identity mismatch, startup recovery diagnostics and real Windows file
-sharing contention. The broader native-format and retained-extension tests
-cover existing typed interface behavior. Area tests alone do not establish
-final installed acceptance or independent review.
+sharing contention. `theseus_tests/test_wasm_features.py` encodes its modules
+by hand from the binary format and checks them against the host validator in a
+separate process: exact function, multi-value, SIMD, table, shared and 64-bit
+memory, multiple-memory, global and tag signatures with their indices; invalid
+modules rejected while reading and while validating; a host-valid module outside
+the reader; a view into a larger buffer; repeated imports and changed limits,
+sharing and mutability in retained comparisons. The broader native-format and
+retained-extension tests cover existing typed interface behavior. Area tests
+alone do not establish final installed acceptance or independent review.
 
 The incorporated MIT WAT/interface and JavaScript parser modules retain their
 licence and pinned provenance in `software_native/engine/NOTICE.md`,

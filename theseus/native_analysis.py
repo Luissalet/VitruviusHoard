@@ -52,7 +52,7 @@ OPERATIONS = [
     {"name": "apple.nib", "title": "Apple · Interfaz NIBArchive",
      "description": "Recupera los objetos, clases, valores y conexiones de un NIBArchive compilado, sin cargar su interfaz.", "inputSchema": EMPTY_PARAMETERS},
     {"name": "wasm.artifact", "title": "WebAssembly · Interfaz y desensamblado",
-     "description": "Valida y desensambla con WABT local: rangos y bytes originales de secciones, WAT completo con hash, firmas, imports y exports. Relaciona literales de JavaScript con los candidatos seleccionados; no carga módulos ni consulta la red.",
+     "description": "Valida con WABT local, contrasta con el validador del runtime Node y desensambla: rangos y bytes originales de secciones, WAT completo con hash, firmas, imports y exports. Relaciona literales de JavaScript con los candidatos seleccionados; no carga módulos ni consulta la red.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
          "glue_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
          "candidate_paths": {"type": "array", "items": {"type": "string", "minLength": 1}}}}},
