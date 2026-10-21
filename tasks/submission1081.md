@@ -30,3 +30,15 @@ private owners: feature, invalid, disagreement and comparison observations, both
 disagreement warnings, transfer of exact documents after retiring the originals,
 and retained readback. Failed attempts and their
 continuations remain in the research receipts.
+
+## Installed acceptance
+
+The wheel built from `050fc1f0083c2577d7104d6466c70eb29a9f8c4a` (SHA-256
+`0d3ee97fec8d74a4bb0edc744a51ab1f550bcab90e9fb75115bb157acd18799e`) was installed
+in a fresh external environment with 3818 exact members and a clean pip check.
+Its owner passed actual stdio MCP with 124 cold tools and no profile created,
+the feature, invalid, disagreement and comparison observations, four exact
+documents after retiring the originals, both disagreement summaries, and the
+normal UI warnings and retained comparison. The shared environment then
+received the same wheel with its owner OFF, unchanged dependencies and 124 cold
+tools; port 5191 was not started.

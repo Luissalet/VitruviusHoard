@@ -19,10 +19,10 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "semantic-review-pending": 168,
+    "semantic-review-pending": 166,
     "implementation-pending": 16,
     "platform-required-implementation-pending": 3,
-    "integrated-tested-published": 16,
+    "integrated-tested-published": 18,
     "excluded-by-user": 4
   },
   "contracts": [
@@ -1426,11 +1426,39 @@
       "counterparts": [
         "wasm.artifact"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "integrated-tested-published",
+      "scope": "Selected core module validated by the bundled reader with every advertised feature and by the host runtime, with their agreement; original section header/payload bytes, decoded WAT identity, exact typed signatures and indices; explicit glue literals and candidate files with coordinates and ambiguity; failed, cancelled and interrupted prefixes retained without reopening originals. No fetch, instantiation or execution.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
+        "task": 1081,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "ea961f8490084beab3f35438678c381c6f5960c1",
+          "825145dd0fa2a75a941cb990dfece808579177b9",
+          "70f604c52f38c737a09ab1ef3c1fc44c7a8e3b52",
+          "175e25ed014cf8da637941d91d0a99e5ca99db00"
+        ],
+        "application_head": "175e25ed014cf8da637941d91d0a99e5ca99db00",
+        "packaged_source_head": "050fc1f0083c2577d7104d6466c70eb29a9f8c4a",
+        "final_wheel_sha256": "0d3ee97fec8d74a4bb0edc744a51ab1f550bcab90e9fb75115bb157acd18799e",
+        "evidence": "Independent claude-2 review: r1 CHANGES (job summary hid a reader-valid/host-invalid module), r2 APPROVE with 49 focused tests and 17 own hand-encoded modules against a separate host validator. Author full suite at 175e25e 969 PASS/5 optional skips of 974, Ghidra ON; babel_tests 183 PASS with the manifest test excluded (task 1097). Actual source stdio MCP124 and normal UI on private owners; exact documents transferred after retiring originals.",
+        "final_acceptance": "Fresh external wheel 3818 exact members except RECORD, pip check; installed owner MCP124 cold without profile, 68 static operations, feature/invalid/disagreement/comparison observations, 4 exact documents after original retirement/export/import, job summaries for both disagreement directions; installed UI showed both warnings and retained comparison. Shared venv replaced from a4e665 with 3818 exact members, dependencies unchanged, cold MCP124, owner OFF, 5191 not started. No Sparks, model, GPU, SABER or shared device.",
+        "proofs": [
+          "wasm1081/claude-full3-ghidra.xml",
+          "wasm1081/claude-r2-focused.xml",
+          "review1081-claude2/REVIEW.md",
+          "review1081-claude2/REVIEW-r2.md",
+          "wasm1081/claude-mcp1081a-proof.json",
+          "wasm1081/claude-mcp1081b-proof.json",
+          "wasm1081/claude-ui1081a.json",
+          "wasm1081/claude-ui1081a-transfer.json",
+          "wasm1081/claude-ui1081b.json",
+          "wasm1081/claude-release1081.json",
+          "wasm1081/claude-mcp1081-installed-proof.json",
+          "wasm1081/claude-mcp1081b-installed-proof.json",
+          "wasm1081/claude-ui1081-installed.json",
+          "wasm1081/claude-shared1081.json"
+        ]
       }
     },
     {
@@ -1444,11 +1472,39 @@
       "counterparts": [
         "wasm.compare_interfaces"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "integrated-tested-published",
+      "scope": "Retained typed import/export comparison bound to both document and original identities, repeated imports as ordered occurrences, partial or unresolved facts unknown; no original reopened.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-integrated-published-final-wheel-installed",
+        "task": 1081,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "ea961f8490084beab3f35438678c381c6f5960c1",
+          "825145dd0fa2a75a941cb990dfece808579177b9",
+          "70f604c52f38c737a09ab1ef3c1fc44c7a8e3b52",
+          "175e25ed014cf8da637941d91d0a99e5ca99db00"
+        ],
+        "application_head": "175e25ed014cf8da637941d91d0a99e5ca99db00",
+        "packaged_source_head": "050fc1f0083c2577d7104d6466c70eb29a9f8c4a",
+        "final_wheel_sha256": "0d3ee97fec8d74a4bb0edc744a51ab1f550bcab90e9fb75115bb157acd18799e",
+        "evidence": "Independent claude-2 review: r1 CHANGES (job summary hid a reader-valid/host-invalid module), r2 APPROVE with 49 focused tests and 17 own hand-encoded modules against a separate host validator. Author full suite at 175e25e 969 PASS/5 optional skips of 974, Ghidra ON; babel_tests 183 PASS with the manifest test excluded (task 1097). Actual source stdio MCP124 and normal UI on private owners; exact documents transferred after retiring originals.",
+        "final_acceptance": "Fresh external wheel 3818 exact members except RECORD, pip check; installed owner MCP124 cold without profile, 68 static operations, feature/invalid/disagreement/comparison observations, 4 exact documents after original retirement/export/import, job summaries for both disagreement directions; installed UI showed both warnings and retained comparison. Shared venv replaced from a4e665 with 3818 exact members, dependencies unchanged, cold MCP124, owner OFF, 5191 not started. No Sparks, model, GPU, SABER or shared device.",
+        "proofs": [
+          "wasm1081/claude-full3-ghidra.xml",
+          "wasm1081/claude-r2-focused.xml",
+          "review1081-claude2/REVIEW.md",
+          "review1081-claude2/REVIEW-r2.md",
+          "wasm1081/claude-mcp1081a-proof.json",
+          "wasm1081/claude-mcp1081b-proof.json",
+          "wasm1081/claude-ui1081a.json",
+          "wasm1081/claude-ui1081a-transfer.json",
+          "wasm1081/claude-ui1081b.json",
+          "wasm1081/claude-release1081.json",
+          "wasm1081/claude-mcp1081-installed-proof.json",
+          "wasm1081/claude-mcp1081b-installed-proof.json",
+          "wasm1081/claude-ui1081-installed.json",
+          "wasm1081/claude-shared1081.json"
+        ]
       }
     },
     {
