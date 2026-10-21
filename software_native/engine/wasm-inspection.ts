@@ -95,8 +95,17 @@ export async function inspectWasm(bytes:Buffer,path:string,parameters:WasmParame
     result.module_header={bytes:Math.min(8,bytes.length),base64:bytes.subarray(0,8).toString('base64'),complete:bytes.length>=8};
     const sections:WasmObservation[]=[];result.sections=sections;result.sections_complete=false;
     await checkpoint('reading-section-ranges');sectionRanges(bytes,sections);result.sections_complete=true;
-    await checkpoint('reading-module');module=wabt.readWasm(bytes,{...features,readDebugNames:true,check:true});
-    await checkpoint('validating-module');module.validate();result.validation='valid';
+    // The bundled reader sizes typed-array views by their whole backing buffer, so it receives an exact copy.
+    const exact=new Uint8Array(bytes);
+    await checkpoint('host-validating');
+    const hostValid=(globalThis as unknown as {WebAssembly:{validate(bytes:Uint8Array):boolean}}).WebAssembly.validate(exact);
+    result.host_validation={method:'WebAssembly.validate',runtime:process.version,v8:process.versions.v8,valid:hostValid,
+      scope:'Decoding and validation by the host runtime that runs the reader; no compilation result, instantiation or execution is retained.'};
+    await checkpoint('reading-module');module=wabt.readWasm(exact,{...features,readDebugNames:true,check:true});
+    // The published typings omit validate's runtime feature options; without them the reader validates with its defaults.
+    await checkpoint('validating-module');
+    (module.validate as (options:Record<string,boolean>)=>void).call(module,features);result.validation='valid';
+    result.validators_agree=hostValid;
     await checkpoint('decoding-module');module.generateNames();module.applyNames();
     const text=module.toText({foldExprs:false,inlineExport:false}),parsed=parseWabtWat(text);
     Object.assign(result,parsed,{wat:text,wat_sha256:hash(text),wat_bytes:Buffer.byteLength(text,'utf8'),wat_representation:'decoded-wat',
@@ -127,6 +136,8 @@ export async function inspectWasm(bytes:Buffer,path:string,parameters:WasmParame
     return result;
   } catch(error) {
     result.failure={phase:result.phase,name:error instanceof Error?error.name:'ReaderError',message:error instanceof Error?error.message:String(error)};
+    const host=result.host_validation as {valid?:boolean}|undefined;
+    if(host&&(result.phase==='reading-module'||result.phase==='validating-module'))result.validators_agree=host.valid===false;
     result.completion_status='unknown';
     if(publish)await publish({...result});
     throw error;
