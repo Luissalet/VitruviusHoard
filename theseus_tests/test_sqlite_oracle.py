@@ -175,14 +175,18 @@ def test_independently_written_wal_family_schema_and_exact_values(tmp_path, writ
     assert {path.name: path.read_bytes() for path in tmp_path.iterdir() if path.name.startswith('written.sqlite')} == family
 
 
-@pytest.mark.parametrize('parameters', [
-    {'query': 'INSERT INTO owner VALUES (3, "x")'},
-    {'query': 'PRAGMA journal_mode=DELETE'},
-    {'query': 'PRAGMA user_version=5'},
-    {'query': 'UPDATE measure SET amount = 1'},
-    {'table': 'missing'},
+@pytest.mark.parametrize('parameters,reason', [
+    ({'query': "INSERT INTO owner VALUES (3, 'x')"}, 'not authorized'),
+    ({'query': 'PRAGMA journal_mode=DELETE'}, 'not authorized'),
+    ({'query': 'PRAGMA user_version=5'}, 'not authorized'),
+    ({'query': 'PRAGMA wal_checkpoint(TRUNCATE)'}, 'not authorized'),
+    ({'query': 'UPDATE measure SET amount = 1'}, 'not authorized'),
+    ({'query': 'CREATE TEMP TABLE scratch(x)'}, 'not authorized'),
+    ({'query': "ATTACH DATABASE 'other.sqlite' AS other"}, 'not authorized'),
+    ({'query': 'VACUUM'}, 'authorization denied'),
+    ({'table': 'missing'}, 'Select an existing table or view'),
 ])
-def test_writes_pragmas_and_unknown_tables_are_rejected_without_changing_the_family(tmp_path, written, parameters):
+def test_writes_pragmas_and_unknown_tables_are_rejected_without_changing_the_family(tmp_path, written, parameters, reason):
     family = {path.name: path.read_bytes() for path in tmp_path.iterdir() if path.name.startswith('written.sqlite')}
     with TestClient(create_app(tmp_path / 'profile', port=64229), base_url='http://127.0.0.1:64229') as client:
         client.get('/')
@@ -193,6 +197,8 @@ def test_writes_pragmas_and_unknown_tables_are_rejected_without_changing_the_fam
         reply.raise_for_status()
         job = wait(client, reply.json())
     assert job['state'] == 'failed' and job['result']['execution']['exit_code'] != 0
+    # The authorizer itself must refuse, not an earlier parse error.
+    assert reason in job['result']['execution']['stderr'], job['result']['execution']['stderr']
     assert {path.name: path.read_bytes() for path in tmp_path.iterdir() if path.name.startswith('written.sqlite')} == family
     assert node(ORACLE, str(written), 'SELECT count(*) AS n FROM owner', check=True).stdout
 
