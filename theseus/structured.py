@@ -241,7 +241,7 @@ def main():
         from objdump_inspection import inspect
         result = inspect(request['parameters']['facet'], output_path.parent, source=source,
                          expected_sha256=before, follow_debug_links=request['parameters'].get('follow_debug_links', False))
-    elif request["operation"] in {"capture.fields", "capture.packets"}:
+    elif request["operation"] in {"capture.fields", "capture.packets", "capture.summary"}:
         from packets import inspect_capture
         result = inspect_capture(source, request["operation"], request["parameters"], output_path, before)
     elif request["operation"] == "apple.plist":
