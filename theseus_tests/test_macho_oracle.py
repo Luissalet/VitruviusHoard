@@ -202,3 +202,15 @@ def test_image_folder_scope_keeps_the_root_at_the_selected_image(tmp_path, image
     assert result['root_selection']['read_beyond_selection'] == []
     units = edges(result)['@rpath/libunits.dylib']
     assert units['candidates'][0]['outcome'] == 'escapes-target' and units['resolution']['status'] == 'undetermined'
+
+
+def test_a_versioned_framework_without_a_current_link_still_extends_the_chain(tmp_path, images):
+    root, _ = images
+    measure_app(root, tmp_path)
+    version = tmp_path / 'Measure.app' / 'Contents' / 'Frameworks' / 'Units.framework' / 'Versions' / 'A'
+    (version / 'Resources').mkdir(parents=True)
+    (version / 'Resources' / 'Info.plist').write_bytes(PLIST)
+    shutil.copy(root / 'libunits-arm64.dylib', version / 'Units')
+    result = trace(tmp_path, version / 'Units')
+    assert Path(result['root_path']).name == 'Measure.app'
+    assert result['root_selection']['bundles'] == ['Contents/Frameworks/Units.framework', '']
