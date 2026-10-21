@@ -1,11 +1,14 @@
 from pathlib import Path
 
-from tests.faustus_manifest import check_repo
+import pytest
+
+from babel_tests.faustus_manifest import check_repo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_manifest_passes_faustus_checks():
-    data = check_repo(REPO_ROOT)
-    assert data["id"] == "babel"
+@pytest.mark.parametrize("folder,plugin_id", [(".", "vitruvius"), ("compatibility/babel", "babel"), ("compatibility/theseus", "theseus")])
+def test_manifest_passes_faustus_checks(folder, plugin_id):
+    data = check_repo(REPO_ROOT / folder)
+    assert data["id"] == plugin_id
     assert data["mcp"]["transport"] == "stdio"
