@@ -115,12 +115,11 @@ def validate(data: Any) -> Dict[str, Any]:
     if not isinstance(data.get("notes") or "", str):
         raise ManifestError("'notes' must be a string")
 
-    # Faustus fills `{X_DIR}` from the running app's working directory only
-    # when an mcp arg names a file that exists under it. Without that the
-    # connect form comes up with the directory blank.
-    dir_keys = [p for p in placeholders if p.endswith("_DIR")]
-    if dir_keys and not any("{" + dir_keys[0] + "}" in a for a in args):
-        raise ManifestError(f"no mcp arg is anchored on {{{dir_keys[0]}}}")
+    # Faustus fills `{X_DIR}` from the running app's working directory when an
+    # mcp arg names a file under it, or when that directory holds this same
+    # manifest (a module bridge such as `python -m pkg.mcp`; see
+    # `connector_discovery._declares_itself_in`). check_repo reads the manifest
+    # from that directory, so a module bridge needs no anchored argument.
     return data
 
 
