@@ -140,14 +140,18 @@ export const traceDylibResolution = async (options: {
           path,
           await files.sha256(join(root, path), view.identity(path)),
         );
-      const targetDigest =
-        digests.get(target) ??
-        (await files.sha256(join(root, target), undefined));
-      if (targetDigest !== options.targetSha256)
-        throw new ArtifactReaderFailure(
-          "integrity",
-          `Active target digest changed: expected ${options.targetSha256}, observed ${targetDigest}`,
-        );
+      // A selected image must still be the file that was snapshotted. A selected
+      // folder has no single file digest; each traced image carries its own.
+      if (!options.enumerateRoots) {
+        const targetDigest =
+          digests.get(target) ??
+          (await files.sha256(join(root, target), undefined));
+        if (targetDigest !== options.targetSha256)
+          throw new ArtifactReaderFailure(
+            "integrity",
+            `Active target digest changed: expected ${options.targetSha256}, observed ${targetDigest}`,
+          );
+      }
       assertArtifactReadActive(options.signal);
       return dylibResolutionResultSchema.parse({
         ...trace,
