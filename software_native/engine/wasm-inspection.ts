@@ -54,7 +54,8 @@ function glueReferences(source:string,path:string,candidates:string[]) {
     } else if(t.isTemplateLiteral(node)&&node.expressions.length===0)value=node.quasis[0]?.value.cooked;
     if(typeof value!=='string'||!/\.wasm(?:[?#].*)?$/iu.test(value)||node.loc==null)return;
     const stripped=value.split(/[?#]/u)[0]??value;
-    const local=!/^[a-z][a-z\d+.-]*:|^\/\//iu.test(value)&&!value.startsWith('/')&&!/[?#]/u.test(value);
+    const drive=/^[a-z]:[\\/]/iu.test(value);
+    const local=drive||(!/^[a-z][a-z\d+.-]*:|^\/\//iu.test(value)&&!value.startsWith('/')&&!/[?#]/u.test(value));
     const target=local?absoluteCallerPath(value,{cwd:dirname(path)}):undefined;
     const exact=target===undefined?[]:candidates.filter(candidate=>absoluteCallerPath(candidate)===target);
     const matches=exact.length?exact:candidates.filter(candidate=>basename(candidate)===basename(stripped));
@@ -76,7 +77,8 @@ export async function inspectWasm(bytes:Buffer,path:string,parameters:WasmParame
     runtime_execution:'not-performed',network_fetch:'not-performed',
     limitations:['WAT is a decoded representation; generated names do not establish original source identifiers or binary round-trip identity.',
       'Glue references are visible literal associations with selected candidates, not data flow, loading, runtime behavior or URL-to-file identity.',
-      'Only the bundled reader and its advertised enabled features establish validation; other tool versions or execution environments are not certified.']};
+      'Only the bundled reader and its advertised enabled features establish validation; other tool versions or execution environments are not certified.',
+      'host_validation is the separate verdict of the runtime running the reader; validators_agree false means the two validators disagree about this module.']};
   const checkpoint=async(phase:string)=>{result.phase=phase;if(publish)await publish({...result});};
   let module:ReturnType<Awaited<ReturnType<typeof wabtFactory>>['readWasm']>|undefined;
   try {
@@ -94,13 +96,13 @@ export async function inspectWasm(bytes:Buffer,path:string,parameters:WasmParame
       validation_method:'WasmModule.validate',decoding_method:'WasmModule.toText'};
     result.module_header={bytes:Math.min(8,bytes.length),base64:bytes.subarray(0,8).toString('base64'),complete:bytes.length>=8};
     const sections:WasmObservation[]=[];result.sections=sections;result.sections_complete=false;
-    await checkpoint('reading-section-ranges');sectionRanges(bytes,sections);result.sections_complete=true;
     // The bundled reader sizes typed-array views by their whole backing buffer, so it receives an exact copy.
     const exact=new Uint8Array(bytes);
     await checkpoint('host-validating');
     const hostValid=(globalThis as unknown as {WebAssembly:{validate(bytes:Uint8Array):boolean}}).WebAssembly.validate(exact);
     result.host_validation={method:'WebAssembly.validate',runtime:process.version,v8:process.versions.v8,valid:hostValid,
       scope:'Decoding and validation by the host runtime that runs the reader; no compilation result, instantiation or execution is retained.'};
+    await checkpoint('reading-section-ranges');sectionRanges(bytes,sections);result.sections_complete=true;
     await checkpoint('reading-module');module=wabt.readWasm(exact,{...features,readDebugNames:true,check:true});
     // The published typings omit validate's runtime feature options; without them the reader validates with its defaults.
     await checkpoint('validating-module');
@@ -139,7 +141,11 @@ export async function inspectWasm(bytes:Buffer,path:string,parameters:WasmParame
     const host=result.host_validation as {valid?:boolean}|undefined;
     if(host&&(result.phase==='reading-module'||result.phase==='validating-module'))result.validators_agree=host.valid===false;
     result.completion_status='unknown';
-    if(publish)await publish({...result});
+    if(publish) {
+      try {await publish({...result});}
+      catch(publication) {throw new AggregateError([error,publication],(error instanceof Error?error.message:String(error))+
+        ' The final observation prefix could not be published.');}
+    }
     throw error;
   } finally {module?.destroy();}
 }
