@@ -49,6 +49,7 @@ def images(tmp_path_factory):
         '-Wl,-current_version,2.3.4', '-Wl,-compatibility_version,2.0.0')
     zig('-target', 'aarch64-macos', '-o', 'measure-arm64', 'main.c', 'libunits-arm64.dylib',
         '-Wl,-rpath,@executable_path/../lib', '-Wl,-rpath,/opt/measure/lib')
+    zig('-target', 'aarch64-macos', '-o', 'escape-arm64', 'main.c', 'libunits-arm64.dylib', '-Wl,-rpath,@executable_path/../../../../secrets')
     zig('-target', 'x86_64-macos', '-o', 'measure-x86_64', 'weak.c', 'libunits-x86_64.dylib', '-L.', '-Wl,-weak-lextra', '-Wl,-rpath,@loader_path/lib')
     content, _ = universal([(0x0100000c, 0, (root / 'libunits-arm64.dylib').read_bytes()), (0x01000007, 3, (root / 'libunits-x86_64.dylib').read_bytes())])
     (root / 'libunits-universal.dylib').write_bytes(content)
@@ -112,13 +113,26 @@ def test_weak_dependency_versions_and_rpaths_are_the_linked_ones(tmp_path, image
     assert not rows['@rpath/libunits.dylib']['weak'] and slice_['rpaths'] == ['@loader_path/lib']
 
 
-def trace(tmp_path, target):
+PLIST = b'<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>measure</string></dict></plist>\n'
+
+
+def trace(tmp_path, target, query=None):
     app = create_app(tmp_path / 'data')
     project = app.state.store.create_project('Dylib resolution')
     artifact = app.state.store.add_artifact(project['id'], target)
     with TestClient(app, base_url='http://127.0.0.1:5217') as client:
         client.get('/')
-        return run(client, project['id'], artifact['id'], 'apple.dylibs', {})[1]
+        return run(client, project['id'], artifact['id'], 'apple.dylibs', {'query': query} if query else {})[1]
+
+
+def measure_app(root, parent):
+    bundle = parent / 'Measure.app' / 'Contents'
+    (bundle / 'MacOS').mkdir(parents=True)
+    (bundle / 'lib').mkdir()
+    (bundle / 'Info.plist').write_bytes(PLIST)
+    shutil.copy(root / 'measure-arm64', bundle / 'MacOS' / 'measure')
+    shutil.copy(root / 'libunits-arm64.dylib', bundle / 'lib' / 'libunits.dylib')
+    return bundle / 'MacOS' / 'measure'
 
 
 def edges(result):
@@ -127,13 +141,10 @@ def edges(result):
 
 def test_selected_image_resolves_inside_its_bundle(tmp_path, images):
     root, _ = images
-    bundle = tmp_path / 'Measure.app' / 'Contents'
-    (bundle / 'MacOS').mkdir(parents=True)
-    (bundle / 'lib').mkdir()
-    shutil.copy(root / 'measure-arm64', bundle / 'MacOS' / 'measure')
-    shutil.copy(root / 'libunits-arm64.dylib', bundle / 'lib' / 'libunits.dylib')
-    result = trace(tmp_path, bundle / 'MacOS' / 'measure')
+    result = trace(tmp_path, measure_app(root, tmp_path))
     assert Path(result['root_path']).name == 'Measure.app' and result['roots'] == [{'image': 'Contents/MacOS/measure', 'architecture': 'arm64'}]
+    assert result['root_selection'] == {'rule': 'enclosing-bundle', 'requested_scope': 'enclosing-bundle', 'selected': 'Contents/MacOS/measure',
+                                        'bundles': [''], 'read_beyond_selection': ['Contents/lib/libunits.dylib']}
     units = edges(result)['@rpath/libunits.dylib']
     # dyld tries rpaths in load-command order: @executable_path/../lib first, then the absolute one.
     assert [(row['rpath'], row['outcome']) for row in units['candidates']][0][0] == '@executable_path/../lib'
@@ -167,3 +178,27 @@ def test_missing_library_inside_the_root_is_unresolved(tmp_path, images):
     units = edges(result)['@rpath/libunits.dylib']
     assert units['resolution'] == {'status': 'unresolved', 'image': None}
     assert [row['outcome'] for row in units['candidates']] == ['absent']
+
+
+def test_a_plain_folder_named_like_a_bundle_does_not_widen_the_root(tmp_path, images):
+    root, _ = images
+    # Outer.bundle has no Info.plist: the chain stops below it, so its sibling stays outside what is read.
+    image = measure_app(root, tmp_path / 'Outer.bundle' / 'plain')
+    shutil.copy(root / 'escape-arm64', image)
+    (image.parents[1] / 'lib' / 'libunits.dylib').unlink()
+    (tmp_path / 'Outer.bundle' / 'secrets').mkdir()
+    shutil.copy(root / 'libunits-arm64.dylib', tmp_path / 'Outer.bundle' / 'secrets' / 'libunits.dylib')
+    result = trace(tmp_path, image)
+    assert Path(result['root_path']).name == 'Measure.app' and result['root_selection']['bundles'] == ['']
+    units = edges(result)['@rpath/libunits.dylib']
+    assert [row['outcome'] for row in units['candidates']] == ['escapes-target'] and units['resolution']['image'] is None
+    assert [row['path'] for row in result['images']] == ['Contents/MacOS/measure']
+
+
+def test_image_folder_scope_keeps_the_root_at_the_selected_image(tmp_path, images):
+    root, _ = images
+    result = trace(tmp_path, measure_app(root, tmp_path), {'root_scope': 'image-folder'})
+    assert Path(result['root_path']).name == 'MacOS' and result['root_selection']['rule'] == 'image-folder'
+    assert result['root_selection']['read_beyond_selection'] == []
+    units = edges(result)['@rpath/libunits.dylib']
+    assert units['candidates'][0]['outcome'] == 'escapes-target' and units['resolution']['status'] == 'undetermined'
