@@ -149,3 +149,11 @@ def test_universal_macho_reads_each_slice_at_its_universal_offsets(tmp_path,oper
     else:
         assert first['auditable_metadata']['file_offset']==thin_result['auditable_metadata']['file_offset']+4096
         assert first['auditable_metadata']['packages']==thin_result['auditable_metadata']['packages']
+
+
+@pytest.mark.parametrize('operation',['go.build','rust.dependencies'])
+def test_universal_macho_with_an_invalid_slice_range_is_reported_as_malformed(tmp_path,operation):
+    thin=carrier('macho',64,'little','go',go_payload('macho',64,'little','inline'))
+    fat=struct.pack('>7I',0xcafebabe,1,0x1000007,3,4096,len(thin)+4096,12).ljust(4096,b'\0')+thin
+    result=inspect(tmp_path,operation,fat,expected_state='failed')
+    assert 'slice range extends beyond the file' in result['result']['execution']['stderr']
