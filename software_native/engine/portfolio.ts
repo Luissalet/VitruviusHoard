@@ -1,6 +1,6 @@
 /** Native inventory and application projections over directly incorporated readers. */
 import {basename,dirname,join,relative,sep} from 'node:path';
-import {stat} from 'node:fs/promises';
+import {readdir,stat} from 'node:fs/promises';
 import {z} from 'zod';
 import {ArtifactResourceScope} from './src/artifacts/ArtifactResourceScope.js';
 import {inventoryArtifact} from './src/artifacts/inventory/ArtifactInventory.js';
@@ -32,7 +32,15 @@ const exists=async(path:string):Promise<boolean>=>{
 const isBundle=async(folder:string):Promise<boolean>=>
   BUNDLE_SUFFIXES.some(suffix=>basename(folder).toLowerCase().endsWith(suffix)) &&
   (await exists(join(folder,'Contents','Info.plist')) || await exists(join(folder,'Info.plist')) ||
-   await exists(join(folder,'Resources','Info.plist')) || await exists(join(folder,'Versions','Current','Resources','Info.plist')));
+   await exists(join(folder,'Resources','Info.plist')) || await versionedFramework(folder));
+
+/** A deep framework keeps Info.plist under Versions/<version>/Resources; a copy may have lost the Current link. */
+const versionedFramework=async(folder:string):Promise<boolean>=>{
+  let versions:string[];
+  try {versions=await readdir(join(folder,'Versions'));} catch {return false;}
+  for(const version of versions) if(await exists(join(folder,'Versions',version,'Resources','Info.plist'))) return true;
+  return false;
+};
 
 /**
  * The enclosing bundles of an image, innermost first. The chain stops at the first folder that carries a
