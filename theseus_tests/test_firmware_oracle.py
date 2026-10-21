@@ -231,3 +231,57 @@ def test_a_scanner_that_never_finishes_is_stopped_and_recorded_as_a_gap(tmp_path
     assert regions['status'] == 'partial' and [row['kind'] for row in regions['gaps']] == ['scanner-timeout']
     assert regions['gaps'][0]['timeout_seconds'] == 2 and regions['gaps'][0]['command'][0] == str(stall)
     assert any(row['timed_out'] for row in regions['observations'])
+
+
+def iso9660(files):
+    """ISO 9660 image written field by field from ECMA-119: system area, primary volume descriptor at
+    sector 16, terminator, both path tables, the root directory and one extent per file."""
+    sector = 2048
+    both16 = lambda value: value.to_bytes(2, 'little') + value.to_bytes(2, 'big')
+    both32 = lambda value: value.to_bytes(4, 'little') + value.to_bytes(4, 'big')
+
+    def record(name, extent, size, directory=False):
+        body = (bytes([0]) + both32(extent) + both32(size) + bytes(7) + bytes([2 if directory else 0, 0, 0])
+                + both16(1) + bytes([len(name)]) + name)
+        body += b'\0' * ((len(body) + 1) % 2)  # the record length, padding included, is even
+        return bytes([len(body) + 1]) + body
+
+    extents, cursor = [], 21
+    for name, body in files.items():
+        extents.append((name, body, cursor))
+        cursor += -(-len(body) // sector)
+    root = record(b'\0', 20, sector, True) + record(b'\1', 20, sector, True)
+    root += b''.join(record(name.upper().encode() + b';1', extent, len(body)) for name, body, extent in extents)
+    path_table = lambda order: bytes([1, 0]) + (20).to_bytes(4, order) + (1).to_bytes(2, order) + b'\0\0'
+    descriptor = (bytes([1]) + b'CD001' + bytes([1, 0]) + b' ' * 32 + b'MEASURE'.ljust(32) + bytes(8) + both32(cursor) + bytes(32)
+                  + both16(1) + both16(1) + both16(sector) + both32(10) + (18).to_bytes(4, 'little') + bytes(4)
+                  + (19).to_bytes(4, 'big') + bytes(4) + record(b'\0', 20, sector, True)
+                  + b' ' * (128 * 4 + 37 * 3) + (b'0' * 16 + b'\0') * 4 + bytes([1, 0]))
+    image = bytearray(sector * 16) + descriptor.ljust(sector, b'\0') + (bytes([255]) + b'CD001' + bytes([1])).ljust(sector, b'\0')
+    image += path_table('little').ljust(sector, b'\0') + path_table('big').ljust(sector, b'\0') + root.ljust(sector, b'\0')
+    for _, body, _ in extents:
+        image += body.ljust(-(-len(body) // sector) * sector, b'\0')
+    return bytes(image)
+
+
+@pytest.mark.skipif(not SEVEN_ZIP, reason='Requires the optional 7-Zip decoder')
+def test_iso9660_members_are_extracted_and_not_read_as_an_empty_tar(tmp_path):
+    files = {'readme.txt': b'Measure volume\n' * 40, 'table.bin': bytes(range(256)) * 9}
+    volume = iso9660(files)
+    content = b'FWHDR'.ljust(0x8000, b'\xff') + volume + b'\xff' * 0x200
+    _, extracted, folder = regions_and_extraction(tmp_path, content, {'search_all': True})
+    region = next(row for row in extracted['regions'] if row['name'] == 'iso9660')
+    assert region['offset'] == 0x8000 and region['size'] == len(volume)
+    rows = {row['archive_entry']['name'].split(';')[0].lower(): row for row in extracted['artifacts'] if row.get('archive_entry')}
+    assert {name: (folder / row['relative_path']).read_bytes() for name, row in rows.items()} == files
+    assert all(row['archive_entry']['reader'] == '7zip' for row in rows.values())
+    assert extracted['gaps'] == [] and extracted['status'] == 'observed'
+
+
+@pytest.mark.skipif(not SEVEN_ZIP, reason='Requires the optional 7-Zip decoder')
+def test_a_container_without_members_is_an_explicit_gap(tmp_path):
+    volume = iso9660({})
+    _, extracted, _ = regions_and_extraction(tmp_path, b'FWHDR'.ljust(0x8000, b'\xff') + volume + b'\xff' * 0x200, {'search_all': True})
+    carved = next(row for row in extracted['artifacts'] if row.get('classification') == 'iso9660')
+    assert [(row['kind'], row['parent_relative_path']) for row in extracted['gaps']] == [('container-without-members', carved['relative_path'])]
+    assert extracted['status'] == 'partial'

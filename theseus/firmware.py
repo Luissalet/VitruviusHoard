@@ -174,6 +174,7 @@ def inspect_firmware(source,operation,parameters,output,identity):
     def unpack(path,origin,queue,depth,format_name):
         if zipfile.is_zipfile(path):
             with zipfile.ZipFile(path) as archive:
+                if not archive.infolist():gap('container-without-members',parent_relative_path=origin,format=format_name)
                 for index,entry in enumerate(archive.infolist()):
                     metadata={'name':entry.orig_filename,'ordinal':index,'size_bytes':entry.file_size,'crc32':entry.CRC,'reader':'python-zip'}
                     if entry.is_dir():result['entries'].append({'parent_relative_path':origin,**metadata,'kind':'directory'});continue
@@ -187,6 +188,9 @@ def inspect_firmware(source,operation,parameters,output,identity):
             return
         try:archive=tarfile.open(path,'r:*')
         except tarfile.ReadError:archive=None
+        # An all-zero first block also opens as an empty tar (ISO 9660 starts with 32 KiB of zeros);
+        # only an archive with at least one member is read as tar, anything else goes on to 7-Zip.
+        if archive is not None and archive.next() is None:archive.close();archive=None
         if archive is not None:
             with archive:
                 for index,entry in enumerate(archive):
@@ -224,6 +228,9 @@ def inspect_firmware(source,operation,parameters,output,identity):
         stream_format=format_name in {'gzip','xz','bzip2','lzma','lz4','zstd'}
         if stream_format and len([block for block in blocks if block.strip()])!=1:
             gap('ambiguous-compressed-stream-listing',parent_relative_path=origin);return
+        listed=[block for block in blocks if block.strip()]
+        if not listed:
+            gap('container-without-members',parent_relative_path=origin,format=format_name);return
         for index,block in enumerate(blocks):
             if not block.strip():continue
             values={};ambiguous=False
