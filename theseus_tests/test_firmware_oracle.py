@@ -16,6 +16,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
+import time
 import zipfile
 import zlib
 from collections import Counter
@@ -26,6 +27,8 @@ import pytest
 from test_portfolio import run
 from theseus.api import create_app
 from theseus.firmware import engines
+
+SEVEN_ZIP = engines()['seven_zip']
 
 CLI = os.environ.get('THESEUS_TEST_BINWALK') or shutil.which('binwalk')
 ZIG = os.environ.get('THESEUS_TEST_ZIG') or shutil.which('zig')
@@ -83,7 +86,7 @@ def image(tmp_path_factory):
     return root, bytes(content), placed
 
 
-def regions_and_extraction(tmp_path, content, parameters):
+def regions_and_extraction(tmp_path, content, parameters, extract=True):
     app = create_app(tmp_path / 'data')
     source = tmp_path / 'original-image.bin'
     source.write_bytes(content)
@@ -92,6 +95,8 @@ def regions_and_extraction(tmp_path, content, parameters):
     with TestClient(app, base_url='http://127.0.0.1:5217') as client:
         client.get('/')
         _, regions = run(client, project['id'], artifact['id'], 'firmware.regions', parameters)
+        if not extract:
+            return regions, None, None
         job, extracted = run(client, project['id'], artifact['id'], 'firmware.extract', {'search_all': True})
     return regions, extracted, Path(job['result']['analysis_file']).parent / 'extracted'
 
@@ -175,3 +180,54 @@ def test_extraction_carves_exact_ranges_and_decodes_to_the_original_bodies(tmp_p
     for row in children[carved['zip']['relative_path']]:
         assert row['archive_entry']['crc32'] == zlib.crc32(ZIP_MEMBERS[row['archive_entry']['name']])
     assert all(hashlib.sha256((folder / row['relative_path']).read_bytes()).hexdigest() == row['sha256'] for row in rows)
+
+
+def newc(entries):
+    """cpio "newc" archive written field by field from the format description (as initramfs uses)."""
+    out = bytearray()
+    for inode, (name, mode, body) in enumerate([*entries, ('TRAILER!!!', 0, b'')], start=1):
+        encoded = name.encode() + b'\0'
+        fields = [inode if name != 'TRAILER!!!' else 0, mode, 0, 0, 1, 0, len(body), 0, 0, 0, 0, len(encoded), 0]
+        out += b'070701' + b''.join(b'%08X' % value for value in fields) + encoded
+        out += b'\0' * (-len(out) % 4) + body
+        out += b'\0' * (-len(out) % 4)
+    return bytes(out)
+
+
+@pytest.mark.skipif(not SEVEN_ZIP, reason='Requires the optional 7-Zip decoder')
+def test_cpio_members_are_extracted_with_archive_names_and_links_stay_gaps(tmp_path):
+    members = {'etc/init.sh': b'#!/bin/sh\necho measure\n', 'usr/share/table.bin': bytes(range(256))}
+    archive = newc([('etc', 0o040755, b''), *[(name, 0o100644, body) for name, body in members.items()],
+                    ('bin/sh', 0o120777, b'busybox')])
+    content = b'FWHDR'.ljust(0x1000, b'\xff') + archive + b'\xff' * 0x100
+    _, extracted, folder = regions_and_extraction(tmp_path, content, {'search_all': True})
+    region = next(row for row in extracted['regions'] if row['name'] == 'cpio')
+    assert region['offset'] == 0x1000 and region['size'] == len(archive)
+    rows = {row['archive_entry']['name']: row for row in extracted['artifacts'] if row.get('archive_entry')}
+    assert {name: (folder / row['relative_path']).read_bytes() for name, row in rows.items()} == members
+    assert [(row['kind'], row['entry']['name']) for row in extracted['gaps']] == [('link-not-created', 'bin/sh')]
+
+
+def test_bzip2_stream_cut_at_the_end_of_the_file_finishes_without_a_region(tmp_path):
+    stream = bz2.compress(STREAMS['bzip2'])
+    content = b'FWHDR'.ljust(0x1000, b'\xff') + gzip.compress(STREAMS['gzip'], mtime=0) + stream[:len(stream) // 2]
+    regions, _, _ = regions_and_extraction(tmp_path, content, {'search_all': True, 'timeout_seconds': 60}, extract=False)
+    assert [row['name'] for row in regions['regions']] == ['gzip'] and regions['gaps'] == []
+    assert all(not row['timed_out'] for row in regions['observations'])
+
+
+@pytest.mark.skipif(not ZIG, reason='Requires zig to build a scanner stand-in that never finishes')
+def test_a_scanner_that_never_finishes_is_stopped_and_recorded_as_a_gap(tmp_path, monkeypatch):
+    source = tmp_path / 'stall.c'
+    source.write_text('#include <windows.h>\nint main(void) { Sleep(600000); return 0; }\n' if os.name == 'nt' else
+                      '#include <unistd.h>\nint main(void) { sleep(600); return 0; }\n', encoding='utf8')
+    stall = tmp_path / ('stall.exe' if os.name == 'nt' else 'stall')
+    env = {**os.environ, 'ZIG_GLOBAL_CACHE_DIR': str(tmp_path / 'zig-cache'), 'ZIG_LOCAL_CACHE_DIR': str(tmp_path / 'zig-local')}
+    subprocess.run([ZIG, 'cc', '-o', str(stall), str(source)], check=True, capture_output=True, env=env)
+    monkeypatch.setenv('THESEUS_BINWALK', str(stall))
+    started = time.monotonic()
+    regions, _, _ = regions_and_extraction(tmp_path, b'FWHDR'.ljust(0x1000, b'\xff'), {'timeout_seconds': 2}, extract=False)
+    assert time.monotonic() - started < 60
+    assert regions['status'] == 'partial' and [row['kind'] for row in regions['gaps']] == ['scanner-timeout']
+    assert regions['gaps'][0]['timeout_seconds'] == 2 and regions['gaps'][0]['command'][0] == str(stall)
+    assert any(row['timed_out'] for row in regions['observations'])
