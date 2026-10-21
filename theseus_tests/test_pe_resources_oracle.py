@@ -586,3 +586,21 @@ def test_corrupt_resource_directory_fails_or_reports_gaps(tmp_path, workspace, c
     assert observed['coverage']['status'] != 'complete', observed['coverage']
     intact = strip(leaves)
     assert all(product_leaf(row) in intact for row in observed['resources'])
+
+
+@pytest.mark.skipif(ZIG is None, reason='Requires zig')
+def test_resource_records_are_named_by_type_name_and_language(tmp_path, workspace):
+    from fastapi.testclient import TestClient
+    from test_portfolio import run
+    from theseus.api import create_app
+    app = create_app(tmp_path / 'data')
+    project = app.state.store.create_project('Resource record names')
+    artifact = app.state.store.add_artifact(project['id'], image(workspace, 'x64.exe'))
+    with TestClient(app, base_url='http://127.0.0.1:5217') as client:
+        client.get('/')
+        job, result = run(client, project['id'], artifact['id'], 'pe.resources')
+        listed = client.get(f"/api/jobs/{job['id']}/records/resources", params={'limit': 1000}).json()['records']
+    def part(value):
+        return value['name'] if value['kind'] == 'name' else '#' + str(value['id'])
+    assert [row['name'] for row in listed] == ['/'.join(part(row[key]) for key in ('type', 'name', 'language')) for row in result['resources']]
+    assert 'MYBLOB/NAMED_BLOB/#0' in [row['name'] for row in listed]

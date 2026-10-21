@@ -15,6 +15,15 @@ def identifier():
     return uuid.uuid4().hex
 
 
+def _identity(value):
+    """Readable text for an identity object such as {"kind": "id", "id": 2} or {"kind": "name", "name": "ICON"}."""
+    if isinstance(value, dict):
+        if isinstance(value.get("name"), str):
+            return value["name"]
+        if "id" in value:
+            return "#" + str(value["id"])
+    return value
+
 class Store:
     def __init__(self, directory):
         self.directory = Path(directory).resolve()
@@ -257,7 +266,12 @@ class Store:
                     identity_names = [str(item.get("declaring_type", "")) + "." + str(item["name"])
                                       for item in identities if item.get("name")]
                     opcode = row["operation"].get("opcode") if isinstance(row.get("operation"), dict) else None
-                    name = str(row.get("name") or row.get("package_name") or row.get("serial") or row.get("path") or row.get("url") or row.get("label") or row.get("declaring_type") or row.get("selector") or row.get("instruction") or opcode or
+                    if all(isinstance(row.get(part), dict) for part in ("type", "name", "language")):
+                        # Resource-style identities: type/name/language, each a text name or a numeric id.
+                        name = "/".join(str(_identity(row[part])) for part in ("type", "name", "language"))
+                    else:
+                        name = None
+                    name = name or str(_identity(row.get("name")) or row.get("package_name") or row.get("serial") or row.get("path") or row.get("url") or row.get("label") or row.get("declaring_type") or row.get("selector") or row.get("instruction") or opcode or
                                (identity_names[0].lstrip(".") if identity_names else None) or row.get("mnemonic") or section)
                     search = (name + " " + " ".join(identity_names) + " " + str(row.get("declaring_type", "")) + " " + str(row.get("selector", "")) + " " + str(row.get("kind", "")) + " " + str(evidence_id or row.get("evidence_id", ""))).casefold()
                     source = row.get("row_offset", row.get("file_offset"))
