@@ -19,6 +19,7 @@ from .process_compare import QUERY as PROCESS_QUERY
 from .retained_evidence import OPERATIONS as EVIDENCE_OPERATIONS
 from .elf_layout import OPERATIONS as ELF_OPERATIONS
 from .objdump_inspection import OPERATIONS as OBJDUMP_OPERATIONS, engine as objdump_engine
+from .rizin import OPERATIONS as RIZIN_OPERATIONS, engine as rizin_engine
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -60,10 +61,17 @@ OPERATIONS = [
      "description": "Analiza bytecode local: selectores, argumentos, mutabilidad, almacenamiento, instrucciones, bloques, flujo y metadatos CBOR. No consulta cadenas ni servicios.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {"encoding": {"type": "string", "enum": ["raw", "hex"]}}}},
     {"name": "flutter.elf", "title": "Flutter · ELF y snapshots Dart",
-     "description": "Lee cabecera ELF, build IDs y símbolos/snapshots Dart seleccionados. Identifica las limitaciones del layout; no reconstruye código Dart.",
+     "description": "Lee cabecera ELF, build IDs y símbolos/snapshots Dart seleccionados (diseño VM/isolate o unificado), con tipo, hash y cadena de características de cada cabecera. No reconstruye código Dart.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
          "symbols": {"type": "array", "items": {"type": "string"}},
          "snapshot_offsets": {"type": "array", "items": {"type": "integer", "minimum": 0}}}}},
+    {"name": "flutter.build", "title": "Flutter · Identificar build de un APK",
+     "description": "Lee lib/<abi>/libapp.so y libflutter.so de un APK sin ejecutarlos: por ABI, tamaños y SHA-256, cabecera ELF, hashes de snapshot Dart, build ID GNU del motor, versión de la VM Dart y líneas de la toolchain.",
+     "inputSchema": EMPTY_PARAMETERS},
+    {"name": "flutter.aot", "title": "Flutter · Snapshot Dart AOT de un APK",
+     "description": "Inspecciona el libapp.so de una ABI del APK: secciones de snapshot exportadas (diseño VM/isolate o unificado), cabeceras, tipo, hash y concordancia, y el pool de cadenas imprimibles (URI package:/dart: y nombres con forma de clase). No reconstruye código Dart.",
+     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
+         "abi": {"type": "string", "minLength": 2, "maxLength": 16, "pattern": "^[a-z0-9_-]+$"}}}},
     {"name": "javascript.application", "title": "JavaScript y Electron · Aplicación",
      "description": "Analiza un directorio o ASAR completo con parser JS/TS: módulos, imports/exports, roles, IPC, ventanas, fuentes y grafos semánticos. Conserva incertidumbres y contradicciones; no ejecuta los scripts.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
@@ -171,6 +179,7 @@ OPERATIONS += [{"name": name, "title": title, "description": description,
 OPERATIONS += STRUCTURED_OPERATIONS
 OPERATIONS += ELF_OPERATIONS
 OPERATIONS += OBJDUMP_OPERATIONS
+OPERATIONS += RIZIN_OPERATIONS
 OPERATIONS += EVIDENCE_OPERATIONS
 OPERATIONS += RECORDING_OPERATIONS
 OPERATIONS += SIGNAL_OPERATIONS
@@ -237,6 +246,8 @@ def catalog():
             reason = firmware_availability(row["name"])
         elif row["name"] == "binary.objdump" and not objdump_engine()['available']:
             reason = "Instala GNU objdump o configura THESEUS_OBJDUMP."
+        elif row["name"] == "rizin.command" and not rizin_engine():
+            reason = "Instala Rizin o configura THESEUS_RIZIN."
         rows.append({**row, "available": not reason, "availability_reason": reason})
     return {"engine": engine(), "operations": rows}
 

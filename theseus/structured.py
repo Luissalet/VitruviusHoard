@@ -244,6 +244,9 @@ def main():
     elif request["operation"] in {"capture.fields", "capture.packets", "capture.summary"}:
         from packets import inspect_capture
         result = inspect_capture(source, request["operation"], request["parameters"], output_path, before)
+    elif request["operation"] == "rizin.command":
+        from rizin import run_command
+        result = run_command(source, request["parameters"], output_path, before)
     elif request["operation"] == "apple.plist":
         result = inspect_plist(source)
     elif request["operation"] == "apple.signature":
