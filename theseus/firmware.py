@@ -25,12 +25,16 @@ OPERATIONS=[{'name':'firmware.regions','title':'Firmware · Regiones y entropía
     'description':'Identifica regiones con Binwalk local, conserva su clasificación y rangos originales y calcula entropía por ventanas. No ejecuta el firmware.',
     'inputSchema':{'type':'object','additionalProperties':False,'properties':{
         'offset':{'type':'integer','minimum':0},'length':{'type':'integer','minimum':1},
-        'search_all':{'type':'boolean'},'entropy_window':{'type':'integer','minimum':1}}}},
+        'search_all':{'type':'boolean'},'entropy_window':{'type':'integer','minimum':1},
+        'timeout_seconds':{'type':'integer','minimum':1}}}},
     {'name':'firmware.extract','title':'Firmware · Extraer regiones y archivos','worker':'python',
     'description':'Conserva regiones y archivos derivados con hashes, padres y ubicaciones originales. Binwalk identifica; lectores de archivo y 7-Zip leen contenido en archivos regulares propios, sin crear enlaces. Retiene parciales y formatos desconocidos.',
     'inputSchema':{'type':'object','additionalProperties':False,'properties':{
         'offset':{'type':'integer','minimum':0},'length':{'type':'integer','minimum':1},
-        'search_all':{'type':'boolean'},'max_depth':{'type':['integer','null'],'minimum':1}}}}]
+        'search_all':{'type':'boolean'},'max_depth':{'type':['integer','null'],'minimum':1},
+        'timeout_seconds':{'type':'integer','minimum':1}}}}]
+# Each scanner or extractor call is stopped after this many seconds unless the request sets timeout_seconds.
+TOOL_TIMEOUT_SECONDS=300
 
 
 def sha(path):
@@ -68,7 +72,8 @@ def inspect_firmware(source,operation,parameters,output,identity):
         'coverage':{'whole_image_completeness':'unknown'},
         'limitations':['Engine signatures are classifications, not authenticated firmware component identities.',
             'Decoded member offsets cannot be linearly mapped back through compression; root ranges remain unknown there.',
-            'No target program is executed. Links and special archive entries are recorded without creating filesystem links.']}
+            'No target program is executed. Links and special archive entries are recorded without creating filesystem links.',
+            'Each scanner or extractor call has a time limit; a call that reaches it is stopped and recorded as a gap, not retried.']}
     snapshot=folder/'firmware-input.bin'
     checkpoint_serial=0;latest_checkpoint=None
     def checkpoint():
@@ -85,21 +90,28 @@ def inspect_firmware(source,operation,parameters,output,identity):
             except PermissionError:pass  # A reader may still hold an immutable older snapshot on Windows.
     def gap(kind,**data):
         result['gaps'].append({'kind':kind,**data});checkpoint()
+    limit=parameters.get('timeout_seconds',TOOL_TIMEOUT_SECONDS)
     def run(args,stdout_file=None):
         start=time.monotonic()
         started=datetime.datetime.now(datetime.timezone.utc).isoformat()
         result['pending_command']=list(map(str,args));checkpoint()
-        if stdout_file:
-            with stdout_file.open('wb') as stream:
-                reply=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=stream,stderr=subprocess.PIPE)
-            text=None;encoded=None
-        else:
-            reply=subprocess.run(args,stdin=subprocess.DEVNULL,capture_output=True)
-            text=reply.stdout.decode('utf8',errors='replace');encoded=base64.b64encode(reply.stdout).decode('ascii')
-        row={'command':list(map(str,args)),'exit_code':reply.returncode,'duration_seconds':round(time.monotonic()-start,4),
+        try:
+            if stdout_file:
+                with stdout_file.open('wb') as stream:
+                    reply=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=stream,stderr=subprocess.PIPE,timeout=limit)
+            else:reply=subprocess.run(args,stdin=subprocess.DEVNULL,capture_output=True,timeout=limit)
+            returncode,out,err,timed_out=reply.returncode,reply.stdout,reply.stderr,False
+        except subprocess.TimeoutExpired as expired:
+            # subprocess.run has already killed and reaped the client; keep whatever it wrote.
+            returncode,out,err,timed_out=None,expired.stdout,expired.stderr,True
+        out=out if isinstance(out,bytes) else b'';err=err if isinstance(err,bytes) else b''
+        text=None if stdout_file else out.decode('utf8',errors='replace')
+        encoded=None if stdout_file else base64.b64encode(out).decode('ascii')
+        row={'command':list(map(str,args)),'exit_code':returncode,'timed_out':timed_out,'timeout_seconds':limit,
+            'duration_seconds':round(time.monotonic()-start,4),
             'started_at':started,'finished_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            'stdout':text,'stdout_base64':encoded,'stderr':reply.stderr.decode('utf8',errors='replace'),
-            'stderr_base64':base64.b64encode(reply.stderr).decode('ascii')}
+            'stdout':text,'stdout_base64':encoded,'stderr':err.decode('utf8',errors='replace'),
+            'stderr_base64':base64.b64encode(err).decode('ascii')}
         if stdout_file:row.update(stdout_relative_path=stdout_file.name,stdout_sha256=sha(stdout_file),stdout_bytes=stdout_file.stat().st_size)
         result['observations'].append(row);result.pop('pending_command',None);checkpoint();return row
     def artifact(path,parent,location,**extra):
@@ -113,6 +125,8 @@ def inspect_firmware(source,operation,parameters,output,identity):
         args=[clients['binwalk'],'--quiet','--threads','1','--log',str(log)]
         if parameters.get('search_all',False):args.append('--search-all')
         reply=run(args+[str(path)])
+        if reply['timed_out']:
+            gap('scanner-timeout',parent_relative_path=parent,command=reply['command'],timeout_seconds=limit);return []
         if reply['exit_code']!=0:gap('scanner-failed',parent_relative_path=parent,diagnostic=reply['stderr'])
         if not log.is_file():gap('missing-scanner-recording',parent_relative_path=parent);return []
         try:recorded=json.loads(log.read_text(encoding='utf8'))
@@ -202,6 +216,8 @@ def inspect_firmware(source,operation,parameters,output,identity):
         if not clients['seven_zip']:
             gap('missing-extractor-dependency',parent_relative_path=origin,dependency='7-Zip',continuation='Configure THESEUS_7ZIP and analyze this retained child again');return
         listing=run([clients['seven_zip'],'l','-slt','-ba','-sccUTF-8','--',str(path)])
+        if listing['timed_out']:
+            gap('extractor-timeout',parent_relative_path=origin,command=listing['command'],timeout_seconds=limit);return
         if listing['exit_code']!=0:
             gap('extractor-unavailable-for-region',parent_relative_path=origin,diagnostic=listing['stderr']);return
         blocks=re.split(r'\n\s*\n',listing['stdout'].replace('\r',''))
@@ -217,10 +233,13 @@ def inspect_firmware(source,operation,parameters,output,identity):
                 values[key]=value
             if ambiguous or ('Path' not in values and not stream_format):
                 gap('ambiguous-extractor-listing',parent_relative_path=origin,raw=block);continue
-            name=values.get('Path') if not stream_format else format_name+' decompressed stream'
+            # 7-Zip lists member paths with the host separator; on Windows '\\' stands for the archive's '/'.
+            listed=values.get('Path','')
+            name=(listed.replace('\\','/') if os.sep=='\\' else listed) if not stream_format else format_name+' decompressed stream'
             metadata={'name':name,'ordinal':index,'reader':'7zip','fields':values,'stream_output':stream_format}
             if values.get('Folder')=='+':result['entries'].append({'parent_relative_path':origin,**metadata,'kind':'directory'});continue
-            if any(key in values for key in ['Symbolic Link','Hard Link','Reparse']):
+            # 7-Zip prints these fields empty for regular members; only a value marks a link.
+            if any(values.get(key,'').strip() for key in ['Symbolic Link','Hard Link','Reparse']):
                 gap('link-not-created',parent_relative_path=origin,entry=metadata);continue
             if values.get('Encrypted')=='+':gap('encrypted-entry',parent_relative_path=origin,entry=metadata);continue
             member=target('member');result['in_progress']={'relative_path':member.name,'parent_relative_path':origin,'entry':metadata};checkpoint()
