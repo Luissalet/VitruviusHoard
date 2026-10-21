@@ -228,4 +228,7 @@ def test_summary_records_are_named_by_query_protocol_and_endpoint(lab, summary):
         return [row['name'] for row in reply.json()['records']]
     assert names('dns_queries') == [row['query'] for row in summary['dns_queries']]
     assert names('protocol_distribution') == [row['protocol'] for row in summary['protocol_distribution']]
-    assert names('endpoints') == [f"{row['address']}:{row['port']}" for row in summary['endpoints']]
+    # IPv6 addresses are bracketed so the port cannot be read as part of the address
+    assert names('endpoints') == [(f"[{row['address']}]" if ':' in row['address'] else row['address']) + f":{row['port']}"
+                                  for row in summary['endpoints']]
+    assert '[2001:db8::1]:41000' in names('endpoints')
