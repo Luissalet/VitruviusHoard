@@ -3722,6 +3722,32 @@
     "module": "babel"
   },
   {
+    "name": "theseus_client_inspect",
+    "description": "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "family": {
+          "enum": [
+            "apktool",
+            "pcap",
+            "objdump"
+          ]
+        }
+      },
+      "required": [
+        "family"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_runtime_catalog",
     "description": "Discover explicit runtime observation operations, target selection, side effects and installed clients. Separate from execution-free static analysis.",
     "inputSchema": {
@@ -4442,6 +4468,34 @@
     "module": "theseus"
   },
   {
+    "name": "theseus_swift_demangle",
+    "description": "Demangle an ordered list of single-line Swift symbols with the free swift-demangle of the installed Swift toolchain. Each symbol returns demangled, unchanged or invalid with its classification (Swift symbol, thunk target, foreign calling convention); nothing is executed or loaded.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "symbols"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_local_engines",
     "description": "Discover installed local free binary analysis engines and JDK. No hosted service.",
     "inputSchema": {
@@ -5096,32 +5150,6 @@
     },
     "annotations": {
       "readOnlyHint": false,
-      "destructiveHint": false,
-      "openWorldHint": false
-    },
-    "module": "theseus"
-  },
-  {
-    "name": "theseus_client_inspect",
-    "description": "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "family": {
-          "enum": [
-            "apktool",
-            "pcap",
-            "objdump"
-          ]
-        }
-      },
-      "required": [
-        "family"
-      ],
-      "additionalProperties": false
-    },
-    "annotations": {
-      "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false
     },
