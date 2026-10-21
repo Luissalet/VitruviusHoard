@@ -23,8 +23,13 @@ decoded and validated only; nothing is instantiated or executed.
 the host accepts but the reader cannot decode, such as a typed reference parameter
 outside the pinned reader, fails the inspection with `validation:
 not-established` and `validators_agree: false`; it is not reported invalid and no
-interface is invented for it. `validation: valid` remains the bundled reader's
-claim.
+interface is invented for it. In the opposite case, such as a 64-bit table the
+reader validates and an older host rejects, the inspection completes with
+`validation: valid` and `validators_agree: false`. `validation: valid` remains the
+bundled reader's claim. The job summary `wasm_observation` repeats
+`validators_agree` and the host verdict, and the analysis view warns when the
+validators disagree. The host verdict is recorded before the section walk, so a
+truncated module keeps it too.
 
 `module_header` and `sections` preserve the selected bytes as base64, with each
 section's original header, payload range, length and SHA-256. Section `start`
@@ -44,8 +49,8 @@ caller's order and file identities without claiming those files are valid WASM.
 JavaScript glue observations retain their file identities, parser status,
 issues, and visible string or expression-free template literals ending in
 `.wasm`, including literals in directive positions. References have source line
-and column coordinates. Relative paths are associated with explicitly selected
-candidates when their resolved paths match. Otherwise a basename association
+and column coordinates. Relative paths and Windows drive paths are associated with
+explicitly selected candidates when their resolved paths match. Otherwise a basename association
 retains every matching selected candidate, including ambiguity. Missing matches
 remain unresolved. URLs, inferred paths, imports and modules are never fetched,
 followed, instantiated or executed. These are literal associations, not loading
@@ -60,7 +65,9 @@ analysis document. A failed validation has a nonzero exit and no completed
 analysis. Its last prefix can still contain the original identity, reader
 profile, section bytes, failure phase and diagnostic. Missing selected glue or
 candidates similarly preserve facts observed before the read failed. A prefix
-does not turn a failed or cancelled job into a successful inspection.
+does not turn a failed or cancelled job into a successful inspection. If the
+final prefix cannot be published, the reader's own error is still reported,
+together with the publication error.
 
 Cancellation stops the owned reader and retains its last published prefix.
 After an owner restart, recovery uses the recorded PID, actual process creation
@@ -95,6 +102,8 @@ all repeated occurrences and producer-owned typed signatures. Repeated imports o
 one module and name are compared as their ordered occurrences, because the order
 defines their indices: the same kinds and signatures in the same order are
 unchanged, any other sequence is changed, and `occurrences` reports both counts.
+The absolute position of an import among imports with other names, its `index`,
+is not part of this equality.
 Missing typed facts, partial interfaces and unresolved signatures yield unknown
 results instead of proving equality or absence. Empty partial interfaces keep
 partial coverage even when there are no rows. An observed complete empty module
@@ -113,8 +122,10 @@ by hand from the binary format and checks them against the host validator in a
 separate process: exact function, multi-value, SIMD, table, shared and 64-bit
 memory, multiple-memory, global and tag signatures with their indices; invalid
 modules rejected while reading and while validating; a host-valid module outside
-the reader; a view into a larger buffer; repeated imports and changed limits,
-sharing and mutability in retained comparisons. The broader native-format and
+the reader and a reader-valid module checked against the host's own verdict; a
+truncated module; a Windows drive literal; a failed final publication; a view
+into a larger buffer; repeated imports and changed limits, sharing and
+mutability in retained comparisons. The broader native-format and
 retained-extension tests cover existing typed interface behavior. Area tests
 alone do not establish final installed acceptance or independent review.
 

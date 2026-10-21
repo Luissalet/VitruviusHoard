@@ -5,6 +5,7 @@ never used to build a fixture. The host oracle is Node's own WebAssembly.validat
 separate process from the product's reader.
 """
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -57,7 +58,7 @@ def code(*instructions):
     return uleb(len(body)) + body
 
 
-I32, I64, F32, F64, V128, EXTERNREF = 0x7f, 0x7e, 0x7d, 0x7c, 0x7b, 0x6f
+I32, I64, F32, F64, V128, FUNCREF, EXTERNREF = 0x7f, 0x7e, 0x7d, 0x7c, 0x7b, 0x70, 0x6f
 FUNC, TABLE, MEMORY, GLOBAL, TAG = 0, 1, 2, 3, 4
 
 
@@ -132,6 +133,13 @@ INVALID_CASES = {
 # (ref null func) parameter: valid for the host runtime, outside what the pinned reader decodes.
 TYPED_REFERENCE = module(section(1, vec([functype([b'\x63\x70'], [])])),
                          section(2, vec([name('env') + name('r') + bytes([FUNC]) + uleb(0)])))
+
+
+# A 64-bit table: the pinned reader decodes and validates it; whether the host accepts it depends on its runtime.
+TABLE64 = module(section(4, vec([bytes([FUNCREF]) + b'\x04' + uleb(1)])),
+                 section(7, vec([name('t64') + bytes([TABLE]) + uleb(0)])))
+# The second section declares more payload than the selected bytes contain.
+TRUNCATED = module(section(1, vec([functype([], [])]))[:-1])
 
 
 def duplicate_imports(order):
@@ -262,3 +270,63 @@ def test_repeated_imports_compare_as_ordered_occurrences_and_signature_changes_a
     states = {json.loads(row['key'])[2] + ':' + json.loads(row['key'])[0]: row['state'] for row in changed['changes']}
     assert states == {'g:import': 'changed', 'g_in:export': 'changed', 'mem:import': 'changed', 'mem:export': 'changed',
                       'tab:import': 'unchanged', 'tab:export': 'unchanged', 'g_def:export': 'unchanged'}
+
+
+def test_job_summary_reports_a_reader_valid_module_the_host_rejects(tmp_path):
+    host = host_valid(TABLE64)
+    source = tmp_path / 'table64.wasm'
+    source.write_bytes(TABLE64)
+    with client_for(tmp_path) as client:
+        store, pid = project(client, 'Table64')
+        job, value = run(client, pid, store.add_artifact(pid, source)['id'], 'wasm.artifact')
+    assert value['validation'] == 'valid' and value['host_validation']['valid'] is host
+    assert value['validators_agree'] is host
+    assert job['result']['wasm_observation'] == {'validation': 'valid', 'phase': 'complete', 'completion_status': 'complete',
+                                                 'validators_agree': host, 'host_valid': host}
+    assert value['interface']['entries'][0]['signature']['address_type'] == 'i64'
+
+
+def test_truncated_module_records_the_host_verdict_before_its_section_walk(tmp_path):
+    assert host_valid(TRUNCATED) is False
+    source = tmp_path / 'truncated.wasm'
+    source.write_bytes(TRUNCATED)
+    with client_for(tmp_path) as client:
+        store, pid = project(client, 'Truncated')
+        job = started(client, pid, store.add_artifact(pid, source)['id'])
+    value = json.loads(Path(job['result']['analysis_file']).read_bytes())['result']
+    assert job['state'] == 'failed' and value['failure']['phase'] == 'reading-section-ranges'
+    assert value['host_validation']['valid'] is False and value['sections_complete'] is False
+    assert job['result']['wasm_observation']['host_valid'] is False
+
+
+def test_windows_drive_literal_is_a_local_path_association(tmp_path):
+    source = tmp_path / 'original.wasm'
+    other = tmp_path / 'other'
+    other.mkdir()
+    candidate = other / 'original.wasm'
+    candidate.write_bytes(b'Selected candidate bytes')
+    glue = tmp_path / 'glue.js'
+    glue.write_text('const exact = ' + json.dumps(str(candidate.resolve())) + ';\n', encoding='utf8')
+    source.write_bytes(FEATURE_CASES['exception-tags'][0])
+    with client_for(tmp_path) as client:
+        store, pid = project(client, 'Drive literal')
+        _, value = run(client, pid, store.add_artifact(pid, source)['id'], 'wasm.artifact',
+                       {'glue_paths': [str(glue)], 'candidate_paths': [str(candidate)]})
+    reference = value['glue'][0]['references'][0]
+    expected = 'local-path-candidate' if os.name == 'nt' else 'basename-candidates'
+    assert reference['association'] == expected
+    assert reference['candidate_paths'] == ([str(candidate.resolve())] if os.name == 'nt' else [str(source.resolve()), str(candidate.resolve())])
+
+
+def test_failed_final_prefix_publication_keeps_the_reader_error(tmp_path):
+    reader = Path(engine()['entry']).with_name('wasm-inspection.js')
+    content = INVALID_CASES['export-index-out-of-range'][0]
+    script = ('import {inspectWasm} from ' + json.dumps(reader.as_uri()) + ';'
+              'const publish=async observation=>{if(observation.failure)throw new Error("prefix storage unavailable");};'
+              'try{await inspectWasm(Buffer.from(process.argv[1],"hex"),"failed.wasm",{},publish);}'
+              'catch(error){process.stdout.write(JSON.stringify([error.name,error.message,error.errors.map(row=>row.message)]));}')
+    result = subprocess.run([engine()['node'], '--input-type=module', '-e', script, content.hex()],
+                            cwd=tmp_path, check=True, capture_output=True, text=True)
+    name_, message, errors = json.loads(result.stdout)
+    assert name_ == 'AggregateError' and 'validate failed' in message and 'could not be published' in message
+    assert 'validate failed' in errors[0] and errors[1] == 'prefix storage unavailable'

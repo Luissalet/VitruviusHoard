@@ -16,7 +16,8 @@ export function compareWasm(reference:unknown,candidate:unknown,scope='both') {
   const summary={added:0,removed:0,changed:0,unchanged:0,unknown:0};
   const changes=[...groups.entries()].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,group])=>{
     let state:keyof typeof summary;
-    // Repeated imports are compared as their ordered occurrences: the order defines each import's index.
+    // Repeated imports of one module and name are compared as their ordered occurrences; their absolute
+    // positions among other imports (the index field) are not part of equality.
     const unresolved=left.state!=='complete'||right.state!=='complete'||
       [...group.left,...group.right].some(entry=>entry.kind==='unknown'||entry.signature===null||entry.issue!==null);
     const typed=(entries:WasmInterfaceEntry[])=>JSON.stringify(entries.map(entry=>[entry.kind,entry.signature]));

@@ -438,7 +438,9 @@ def retain(store, project_id, job_id, artifact, folder, output, result, *, obser
         result['reader_observation'] = {key: document['result'][key] for key in
             ['exit_code', 'completion_status', 'stream_complete', 'artifact_changed']}
     if result['operation']=='wasm.artifact':
-        result['wasm_observation']={key:document['result'].get(key) for key in ['validation','phase','completion_status']}
+        observed=document['result']
+        result['wasm_observation']={**{key:observed.get(key) for key in ['validation','phase','completion_status','validators_agree']},
+                                    'host_valid':(observed.get('host_validation') or {}).get('valid')}
     result.update(artifact_sha256=document["artifact_sha256"], analysis_file=str(output),
                   analysis_sha256=digest(output), runtime=document["runtime"])
     result["source_changed"] = document["artifact_sha256"] != artifact["sha256"]
