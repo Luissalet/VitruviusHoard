@@ -124,8 +124,28 @@ def test_original_rust_compiler_pe_keeps_unknown_dependencies_and_path_provenanc
 
 
 @pytest.mark.parametrize('operation',['go.build','rust.dependencies'])
-def test_universal_macho_stays_explicitly_unsupported_without_slice_selection(tmp_path,operation):
-    thin=carrier('macho',64,'little','go',go_payload('macho',64,'little','inline'))
-    fat=struct.pack('>7I',0xcafebabe,1,0x1000007,3,4096,len(thin),12).ljust(4096,b'\0')+thin
-    result=inspect(tmp_path,operation,fat,expected_state='failed')
-    assert 'selecting a thin slice' in result['result']['execution']['stderr']
+def test_universal_macho_reads_each_slice_at_its_universal_offsets(tmp_path,operation):
+    language='go' if operation=='go.build' else 'rust'
+    payload=go_payload('macho',64,'little','inline') if language=='go' else rust_payload()
+    thin=carrier('macho',64,'little',language,payload)
+    # The second entry claims arm64 but carries the x86_64 header: it must fail alone.
+    fat=struct.pack('>12I',0xcafebabe,2,0x1000007,3,4096,len(thin),12,0x100000c,0,8192,len(thin),12).ljust(4096,b'\0')
+    fat=(fat+thin).ljust(8192,b'\0')+thin
+    result=inspect(tmp_path,operation,fat)
+    assert result['format']=='macho-universal' and result['fat_magic']==0xcafebabe and not result['wide_table']
+    first,second=result['slices']
+    assert (first['status'],first['file_offset'],first['file_bytes'],first['cpu_type'])==('read',4096,len(thin),0x1000007)
+    assert first['format']=='macho' and first['architecture']=='amd64'
+    assert second['status']=='failed' and second['failure']['category']=='malformed'
+    assert 'disagrees with its Mach-O header' in second['failure']['reason']
+    (tmp_path/'thin').mkdir()
+    thin_result=inspect(tmp_path/'thin',operation,thin)
+    if language=='go':
+        info,alone=first['build_info'],thin_result['build_info']
+        assert info['header_offset']==alone['header_offset']+4096 and first['module']==thin_result['module']
+        for key in ['version','module']:
+            at=info[key+'_location']
+            assert fat[at['offset']:at['offset']+at['bytes']]==base64.b64decode(info[key+'_bytes_base64' if key=='module' else 'go_version_bytes_base64'])
+    else:
+        assert first['auditable_metadata']['file_offset']==thin_result['auditable_metadata']['file_offset']+4096
+        assert first['auditable_metadata']['packages']==thin_result['auditable_metadata']['packages']
