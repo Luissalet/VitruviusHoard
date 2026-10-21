@@ -1,5 +1,5 @@
 /** Native inventory and application projections over directly incorporated readers. */
-import {basename,dirname} from 'node:path';
+import {basename,dirname,join,relative,sep} from 'node:path';
 import {stat} from 'node:fs/promises';
 import {z} from 'zod';
 import {ArtifactResourceScope} from './src/artifacts/ArtifactResourceScope.js';
@@ -24,12 +24,28 @@ const provider={id:'theseus-static',name:'Theseus static application analysis',v
 
 const BUNDLE_SUFFIXES=['.app','.framework','.bundle','.appex','.xpc','.plugin'];
 
-/** Outermost Apple bundle folder that contains the image, or the image's own folder. */
-const bundleRoot=(path:string):string=>{
-  let root=dirname(path);
-  for(let folder=dirname(path);dirname(folder)!==folder;folder=dirname(folder))
-    if(BUNDLE_SUFFIXES.some(suffix=>basename(folder).toLowerCase().endsWith(suffix))) root=folder;
-  return root;
+const exists=async(path:string):Promise<boolean>=>{
+  try {await stat(path);return true;} catch {return false;}
+};
+
+/** A folder is a bundle when it has a bundle name and the Info.plist of a macOS, iOS or framework layout. */
+const isBundle=async(folder:string):Promise<boolean>=>
+  BUNDLE_SUFFIXES.some(suffix=>basename(folder).toLowerCase().endsWith(suffix)) &&
+  (await exists(join(folder,'Contents','Info.plist')) || await exists(join(folder,'Info.plist')) ||
+   await exists(join(folder,'Resources','Info.plist')) || await exists(join(folder,'Versions','Current','Resources','Info.plist')));
+
+/**
+ * The enclosing bundles of an image, innermost first. The chain stops at the first folder that carries a
+ * bundle name without being a bundle, so a plain folder named like one never widens what is read.
+ */
+const enclosingBundles=async(path:string):Promise<string[]>=>{
+  const chain:string[]=[];
+  for(let folder=dirname(path);dirname(folder)!==folder;folder=dirname(folder)) {
+    if(!BUNDLE_SUFFIXES.some(suffix=>basename(folder).toLowerCase().endsWith(suffix))) continue;
+    if(!(await isBundle(folder))) break;
+    chain.push(folder);
+  }
+  return chain;
 };
 
 export async function analyzePortfolio(operation:string,bytes:Buffer,path:string,sha256:string,
@@ -52,10 +68,21 @@ export async function analyzePortfolio(operation:string,bytes:Buffer,path:string
     if(operation==='apple.assets') return await analyzeAppleAssetCatalogs({bundlePath:path,targetSha256:sha256,environment:process.env,page:parameters.query});
     if(operation==='apple.dylibs') {
       // A selected folder is the analyzed root and every executable in it is traced. A selected image is
-      // traced inside its outermost enclosing bundle, so @executable_path/../Frameworks stays inside the root.
+      // traced inside its outermost enclosing bundle by default (root_scope 'enclosing-bundle'), so
+      // @executable_path/../Frameworks stays inside the root; root_scope 'image-folder' keeps its own folder.
+      const {root_scope:scope='enclosing-bundle',...query}=z.object({root_scope:z.enum(['enclosing-bundle','image-folder']).optional()})
+        .passthrough().parse(parameters.query??{});
       const directory=(await stat(path)).isDirectory();
-      return await traceDylibResolution({rootPath:directory ? path : bundleRoot(path),targetPath:path,
-        targetSha256:sha256,enumerateRoots:directory,parameters:z.record(z.string(),z.unknown()).parse(parameters.query??{}),resourceScope:resources});
+      const bundles=directory || scope==='image-folder' ? [] : await enclosingBundles(path);
+      const rootPath=directory ? path : bundles.at(-1) ?? dirname(path);
+      const rule=directory ? 'selected-folder' : bundles.length ? 'enclosing-bundle' : 'image-folder';
+      const result=await traceDylibResolution({rootPath,targetPath:path,targetSha256:sha256,enumerateRoots:directory,
+        parameters:query,resourceScope:resources});
+      const portable=(folder:string)=>relative(rootPath,folder).split(sep).join('/');
+      return {...result,root_selection:{rule,requested_scope:directory ? null : scope,
+        selected:directory ? '' : portable(path),bundles:bundles.map(portable),
+        // Images other than the selected one were read because dyld would load them from inside this root.
+        read_beyond_selection:directory ? [] : result.images.map(image=>image.path).filter(image=>image!==portable(path))}};
     }
     const inventory=await inventoryArtifact(path,{resourceScope:resources,environment:process.env,integrity:{mode:'record-and-continue'}});
     if(operation==='artifact.inventory') return inventory;
