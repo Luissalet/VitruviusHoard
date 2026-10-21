@@ -10,6 +10,13 @@ const escape = (value) =>
 const json = (value) => JSON.stringify(value, null, 2);
 let clientInspectionDownload = null;
 const SWIFT_STATUS = {demangled: "demangled", unchanged: "sin cambio", invalid: "inválido"};
+function swiftFlags(flags) {
+  if (!flags) return "";
+  const notes = [];
+  if (flags.thunk) notes.push(flags.thunk_target ? `thunk de ${escape(flags.thunk_target)}` : "thunk sin destino registrado");
+  if (flags.foreign_calling_convention) notes.push("sin convención de llamada Swift");
+  return notes.length ? " · " + notes.join(" · ") : "";
+}
 async function demangleSwiftForm(form) {
   const button = form.querySelector('button[type="submit"]');
   const result = $("#swift-demangle-result");
@@ -20,7 +27,7 @@ async function demangleSwiftForm(form) {
   try {
     const observed = await api("/swift/demangle", {symbols});
     result.innerHTML = '<ol class="swift-symbols">' + observed.symbols.map((row) =>
-      `<li data-status="${escape(row.status)}"><code>${escape(row.input)}</code> → <code>${escape(row.output)}</code> <span class="small">${escape(SWIFT_STATUS[row.status] || row.status)}</span></li>`).join("") +
+      `<li data-status="${escape(row.status)}"><code>${escape(row.input)}</code> → <code>${escape(row.output)}</code> <span class="small">${escape(SWIFT_STATUS[row.status] || row.status)}${swiftFlags(row.classification)}</span></li>`).join("") +
       `</ol><p class="small">${escape(observed.provenance[0]?.version.split("\n").find((line) => /version/iu.test(line)) || "")}</p>`;
   } catch (error) {
     result.textContent = error.message;
