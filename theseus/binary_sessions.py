@@ -30,6 +30,8 @@ METHODS = {
     "ping": {}, "read_binary_inventory_summary": {}, "inspect_native_load_image": {}, "list_documents": {},
     **{name: {**DOCUMENT, "address": None} for name in ADDRESS_METHODS},
     **{name: {**DOCUMENT, "procedure": ""} for name in PROCEDURE_METHODS},
+    # The contract defaults direction to outgoing; the catalog advertises it so its parameters are callable as listed.
+    "procedure_references": {**DOCUMENT, "procedure": "", "direction": "outgoing"},
     "list_procedures": DOCUMENT, "list_segments": DOCUMENT,
     "read_bytes": {**DOCUMENT, "address": "", "length": 256},
     "search_bytes": {**DOCUMENT, "pattern": "", "limit": 1000},
