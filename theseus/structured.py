@@ -57,26 +57,37 @@ def value(raw):
     return raw
 
 
-def plist_value(raw):
+def plist_value(raw, xml=False, ancestors=()):
     if isinstance(raw, plistlib.UID):
         return {"type": "uid", "decimal": str(raw.data)}
+    # Core Foundation writes a UID in XML as a one-key CF$UID dictionary and reads it back as a UID.
+    if xml and isinstance(raw, dict) and list(raw) == ["CF$UID"] and isinstance(raw["CF$UID"], int) and raw["CF$UID"] >= 0:
+        return {"type": "uid", "decimal": str(raw["CF$UID"])}
     if isinstance(raw, datetime.datetime):
         return {"type": "date", "iso8601": raw.isoformat(), "timezone": "UTC"}
-    if isinstance(raw, dict):
-        return {key: plist_value(item) for key, item in raw.items()}
-    if isinstance(raw, list):
-        return [plist_value(item) for item in raw]
+    if isinstance(raw, (dict, list)):
+        if id(raw) in ancestors:
+            raise ValueError("Property list contains a reference cycle")
+        inner = (*ancestors, id(raw))
+        if isinstance(raw, dict):
+            return {key: plist_value(item, xml, inner) for key, item in raw.items()}
+        return [plist_value(item, xml, inner) for item in raw]
     return value(raw)
 
 
 def inspect_plist(source):
     raw = source.read_bytes()
     parsed = plistlib.loads(raw)
+    xml = not raw.startswith(b"bplist00")
     kind = "dictionary" if isinstance(parsed, dict) else "array" if isinstance(parsed, list) else "scalar"
-    pairs = parsed.items() if isinstance(parsed, dict) else enumerate(parsed) if isinstance(parsed, list) else [("$", parsed)]
-    return {"format": "binary" if raw.startswith(b"bplist00") else "xml", "container_type": kind,
-            "entries": [{"name": str(key), "value": plist_value(item)} for key, item in pairs],
-            "limitations": ["Dates use the standard plist parser's datetime precision; exact original numeric bytes remain identified by the artifact hash."]}
+    if kind == "dictionary" and xml and list(parsed) == ["CF$UID"]:
+        kind = "scalar"
+    pairs = parsed.items() if kind == "dictionary" else enumerate(parsed) if kind == "array" else [("$", parsed)]
+    ancestors = (id(parsed),) if kind != "scalar" else ()
+    return {"format": "xml" if xml else "binary", "container_type": kind,
+            "entries": [{"name": str(key), "value": plist_value(item, xml, ancestors)} for key, item in pairs],
+            "limitations": ["Dates use the standard plist parser's datetime precision; exact original numeric bytes remain identified by the artifact hash.",
+                            "In XML a dictionary whose only key is CF$UID with a non-negative integer is a UID, as Core Foundation reads it."]}
 
 
 def inspect_signature(source):
