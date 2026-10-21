@@ -30,8 +30,12 @@ OPERATIONS = [
 ]
 
 SUMMARY_FIELDS = ["frame.time_epoch", "frame.protocols", "ip.src", "ip.dst", "ipv6.src", "ipv6.dst", "tcp.srcport", "tcp.dstport", "udp.srcport", "udp.dstport",
-                  "dns.flags.response", "dns.qry.name", "dns.a", "dns.aaaa", "tls.handshake.extensions_server_name", "http.request.uri"]
-
+                  "tls.handshake.extensions_server_name", "http.request.uri"]
+# Values of one field within a frame are joined by the unit separator, which cannot occur in addresses, names or request URIs.
+AGGREGATOR = "\x1f"
+NETWORK = {"ip", "ipv6"}
+# Layers that carry a copy of another packet: what follows them is quoted or tunnelled, not this packet's own transport.
+QUOTING = {"icmp", "icmpv6"}
 
 def capinfos_facts(metadata):
     facts = {}
@@ -52,8 +56,38 @@ def utc(seconds):
     return stamp + ("." + fraction if fraction else "") + "Z"
 
 
-def summarize(text, metadata, maximum):
-    """Aggregate tab-separated tshark field rows into the capture summary contract."""
+def own_transport(stack):
+    """tcp or udp when it directly follows the first network layer (IPv6 extension headers aside), else None."""
+    seen_network = False
+    for layer in stack:
+        if layer in NETWORK and not seen_network:
+            seen_network = True
+        elif seen_network and layer.startswith("ipv6."):
+            continue
+        elif seen_network:
+            return layer if layer in {"tcp", "udp"} else None
+    return None
+
+
+def dns_messages(document):
+    """(is_response, question names, answer-section addresses) for every top-level DNS message in tshark JSON."""
+    def items(node):
+        return node if isinstance(node, list) else [node] if isinstance(node, dict) else []
+    for packet in document:
+        layers = packet.get("_source", {}).get("layers", {})
+        # Only DNS that is a layer of the frame itself; a DNS message quoted inside ICMP is nested under that layer.
+        for message in items(layers.get("dns")):
+            flags = message.get("dns.flags_tree", {})
+            response = str(flags.get("dns.flags.response", "")) in {"1", "True", "true"}
+            names = [query.get("dns.qry.name") for group in items(message.get("Queries")) for query in group.values()
+                     for query in items(query) if query.get("dns.qry.name") is not None]
+            addresses = [record.get(field) for group in items(message.get("Answers")) for record in group.values()
+                         for record in items(record) for field in ("dns.a", "dns.aaaa") if record.get(field)]
+            yield response, names, addresses
+
+
+def summarize(text, metadata, maximum, messages=()):
+    """Aggregate tshark field rows (and the DNS messages read separately) into the capture summary contract."""
     endpoints, protocols, dns, sni, uris = {}, {}, {}, set(), []
     unattributed, unattributed_packets, redacted, times, count = set(), 0, 0, [], 0
     for line in text.splitlines():
@@ -61,39 +95,41 @@ def summarize(text, metadata, maximum):
         count += 1
         if values.get("frame.time_epoch"):
             times.append(Decimal(values["frame.time_epoch"]))
-        split = lambda name: [item for item in values.get(name, "").split(",") if item]
-        for protocol in set(filter(None, values.get("frame.protocols", "").split(":"))):
+        split = lambda name: [item for item in values.get(name, "").split(AGGREGATOR) if item]
+        stack = [layer for layer in values.get("frame.protocols", "").split(":") if layer]
+        for protocol in set(stack):
             protocols[protocol] = protocols.get(protocol, 0) + 1
-        source = (split("ip.src") or split("ipv6.src") or [None])[0]
-        target = (split("ip.dst") or split("ipv6.dst") or [None])[0]
-        transport = "tcp" if split("tcp.srcport") else "udp" if split("udp.srcport") else None
-        ports = (split(transport + ".srcport")[0], split(transport + ".dstport")[0]) if transport else (None, None)
+        # The first address pair is the frame's own; later pairs belong to quoted or tunnelled packets.
+        first = next((layer for layer in stack if layer in NETWORK), None)
+        source = (split(first + ".src") or [None])[0] if first else None
+        target = (split(first + ".dst") or [None])[0] if first else None
+        transport = own_transport(stack)
+        ports = (split(transport + ".srcport")[0], split(transport + ".dstport")[0]) if transport and split(transport + ".srcport") else (None, None)
         for address, port in ((source, ports[0]), (target, ports[1])):
             if address:
                 key = (address, int(port) if port else None)
                 endpoints[key] = endpoints.get(key, 0) + 1
-        names, answers = split("dns.qry.name"), split("dns.a") + split("dns.aaaa")
-        if names:
-            for name in names:
-                dns.setdefault(name, [])
-            if values.get("dns.flags.response") in {"1", "True", "true"}:
-                for name in names[:1]:
-                    dns[name].extend(answer for answer in answers if answer not in dns[name])
-        elif answers:
-            unattributed_packets += 1
-            unattributed.update(answers)
         sni.update(split("tls.handshake.extensions_server_name"))
-        for uri in [values.get("http.request.uri", "")] if values.get("http.request.uri") else []:
+        for uri in split("http.request.uri"):
             if "?" in uri:
                 uri, redacted = uri.split("?", 1)[0] + "?<redacted>", redacted + 1
             uris.append(uri)
+    for response, names, answers in messages:
+        if names:
+            for name in names:
+                dns.setdefault(name, [])
+            if response:
+                dns[names[0]].extend(answer for answer in answers if answer not in dns[names[0]])
+        elif answers:
+            unattributed_packets += 1
+            unattributed.update(answers)
     facts, number = capinfos_facts(metadata)
     rows = sorted(({"address": address, "port": port, "packet_count": count} for (address, port), count in endpoints.items()),
                   key=lambda row: (-row["packet_count"], row["address"], row["port"] if row["port"] is not None else -1))
     queries = [{"query": name, "response_addresses": addresses[:maximum], "response_address_count": len(addresses)} for name, addresses in sorted(dns.items())]
     distribution = sorted(({"protocol": name, "packet_count": count} for name, count in protocols.items()), key=lambda row: (-row["packet_count"], row["protocol"]))
     distinct_uris = sorted(set(uris))
-    clipped = any(len(items) > maximum for items in (rows, queries, sni, distribution, distinct_uris, unattributed))
+    clipped = any(len(items) > maximum for items in (rows, queries, sni, distribution, distinct_uris, unattributed, *dns.values()))
     return {"file_type": facts.get("File type") or None, "encapsulation": facts.get("File encapsulation") or None,
             "packet_count": count, "capture_start": utc(min(times)) if times else None, "capture_end": utc(max(times)) if times else None,
             "capture_duration_seconds": float(max(times) - min(times)) if times else None,
@@ -104,7 +140,6 @@ def summarize(text, metadata, maximum):
             "http_request_uris": distinct_uris[:maximum], "http_request_uri_count": len(distinct_uris), "http_uri_redaction_count": redacted,
             "unattributed_dns_addresses": sorted(unattributed)[:maximum], "unattributed_dns_address_count": len(unattributed),
             "unattributed_dns_packet_count": unattributed_packets, "coverage": "partial" if clipped else "complete"}
-
 
 CAPTURE_MAGICS = {bytes.fromhex(value) for value in ("d4c3b2a1", "a1b2c3d4", "4d3cb2a1", "a1b23c4d", "34cdb2a1", "a1b2cd34", "0a0d0d0a")}
 
@@ -147,7 +182,7 @@ def inspect_capture(source, operation, parameters, output, expected_sha256):
             snapshot.unlink()
             raise ValueError("Capture changed before a stable snapshot could be read")
         if operation == "capture.summary":
-            command += ["-n", "-r", str(snapshot), "-T", "fields", "-E", "separator=/t", "-E", "aggregator=,", "-E", "occurrence=a"]
+            command += ["-n", "-r", str(snapshot), "-T", "fields", "-E", "separator=/t", "-E", "aggregator=" + AGGREGATOR, "-E", "occurrence=a"]
             command += [option for field in SUMMARY_FIELDS for option in ("-e", field)]
         else:
             command += ["-n", "-r", str(snapshot), "-T", "json", "--no-duplicate-keys"]
@@ -176,6 +211,13 @@ def inspect_capture(source, operation, parameters, output, expected_sha256):
                 "stdout": info.stdout.decode("utf8", errors="replace"), "stderr": info.stderr.decode("utf8", errors="replace"),
                 "executable_sha256": hashlib.sha256(Path(capinfos).read_bytes()).hexdigest()}
         observed = subprocess.run(command, env=environment, capture_output=True)
+        if operation == "capture.summary" and not observed.returncode:
+            # DNS needs message structure (sections, several messages per segment), so it is read from a JSON pass over DNS frames.
+            dns_command = [executable, "-n", "-r", str(snapshot), "-Y", "dns", "-T", "json", "--no-duplicate-keys"]
+            dns_observed = subprocess.run(dns_command, env=environment, capture_output=True)
+            if dns_observed.returncode:
+                raise ValueError("Packet decoder failed on DNS (" + str(dns_observed.returncode) + "): " + dns_observed.stderr.decode("utf8", "replace"))
+            messages = list(dns_messages(json.loads(dns_observed.stdout.decode("utf8") or "[]")))
     finally:
         snapshot.unlink(missing_ok=True)
     warnings = observed.stderr.decode("utf8", errors="replace")
@@ -186,10 +228,11 @@ def inspect_capture(source, operation, parameters, output, expected_sha256):
         return {"engine": {"executable": executable, "sha256": hashlib.sha256(Path(executable).read_bytes()).hexdigest(),
                            "version": version.splitlines()[0]}, "command": command, "source_path": str(source),
                 "capture_metadata": metadata, "snapshot_sha256": expected_sha256, "warnings": warnings,
-                **summarize(text, metadata, parameters.get("max_items", 500)),
+                "dns_command": dns_command, **summarize(text, metadata, parameters.get("max_items", 500), messages),
                 "limitations": ["Offline recorded bytes only; no live acquisition or network requests.",
                     "Endpoints count each packet once for its source and once for its destination; ports come from TCP or UDP only.",
-                    "DNS response addresses are attributed to the first question of the response; answers without a question are listed as unattributed.",
+                    "DNS response addresses are the A and AAAA records of the answer section, attributed to the first question of the response; answers without a question are listed as unattributed, and DNS quoted inside ICMP errors is not counted.",
+                    "Ports belong to an endpoint only when TCP or UDP directly follows the frame's own network layer; quoted, tunnelled and non-first IPv4 fragments add the address without a port.",
                     "HTTP request URIs keep the path; any query string is replaced by <redacted>.",
                     "Encrypted traffic remains encrypted; TLS server names come from cleartext handshakes only."]}
     if operation == "capture.fields":
