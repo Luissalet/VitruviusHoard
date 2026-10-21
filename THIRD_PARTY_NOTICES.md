@@ -31,3 +31,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Swift demangling test vectors
+
+`theseus_tests/fixtures/swift_manglings.txt` is an unmodified copy of `test/Demangle/Inputs/manglings.txt`
+from https://github.com/swiftlang/swift at tag `swift-6.4.1-RELEASE`. It is used only as test data to check
+the demangler output against the expectations of the Swift project's own test suite.
+
+Copyright Apple Inc. and the Swift project authors.
+Licensed under the Apache License, Version 2.0 with Runtime Library Exception
+(https://swift.org/LICENSE.txt). See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors.

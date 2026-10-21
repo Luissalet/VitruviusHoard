@@ -81,6 +81,7 @@ TOOLS = [
     tool("theseus_job_read", "Read background analysis/comparison progress, retained sources, frozen inputs, program hashes and diagnostics.", {"job_id": S}, ["job_id"]),
     tool("theseus_job_cancel", "Stop owned host clients of an active analysis or comparison. Completed observations can remain; cancellation does not undo target-side effects.", {"job_id": S}, ["job_id"], False),
     tool("theseus_project_export", "Export a project JSON record with evidence and reproducible comparison receipts. Artifact paths reference originals.", PROJECT, ["project_id"]),
+    tool("theseus_swift_demangle", "Demangle an ordered list of single-line Swift symbols with the free swift-demangle of the installed Swift toolchain. Each symbol returns demangled, unchanged or invalid with its classification (Swift symbol, thunk target, foreign calling convention); nothing is executed or loaded.", {"symbols": {"type": "array", "minItems": 1, "maxItems": 10000, "items": {"type": "string", "minLength": 1}}}, ["symbols"]),
     tool("theseus_local_engines", "Discover installed local free binary analysis engines and JDK. No hosted service.", {}),
     tool("theseus_binary_analysis", "Analyze a local binary with installed Ghidra: retained native project, functions, pseudocode and call edges. Does not execute the binary. Returns a job ID for theseus_job_read. Descompilar, desensamblar, funciones.", ARTIFACT, ["project_id", "artifact_id"], False),
     tool("theseus_function_read", "Read one decompiled function with its callees, callers, address and artifact hash, without loading the entire analysis into context.", {"job_id": S, "address": S}, ["job_id", "address"]),
@@ -127,6 +128,10 @@ class ArtifactAdd(Payload):
 
 class ClientInspection(Payload):
     family: Literal['apktool', 'pcap', 'objdump']
+
+
+class SwiftSymbols(Payload):
+    symbols: list[str]
 
 
 class SourceReference(Payload):
@@ -332,6 +337,9 @@ def create_app(data=None, port=5217, recover=True):
             return comparisons.cancel(**args)
         if name == "theseus_project_export":
             return {**store.export(**args), "workflow": workflow.read(args["project_id"])}
+        if name == "theseus_swift_demangle":
+            from .swift_demangle import demangle
+            return demangle(args["symbols"])
         if name == "theseus_local_engines":
             return {**binary_analysis.engines(), "native": native_analysis.engine()}
         if name == "theseus_binary_analysis":
@@ -414,6 +422,11 @@ def create_app(data=None, port=5217, recover=True):
     @app.get("/api/analyses/catalog")
     def analysis_catalog():
         return native_analysis.catalog()
+
+    @app.post('/api/swift/demangle')
+    def swift_demangle(body: SwiftSymbols):
+        from .swift_demangle import demangle
+        return demangle(body.symbols)
 
     @app.post('/api/engines/inspect')
     def inspect_client(body: ClientInspection):

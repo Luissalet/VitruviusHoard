@@ -9,6 +9,26 @@ const escape = (value) =>
   );
 const json = (value) => JSON.stringify(value, null, 2);
 let clientInspectionDownload = null;
+const SWIFT_STATUS = {demangled: "demangled", unchanged: "sin cambio", invalid: "inválido"};
+async function demangleSwiftForm(form) {
+  const button = form.querySelector('button[type="submit"]');
+  const result = $("#swift-demangle-result");
+  const symbols = String(new FormData(form).get("symbols") || "").split(/\r?\n/u).filter((line) => line.length);
+  button.disabled = true;
+  result.setAttribute("aria-busy", "true");
+  result.textContent = "Demangling…";
+  try {
+    const observed = await api("/swift/demangle", {symbols});
+    result.innerHTML = '<ol class="swift-symbols">' + observed.symbols.map((row) =>
+      `<li data-status="${escape(row.status)}"><code>${escape(row.input)}</code> → <code>${escape(row.output)}</code> <span class="small">${escape(SWIFT_STATUS[row.status] || row.status)}</span></li>`).join("") +
+      `</ol><p class="small">${escape(observed.provenance[0]?.version.split("\n").find((line) => /version/iu.test(line)) || "")}</p>`;
+  } catch (error) {
+    result.textContent = error.message;
+  } finally {
+    result.removeAttribute("aria-busy");
+    button.disabled = false;
+  }
+}
 async function inspectClientForm(form) {
   const button = form.querySelector('button[type="submit"]');
   const result = $("#client-inspection-result");
@@ -1146,6 +1166,10 @@ document.addEventListener("submit", (event) => {
   event.preventDefault();
   if (form.id === "client-inspection-form") {
     void inspectClientForm(form);
+    return;
+  }
+  if (form.id === "swift-demangle-form") {
+    void demangleSwiftForm(form);
     return;
   }
   if (form.id === "strings-filter") {

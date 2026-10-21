@@ -28,7 +28,7 @@ async def test_discovery_never_calls_http_even_with_retired_autostart_enabled(mo
         pytest.fail("Discovery attempted HTTP")
     monkeypatch.setattr(owner, "HTTP_CLIENT", unexpected)
     tools = await owner.tools()
-    assert len(tools) == 124
+    assert len(tools) == 125
     assert {"diagram_document_save", "software_modules"} <= {tool.name for tool in tools}
 
 

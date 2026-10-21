@@ -61,6 +61,15 @@
           </form>
           <div id="client-inspection-result" role="status" aria-live="polite"></div>
         </details>
+        <details id="swift-demangle">
+          <summary>Demangle Swift</summary>
+          <form id="swift-demangle-form">
+            <label>Símbolos, uno por línea<textarea name="symbols" rows="4" spellcheck="false" required></textarea></label>
+            <p class="small">Usa swift-demangle de la toolchain de Swift instalada. No carga ningún binario.</p>
+            <button type="submit">Demangle</button>
+          </form>
+          <div id="swift-demangle-result" role="status" aria-live="polite"></div>
+        </details>
         <p class="rail-note">
           Los artefactos se inspeccionan sin ejecutarlos. Las comparaciones usan
           los programas que indiques en cada escenario.
