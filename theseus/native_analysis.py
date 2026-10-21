@@ -48,7 +48,7 @@ OPERATIONS = [
     {"name": "apple.keyed_archive", "title": "Apple · Archivo de objetos Foundation",
      "description": "Lee NSKeyedArchiver XML/binario como grafo de objetos, clases, raíces y referencias UID. No instancia clases.",
      "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
-         "root": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 0}}}},
+         "root": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1}}}},
     {"name": "apple.nib", "title": "Apple · Interfaz NIBArchive",
      "description": "Recupera los objetos, clases, valores y conexiones de un NIBArchive compilado, sin cargar su interfaz.", "inputSchema": EMPTY_PARAMETERS},
     {"name": "wasm.artifact", "title": "WebAssembly · Interfaz y desensamblado",
