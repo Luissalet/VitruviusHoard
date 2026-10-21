@@ -11,7 +11,7 @@ import sqlite3
 import subprocess
 
 OPERATIONS = [{"name": "sqlite.database", "title": "SQLite · Esquema, registros y consultas",
-    "description": "Inspecciona una captura privada del archivo y su WAL: esquema, tablas, índices, relaciones y consultas de lectura. Conserva BLOB e enteros de 64 bits sin pérdida.",
+    "description": "Inspecciona una captura privada del archivo y su WAL: esquema, tablas, índices, relaciones, consultas de lectura (también sobre tablas FTS5) y pragmas informativos como table_xinfo o integrity_check. Conserva BLOB e enteros de 64 bits sin pérdida.",
     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
         "query": {"type": "string"}, "bindings": {"type": "array"},
         "table": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
@@ -95,6 +95,26 @@ def inspect_signature(source):
     return result
 
 
+ALLOWED_ACTIONS = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
+# Introspection pragmas that only report. FTS5 itself reads data_version while answering a query.
+REPORTING_PRAGMAS = {"data_version", "schema_version", "user_version", "application_id", "encoding", "page_size",
+                     "page_count", "freelist_count", "compile_options", "function_list", "module_list", "pragma_list",
+                     "collation_list", "integrity_check", "quick_check", "foreign_key_check"}
+TABLE_PRAGMAS = {"table_info", "table_xinfo", "table_list", "index_list", "index_info", "index_xinfo", "foreign_key_list",
+                 "integrity_check", "quick_check", "foreign_key_check"}
+
+
+def read_only_authorizer(action, first, second, *_):
+    """Queries may read rows and call functions; pragmas are admitted only in their reporting forms."""
+    if action in ALLOWED_ACTIONS:
+        return sqlite3.SQLITE_OK
+    if action == sqlite3.SQLITE_PRAGMA:
+        name = (first or "").lower()
+        if name in TABLE_PRAGMAS or (name in REPORTING_PRAGMAS and second is None):
+            return sqlite3.SQLITE_OK
+    return sqlite3.SQLITE_DENY
+
+
 def sqlite_database(source, parameters, output):
     # SQLite can create shared-memory sidecars even when its main file is opened
     # read-only. Read the selected database family only through a private capture.
@@ -146,8 +166,7 @@ def inspect_sqlite_snapshot(source, parameters, directory):
             query = 'SELECT * FROM "' + parameters["table"].replace('"', '""') + '"'
         rows, columns = [], []
         if query is not None:
-            allowed = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
-            db.set_authorizer(lambda action, *_: sqlite3.SQLITE_OK if action in allowed else sqlite3.SQLITE_DENY)
+            db.set_authorizer(read_only_authorizer)
             cursor = db.execute(query, parameters.get("bindings", []))
             columns = [row[0] for row in cursor.description or []]
             offset, maximum = parameters.get("offset", 0), parameters.get("limit")
