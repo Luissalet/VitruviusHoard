@@ -851,7 +851,11 @@ public final class TheseusGhidraBridge extends HeadlessScript {
                 match.addProperty("address", canonicalAddress(found));
                 match.addProperty("segment", block.getName());
                 Long offset = targetFileOffset(block, found).offset();
-                match.add("file_offset", offset == null ? JsonNull.INSTANCE : GSON.toJsonTree(offset));
+                // The loader may rewrite memory (relocations, import slots); a file offset is reported only when the
+                // original file bytes there satisfy the same pattern, otherwise the match exists in memory only.
+                boolean fileMatches = offset != null && originalBytesMatch(block, found, bytes, masks);
+                match.add("file_offset", fileMatches ? GSON.toJsonTree(offset) : JsonNull.INSTANCE);
+                if (offset != null && !fileMatches) match.addProperty("memory_differs_from_file", true);
                 Function function = currentProgram.getFunctionManager().getFunctionContaining(found);
                 JsonObject procedure = new JsonObject();
                 if (function != null) {
@@ -889,6 +893,24 @@ public final class TheseusGhidraBridge extends HeadlessScript {
     }
 
     private record TargetFileOffset(Long offset, int mappings) {}
+
+    private boolean originalBytesMatch(MemoryBlock block, Address start, byte[] bytes, byte[] masks) throws Exception {
+        for (int index = 0; index < bytes.length; index++) {
+            Address address = start.addNoWrap(index);
+            Byte original = null;
+            for (MemoryBlockSourceInfo source : block.getSourceInfos()) {
+                if (!source.contains(address) || source.getFileBytes().isEmpty() ||
+                    !isTargetSource(source.getFileBytes().get())) continue;
+                long candidate = source.getFileBytesOffset(address);
+                if (candidate < 0) continue;
+                original = source.getFileBytes().get().getOriginalByte(candidate);
+            }
+            if (original == null) return false;
+            int mask = masks == null ? 0xff : masks[index] & 0xff;
+            if (((original & 0xff) & mask) != ((bytes[index] & 0xff) & mask)) return false;
+        }
+        return true;
+    }
 
     private TargetFileOffset targetFileOffset(MemoryBlock block, Address address) throws Exception {
         Long offset = null;
@@ -3726,7 +3748,25 @@ public final class TheseusGhidraBridge extends HeadlessScript {
         }
         for (Instruction instruction : instructions) {
             boundary.observe(instruction);
-            if (!instruction.getFlowType().isCall()) continue;
+            FlowType flow = instruction.getFlowType();
+            if (flow.isJump() && flow.isComputed() && !flow.isCall()) {
+                // A computed jump without recovered destinations (no jump table) can leave the procedure, as a tail
+                // dispatch through a function-pointer table does; its targets are unknown, so callees are incomplete.
+                boolean recovered = false;
+                for (Reference reference : instruction.getReferencesFrom()) {
+                    if (reference.getReferenceType().isFlow()) {
+                        recovered = true;
+                        break;
+                    }
+                }
+                if (!recovered) {
+                    calls.unrepresented++;
+                    calls.unresolved(instruction.getAddress(),
+                        "Computed jump without recovered destinations; it may transfer to another procedure, as a tail dispatch does");
+                }
+                continue;
+            }
+            if (!flow.isCall()) continue;
             boolean destination = false;
             for (Reference reference : instruction.getReferencesFrom()) {
                 if (!reference.getReferenceType().isCall()) continue;
