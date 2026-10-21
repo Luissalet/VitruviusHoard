@@ -234,6 +234,10 @@ export const readGoBinaryContainer = (bytes: Buffer): GoBinaryContainer => {
           "unsupported",
           "Universal/fat Mach-O containers require selecting a thin slice",
         );
+      // A Mach-O architecture table whose slice ranges are invalid is a
+      // damaged universal file, not an unknown container format.
+      if (identity?.state === "malformed")
+        throw new GoBinaryFormatFailure(identity.category, identity.reason);
     }
     if ([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe].includes(magic))
       return readGoMachoImage(bytes);
