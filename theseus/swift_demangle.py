@@ -11,9 +11,9 @@ import subprocess
 # Mangling prefixes the demangler recognises: the original Swift 1-3 scheme (_T), Swift 4 (_T0), 4.2 ($S), 5 and later ($s), Embedded Swift ($e) and macro expansions.
 PREFIXES = ('_T0', '$s', '$S', '$e', '_$s', '_$S', '_$e', '@__swiftmacro_', '_T')
 MAX_SYMBOLS = 10000
-COMMAND_BUDGET = 24000  # characters per invocation, below the Windows command-line limit
+MAX_INPUT_BYTES = 8 * 1024 * 1024
 # --classify prefixes a line with {N} (not a Swift symbol), T:<target> (a thunk and the symbol it forwards to) and C (no Swift calling convention).
-CLASSIFICATION = re.compile(r'\{((?:N|T:[^,}]*|C)(?:,(?:T:[^,}]*|C))*)\} ')
+CLASSIFICATION = re.compile(r'(\s*)\{((?:N|T:[^,}]*|C)(?:,(?:T:[^,}]*|C))*)\} ')
 
 
 def engine():
@@ -27,6 +27,8 @@ def engine():
 def validate(symbols):
     if not isinstance(symbols, list) or not 1 <= len(symbols) <= MAX_SYMBOLS:
         raise ValueError(f'symbols must be a list of 1 to {MAX_SYMBOLS} strings')
+    if sum(len(symbol.encode('utf8')) + 1 for symbol in symbols if isinstance(symbol, str)) > MAX_INPUT_BYTES:
+        raise ValueError(f'symbols must total at most {MAX_INPUT_BYTES} bytes')
     for symbol in symbols:
         if not isinstance(symbol, str) or not symbol:
             raise ValueError('Each Swift symbol must be a nonempty string')
@@ -41,39 +43,32 @@ def demangle(symbols):
         raise ValueError('Install the Swift toolchain or set THESEUS_SWIFT_DEMANGLE to swift-demangle')
     digest = hashlib.sha256(Path(executable).read_bytes()).hexdigest()
     version = subprocess.run([executable, '--version'], capture_output=True, timeout=60).stdout.decode('utf8', errors='replace')
-    batches, current, size = [], [], 0
-    for symbol in symbols:
-        if current and size + len(symbol) + 3 > COMMAND_BUDGET:
-            batches.append(current)
-            current, size = [], 0
-        current.append(symbol)
-        size += len(symbol) + 3
-    batches.append(current)
-    rows, provenance = [], []
-    for batch in batches:
-        # '--' ends option parsing, so a symbol that starts with '-' is demangled, not read as an option.
-        command = [executable, '--compact', '--classify', '--', *batch]
-        started = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        reply = subprocess.run(command, capture_output=True, timeout=300)
-        lines = reply.stdout.decode('utf8', errors='replace').split('\n')
-        provenance.append({'executable': executable, 'sha256': digest, 'version': version.strip(), 'argument_count': len(batch),
-                           'exit_code': reply.returncode, 'stderr': reply.stderr.decode('utf8', errors='replace'),
-                           'started_at': started, 'finished_at': datetime.datetime.now(datetime.timezone.utc).isoformat()})
-        if reply.returncode != 0 or len(lines) != len(batch) + 1 or lines[-1] != '':
-            raise ValueError('swift-demangle did not return one line per symbol')
-        for symbol, output in zip(batch, lines):
-            flags = []
-            match = CLASSIFICATION.match(output)
-            if match:
-                flags, output = match.group(1).split(','), output[match.end():]
-            thunk = next((flag[2:] for flag in flags if flag.startswith('T:')), None)
-            classification = {'swift_symbol': 'N' not in flags, 'thunk': thunk is not None,
-                              'thunk_target': thunk or None, 'foreign_calling_convention': 'C' in flags}
-            status = 'demangled' if output != symbol else 'invalid' if symbol.startswith(PREFIXES) else 'unchanged'
-            rows.append({'input': symbol, 'output': output, 'status': status, 'classification': classification})
+    # Symbols travel on standard input, one per line, as in the Swift release suite. Never on the command line:
+    # there the runtime expands @response files and wildcards and adds a $ to names that start with s or S.
+    command = [executable, '--compact', '--classify']
+    started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    reply = subprocess.run(command, input=('\n'.join(symbols) + '\n').encode('utf8'), capture_output=True, timeout=300)
+    lines = [line[:-1] if line.endswith('\r') else line for line in reply.stdout.decode('utf8', errors='replace').split('\n')]
+    provenance = [{'executable': executable, 'sha256': digest, 'version': version.strip(), 'argument_count': len(symbols), 'input': 'stdin',
+                   'exit_code': reply.returncode, 'stderr': reply.stderr.decode('utf8', errors='replace'),
+                   'started_at': started, 'finished_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}]
+    if reply.returncode != 0 or len(lines) != len(symbols) + 1 or lines[-1] != '':
+        raise ValueError('swift-demangle did not return one line per symbol')
+    rows = []
+    for symbol, output in zip(symbols, lines):
+        flags = []
+        match = CLASSIFICATION.match(output)
+        if match:
+            flags, output = match.group(2).split(','), match.group(1) + output[match.end():]
+        thunk = next((flag[2:] for flag in flags if flag.startswith('T:')), None)
+        status = 'demangled' if output != symbol else 'invalid' if symbol.lstrip().startswith(PREFIXES) else 'unchanged'
+        classification = {'swift_symbol': status != 'unchanged', 'thunk': thunk is not None,
+                          'thunk_target': thunk or None, 'foreign_calling_convention': 'C' in flags}
+        rows.append({'input': symbol, 'output': output, 'status': status, 'classification': classification})
     return {'symbols': rows, 'provenance': provenance,
             'limitations': ['A symbol is invalid when it carries a Swift mangling prefix and swift-demangle returns it unchanged; '
                             'a mangling that decodes to an unexpected but well-formed tree is reported as demangled.',
-                            'Classification comes from swift-demangle --classify: swift_symbol is false without a Swift prefix, '
-                            'thunk_target names the forwarded symbol when the thunk records one, and foreign_calling_convention marks entry points without the Swift calling convention, such as C, Objective-C and value witness functions.',
+                            'Each line is read as text, as swift-demangle reads standard input: Swift symbols inside a line are replaced in place and the rest is kept.',
+                            'Classification comes from swift-demangle --classify: thunk_target names the forwarded symbol when the thunk records one, '
+                            'and foreign_calling_convention marks entry points without the Swift calling convention, such as C, Objective-C and value witness functions.',
                             'Demangling restores declared names and types only; it does not prove the symbol exists in any binary.']}
