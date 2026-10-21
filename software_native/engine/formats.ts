@@ -2,7 +2,9 @@
 import {createHash} from 'node:crypto';
 import {open} from 'node:fs/promises';
 import {contractInfo} from 'evmole';
-import {readGoBinaryImage} from './src/go/GoBinaryImage.js';
+import {GoBinaryFormatFailure,GoBinaryResourceFailure,readGoBinaryImage} from './src/go/GoBinaryImage.js';
+import {RustAuditableFormatFailure,RustAuditableResourceFailure} from './src/rust/RustAuditableReader.js';
+import {universalMachoSlices} from './src/native/UniversalMachoSlices.js';
 import {parseGoModuleBytes} from './src/go/GoModuleText.js';
 import {readRustBinaryImage} from './src/rust/RustBinaryImage.js';
 import {readElectronFuseImage} from './src/electron/ElectronFuseReader.js';
@@ -35,6 +37,27 @@ export interface FormatParameters {
   architecture?:'arm64'|'x86_64'|undefined;max_records?:number|undefined;
 }
 
+const readGoBuild=(bytes:Buffer)=>{
+  const image=readGoBinaryImage(bytes);
+  const moduleBytes=image.build_info ? Buffer.from(image.build_info.module_bytes_base64,'base64') : null;
+  return {...image,module:moduleBytes ? parseGoModuleBytes(moduleBytes.length ? moduleBytes.subarray(16,-16) : moduleBytes) : null};
+};
+
+/** Re-base every file offset a thin Go or Rust reading reports onto the universal file. */
+const shiftFileOffsets=<T extends object>(reading:T,base:number):T=>{
+  const value=reading as Record<string,any>;
+  const info=value.build_info;
+  const auditable=value.auditable_metadata;
+  const rustc=value.rustc_commit;
+  return {...value,
+    ...(info ? {build_info:{...info,header_offset:info.header_offset+base,
+      version_location:{...info.version_location,offset:info.version_location.offset+base},
+      module_location:{...info.module_location,offset:info.module_location.offset+base}}} : {}),
+    ...(auditable ? {auditable_metadata:{...auditable,file_offset:auditable.file_offset+base}} : {}),
+    ...(rustc ? {rustc_commit:{...rustc,hashes:rustc.hashes.map((row:any)=>({...row,file_offset:row.file_offset+base}))}} : {}),
+  } as T;
+};
+
 export async function analyzeFormat(operation:string,bytes:Buffer,path:string,parameters:FormatParameters):Promise<unknown> {
   if(operation==='apple.dispatch') {
     const image=await readMachoImage(async(offset,length)=>bytes.subarray(offset,offset+length),bytes.length);
@@ -64,14 +87,25 @@ export async function analyzeFormat(operation:string,bytes:Buffer,path:string,pa
       return result;
     } finally {await resources.close();}
   }
-  if (operation==='go.build') {
-    const image=readGoBinaryImage(bytes);
-    const moduleBytes=image.build_info ? Buffer.from(image.build_info.module_bytes_base64,'base64') : null;
-    return {...image,module:moduleBytes ? parseGoModuleBytes(moduleBytes.length ? moduleBytes.subarray(16,-16) : moduleBytes) : null,
-      limitations:['Missing build information does not establish that the image is not Go. Native function/type recovery is a separate analysis.']};
+  if (operation==='go.build' || operation==='rust.dependencies') {
+    const read=operation==='go.build' ? readGoBuild : readRustBinaryImage;
+    const limitation=operation==='go.build'
+      ? 'Missing build information does not establish that the image is not Go. Native function/type recovery is a separate analysis.'
+      : 'Dependency metadata exists only in supported auditable sections. An absent section is not a verdict about source language or dependencies. Compiler commits are inferred from recorded strings.';
+    const universal=universalMachoSlices(bytes);
+    if (universal===null) return {...read(bytes),limitations:[limitation]};
+    return {format:'macho-universal',fat_magic:universal.magic,wide_table:universal.wide,
+      slices:universal.slices.map(({bytes:thin,identity_failure:identity,...slice})=>{
+        if (identity!==null) return {...slice,status:'failed',failure:{category:'malformed',reason:identity}};
+        try {return {...slice,status:'read',...shiftFileOffsets(read(thin),slice.file_offset)};}
+        catch (cause) {
+          if (!(cause instanceof GoBinaryFormatFailure || cause instanceof GoBinaryResourceFailure ||
+            cause instanceof RustAuditableFormatFailure || cause instanceof RustAuditableResourceFailure)) throw cause;
+          return {...slice,status:'failed',failure:{category:cause instanceof GoBinaryFormatFailure || cause instanceof RustAuditableFormatFailure ? cause.kind : 'resource',reason:cause.message}};
+        }
+      }),
+      limitations:[limitation,'Each universal slice is read on its own bytes in table order. Every reported file offset counts from the start of the universal file. A failed slice does not hide the others.']};
   }
-  if (operation==='rust.dependencies') return {...readRustBinaryImage(bytes),
-    limitations:['Dependency metadata exists only in supported auditable sections. An absent section is not a verdict about source language or dependencies. Compiler commits are inferred from recorded strings.']};
   if (operation==='electron.fuses') {
     const image=await readElectronFuseImage(path);
     if (image.sha256!==createHash('sha256').update(bytes).digest('hex')) throw new Error('Artifact changed between snapshot and Electron fuse read');

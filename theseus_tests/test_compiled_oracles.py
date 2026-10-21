@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 
 import pytest
@@ -112,6 +113,51 @@ def test_go_binary_without_build_information_is_not_called_non_go(tmp_path, go_w
     assert result['format'] == 'elf' and result['build_info'] is None
     assert result['module'] is None
     assert any('does not establish that the image is not go' in row.lower() for row in result['limitations'])
+
+
+def universal(slices, alignment=14):
+    """Universal Mach-O laid out like lipo: big-endian fat_arch table, slices on 2^alignment boundaries."""
+    table, payload, cursor = b'', [], 1 << alignment
+    for cpu_type, cpu_subtype, data in slices:
+        table += struct.pack('>5I', cpu_type, cpu_subtype, cursor, len(data), alignment)
+        payload.append((cursor, data))
+        cursor = (cursor + len(data) + (1 << alignment) - 1) & -(1 << alignment)
+    image = bytearray(payload[-1][0] + len(payload[-1][1]))
+    image[:8 + len(table)] = struct.pack('>II', 0xcafebabe, len(slices)) + table
+    for at, data in payload:
+        image[at:at + len(data)] = data
+    return bytes(image), [at for at, _ in payload]
+
+
+def test_go_universal_macho_reads_every_slice_like_the_go_toolchain(tmp_path, go_workspace):
+    thin = [(0x01000007, 3, *go_build(go_workspace, 'darwin', 'amd64')), (0x0100000c, 0, *go_build(go_workspace, 'darwin', 'arm64'))]
+    content, offsets = universal([(cpu, sub, binary.read_bytes()) for cpu, sub, binary, _ in thin])
+    fat = tmp_path / 'oracle-universal'
+    fat.write_bytes(content)
+    source, env = go_workspace
+    # The Go reader opens the first architecture of a universal file.
+    first = json.loads(subprocess.run([GO, 'version', '-m', '-json', str(fat)], cwd=source, env=env,
+                                      check=True, capture_output=True, text=True).stdout)
+    assert first == thin[0][3]
+    result = inspect(tmp_path, 'go.build', content)
+    assert result['format'] == 'macho-universal' and len(result['slices']) == 2
+    for slice_result, at, (cpu, sub, binary, oracle) in zip(result['slices'], offsets, thin):
+        assert slice_result['status'] == 'read' and slice_result['file_offset'] == at
+        assert (slice_result['cpu_type'], slice_result['cpu_subtype'], slice_result['file_bytes']) == (cpu, sub, binary.stat().st_size)
+        assert slice_result['format'] == 'macho' and slice_result['architecture'] == oracle_setting(oracle, 'GOARCH')
+        assert slice_result['build_info']['go_version'] == oracle['GoVersion']
+        assert slice_result['module']['path'] == oracle['Path']
+        assert slice_result['module']['settings'] == [{'key': row['Key'], 'value': row['Value']} for row in oracle['Settings']]
+        info = slice_result['build_info']
+        assert at < info['header_offset'] < at + binary.stat().st_size
+        for field, location in [('go_version_bytes_base64', 'version_location'), ('module_bytes_base64', 'module_location')]:
+            span = info[location]
+            assert content[span['offset']:span['offset'] + span['bytes']] == base64.b64decode(info[field])
+    assert any('universal slice' in row for row in result['limitations'])
+
+
+def oracle_setting(oracle, key):
+    return next(row['Value'] for row in oracle['Settings'] if row['Key'] == key)
 
 
 @pytest.fixture(scope='session')
