@@ -4,6 +4,7 @@ fixtures/swift_manglings.txt is test/Demangle/Inputs/manglings.txt from swiftlan
 swift-6.4.1-RELEASE (Apache License 2.0 with Runtime Library Exception): each line is
 `mangled ---> demangled`, the output swift-demangle must produce for that input.
 """
+import json
 from pathlib import Path
 import re
 
@@ -11,7 +12,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from theseus.api import create_app
-from theseus.swift_demangle import COMMAND_BUDGET, PREFIXES, engine
+from theseus.swift_demangle import PREFIXES, engine
 
 pytestmark = pytest.mark.skipif(engine() is None, reason='Requires swift-demangle (THESEUS_SWIFT_DEMANGLE)')
 # Split each line exactly as the release suite's sed commands do: input is the text before ' *--->', expectation after the last '---> *'.
@@ -60,13 +61,27 @@ def test_every_release_vector_demangles_as_the_swift_test_suite_expects(client):
     assert all(row['exit_code'] == 0 and len(row['sha256']) == 64 for row in result['provenance'])
 
 
-def test_lists_longer_than_one_command_line_keep_order_across_invocations(client):
+def test_one_invocation_reads_every_symbol_from_standard_input(client):
     symbols = [mangled for mangled, _ in VECTORS] * 4
-    assert sum(len(symbol) + 3 for symbol in symbols) > COMMAND_BUDGET
     single = call(client, [mangled for mangled, _ in VECTORS])['symbols']
     result = call(client, symbols)
     assert result['symbols'] == single * 4
-    assert len(result['provenance']) > 1 and sum(row['argument_count'] for row in result['provenance']) == len(symbols)
+    assert [(row['argument_count'], row['input']) for row in result['provenance']] == [(len(symbols), 'stdin')]
+
+
+def test_symbols_are_never_read_as_response_files_wildcards_or_dollar_names(client, tmp_path):
+    canary = tmp_path / 'canary.txt'
+    canary.write_text('swift-canary-7f3a', encoding='utf8')
+    symbols = ['@' + str(canary), 'THIRD_PARTY_NOTICES.m?', '*', 'swift_retain', 'sin', 'Sx', 'x' * 40000, '"' * 9000]
+    result = call(client, symbols)
+    assert [(row['output'], row['status']) for row in result['symbols']] == [(symbol, 'unchanged') for symbol in symbols]
+    assert 'swift-canary' not in json.dumps(result)
+
+
+def test_surrounding_spaces_are_kept_and_the_symbol_still_demangles(client):
+    rows = call(client, [' $s4Test3fooyyF', '$s4Test3fooyyF  ', '\t$sSiN'])['symbols']
+    assert [(row['output'], row['status']) for row in rows] == [
+        (' Test.foo() -> ()', 'demangled'), ('Test.foo() -> ()  ', 'demangled'), ('\ttype metadata for Swift.Int', 'demangled')]
 
 
 def test_plain_names_options_and_text_are_never_read_as_manglings(client):
