@@ -57,37 +57,56 @@ def value(raw):
     return raw
 
 
-def plist_value(raw, xml=False, ancestors=()):
+MAX_PLIST_VALUES = 1_000_000
+MAX_PLIST_DEPTH = 512
+
+
+def xml_uid(raw):
+    """Core Foundation writes a UID in XML as a one-key CF$UID dictionary holding a non-negative integer (not a boolean)."""
+    return isinstance(raw, dict) and list(raw) == ["CF$UID"] and type(raw["CF$UID"]) is int and raw["CF$UID"] >= 0
+
+
+def plist_value(raw, xml=False, ancestors=(), budget=None):
+    budget = budget if budget is not None else [MAX_PLIST_VALUES]
+    budget[0] -= 1
+    if budget[0] < 0:
+        raise ValueError(f"Property list expands to more than {MAX_PLIST_VALUES} values; shared objects are repeated at every reference")
     if isinstance(raw, plistlib.UID):
         return {"type": "uid", "decimal": str(raw.data)}
-    # Core Foundation writes a UID in XML as a one-key CF$UID dictionary and reads it back as a UID.
-    if xml and isinstance(raw, dict) and list(raw) == ["CF$UID"] and isinstance(raw["CF$UID"], int) and raw["CF$UID"] >= 0:
+    if xml and xml_uid(raw):
         return {"type": "uid", "decimal": str(raw["CF$UID"])}
     if isinstance(raw, datetime.datetime):
         return {"type": "date", "iso8601": raw.isoformat(), "timezone": "UTC"}
     if isinstance(raw, (dict, list)):
         if id(raw) in ancestors:
             raise ValueError("Property list contains a reference cycle")
+        if len(ancestors) >= MAX_PLIST_DEPTH:
+            raise ValueError(f"Property list nests deeper than {MAX_PLIST_DEPTH} containers")
         inner = (*ancestors, id(raw))
         if isinstance(raw, dict):
-            return {key: plist_value(item, xml, inner) for key, item in raw.items()}
-        return [plist_value(item, xml, inner) for item in raw]
+            return {key: plist_value(item, xml, inner, budget) for key, item in raw.items()}
+        return [plist_value(item, xml, inner, budget) for item in raw]
     return value(raw)
 
 
 def inspect_plist(source):
     raw = source.read_bytes()
-    parsed = plistlib.loads(raw)
+    try:
+        parsed = plistlib.loads(raw)
+    except RecursionError:
+        raise ValueError(f"Property list nests too deeply to parse") from None
     xml = not raw.startswith(b"bplist00")
     kind = "dictionary" if isinstance(parsed, dict) else "array" if isinstance(parsed, list) else "scalar"
-    if kind == "dictionary" and xml and list(parsed) == ["CF$UID"]:
+    if kind == "dictionary" and xml and xml_uid(parsed):
         kind = "scalar"
     pairs = parsed.items() if kind == "dictionary" else enumerate(parsed) if kind == "array" else [("$", parsed)]
     ancestors = (id(parsed),) if kind != "scalar" else ()
+    budget = [MAX_PLIST_VALUES]
     return {"format": "xml" if xml else "binary", "container_type": kind,
-            "entries": [{"name": str(key), "value": plist_value(item, xml, ancestors)} for key, item in pairs],
+            "entries": [{"name": str(key), "value": plist_value(item, xml, ancestors, budget)} for key, item in pairs],
             "limitations": ["Dates use the standard plist parser's datetime precision; exact original numeric bytes remain identified by the artifact hash.",
-                            "In XML a dictionary whose only key is CF$UID with a non-negative integer is a UID, as Core Foundation reads it."]}
+                            "In XML a dictionary whose only key is CF$UID with a non-negative integer is a UID, as Core Foundation reads it.",
+                            f"Shared objects are expanded at every reference, up to {MAX_PLIST_VALUES} values and {MAX_PLIST_DEPTH} nested containers; larger lists fail rather than return a partial tree."]}
 
 
 def inspect_signature(source):

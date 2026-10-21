@@ -674,3 +674,37 @@ def test_zero_limit_cannot_stall_a_paging_client(run):
     raw = encode_archive(sample(B).document(), B)
     with pytest.raises(Exception, match='400'):
         run.ok('apple.keyed_archive', raw, {'limit': 0})
+
+
+@pytest.mark.parametrize('flag', [b'<true/>', b'<false/>', b'<real>5.0</real>', b'<integer>-1</integer>'])
+def test_xml_cf_uid_dictionary_without_a_non_negative_integer_stays_a_dictionary(run, flag):
+    # plistlib reads <true/> as True, which is an int subclass in Python; Core Foundation only reads an integer here
+    raw = b'<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>u</key><dict><key>CF$UID</key>' + flag + b'</dict></dict></plist>'
+    entry = run.ok('apple.plist', raw)['entries'][0]
+    assert entry['name'] == 'u' and set(entry['value']) == {'CF$UID'}
+
+
+def test_shared_objects_that_expand_beyond_the_value_budget_fail_quickly(run):
+    # object i is [i+1, i+1]: 40 levels are 41 bplist objects but 2**41 values once every reference is expanded
+    objects = [[None, None] for _ in range(40)] + ['leaf']
+    for index in range(40):
+        objects[index][0] = objects[index][1] = objects[index + 1]
+    raw = dumps({'root': objects[0]}, B)
+    assert len(raw) < 2000
+    import time
+    started = time.monotonic()
+    run.fails('apple.plist', raw, mentions='expands to more than')
+    assert time.monotonic() - started < 60
+
+
+def test_shared_but_small_graphs_are_expanded_in_full(run):
+    leaf = {'k': 1}
+    shared = [leaf, leaf, [leaf, leaf]]
+    result = run.ok('apple.plist', dumps({'root': shared}, B))
+    assert result['entries'][0]['value'] == [{'k': 1}, {'k': 1}, [{'k': 1}, {'k': 1}]]
+
+
+def test_nesting_beyond_the_depth_limit_fails_with_a_message(run):
+    raw = b'<?xml version="1.0"?><plist version="1.0">' + b'<array>' * 3000 + b'</array>' * 3000 + b'</plist>'
+    run.fails('apple.plist', raw, mentions='nest')
+
