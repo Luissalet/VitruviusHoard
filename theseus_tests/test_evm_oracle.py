@@ -133,7 +133,7 @@ def test_compiled_selectors_mutability_and_metadata_match_solc(tmp_path, source,
     assert result['runtime_execution'] == 'not-performed' and result['discovery_completeness'] == 'unknown'
 
 
-def test_every_declared_inference_difference_occurs():
+def test_every_declared_inference_exception_names_a_compiled_function():
     # Keeps the exception table honest: an entry that no longer names a compiled function must go.
     signatures = set()
     for source, name in [(LEDGER, 'Ledger'), (SHAPES, 'Shapes')]:
