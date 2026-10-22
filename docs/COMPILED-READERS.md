@@ -43,3 +43,7 @@ previously omitted test-only commits, the obsolete catalogue-count expectation
 and the opt-in design test mount.
 Historical failed checks are preserved separately.
 See [batch acceptance](../tasks/submission-reader-batch.md).
+
+## Installed candidate acceptance
+
+The private installed wheel was checked byte for byte and passed the native stdio MCP and normal browser flows recorded in `codex-installed-qa22a.json`. It was packaged from `eef5f442507f672f4f0808b5946094b53ea972a8`, with wheel SHA-256 `02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594`. The final coverage/acceptance documentation is outside the wheel; its later commit changes no packaged source or UI member. Integration and publication have separate receipts. These checks do not certify the remaining open contracts.
