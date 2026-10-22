@@ -214,6 +214,7 @@ def test_spa_unknown_api_returns_404_json(client):
     assert r.status_code == 404
 def test_browser_structured_provenance_and_draft_history(tmp_path):
     """Opt-in real browser regression for blank gallery and lost intermediate edits."""
+    from contextlib import asynccontextmanager
     import json
     import os
     import re
@@ -223,6 +224,7 @@ def test_browser_structured_provenance_and_draft_history(tmp_path):
 
     import pytest
     import uvicorn
+    from fastapi import FastAPI
     from PIL import Image
     from playwright.sync_api import expect, sync_playwright
     from conftest import make_services
@@ -241,7 +243,16 @@ def test_browser_structured_provenance_and_draft_history(tmp_path):
     port = listener.getsockname()[1]
     svc = make_services(tmp_path, port=port)
     svc.reference_import_collection(str(manifest))
-    server = uvicorn.Server(uvicorn.Config(create_app(svc.config, svc), log_level="error"))
+    design = create_app(svc.config, svc)
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        async with design.router.lifespan_context(design):
+            yield
+
+    owner = FastAPI(lifespan=lifespan)
+    owner.mount("/design", design)
+    server = uvicorn.Server(uvicorn.Config(owner, log_level="error"))
     thread = threading.Thread(target=lambda: server.run(sockets=[listener]), daemon=True)
     thread.start()
     try:
@@ -255,13 +266,13 @@ def test_browser_structured_provenance_and_draft_history(tmp_path):
                 page = browser.new_page()
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                page.goto(f"http://127.0.0.1:{port}/#/gallery")
+                page.goto(f"http://127.0.0.1:{port}/design/#/gallery")
                 expect(page.get_by_role("heading", name="Gallery", exact=True)).to_be_visible()
                 expect(page.get_by_text('{"spdx":"MIT"}', exact=True)).to_be_visible()
                 page.get_by_role("button", name=re.compile("Structured reference")).click()
                 expect(page.get_by_text('Revision: {"tag":"v1"}', exact=True)).to_be_visible()
                 expect(page.get_by_text('Patterns: {"primary":"editorial"}', exact=True)).to_be_visible()
-                page.goto(f"http://127.0.0.1:{port}/#/critique")
+                page.goto(f"http://127.0.0.1:{port}/design/#/critique")
                 editor = page.get_by_label("HTML", exact=True)
                 editor.fill("<h1>Draft A</h1>")
                 page.get_by_text("Original HTML patterns", exact=True).click()
