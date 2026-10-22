@@ -26,7 +26,7 @@ const portfolioOperations=['artifact.inventory','artifact.extract','managed.grap
 
 const requestSchema = z.object({
   operation:z.enum(['managed.artifact','managed.members','managed.native_boundaries','go.build','rust.dependencies',
-    'electron.fuses','apple.macho','apple.dispatch','apple.keyed_archive','apple.nib','pe.resources','wasm.artifact','evm.interface','flutter.elf','javascript.application','javascript.query','javascript.feature',
+    'electron.fuses','apple.macho','apple.dispatch','apple.keyed_archive','apple.nib','pe.resources','wasm.artifact','evm.interface','flutter.elf','flutter.build','flutter.aot','javascript.application','javascript.query','javascript.feature',
     'artifact.compare','managed.compare','javascript.compare_versions','javascript.compare_exports','javascript.recover','source.graph',
     'javascript.compare_source','managed.reconstruction','managed.verify_native','wasm.compare_interfaces','javascript.trace_source','javascript.trace_imports','evidence.call_paths','evidence.compare_functions',...portfolioOperations]),
   path:z.string().min(1),
@@ -34,7 +34,7 @@ const requestSchema = z.object({
     method_limit:z.number().int().min(0).optional(), user_strings:z.boolean().optional(),
     encoding:z.enum(['raw','hex']).optional(), root:z.string().optional(), offset:z.number().int().min(0).optional(),
     limit:z.number().int().min(0).optional(), symbols:z.array(z.string()).optional(),
-    snapshot_offsets:z.array(z.number().int().min(0)).optional(),source_paths:z.array(z.string()).optional(),query:z.unknown().optional(),
+    snapshot_offsets:z.array(z.number().int().min(0)).optional(),abi:z.string().regex(/^[a-z0-9_-]{2,16}$/u).optional(),source_paths:z.array(z.string()).optional(),query:z.unknown().optional(),
     glue_paths:z.array(z.string().min(1)).optional(),candidate_paths:z.array(z.string().min(1)).optional(),
     output_directory:z.string().optional(),architecture:z.enum(['arm64','x86_64']).optional(),max_records:z.number().int().min(1).optional()}).strict().default({}),
   expected_input_sha256:z.string().optional(),source_artifact_sha256:z.string().optional(),
