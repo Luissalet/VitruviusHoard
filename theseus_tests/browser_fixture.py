@@ -85,7 +85,10 @@ def browser_fixture(folder,http_port=0,debugging_port=0,rule_limit=128,extra_scr
                 except subprocess.TimeoutExpired:
                     for child,saved in zip(owned,cleanup):
                         try:
-                            assert child.create_time()==saved['create_time'] and child.cmdline()==saved['command']
+                            # Windows may no longer expose argv while this exact
+                            # owned process is exiting. PID plus creation time
+                            # still distinguishes it from a reused PID.
+                            assert child.create_time()==saved['create_time']
                             child.terminate()
                         except psutil.NoSuchProcess:pass
                     process.wait(timeout=5)
@@ -96,7 +99,7 @@ def browser_fixture(folder,http_port=0,debugging_port=0,rule_limit=128,extra_scr
                 for child in remaining:
                     try:
                         saved=identities[child.pid]
-                        assert child.create_time()==saved['create_time'] and child.cmdline()==saved['command']
+                        assert child.create_time()==saved['create_time']
                         child.terminate()
                     except psutil.NoSuchProcess:pass
                 _,remaining=psutil.wait_procs(remaining,timeout=5)
