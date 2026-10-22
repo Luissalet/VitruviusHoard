@@ -3316,22 +3316,33 @@
       "status": "semantic-review-pending",
       "scope": "Complete saved package observations with optional linked summary delivery and retained summary/UTF-16 manifest windows from finished or imported sources. Independent and installed acceptance pending.",
       "acceptance": {
-        "state": "source-MCP-UI-validated-pending-independent-installed",
+        "state": "corrected-source-MCP-UI-validated-pending-independent-installed",
         "task": 1162,
         "tests": [
           "theseus_tests/test_android_projection.py",
           "theseus_tests/test_android_static.py",
           "theseus_tests/test_native_analysis.py",
           "theseus_tests/test_retained_workflow.py",
-          "theseus_tests/test_structured_recovery.py"
+          "theseus_tests/test_structured_recovery.py",
+          "theseus_tests/test_evidence.py",
+          "theseus_tests/test_byte_evidence_sources.py",
+          "theseus_tests/test_retained_evidence.py"
         ],
         "source_proofs": [
           "codex-android1162-c.xml",
           "codex-android1162-mcp22b.json",
           "codex-android1162-ui22.json",
-          "codex-android1162-ui-verified22.json"
+          "codex-android1162-ui-verified22.json",
+          "codex-android1162-e-red.xml",
+          "codex-android1162-f-green.xml",
+          "codex-android1162-g.xml",
+          "codex-android1162-h.xml",
+          "codex-android1162-i-timing.xml",
+          "codex-android1162-mcp23a.json",
+          "codex-android1162-ui23a.json",
+          "codex-android1162-ui-verified23a.json"
         ],
-        "scope": "34 area PASS, six actual MCP observations, UI-submitted locale selection and imported manifest window. First author count-oracle error preserved. No installed or whole-application equivalence claim."
+        "scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
       }
     },
     {
@@ -3473,22 +3484,33 @@
       "status": "semantic-review-pending",
       "scope": "Complete decoded resource files, lexical direct string tables selected by locale/locales or explicitly omitted, raw scalar metadata, missing/malformed/unparsed counts and qualified coverage. Independent and installed acceptance pending.",
       "acceptance": {
-        "state": "source-MCP-UI-validated-pending-independent-installed",
+        "state": "corrected-source-MCP-UI-validated-pending-independent-installed",
         "task": 1162,
         "tests": [
           "theseus_tests/test_android_projection.py",
           "theseus_tests/test_android_static.py",
           "theseus_tests/test_native_analysis.py",
           "theseus_tests/test_retained_workflow.py",
-          "theseus_tests/test_structured_recovery.py"
+          "theseus_tests/test_structured_recovery.py",
+          "theseus_tests/test_evidence.py",
+          "theseus_tests/test_byte_evidence_sources.py",
+          "theseus_tests/test_retained_evidence.py"
         ],
         "source_proofs": [
           "codex-android1162-c.xml",
           "codex-android1162-mcp22b.json",
           "codex-android1162-ui22.json",
-          "codex-android1162-ui-verified22.json"
+          "codex-android1162-ui-verified22.json",
+          "codex-android1162-e-red.xml",
+          "codex-android1162-f-green.xml",
+          "codex-android1162-g.xml",
+          "codex-android1162-h.xml",
+          "codex-android1162-i-timing.xml",
+          "codex-android1162-mcp23a.json",
+          "codex-android1162-ui23a.json",
+          "codex-android1162-ui-verified23a.json"
         ],
-        "scope": "34 area PASS, six actual MCP observations, UI-submitted locale selection and imported manifest window. First author count-oracle error preserved. No installed or whole-application equivalence claim."
+        "scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
       }
     },
     {
