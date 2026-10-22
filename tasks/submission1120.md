@@ -61,6 +61,26 @@ check uses the documented `flj` and `oc` commands and verifies actual file state
 
 ## Scope still requiring acceptance
 
+Revision 3 corrects shutdown after the independent revision-2 counterexample.
+The original access violation and all narrowing receipts remain available.
+The debugger stack enters PySide while QApplication destroys Python-backed
+QObject children after the host has finalized Python. Two lifetimes matter:
+the private QA wrapper's stop-marker QTimer and the maintained bridge QObject.
+Deleting only the QA timer fixes the status-only control but still fails the
+full 15-request sequence. Deleting both before interpreter teardown passes
+that sequence with exit 0 and descriptor removal. The product now explicitly
+disposes its own QObject in close; the diagnostic wrapper separately disposes
+its own timer. No QA timer is part of the shipped plugin.
+
+Evidence: `codex-cutter-narrow22-status_debug/socket-control.stdout`,
+`codex-cutter-narrow22-status_deletetimer/socket-control.json`,
+`codex-cutter-narrow22-fixed_full/socket-control.json`, and
+`codex-cutter-narrow22-fixed_full_product/socket-control.json`. The first
+debugger helper timed out during discovery before its protected cleanup;
+its own stop marker subsequently closed the editor and the debugger captured
+the shutdown stack. This diagnostic failure is preserved, not counted as a
+passing live operation. The source fix still requires independent review.
+
 Independent source review and its own tests, combined regression as appropriate,
 fresh packaged/installed MCP/UI acceptance, integration and publication have not
 been claimed by this source submission. Both ledger rows stay pending. Document

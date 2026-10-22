@@ -8,6 +8,7 @@ import socket
 import uuid
 
 import cutter
+import shiboken6
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtWidgets import QApplication
 
@@ -179,6 +180,9 @@ class Bridge(QObject):
                 self.path.unlink()
         except (OSError, ValueError):
             pass
+        # The host may finalize Python before destroying QApplication children.
+        # Dispose this Python-backed QObject while its interpreter is still live.
+        shiboken6.delete(self)
 
 
 _bridge = None
