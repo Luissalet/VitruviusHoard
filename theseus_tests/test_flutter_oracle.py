@@ -857,3 +857,32 @@ def test_selected_offset_too_close_to_the_end_for_a_header_is_never_complete(lab
         assert rows and all(row['complete'] is False and row['magicValid'] is False for row in rows)
     else:
         assert job['state'] in ('failed', 'rejected')
+
+
+@pytest.mark.parametrize('mutation', ['missing-code', 'tiny-symbol', 'outside-symbol'])
+def test_snapshot_completeness_respects_defined_symbols_and_their_extents(lab, elfs, mutation):
+    raw = bytearray(elfs['split-ok'])
+    image = ELFFile(io.BytesIO(raw))
+    table = image.get_section_by_name('.dynsym')
+    rows = {symbol.name: (index, symbol) for index, symbol in enumerate(table.iter_symbols())}
+    name = '_kDartIsolateSnapshotData'
+    index, symbol = rows[name]
+    entry = table['sh_offset'] + index * table['sh_entsize']
+    offset = next(image.address_offsets(symbol['st_value']))
+    if mutation == 'missing-code':
+        for code in ['_kDartVmSnapshotInstructions', '_kDartIsolateSnapshotInstructions']:
+            struct.pack_into('<H', raw, table['sh_offset'] + rows[code][0] * table['sh_entsize'] + 6, 0)
+    elif mutation == 'tiny-symbol':
+        struct.pack_into('<Q', raw, entry + 16, 1)
+    else:
+        length = symbol['st_size'] + 16
+        assert offset + length + 4 < len(raw)
+        struct.pack_into('<Q', raw, offset + 4, length)
+    result = lab.run('extent-' + mutation + '.apk', make_apk([('lib/arm64-v8a/libapp.so', raw, DEFLATED)]), 'flutter.aot')
+    assert result['libapp']['coverage'] == result['coverage'] == 'partial'
+    if mutation != 'missing-code':
+        elf = lab.run('extent-' + mutation + '.so', raw, 'flutter.elf')
+        snapshot = next(row for row in elf['snapshots'] if row['name'] == name)
+        assert snapshot['complete'] is False
+        if mutation == 'tiny-symbol':
+            assert snapshot['magicValid'] is False and snapshot['hash'] is None
