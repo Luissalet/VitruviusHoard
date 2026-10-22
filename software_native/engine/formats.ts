@@ -15,7 +15,8 @@ import {InterfaceBuilderDecodeBudget} from './src/artifacts/apple/InterfaceBuild
 import {decodeEvmBytecodeCarrier} from './src/evm/EvmBytecodeCarrier.js';
 import {inspectSolidityMetadata} from './src/evm/SolidityMetadata.js';
 import {inspectWasm} from './wasm-inspection.js';
-import {readElfHeader,readElfSymbols,readSnapshotHeader} from './src/flutter/DartElf.js';
+import {FULL_AOT_KIND,SPLIT_SNAPSHOT_SYMBOLS,UNIFIED_SNAPSHOT_SYMBOLS,readElfHeader,readElfSymbols,readSnapshotHeader,snapshotLayout} from './src/flutter/DartElf.js';
+import {identifyFlutterBuild,inspectDartAot} from './src/flutter/FlutterApk.js';
 import {readElfBuildIds} from './src/flutter/ElfBuildId.js';
 import {ArtifactResourceScope} from './src/artifacts/ArtifactResourceScope.js';
 import {reconstructJavaScriptArtifact} from './src/application/javascript/JavaScriptArtifactReconstruction.js';
@@ -30,7 +31,7 @@ import {decodeAppleDispatchMetadata} from './src/native/AppleDispatchMetadata.js
 
 export interface FormatParameters {
   encoding?:'raw'|'hex'|undefined; root?:string|undefined; offset?:number|undefined; limit?:number|undefined;
-  symbols?:string[]|undefined; snapshot_offsets?:number[]|undefined;
+  symbols?:string[]|undefined; snapshot_offsets?:number[]|undefined; abi?:string|undefined;
   source_paths?:string[]|undefined;
   glue_paths?:string[]|undefined;candidate_paths?:string[]|undefined;
   query?:unknown;
@@ -130,19 +131,28 @@ export async function analyzeFormat(operation:string,bytes:Buffer,path:string,pa
         'State mutability is a conservative static inference; a pure source function can be reported as view. An independently known ABI can contradict this inference.']};
   }
   if (operation==='wasm.artifact') return inspectWasm(bytes,path,parameters);
+  if (operation==='flutter.build') return await identifyFlutterBuild(bytes,path);
+  if (operation==='flutter.aot') return await inspectDartAot(bytes,path,parameters);
   if (operation==='flutter.elf') {
     const header=readElfHeader(bytes);
     if (header.failure) throw new Error(header.failure.reason);
-    const names=parameters.symbols??['_kDartVmSnapshotData','_kDartVmSnapshotInstructions','_kDartIsolateSnapshotData','_kDartIsolateSnapshotInstructions'];
+    const defaults=parameters.symbols===undefined;
+    const names=parameters.symbols??[...SPLIT_SNAPSHOT_SYMBOLS,...UNIFIED_SNAPSHOT_SYMBOLS];
     const symbols=await readElfSymbols(bytes,names);
+    const layout=snapshotLayout(symbols.symbols.map(row=>row.name));
+    // With the default list, the symbols of the layout family that is absent are not failures.
+    const absent=layout===null?[]:(layout==='unified'?SPLIT_SNAPSHOT_SYMBOLS:UNIFIED_SNAPSHOT_SYMBOLS) as readonly string[];
+    const symbolFailures=defaults?symbols.failures.filter(row=>!absent.some(name=>row.reason===`symbol ${name} is not in the dynamic symbol table`)):symbols.failures;
+    const aotKind=layout===null?null:FULL_AOT_KIND[layout];
     const file=await open(path,'r');
     let build;
     try {build=await readElfBuildIds(file,bytes.length,undefined);} finally {await file.close();}
-    const snapshots=[...symbols.symbols.filter(row=>row.name.endsWith('Data')).map(row=>({name:row.name,file_offset:row.offset,...readSnapshotHeader(bytes,row.offset)})),
-      ...(parameters.snapshot_offsets||[]).map(offset=>({name:'selected',file_offset:offset,...readSnapshotHeader(bytes,offset)}))];
-    return {header:header.header,symbols:symbols.symbols,symbol_failures:symbols.failures,build_ids:build.candidates,
+    const snapshots=[...symbols.symbols.filter(row=>row.name.endsWith('Data')).map(row=>({name:row.name,file_offset:row.offset,...readSnapshotHeader(bytes,row.offset,aotKind)})),
+      ...(parameters.snapshot_offsets||[]).map(offset=>({name:'selected',file_offset:offset,...readSnapshotHeader(bytes,offset,aotKind)}))];
+    return {header:header.header,layout,symbols:symbols.symbols,symbol_failures:symbolFailures,build_ids:build.candidates,
       build_id_failures:build.failures,snapshots,
-      limitations:['Supported ELF/Dart layout identification only. Missing dynamic symbols or snapshot headers remain unknown; this does not reconstruct Dart source.']};
+      limitations:['Supported ELF/Dart layout identification only. Missing dynamic symbols or snapshot headers remain unknown; this does not reconstruct Dart source.',
+        'A snapshot is complete only when its kind is FullAOT for the observed layout: 3 in the split VM/isolate layout, 2 in the unified layout of Dart 3.13; other kinds are reported as observed.']};
   }
   throw new Error('Unknown native format operation: '+operation);
 }

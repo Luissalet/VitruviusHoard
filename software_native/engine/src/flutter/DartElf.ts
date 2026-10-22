@@ -485,15 +485,44 @@ export const readElfSymbols = async (
   };
 };
 
+const MAX_FEATURES_BYTES = 1024;
+
+/** Exported snapshot symbols of the split VM/isolate layout. */
+export const SPLIT_SNAPSHOT_SYMBOLS = [
+  "_kDartVmSnapshotData",
+  "_kDartVmSnapshotInstructions",
+  "_kDartIsolateSnapshotData",
+  "_kDartIsolateSnapshotInstructions",
+] as const;
+/** Exported snapshot symbols of the unified layout (Dart 3.13 AOT ELF). */
+export const UNIFIED_SNAPSHOT_SYMBOLS = [
+  "_kDartSnapshotData",
+  "_kDartSnapshotText",
+  "_kDartSnapshotBuildId",
+] as const;
+export type SnapshotLayout = "split" | "unified";
+/** Snapshot::kFullAOT of each layout family's SDK enum. */
+export const FULL_AOT_KIND: Record<SnapshotLayout, number> = { split: 3, unified: 2 };
+
+/** The layout whose symbols were found; unified wins when both appear. */
+export const snapshotLayout = (names: readonly string[]): SnapshotLayout | null =>
+  names.includes("_kDartSnapshotData")
+    ? "unified"
+    : names.some((name) => (SPLIT_SNAPSHOT_SYMBOLS as readonly string[]).includes(name))
+      ? "split"
+      : null;
+
 /** Read one Dart snapshot section header from its file offset. */
 export const readSnapshotHeader = (
   bytes: Buffer,
   offset: number,
+  fullAotKind: number | null = 3,
 ): {
   magicValid: boolean;
   kind: number | null;
   headerLength: number | null;
   hash: string | null;
+  features: string | null;
   complete: boolean;
 } => {
   const reader = new BoundedReader(bytes);
@@ -507,6 +536,7 @@ export const readSnapshotHeader = (
       kind: null,
       headerLength: null,
       hash: null,
+      features: null,
       complete: false,
     };
   const headerLength = reader.u64(offset + 4);
@@ -518,16 +548,32 @@ export const readSnapshotHeader = (
     )
     .toString("latin1");
   const hash = SNAPSHOT_HASH_PATTERN.test(candidate) ? candidate : null;
+  // The features string follows the hash, NUL-terminated and printable
+  // (build mode, sanitizers, architecture, OS, pointer compression).
+  const featuresStart = offset + SNAPSHOT_HASH_OFFSET + SNAPSHOT_HASH_LENGTH;
+  const featuresEnd =
+    hash === null
+      ? -1
+      : bytes.subarray(featuresStart, featuresStart + MAX_FEATURES_BYTES + 1).indexOf(0);
+  const featureText =
+    featuresEnd < 0
+      ? null
+      : bytes.subarray(featuresStart, featuresStart + featuresEnd).toString("latin1");
+  const features =
+    featureText !== null && /^[\x20-\x7e]*$/u.test(featureText) ? featureText : null;
   // Dart's stored length excludes the four magic bytes and includes the
   // 20-byte fixed header and the version hash. Aligned data may follow it
   // inside the exported symbol, but the serialized snapshot must fit.
-  // Kind 3 is FullAOT in the supported Dart 2.14 layout; enum values change
-  // across SDK versions, so other kinds remain uninterpreted observations.
+  // The FullAOT value depends on the SDK's Snapshot::Kind enum: 3 while
+  // kFullCore existed (split VM/isolate layout), 2 in the unified layout of
+  // Dart 3.13. The caller passes the value of the layout it observed; null
+  // means the layout is unknown and the header is never complete.
   const complete =
     headerLength !== null &&
     headerLength >= SNAPSHOT_HASH_OFFSET + SNAPSHOT_HASH_LENGTH - 4 &&
     headerLength <= bytes.length - offset - 4 &&
-    kind === 3 &&
+    fullAotKind !== null &&
+    kind === fullAotKind &&
     hash !== null;
-  return { magicValid: true, kind, headerLength, hash, complete };
+  return { magicValid: true, kind, headerLength, hash, features, complete };
 };
