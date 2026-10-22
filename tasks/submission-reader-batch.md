@@ -1,0 +1,9 @@
+# Reviewed reader batch
+
+Runtime `b5b5f0d74562bbc54dfc4193c8100962af326833` is frozen and independently reviewed.
+
+The complete Ghidra-enabled runtime suite ran with these exact preserved JUnit counts: `{"tests": 1888, "failures": 1, "errors": 0, "skipped": 5}`. Its only failure was the opt-in design test using the former root mount. After the independently reviewed test-only mount correction, the entire API/browser file passed 31/31 with zero skips. Production code is unchanged. `codex-runtime-validation22.json` checks this composition, both original XML digests and the exact case identities; it does not claim a single green full run. The separately configured Go/Mach-O supplement passed 25 tests. The five remaining skips retain their recorded reasons; no skipped backend is certified by its catalogue name.
+
+Actual private MCP125 cold discovery created no profile. Final source reader/transfer checks retain 4 native documents, 5 adverse/packet documents and 18 earlier-reader documents exactly; symbol demangling and Ghidra session flows have separate receipts. Final browser checks include unified AOT/build-id, partial one-byte symbol, literal demangling markers and numeric query output. No shared owner or original Theseus server was started.
+
+All main-to-runtime commits occur in the exact approved task snapshots; 1145 separately reviews the two test-only commits omitted from earlier submission lists. The previous full run is retained: 1850 PASS / 37 SKIP and one obsolete 39-versus-40 tool-count assertion, corrected by test-only 1150r2. The second full run uses the shared FastAPI/MCP versions, explicit Go, Frida and private CPU browser flows: 1882 PASS / 5 SKIP / 1 FAIL, with its obsolete root-mounted browser fixture corrected by 1158r1 and rechecked separately. Source inventory and `COMPILED-READERS.md` record each finite accepted scope. Packaging, installation, integration and publication remain pending until separate receipts exist.

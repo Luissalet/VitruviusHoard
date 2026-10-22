@@ -11,7 +11,7 @@
   "completion": {
     "complete": false,
     "percentage": null,
-    "reason": "Every contract is accounted for; name linkage and family test counts are not semantic acceptance. Review and implementation remain open."
+    "reason": "Reviewed original-fixture contracts are tracked separately from installed/publication acceptance. Remaining semantic, implementation and platform work stays open."
   },
   "boundaries": [
     "No Sparks or substitute local text model used.",
@@ -19,8 +19,9 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "semantic-review-pending": 166,
-    "implementation-pending": 16,
+    "independently-reviewed-release-pending": 69,
+    "implementation-pending": 24,
+    "semantic-review-pending": 89,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 18,
     "excluded-by-user": 4
@@ -37,11 +38,29 @@
       "counterparts": [
         "theseus_binary_call:annotate_native_function"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Annotation changes round-trip in the private analysis session while original artifact bytes retain their hash.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_annotations_never_touch_the_original_file"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -55,11 +74,29 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_load_image"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Observed load-image ranges, original-file identities and byte mappings on ELF, PE and AArch64; rewritten memory is distinguished from original file bytes.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_load_image_mappings_hash_the_container_bytes"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -73,11 +110,29 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_data_type"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original C string/array declarations checked against recovered type identity, size/count/stride; unavailable types remain explicit.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_data_types_of_strings_and_the_table_follow_the_c_declarations"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -91,11 +146,29 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_instruction"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Instruction bytes/length and direct call targets checked against original container/disassembly; unresolved computed targets remain unresolved.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_instruction_inspection_and_call_target_resolution"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -109,11 +182,29 @@
       "counterparts": [
         "theseus_binary_call:resolve_native_call_targets"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Instruction bytes/length and direct call targets checked against original container/disassembly; unresolved computed targets remain unresolved.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_instruction_inspection_and_call_target_resolution"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -127,11 +218,29 @@
       "counterparts": [
         "theseus_binary_call:address_name"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -145,11 +254,29 @@
       "counterparts": [
         "theseus_binary_call:comment"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -163,11 +290,29 @@
       "counterparts": [
         "theseus_binary_call:current_address"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_navigation_moves_a_cursor_in_address_order"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -181,11 +326,29 @@
       "counterparts": [
         "theseus_binary_call:current_procedure"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_navigation_moves_a_cursor_in_address_order"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -199,11 +362,29 @@
       "counterparts": [
         "theseus_binary_call:current_document"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Session/document identity bound to the original artifact SHA-256, language, base address and live session listing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_session_identity_and_listing"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -217,11 +398,29 @@
       "counterparts": [
         "theseus_binary_call:goto_address"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_navigation_moves_a_cursor_in_address_order"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -235,11 +434,29 @@
       "counterparts": [
         "theseus_binary_call:inline_comment"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -253,11 +470,29 @@
       "counterparts": [
         "theseus_binary_call:list_bookmarks"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -271,11 +506,29 @@
       "counterparts": [
         "theseus_binary_call:list_documents"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Session/document identity bound to the original artifact SHA-256, language, base address and live session listing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_session_identity_and_listing"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -289,11 +542,29 @@
       "counterparts": [
         "theseus_binary_call:list_names"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -307,11 +578,29 @@
       "counterparts": [
         "theseus_binary_call:list_procedures"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_procedures_match_container_symbols"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -325,11 +614,29 @@
       "counterparts": [
         "theseus_binary_call:list_segments"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Observed mapped sections checked against original ELF/PE container ranges, permissions and mapped/raw size distinctions.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_segments_match_container_sections"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -343,11 +650,29 @@
       "counterparts": [
         "theseus_binary_call:list_strings"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original authored data strings, addresses, byte lengths and search selection checked against container bytes.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_strings_match_the_data_section"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -361,11 +686,29 @@
       "counterparts": [
         "theseus_binary_call:next_address"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_navigation_moves_a_cursor_in_address_order"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -379,11 +722,29 @@
       "counterparts": [
         "theseus_binary_call:prev_address"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_navigation_moves_a_cursor_in_address_order"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -397,11 +758,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_address"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_procedures_match_container_symbols"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -415,11 +794,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_assembly"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Function assembly checked against an independent disassembler on x86; AArch64 is checked through original instruction words because installed objdump cannot decode that target.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_assembly_matches_objdump"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -433,11 +830,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_callees"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_call_graph_matches_disassembly_and_source"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -451,11 +866,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_callers"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_call_graph_matches_disassembly_and_source"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -469,11 +902,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_info"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_procedures_match_container_symbols"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -487,11 +938,29 @@
       "counterparts": [
         "theseus_binary_call:read_function_instructions"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Function assembly checked against an independent disassembler on x86; AArch64 is checked through original instruction words because installed objdump cannot decode that target.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_assembly_matches_objdump"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -505,11 +974,29 @@
       "counterparts": [
         "theseus_binary_call:search_bytes"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Search matches checked against original container scanning; file offsets are only published when the loaded bytes match the original file.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_search_bytes_file_offsets_point_at_bytes_that_match"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -523,11 +1010,29 @@
       "counterparts": [
         "theseus_binary_call:read_bytes"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Read ranges and virtual/file address mapping checked against original bytes, including unavailable mappings.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_read_bytes_and_file_offsets_match_the_container"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -541,11 +1046,29 @@
       "counterparts": [
         "theseus_binary_call:address_to_file_offset"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Read ranges and virtual/file address mapping checked against original bytes, including unavailable mappings.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_read_bytes_and_file_offsets_match_the_container"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -559,11 +1082,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_references"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Instruction/data reference identities and incoming/outgoing directions checked against original disassembly and function-pointer data; omitted direction uses outgoing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_procedure_references_describe_incoming_and_outgoing_edges"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -577,11 +1118,29 @@
       "counterparts": [
         "theseus_binary_call:procedure_pseudo_code"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Single/batch pseudocode retains original authored callees, string/constant references and ordered selected function identities; no source-code equivalence claim.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_pseudo_code_names_callees_strings_and_constants"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -595,11 +1154,29 @@
       "counterparts": [
         "theseus_binary_call:resolve_containing_procedure"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Containing function resolution checked at original function entries/interiors and outside recovered functions.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_resolve_containing_procedure_for_addresses_inside_and_outside_functions"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -613,11 +1190,29 @@
       "counterparts": [
         "theseus_binary_call:search_procedures"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Name search selects the expected recovered original functions and follows session renaming.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_search_procedures_filters_by_name"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -631,11 +1226,29 @@
       "counterparts": [
         "theseus_binary_call:search_strings"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original authored data strings, addresses, byte lengths and search selection checked against container bytes.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_strings_match_the_data_section"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -649,11 +1262,29 @@
       "counterparts": [
         "theseus_binary_call:set_address_name"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -667,11 +1298,29 @@
       "counterparts": [
         "theseus_binary_call:set_addresses_names"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -685,11 +1334,29 @@
       "counterparts": [
         "theseus_binary_call:set_bookmark"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -703,11 +1370,29 @@
       "counterparts": [
         "theseus_binary_call:set_comment"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -721,11 +1406,29 @@
       "counterparts": [
         "theseus_binary_call:set_inline_comment"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -739,11 +1442,29 @@
       "counterparts": [
         "theseus_binary_call:unset_bookmark"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_names_comments_and_bookmarks_round_trip_inside_the_session"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -757,11 +1478,29 @@
       "counterparts": [
         "theseus_binary_call:xrefs"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Instruction/data reference identities and incoming/outgoing directions checked against original disassembly and function-pointer data; omitted direction uses outgoing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_procedure_references_describe_incoming_and_outgoing_edges"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -775,11 +1514,19 @@
       "counterparts": [
         "apple.dispatch"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "The ABI reader is present, but the normal route does not project the LC_SYMTAB/provider symbol inventory or the required identity/profile envelope. Symbol names alone must remain distinct from decoded ABI facts.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1152,
+        "audit_task": 1151,
+        "tests": [
+          "compiled/semantic-apple1151/test_semantics.py"
+        ],
+        "evidence": "Existing ABI tests:21PASS. Independent symbol helper PASS and four contract-gap FAIL, plus a refined Swift protocol-symbol FAIL. These are pending implementation cases, not regressions introduced by the reviewed reader batch.",
+        "proofs": [
+          "compiled/semantic-apple1151/REVIEW.md"
+        ]
       }
     },
     {
@@ -793,11 +1540,19 @@
       "counterparts": [
         "apple.dispatch"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Missing deduplicated class-label projection and literal case-sensitive pattern filter. Existing class and metaclass ABI records are both legitimate and must be preserved.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1152,
+        "audit_task": 1151,
+        "tests": [
+          "compiled/semantic-apple1151/test_semantics.py"
+        ],
+        "evidence": "Existing ABI tests:21PASS. Independent symbol helper PASS and four contract-gap FAIL, plus a refined Swift protocol-symbol FAIL. These are pending implementation cases, not regressions introduced by the reviewed reader batch.",
+        "proofs": [
+          "compiled/semantic-apple1151/REVIEW.md"
+        ]
       }
     },
     {
@@ -811,11 +1566,19 @@
       "counterparts": [
         "apple.dispatch"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Missing combined ObjC/Swift protocol-label inventory independent of conformances, including a Swift protocol symbol/descriptor with no conformer.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1152,
+        "audit_task": 1151,
+        "tests": [
+          "compiled/semantic-apple1151/test_semantics.py"
+        ],
+        "evidence": "Existing ABI tests:21PASS. Independent symbol helper PASS and four contract-gap FAIL, plus a refined Swift protocol-symbol FAIL. These are pending implementation cases, not regressions introduced by the reviewed reader batch.",
+        "proofs": [
+          "compiled/semantic-apple1151/REVIEW.md"
+        ]
       }
     },
     {
@@ -829,11 +1592,29 @@
       "counterparts": [
         "theseus_binary_call:batch_decompile"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Single/batch pseudocode retains original authored callees, string/constant references and ordered selected function identities; no source-code equivalence claim.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_pseudo_code_names_callees_strings_and_constants"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -847,11 +1628,29 @@
       "counterparts": [
         "theseus_binary_call:get_call_graph"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_call_graph_matches_disassembly_and_source"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -865,11 +1664,19 @@
       "counterparts": [
         "apple.dispatch"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Missing procedure/alias name categorization, per-procedure counts, category/pattern filters and unclassified names. Swift conformances or inferred source declarations are not substitutes for this contract.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1152,
+        "audit_task": 1151,
+        "tests": [
+          "compiled/semantic-apple1151/test_semantics.py"
+        ],
+        "evidence": "Existing ABI tests:21PASS. Independent symbol helper PASS and four contract-gap FAIL, plus a refined Swift protocol-symbol FAIL. These are pending implementation cases, not regressions introduced by the reviewed reader batch.",
+        "proofs": [
+          "compiled/semantic-apple1151/REVIEW.md"
+        ]
       }
     },
     {
@@ -883,11 +1690,20 @@
       "counterparts": [
         "theseus_binary_call:xrefs"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Numeric xrefs and exact name inventories work independently; the product lacks exact-name resolution composition and stable resolved/unresolved/name_not_found results.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1157,
+        "audit_task": 1155,
+        "tests": [
+          "compiled/semantic-native22/test_semantic_native.py"
+        ],
+        "proofs": [
+          "compiled/semantic-native22/FINAL-REPORT.md",
+          "compiled/semantic-native22/matrix-final.json"
+        ],
+        "evidence": "Independent original ELF/API controls confirm useful primitives, exact target bytes and explicit native-project reopening; retained counterexamples identify prior baseline gaps. Contract54 has eight positive finite oracles, with installed MCP/UI acceptance still pending."
       }
     },
     {
@@ -901,11 +1717,20 @@
       "counterparts": [
         "theseus_binary_call:read_binary_inventory_summary"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "The raw inventory and segment/count observations match the original ELF, but the consolidated segment_count and conditional common image_base projection are missing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1157,
+        "audit_task": 1155,
+        "tests": [
+          "compiled/semantic-native22/test_semantic_native.py"
+        ],
+        "proofs": [
+          "compiled/semantic-native22/FINAL-REPORT.md",
+          "compiled/semantic-native22/matrix-final.json"
+        ],
+        "evidence": "Independent original ELF/API controls confirm useful primitives, exact target bytes and explicit native-project reopening; retained counterexamples identify prior baseline gaps. Contract54 has eight positive finite oracles, with installed MCP/UI acceptance still pending."
       }
     },
     {
@@ -919,11 +1744,29 @@
       "counterparts": [
         "theseus_binary_call:analyze_function"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original C dossiers checked for body ranges, direct neighbours, pseudocode/assembly, typed arguments/returns, jump tables and selected high-p-code constants. Compiler/version breadth remains finite.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_function_dossier_reports_signature_flow_and_neighbours"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -937,11 +1780,29 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_api"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original C dossiers checked for body ranges, direct neighbours, pseudocode/assembly, typed arguments/returns, jump tables and selected high-p-code constants. Compiler/version breadth remains finite.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_function_dossier_reports_signature_flow_and_neighbours"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -972,11 +1833,29 @@
       "counterparts": [
         "theseus_binary_call:trace_call_path"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original direct call paths checked against the authored graph and independently observed instruction call sites; indirect unknowns remain explicit.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1132,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "d0acea0"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_ghidra_session_oracle.py::test_trace_call_path_follows_the_known_graph"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1076,11 +1955,31 @@
       "counterparts": [
         "apple.macho"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original linked Mach-O slices checked with an independent reader; scoped bundle/image-folder dylib resolution, explicit paths/candidates, versions, flags and unknown system dependencies. No runtime loading or signature authentication.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1109,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "c57c5cf",
+          "6a01b42",
+          "8a63263"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_macho_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1112,11 +2011,30 @@
       "counterparts": [
         "apple.plist"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "XML/binary plist values and keyed archive identities/edges checked against independent construction and plistlib; boolean CF$UID dictionaries remain dictionaries. Expansion beyond one million values or 512 nesting levels fails explicitly, without silently truncating values.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1122,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "d650f93",
+          "bb9af4e"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_apple_plist_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1128,13 +2046,33 @@
         "kind": "native-provider"
       },
       "counterparts": [
-        "artifact.inventory"
+        "apple.macho"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original thin and universal Mach-O architecture slices with table-order identity, CPU/subtype, offset, size and alignment compared with an independent container reader; other formats use their own layout readers.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1109,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "c57c5cf",
+          "6a01b42",
+          "8a63263"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_macho_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1146,11 +2084,32 @@
         "kind": "native-provider"
       },
       "counterparts": [],
-      "status": "implementation-pending",
-      "scope": "Demangle each ordered symbol using a free native implementation; retain demangled, unchanged and invalid states.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Official demangler on stdin, authoritative compact text plus separately matched classification; literal prefix markers, at-signs, wildcards and leading dollar signs are preserved. Tool version/bytes and failures retained; no arbitrary symbol expansion through argv.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1119,
+        "submission_revision": 4,
+        "reviewed_submission_revision": 4,
+        "reviewed_commits": [
+          "f31d4fd",
+          "db1c1d4",
+          "8e93aee",
+          "52a4718"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_swift_demangle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       },
       "group": "swift-demangle"
     },
@@ -1165,11 +2124,30 @@
       "counterparts": [
         "pe.resources"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original x86/x64 resource builds checked leaf by leaf against pefile and authored payloads; identities, offsets, hashes and icon relationships. Payloads remain raw, damaged trees fail explicitly.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1110,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "9572334",
+          "babd715"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_pe_resources_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1264,11 +2242,30 @@
       "counterparts": [
         "artifact.inventory"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1115,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "91fd1d2"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_artifact_oracle.py",
+          "theseus_tests/test_artifact_comparison.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1282,11 +2279,30 @@
       "counterparts": [
         "artifact.extract"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1115,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "91fd1d2"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_artifact_oracle.py",
+          "theseus_tests/test_artifact_comparison.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1318,11 +2334,30 @@
       "counterparts": [
         "apple.keyed_archive"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "XML/binary plist values and keyed archive identities/edges checked against independent construction and plistlib; boolean CF$UID dictionaries remain dictionaries. Expansion beyond one million values or 512 nesting levels fails explicitly, without silently truncating values.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1122,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "d650f93",
+          "bb9af4e"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_apple_plist_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1354,11 +2389,31 @@
       "counterparts": [
         "apple.dylibs"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original linked Mach-O slices checked with an independent reader; scoped bundle/image-folder dylib resolution, explicit paths/candidates, versions, flags and unknown system dependencies. No runtime loading or signature authentication.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1109,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "c57c5cf",
+          "6a01b42",
+          "8a63263"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_macho_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1372,11 +2427,30 @@
       "counterparts": [
         "evm.interface"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original solc builds with optimization variants; selector/interface/storage facts and terminal CBOR metadata. Bytecode argument renderings and mutability retain conservative inference and known widening; no chain execution or authentication.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1104,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "d7029ec",
+          "e1e9e83"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_evm_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1390,11 +2464,31 @@
       "counterparts": [
         "go.build"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Compiler/module metadata and auditable dependency graphs on original Go and Rust builds; per-slice universal Mach-O evidence and original byte ranges. Pointer-encoded Go metadata has synthetic coverage; metadata does not authenticate a producer or recover all language types/functions.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1100,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "f1b92f9",
+          "23ce869",
+          "9cf1b74"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_compiled_oracles.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1408,11 +2502,31 @@
       "counterparts": [
         "rust.dependencies"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Compiler/module metadata and auditable dependency graphs on original Go and Rust builds; per-slice universal Mach-O evidence and original byte ranges. Pointer-encoded Go metadata has synthetic coverage; metadata does not authenticate a producer or recover all language types/functions.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1100,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "f1b92f9",
+          "23ce869",
+          "9cf1b74"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_compiled_oracles.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1518,11 +2632,30 @@
       "counterparts": [
         "sqlite.database"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Private read-only SQLite/WAL-family observations, schema and bounded queries; FTS5, BLOB bytes, int64 and text preservation checked against SQLite itself. No runtime/application equivalence.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1102,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "3db41f1",
+          "d536ae4"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_sqlite_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1554,11 +2687,33 @@
       "counterparts": [
         "capture.packets"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original packet captures: outer transport endpoints, answer-only DNS from every message in a segment, separated chained URI observations, selected packet/stream limits and exact capture identity. Quoted ICMP/tunnel traffic is not attributed to the outer endpoint; encrypted bodies and uncaptured traffic remain unknown.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1123,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "2d76ee3",
+          "4463da5",
+          "5a55f9d",
+          "e32b1d6"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_pcap_oracle.py",
+          "theseus_tests/test_pcap_summary_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1608,11 +2763,29 @@
       "counterparts": [
         "managed.artifact"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1107,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "1a77333"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_managed_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1626,11 +2799,29 @@
       "counterparts": [
         "managed.members"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1107,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "1a77333"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_managed_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1644,11 +2835,29 @@
       "counterparts": [
         "managed.native_boundaries"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1107,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "1a77333"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_managed_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1876,11 +3085,33 @@
       "counterparts": [
         "capture.packets"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original packet captures: outer transport endpoints, answer-only DNS from every message in a segment, separated chained URI observations, selected packet/stream limits and exact capture identity. Quoted ICMP/tunnel traffic is not attributed to the outer endpoint; encrypted bodies and uncaptured traffic remain unknown.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1123,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "2d76ee3",
+          "4463da5",
+          "5a55f9d",
+          "e32b1d6"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_pcap_oracle.py",
+          "theseus_tests/test_pcap_summary_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1894,11 +3125,30 @@
       "counterparts": [
         "flutter.elf"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original Dart AOT ELF and synthetic APK engine build-id fixtures: split and unified snapshot layouts, feature strings, symbol definition/extent and serialized-length checks. Snapshot headers and bounded printable strings are observed; Dart objects/types or decompiled application behavior are not recovered. Missing/tiny symbols and incomplete pools remain partial.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1118,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "2b7d5b3",
+          "683ddd4"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_flutter_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -1912,11 +3162,30 @@
       "counterparts": [
         "flutter.elf"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original Dart AOT ELF and synthetic APK engine build-id fixtures: split and unified snapshot layouts, feature strings, symbol definition/extent and serialized-length checks. Snapshot headers and bounded printable strings are observed; Dart objects/types or decompiled application behavior are not recovered. Missing/tiny symbols and incomplete pools remain partial.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1118,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "2b7d5b3",
+          "683ddd4"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_flutter_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -2426,11 +3695,31 @@
       "counterparts": [
         "firmware.regions"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original images assembled with real encoders, observed signature offsets/sizes, exact extracted bytes and retained extraction gaps; unavailable extractors and interrupted/partial outcomes remain explicit.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1106,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "8f115ba",
+          "a12c401",
+          "0e66e7e"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_firmware_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -2444,11 +3733,31 @@
       "counterparts": [
         "firmware.extract"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original images assembled with real encoders, observed signature offsets/sizes, exact extracted bytes and retained extraction gaps; unavailable extractors and interrupted/partial outcomes remain explicit.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1106,
+        "submission_revision": 3,
+        "reviewed_submission_revision": 3,
+        "reviewed_commits": [
+          "8f115ba",
+          "a12c401",
+          "0e66e7e"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_firmware_oracle.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -3189,11 +4498,20 @@
       "counterparts": [
         "theseus_binary_open"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Explicit analysis_job_id reopening preserves native annotations. Ordinary same-target/profile reopening instead opens a new database, and provider-neutral snapshot import is missing.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1157,
+        "audit_task": 1155,
+        "tests": [
+          "compiled/semantic-native22/test_semantic_native.py"
+        ],
+        "proofs": [
+          "compiled/semantic-native22/FINAL-REPORT.md",
+          "compiled/semantic-native22/matrix-final.json"
+        ],
+        "evidence": "Independent original ELF/API controls confirm useful primitives, exact target bytes and explicit native-project reopening; retained counterexamples identify prior baseline gaps. Contract54 has eight positive finite oracles, with installed MCP/UI acceptance still pending."
       }
     },
     {
@@ -3207,11 +4525,20 @@
       "counterparts": [
         "theseus_binary_close"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "The native engine closes and retained projects reopen, but optional neutral snapshot/overwrite and ordering of later requests during close remain unimplemented.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1157,
+        "audit_task": 1155,
+        "tests": [
+          "compiled/semantic-native22/test_semantic_native.py"
+        ],
+        "proofs": [
+          "compiled/semantic-native22/FINAL-REPORT.md",
+          "compiled/semantic-native22/matrix-final.json"
+        ],
+        "evidence": "Independent original ELF/API controls confirm useful primitives, exact target bytes and explicit native-project reopening; retained counterexamples identify prior baseline gaps. Contract54 has eight positive finite oracles, with installed MCP/UI acceptance still pending."
       }
     },
     {
@@ -3225,11 +4552,20 @@
       "counterparts": [
         "theseus_binary_sessions"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "implementation-pending",
+      "scope": "Per-project native session records exist; a complete cold server/client/activity context and expectation checks remain unimplemented.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-confirmed-semantic-gap",
+        "task": 1157,
+        "audit_task": 1155,
+        "tests": [
+          "compiled/semantic-native22/test_semantic_native.py"
+        ],
+        "proofs": [
+          "compiled/semantic-native22/FINAL-REPORT.md",
+          "compiled/semantic-native22/matrix-final.json"
+        ],
+        "evidence": "Independent original ELF/API controls confirm useful primitives, exact target bytes and explicit native-project reopening; retained counterexamples identify prior baseline gaps. Contract54 has eight positive finite oracles, with installed MCP/UI acceptance still pending."
       }
     },
     {
@@ -3363,11 +4699,30 @@
       "counterparts": [
         "artifact.compare"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-release-pending",
+      "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1115,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "91fd1d2"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_artifact_oracle.py",
+          "theseus_tests/test_artifact_comparison.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
       }
     },
     {
@@ -3872,12 +5227,39 @@
       },
       "counterparts": [],
       "status": "implementation-pending",
-      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "scope": "Selected installed engine on a private read-only artifact: supported query grammar, actual numeric evaluation, full diagnostics and retained output/timeout/cancellation. No arbitrary shell/mutation command or live debugger backend; Cutter sessions remain separate pending work. The source contract also requires arbitrary commands and installed plugins; that remaining execution scope is tracked separately.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "reviewed-read-only-subset; arbitrary-command-execution-pending",
+        "task": 1154,
+        "partial_implementation_task": 1133,
+        "tests": [
+          "theseus_tests/test_rizin_command.py"
+        ]
       },
-      "group": "free-debugger-backends"
+      "group": "free-debugger-backends",
+      "reviewed_partial_scope": {
+        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "task": 1133,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "4605099",
+          "8eafeb6dc82682a94dbbd3b32df5e2bdabfa5010"
+        ],
+        "application_head": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+        "tests": [
+          "theseus_tests/test_rizin_command.py"
+        ],
+        "normal_ui": "Normal private workspace, saved analyses/records and exact portable readback; see COMPILED-READERS.md",
+        "proofs": [
+          "codex-batch22-review-snapshots-d.json",
+          "codex-runtime-validation22.json",
+          "codex-full22b-ghidra.xml",
+          "codex-browser-route22a.xml",
+          "codex-full22a-ghidra.xml"
+        ],
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+      }
     },
     {
       "index": 190,
