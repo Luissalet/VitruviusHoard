@@ -9,7 +9,9 @@ from jsonschema import validate
 
 from theseus.android import OPERATIONS, apktool_metadata, decoded_strings, resource_projection, package_summary, package_view
 from theseus.comparison import Comparisons
+from theseus.evidence import Evidence
 from theseus.store import Store
+from theseus.workflow import Workflow, fingerprint
 
 
 @pytest.mark.parametrize('operation,parameters', [
@@ -168,5 +170,66 @@ def test_actual_retained_worker_does_not_reopen_original_or_require_java(tmp_pat
         assert job['result']['original_source_check']=='not-performed-retained-input'
         assert job['result']['source_analysis_sha256']==digest
         assert hashlib.sha256(path.read_bytes()).hexdigest()==digest
+    finally:
+        manager.shutdown()
+
+
+def test_physical_decoded_text_keeps_crlf_and_cr(tmp_path):
+    folder=decoded_folder(tmp_path)
+    manifest='<manifest\r\n package="own.review"/>\r\n'
+    value='first\r\nsecond\rthird'
+    (folder/'AndroidManifest.xml').write_bytes(manifest.encode('utf8'))
+    (folder/'res/values/strings.xml').write_bytes(('<resources><string name="lines">'+value+'</string></resources>').encode('utf8'))
+    result=resource_projection(folder,{})
+    assert result['strings']==[{'name':'lines','value':value}]
+    assert result['manifest']==manifest and result['coverage']=='complete'
+
+
+def test_summary_links_digest_and_literal_ids_survive_repeated_transfer(tmp_path):
+    from theseus import native_analysis
+    store=Store(tmp_path/'data');project=store.create_project('Portable Android summary')
+    original=tmp_path/'own.apk';original.write_bytes(b'own original; never executed')
+    artifact=store.add_artifact(project['id'],original)
+    source_job='3'*32
+    folder=store.directory/'analyses'/source_job;folder.mkdir(parents=True)
+    path,report,_=package_document(folder)
+    report['engine']={'parent_job_id':source_job,'source_job_id':source_job,'job_id':source_job}
+    document=json.loads(path.read_text(encoding='utf8'))
+    document.update(artifact_sha256=artifact['sha256'],result=report)
+    raw=json.dumps(document,ensure_ascii=False).encode('utf8');path.write_bytes(raw)
+    base={'kind':'native_analysis','operation':'android.package','artifact_id':artifact['id'],'parameters':{'detail':'summary'}}
+    store.save_job(project['id'],source_job,'running',base)
+    native_analysis.retain(store,project['id'],source_job,artifact,folder,path,base)
+    store.save_job(project['id'],source_job,'finished',base)
+    original.rename(tmp_path/'own.apk.retired')
+    manager=Comparisons(store);evidence=Evidence(Workflow(manager))
+    parent_project=project['id'];parent_job=source_job;parent_artifact=artifact['id']
+    try:
+        for turn in range(3):
+            imported=evidence.load(evidence.export(parent_project),'Transfer '+str(turn))
+            parent_project=imported['project']['id'];parent_job=imported['id_map'][parent_job]
+            parent_artifact=imported['id_map'][parent_artifact]
+            job=store.job(parent_job);delivery=job['result']['delivery']
+            assert delivery['parent_job_id']==parent_job and delivery['manifest_view']['source_job_id']==parent_job
+            payload={k:v for k,v in delivery.items() if k!='view_sha256'}
+            assert delivery['view_sha256']==hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode('utf8')).hexdigest()
+            assert delivery['summary']['engine']==report['engine']
+            assert delivery['parent_analysis_sha256']==hashlib.sha256(raw).hexdigest()
+            assert path.read_bytes()==raw and Path(job['result']['analysis_file']).read_bytes()==raw
+            selection=delivery['manifest_view']
+            view=native_analysis.start(manager,parent_project,parent_artifact,selection['operation'],
+                {k:v for k,v in selection.items() if k!='operation'})
+            deadline=time.monotonic()+15
+            while view['state'] in {'queued','running'} and time.monotonic()<deadline:
+                time.sleep(.02);view=store.job(view['id'])
+            assert view['state']=='finished',view
+            assert store.analysis_record(view['id'],'text','0')['record']==report['manifest_xml']
+        for field,value,diagnostic in [('parent_job_id','missing','missing jobs'),('view_sha256','0'*64,'summary delivery SHA')]:
+            bundle=evidence.export(parent_project)
+            source=next(row for row in bundle['payload']['jobs'] if row['id']==parent_job)
+            source['result']['delivery'][field]=value
+            bundle['manifest']['sha256']=fingerprint(bundle['payload'])
+            with pytest.raises(ValueError,match=diagnostic):
+                evidence.load(bundle)
     finally:
         manager.shutdown()

@@ -152,7 +152,7 @@ def resource_projection(folder, parameters, *, decoded=True):
               'manifest': None, 'strings': [], 'locale': parameters.get('locale'), 'locales': [],
               'string_tables': [], 'coverage': 'complete' if decoded else 'partial', 'limitations': []}
     try:
-        result['manifest'] = (folder / 'AndroidManifest.xml').read_text(encoding='utf-8')
+        result['manifest'] = (folder / 'AndroidManifest.xml').read_bytes().decode('utf-8')
         manifest = ET.fromstring(result['manifest'])
         if manifest.tag != 'manifest':
             raise ValueError('Manifest root must be manifest')
@@ -182,7 +182,7 @@ def resource_projection(folder, parameters, *, decoded=True):
                 path = folder / 'res' / directory / 'strings.xml'
                 fact = {'status': 'present', 'strings': [], 'total_count': None, 'unparsed_count': None, 'coverage': 'partial'}
                 try:
-                    entries, skipped = decoded_strings(path.read_text(encoding='utf-8'))
+                    entries, skipped = decoded_strings(path.read_bytes().decode('utf-8'))
                     fact.update(strings=entries, total_count=len(entries), unparsed_count=skipped,
                                 coverage='partial' if skipped or not decoded else 'complete')
                 except FileNotFoundError:
@@ -197,6 +197,11 @@ def resource_projection(folder, parameters, *, decoded=True):
                 result['coverage'] = 'partial'
         result['strings'] = result['string_tables'][0]['strings']
     return result
+
+
+def delivery_sha256(value):
+    payload = {key: item for key, item in value.items() if key != 'view_sha256'}
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')).hexdigest()
 
 
 def package_summary(report):

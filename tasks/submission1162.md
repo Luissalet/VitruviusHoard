@@ -48,3 +48,27 @@ pinned environment requirements; the source QA environment used 6.0.3.
 Independent review, composed regression, a fresh wheel and installed MCP/UI
 acceptance remain pending. Source acceptance is finite and does not establish
 arbitrary APK behavior. See [semantics and usage](../docs/ANDROID-VIEWS.md).
+
+## Revision 2 corrections
+
+Independent CAS1 found two defects: summary action links still selected the
+exporting project after import, and physical decoded-file reads normalized CRLF
+and CR before lexical projection. Both original counterexamples remain in
+`review-android1162-r1/REVIEW-1162-R1.md` and its receipts. The source correction
+remaps only the typed summary envelope links, recomputes and validates its view
+digest, and preserves literal IDs and complete historical JSON bytes. Decoded
+manifest/string files are read as UTF-8 bytes without universal-newline conversion.
+
+New repository regressions exercise physical CRLF/CR and three consecutive
+transfers with the original absent, follow exactly the delivered manifest action,
+check each current view digest, preserve literal IDs and canonical bytes, and
+exercise broken links/digests. External RED `codex-android1162-e-red.xml` confirms
+both source defects; `-d-red.xml` additionally preserves the author's wrong
+Workflow constructor. External GREEN `-f-green.xml` passes both corrected cases.
+The expanded import regression `codex-android1162-g.xml` passes 40 cases.
+
+The full run `codex-full22c` on the previous frozen source was stopped only after
+these independent defects made that candidate superseded; its exact owned tree,
+log, partial basetemp and interruption receipt are preserved. It is not a passing
+full run and does not validate this correction. Fresh native MCP/UI, final area
+checks and CAS2 review are still required before accepting the corrected source.
