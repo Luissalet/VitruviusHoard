@@ -11,6 +11,7 @@ from .native_analysis import analysis_file
 from .store import identifier, now
 from .workflow import fingerprint
 from . import retained_scenarios
+from .android import delivery_sha256
 
 
 SCHEMA = "theseus/evidence-1"
@@ -158,6 +159,14 @@ class Evidence:
                 json.loads(row["record"])
             jobs = {row["id"]: row for row in payload["jobs"]}
             for row in payload['jobs']:
+                result = row['result']
+                if result.get('kind') == 'native_analysis' and result.get('operation') == 'android.package':
+                    delivery = result.get('delivery', {})
+                    if isinstance(delivery, dict) and delivery.get('kind') == 'summary':
+                        links([delivery['parent_job_id'], delivery['manifest_view']['source_job_id']], 'jobs')
+                        if delivery_sha256(delivery) != delivery['view_sha256']:
+                            raise ValueError('Android summary delivery SHA-256 mismatch')
+            for row in payload['jobs']:
                 result=row['result']
                 if result.get('kind')!='oracle_selftest':continue
                 snapshots={scenario['id']:scenario['definition'] for scenario in result.get('scenarios',[])}
@@ -260,6 +269,15 @@ class Evidence:
                 for row in payload["jobs"]:
                     key = mapping[row["id"]]
                     result = remap(row["result"])
+                    if result.get('kind') == 'native_analysis' and result.get('operation') == 'android.package':
+                        delivery = row['result'].get('delivery', {})
+                        if isinstance(delivery, dict) and delivery.get('kind') == 'summary':
+                            # Only these envelope fields are project links; the
+                            # saved summary and its arbitrary IDs remain literal.
+                            result['delivery'] = {**delivery, 'parent_job_id': mapping[delivery['parent_job_id']],
+                                'manifest_view': {**delivery['manifest_view'],
+                                    'source_job_id': mapping[delivery['manifest_view']['source_job_id']]}}
+                            result['delivery']['view_sha256'] = delivery_sha256(result['delivery'])
                     for source_case,case in zip(row['result'].get('cases',[]),result.get('cases',[])):
                         if not isinstance(source_case,dict) or not isinstance(case,dict):continue
                         for side in ('reference','candidate'):

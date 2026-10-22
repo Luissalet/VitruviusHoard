@@ -14,6 +14,10 @@ Signature metadata does not establish signature verification.
 units; a page never splits a surrogate pair. A starting offset inside a pair is
 rejected, and a limit too small for the next character must be increased. The
 result records the parent document digest, total size, next offset and exhaustion.
+After evidence import, the summary's action links identify jobs in the receiving
+project and its view digest covers that remapped envelope. The complete historical
+analysis bytes and original evidence bundle remain unchanged. IDs inside the
+summary's literal reader data are not action links and are preserved.
 
 `android.resources` preserves complete decoded files and adds manifest text,
 package/version/SDK metadata, available locale directories and normalized string
@@ -25,6 +29,7 @@ Configuration directories such as `values-night` are not language tables.
 
 Plain direct string values retain whitespace and literal entity spelling;
 comments are omitted. Empty strings and duplicate names remain occurrences.
+Physical UTF-8 reads preserve CRLF and CR in decoded manifests and string values.
 Nested markup, CDATA, processing instructions and missing names are counted as
 unparsed rather than silently treated as plain strings. Malformed tables have
 unknown counts. Missing tables have a known zero count only after successful

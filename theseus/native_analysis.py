@@ -1,5 +1,4 @@
 """Native static analysis operations and persistent, individually readable results."""
-import hashlib
 import json
 import shutil
 import sys
@@ -466,12 +465,12 @@ def retain(store, project_id, job_id, artifact, folder, output, result, *, obser
         result["source_changed_during_analysis"] = available and digest(artifact["path"]) != document["artifact_sha256"]
     result["sections"] = store.index_analysis(job_id, document["result"])
     if result['operation'] == 'android.package' and result.get('parameters', {}).get('detail') == 'summary':
-        from .android import package_summary
+        from .android import package_summary, delivery_sha256
         view = {'kind': 'summary', 'parent_job_id': job_id,
                 'parent_analysis_sha256': result['analysis_sha256'],
                 'artifact_sha256': document['artifact_sha256'], 'summary': package_summary(document['result']),
                 'manifest_view': {'operation': 'android.package_view', 'source_job_id': job_id, 'facet': 'manifest'}}
-        view['view_sha256'] = hashlib.sha256(json.dumps(view, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')).hexdigest()
+        view['view_sha256'] = delivery_sha256(view)
         result['delivery'] = view
     if result["operation"] in {"artifact.extract", "javascript.recover", "android.resources", "firmware.extract", "browser.export_scripts"}:
         result["derived_artifacts"] = []
