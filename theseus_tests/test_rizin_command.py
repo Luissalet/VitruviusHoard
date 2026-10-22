@@ -161,3 +161,17 @@ def test_every_admitted_family_keeps_its_name_and_output_modes():
     assert admit('aflj') == 'aflj' and admit('afiq @ main') == 'afiq @ main'
     assert admit('  pdf   @  sym.main  ') == 'pdf @ sym.main'
     assert admit('izz~?') == 'izz~?'
+
+
+@pytest.mark.parametrize('command,expected', [('%v 7*9', '0x3f'), ('%vi 63', '63'), ('%X 63', '3f')])
+def test_expression_commands_return_known_arithmetic(lab, fixture, command, expected):
+    result = rizin(lab, fixture, command)
+    assert result['completion'] == 'complete' and result['exit_code'] == 0
+    assert result['stdout'].strip() == expected
+    assert 'Error while parsing command' not in result['stderr']
+
+
+@pytest.mark.parametrize('command', ['?v 63', '?vi 63', '?x 63', '% 63', '%!echo hi'])
+def test_unsupported_expression_variants_are_not_advertised(command):
+    with pytest.raises(ValueError):
+        admit(command)

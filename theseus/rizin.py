@@ -29,7 +29,7 @@ COMMANDS = {
     # flags and search
     "f", "fs", "/", "/x", "/a", "/R", "/v",
     # expressions
-    "?v", "?vi", "?x",
+    "%v", "%vi", "%X",
 }
 ARGUMENTS = re.compile(r"[A-Za-z0-9_.:+\-*/, ]*")
 ADDRESS = re.compile(r"[A-Za-z0-9_.+\-*]+")
