@@ -61,16 +61,21 @@ check uses the documented `flj` and `oc` commands and verifies actual file state
 
 ## Scope still requiring acceptance
 
-Revision 3 corrects shutdown after the independent revision-2 counterexample.
+Revision 3 adds explicit disposal of the bridge's own Qt object during close.
 The original access violation and all narrowing receipts remain available.
-The debugger stack enters PySide while QApplication destroys Python-backed
-QObject children after the host has finalized Python. Two lifetimes matter:
-the private QA wrapper's stop-marker QTimer and the maintained bridge QObject.
-Deleting only the QA timer fixes the status-only control but still fails the
-full 15-request sequence. Deleting both before interpreter teardown passes
-that sequence with exit 0 and descriptor removal. The product now explicitly
-disposes its own QObject in close; the diagnostic wrapper separately disposes
-its own timer. No QA timer is part of the shipped plugin.
+The debugger stack enters PySide during QObject child destruction; its exact
+interpreter-finalization order and the triggering object were not isolated by
+that stack. The author's historical comparisons also changed the QA callback's
+form, so they do not demonstrate that disposing the Bridge was necessary.
+
+Independent controls hold the old r2 product bytes and 15 requests constant:
+a named function that only deletes the QA timer exits 0, whereas a lambda with
+the same body reproduces the access violation. The QA callback's form/lifetime
+is therefore a demonstrated confounder. R3 with the corrected QA callback exits
+0, and its explicit bridge disposal passes regression and native MCP checks;
+its necessity as a fix for the original failure remains unproven. The wrapper's
+timer is not part of the shipped plugin. See `review-cutter1120-r3.md` and its
+four causal-controls receipts for the independent positive and negative cases.
 
 Evidence: `codex-cutter-narrow22-status_debug/socket-control.stdout`,
 `codex-cutter-narrow22-status_deletetimer/socket-control.json`,
