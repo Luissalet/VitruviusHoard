@@ -17,6 +17,7 @@ from hoard_link.guard import install_guard
 
 from .comparison import Comparisons
 from . import binary_analysis, native_analysis, binary_sessions, runtime, frida_runtime
+from .cutter import CutterBridge, PLUGIN
 from .inspection import excerpt, image_png
 from .store import Store, identifier
 from .workflow import Workflow
@@ -63,6 +64,8 @@ RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'na
         'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
 VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 TOOLS = [
+    tool("theseus_cutter_sessions", "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.", {}),
+    tool("theseus_cutter_command", "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.", {**PROJECT, "session_id": {"type": "string", "format": "uuid"}, "expected_generation": {"type": "integer", "minimum": 0}, "command": {"type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$"}, "json": {"type": "boolean"}}, ["project_id", "session_id", "expected_generation", "command"], False, True),
     tool("theseus_client_inspect", "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.", {"family": {"enum": ["apktool", "pcap", "objdump"]}}, ["family"]),
     tool("theseus_runtime_catalog", "Discover explicit runtime observation operations, target selection, side effects and installed clients. Separate from execution-free static analysis.", {}),
     tool("theseus_runtime_start", "Run an explicitly selected Android, instrumentation, V8 Inspector or browser CDP operation in a project. ADB requires an exact serial; Frida requires a selected device, PID/argv or live project session; Inspector requires an explicit endpoint and exact target ID. Inspector/CDP metadata never evaluates, pauses or closes the target; script text, page DOM/listeners, completed response bodies and PNG are explicit choices. Device actions and instrumentation scripts can change their targets. Captures are historical, not behavioral equivalence; cancellation cannot undo effects. Remote tokens are ephemeral and excluded from recordings.", {**PROJECT, "operation": S, "parameters": {"type": "object"}}, ["project_id", "operation"], False, True),
@@ -239,6 +242,13 @@ class BinarySessionOpen(Payload):
     options: dict = Field(default_factory=dict)
 
 
+class CutterCommand(Payload):
+    session_id: str
+    expected_generation: int = Field(ge=0, strict=True)
+    command: str
+    json_output: bool = Field(default=False, strict=True, alias='json')
+
+
 class BinarySessionCall(Payload):
     operation: str
     parameters: dict = Field(default_factory=dict)
@@ -262,6 +272,10 @@ def create_app(data=None, port=5217, recover=True):
     workflow = Workflow(comparisons)
     evidence = Evidence(workflow)
     sessions = binary_sessions.BinarySessions(comparisons)
+    cutter = CutterBridge(store)
+    # This only records uncertain historical commands; it never reconnects or
+    # starts a client, including when the owner disables process recovery.
+    cutter.recover()
     token_path = store.directory / "mcp-token"
     if not token_path.exists():
         token_path.write_text(secrets.token_urlsafe(40), encoding="utf-8")
@@ -278,6 +292,7 @@ def create_app(data=None, port=5217, recover=True):
     app.state.store = store
     app.state.comparisons = comparisons
     app.state.binary_sessions = sessions
+    app.state.cutter = cutter
     app.state.workflow = workflow
     app.state.evidence = evidence
     from vitruvius_hoard.software.cleanup import Shutdown
@@ -296,6 +311,10 @@ def create_app(data=None, port=5217, recover=True):
 
     def execute(name, args):
         args = dict(args)
+        if name == "theseus_cutter_sessions":
+            return cutter.discover()
+        if name == "theseus_cutter_command":
+            return cutter.command(**args)
         if name == "theseus_projects":
             return {"projects": store.projects()}
         if name == "theseus_project_create":
@@ -436,6 +455,18 @@ def create_app(data=None, port=5217, recover=True):
     @app.get("/api/binary-sessions/catalog")
     def binary_catalog():
         return binary_sessions.catalog()
+
+    @app.get('/api/cutter/sessions')
+    def cutter_sessions():
+        return cutter.discover()
+
+    @app.get('/api/cutter/plugin.py')
+    def cutter_plugin():
+        return FileResponse(PLUGIN, media_type='text/x-python', filename='vitruvius_bridge.py')
+
+    @app.post('/api/projects/{project_id}/cutter/command')
+    def cutter_command(project_id: str, body: CutterCommand):
+        return cutter.command(project_id, **body.model_dump(by_alias=True))
 
     @app.get("/api/projects/{project_id}/binary-sessions")
     def project_sessions(project_id: str):

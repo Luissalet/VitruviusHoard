@@ -56,7 +56,7 @@ namespaces = false
 "vitruvius_hoard.hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "hoard_link" = ["ui/*", "_data/*", "LICENSE", "VENDORED.txt"]
 "babel_client" = ["dist/*", "dist/assets/*"]
-"software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/dist/*.js", "engine/dist/**/*.js", "engine/firmware-scanner/Cargo.toml", "engine/firmware-scanner/Cargo.lock", "engine/firmware-scanner/LICENSE-BINWALK", "engine/firmware-scanner/NOTICE.md", "engine/firmware-scanner/PROVENANCE.json", "engine/firmware-scanner/src/*.rs"]
+"software_native" = ["theseus-limits.md", "theseus_web/*", "engine/*.ts", "engine/*.mjs", "engine/*.json", "engine/LICENSE*", "engine/NOTICE.md", "engine/PROVENANCE.json", "engine/src/**/*", "engine/bridge/**/*.java", "engine/bridge/**/*.py", "engine/dist/*.js", "engine/dist/**/*.js", "engine/firmware-scanner/Cargo.toml", "engine/firmware-scanner/Cargo.lock", "engine/firmware-scanner/LICENSE-BINWALK", "engine/firmware-scanner/NOTICE.md", "engine/firmware-scanner/PROVENANCE.json", "engine/firmware-scanner/src/*.rs"]
 vitruvius_hoard = ["LICENSE", "static/*", "static/**/*", "seeds.json", "functional_check/LICENSE-MIT", "functional_check/PROVENANCE.json", "functional_check/README.md"]
 
 [tool.pytest.ini_options]

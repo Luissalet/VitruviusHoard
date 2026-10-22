@@ -6,6 +6,8 @@ A local software workbench with design/source projects, version-exact API docume
 
 **Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026.** This incorporation retains its existing functions, including retained WebSocket stream comparisons and immutable coverage progress receipts, and does not complete the pending reverse-engineering programme. See the [source synchronization](docs/THESEUS-SYNC.md). See the [retained coverage ledger](software_native/theseus-limits.md).
 
+Inspection can discover an already open local editor and send explicit commands through the bundled Python bridge. Commands may change files or the editor; uncertain completion is never retried automatically. Their retained observations remain readable and transferable after it closes. See [live editor sessions](docs/LIVE-EDITOR.md).
+
 Original compiler/encoder fixtures and independent reviews now cover Go/Rust metadata, SQLite values, EVM interfaces, firmware extraction, managed metadata/CIL, Mach-O dependencies, PE resources, artifact inventories, plist/keyed archives, packet captures, Flutter/Dart snapshot headers, symbol demangling and read-only binary queries. Native-session oracles distinguish unresolved branches and rewritten memory from original file offsets. Flutter observations retain partial symbols/pools; these readers do not prove application behavior. See [reader scope and acceptance](docs/COMPILED-READERS.md).
 
 Retained browser captures can export their script bytes and source maps, trace generated positions to original sources and resolve literal imports offline. Missing maps, duplicate sources and computed imports retain their uncertainty. See [retained web sources](docs/WEB-SOURCES.md).

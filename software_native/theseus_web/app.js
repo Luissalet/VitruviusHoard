@@ -66,6 +66,8 @@ const state = {
   engines: null,
   catalog: null,
   binaryCatalog: null,
+  cutterSessions: null,
+  cutterObservation: null,
   runtimeCatalog: null,
   analysisPage: null,
   analysisRecord: null,
@@ -230,6 +232,7 @@ async function load(id) {
   const sequence = ++state.sequence;
   const data = await api("/projects/" + id);
   if (sequence !== state.sequence) return;
+  if (state.data?.project.id !== data.project.id) state.cutterObservation = null;
   state.data = data;
   if (!data.artifacts.some((row) => row.id === state.artifact)) {
     state.artifact = data.artifacts[0]?.id || "";
@@ -734,13 +737,26 @@ function processTerminalView(data) {
   return `<section><h4>Terminal guardado · ${screen.columns} × ${screen.rows}</h4><label>Fotograma<select id="process-terminal-frame" data-draft="${escape(key)}"><option value="-1" ${chosen==='-1'?'selected':''}>Estado final</option>${frames.map((frame,index)=>`<option value="${index}" ${String(index)===chosen?'selected':''}>${index+1} · ${escape(frame.event_id)} · ${frame.columns} × ${frame.rows}</option>`).join('')}</select></label><p class="small">Buffer ${escape(screen.active_buffer)} · cursor ${screen.cursor_x}, ${screen.cursor_y}. Interpretación de los bytes VT guardados; no ejecuta el programa.</p><pre class="mono" aria-label="Contenido del terminal guardado">${escape(screen.lines.join('\n'))}</pre><p class="small mono">Bytes originales · SHA-256 ${escape(data.raw_bytes.sha256)}</p></section>`;
 }
 
+function cutterWorkspace() {
+  const discovery = state.cutterSessions;
+  const sessions = discovery?.sessions || [];
+  const selected = sessions.find(row => row.session_id === draft('cutter-session')) || sessions[0];
+  const observation = state.cutterObservation;
+  return `<section id="cutter-workspace"><h2>Cutter · Sesión abierta</h2><p>Consulta y modifica una sesión local con órdenes Rizin. Instala el puente en el perfil de Cutter que quieras conectar y abre allí el archivo.</p>
+    <div class="toolbar"><a class="button" href="/theseus/api/cutter/plugin.py" download>Descargar puente Python</a><button data-action="cutter-refresh">Buscar sesiones de Cutter</button></div>
+    <details><summary>Instalar el puente</summary><p>Guarda <code>vitruvius_bridge.py</code> en la carpeta de plugins Python indicada por Cutter y reinicia ese editor. El puente usa PySide6 incluido en Cutter. La carpeta compartida predeterminada es <code>Vitruvius/cutter-bridge</code> dentro de los datos locales del usuario; ambos procesos pueden elegir otra con <code>THESEUS_CUTTER_BRIDGE_DIR</code>.</p><p>La identidad del documento es parcial: archivo y generación observados no equivalen a una huella de todos sus bytes. La consulta informa por separado del estado de la carpeta del puente.</p></details>
+    ${discovery ? `<p class="small">${sessions.length ? `${sessions.length} sesiones disponibles.` : 'No se ha encontrado un puente activo. Comprueba la instalación y vuelve a buscar.'} <span class="mono">${escape(discovery.discovery_status)} · ${escape(discovery.bridge_directory_security)}</span></p>` : '<p class="muted">Busca las sesiones cuando quieras conectar. No se abre Cutter automáticamente.</p>'}
+    ${selected ? `<form id="cutter-command-form"><label>Sesión de Cutter<select id="cutter-session" name="session_id" data-draft="cutter-session">${sessions.map(row => `<option value="${escape(row.session_id)}" ${row.session_id === selected.session_id ? 'selected' : ''}>${escape(row.current_file || 'Sin archivo observado')} · PID ${row.pid}</option>`).join('')}</select></label><p class="small">Cutter ${escape(selected.cutter_version)} · generación observada <strong>${selected.document_generation}</strong> · identidad parcial</p><input type="hidden" name="expected_generation" value="${selected.document_generation}"><label>Orden Rizin<input class="mono" name="command" data-draft="cutter-command" value="${attr('cutter-command')}" required autocomplete="off" placeholder="iIj"></label><label class="inline"><input type="checkbox" name="json" data-draft="cutter-json" ${draft('cutter-json',false) ? 'checked' : ''}>Interpretar la salida como JSON</label><p class="warning">La orden puede modificar archivos, ejecutar plugins o cambiar el editor. Si se pierde la respuesta, no se repite automáticamente.</p><button class="primary" type="submit">Enviar orden a Cutter</button></form>` : ''}
+    ${observation ? `<div id="cutter-observation" role="status"><h3>Resultado de la orden</h3><p><code>${escape(observation.command)}</code></p><p>${escape({complete:'El motor ha respondido',failed:'La respuesta contiene un error',unknown:'Finalización desconocida',not_started:'La orden no se ha enviado al motor'}[observation.execution_state] || observation.execution_state)}</p>${observation.error ? `<p class="error">${escape(observation.error)}</p>` : ''}${observation.retention_error ? `<p class="error">No se ha podido conservar toda la observación. Consulta el estado de la ejecución; no repitas la orden automáticamente.</p>` : ''}<pre>${escape(typeof observation.output === 'string' ? observation.output : json(observation.output))}</pre><p class="small">${escape(observation.message)}</p>${observation.job_id && !observation.retention_error ? `<a href="/theseus/api/jobs/${observation.job_id}/analysis.json" download>Descargar observación conservada</a>` : ''}</div>` : ''}</section>`;
+}
+
 function binaryWorkspace() {
   const sessions = [...state.data.jobs].reverse().filter(row => row.result.kind === "binary_session");
   const selected = sessions.find(row => row.id === draft("binary-session")) || sessions.find(row => row.result.session_state === "open") || sessions[0];
   const operations = state.binaryCatalog?.operations || [];
   const operation = operations.find(row => row.name === draft("binary-operation")) || operations.find(row => row.name === "search_procedures") || operations[0];
   const retained = state.data.jobs.filter(row => row.result.project_directory && (row.result.kind === "binary_analysis" || row.result.kind === "binary_session"));
-  let body = `<div class="reading"><h2>Proyecto de análisis del binario</h2><p>Conecta Ghidra local para navegar funciones, instrucciones, referencias, tipos y valores. Las anotaciones se guardan en la base de análisis y conservan los bytes del archivo original.</p>`;
+  let body = `<div class="reading">${cutterWorkspace()}<h2>Proyecto de análisis del binario</h2><p>Conecta Ghidra local para navegar funciones, instrucciones, referencias, tipos y valores. Las anotaciones se guardan en la base de análisis y conservan los bytes del archivo original.</p>`;
   if (!state.data.artifacts.length) return body + '<p>Añade un ejecutable o una imagen binaria desde Artefactos.</p><button data-action="tab" data-view="artifacts">Añadir artefacto</button></div>';
   body += `<form id="binary-open-form"><label>Artefacto<select name="artifact_id" data-draft="binary-artifact">${state.data.artifacts.map(row => `<option value="${row.id}" ${draft("binary-artifact",state.artifact)===row.id?"selected":""}>${escape(row.name)}</option>`).join("")}</select></label>
     <label>Proyecto nativo<select name="analysis_job_id" data-draft="binary-project"><option value="">Importar en un proyecto nuevo</option>${retained.map(row => `<option value="${row.id}" ${draft("binary-project")===row.id?"selected":""}>${escape(row.result.artifact_name)} · ${row.id.slice(0,8)}${row.result.session_state ? " · " + (sessionLabels[row.result.session_state] || row.result.session_state) : ""}</option>`).join("")}</select></label>
@@ -970,6 +986,10 @@ document.addEventListener("click", (event) => {
     await api(`/binary-sessions/${id}/close`,{});
     await refresh();
     notice("La sesión está guardando su proyecto y cerrando el motor.");
+  });
+  if (action === 'cutter-refresh') return act(async () => {
+    state.cutterSessions = await api('/cutter/sessions');
+    render();
   });
   if (action === "analysis-section") return act(async () => {
     state.view = "analyses";
@@ -1224,6 +1244,24 @@ document.addEventListener("submit", (event) => {
       await api(`/projects/${projectId()}/reconstructions/verify`,fields);
       state.view="jobs";route();await refresh();notice("Verificación de reconstrucción iniciada.");
     }
+    if (form.id === 'cutter-command-form') {
+      // Never turn a transport error into an automatic resend.
+      state.cutterSessions = null;
+      state.cutterObservation = {command: fields.command, output: null, execution_state: 'unknown',
+        error: 'No se ha recibido una observación completa.',
+        message: 'La orden puede haber tenido efectos. No la repitas automáticamente; comprueba la sesión y las ejecuciones guardadas.'};
+      try {
+        state.cutterObservation = await api(`/projects/${projectId()}/cutter/command`, {
+          session_id: fields.session_id, expected_generation: Number(fields.expected_generation),
+          command: fields.command, json: Object.hasOwn(fields, 'json')});
+      } catch (error) {
+        state.cutterObservation.error = error.message;
+        notice('No se ha recibido el resultado. Comprueba la sesión y las ejecuciones guardadas antes de decidir otra orden.');
+        return;
+      }
+      await refresh();
+      notice('Observación conservada. Busca de nuevo las sesiones antes de decidir otra orden.');
+    }
     if (form.id === "binary-compare-form") {
       await api("/binary-comparisons", fields);
       await refresh();notice("Comparación iniciada. El resultado conservará los bytes y los datos de ambas funciones.");
@@ -1391,7 +1429,7 @@ document.addEventListener("change", (event) => {
     if(event.target.dataset.captureHash)clearDrafts(event.target.dataset.captureHash);
     render();
   }
-  if (["binary-session","binary-operation"].includes(event.target.id)) render();
+  if (["binary-session","binary-operation","cutter-session"].includes(event.target.id)) render();
   if (["analysis-operation","analysis-source-job"].includes(event.target.id)) render();
   if (event.target.id === "runtime-operation" || (event.target.form?.id==="runtime-form" && ['runtime-param-mode','runtime-param-session_id'].includes(event.target.name))) render();
   if (event.target.id === "show-archived") {

@@ -20,8 +20,8 @@
   ],
   "status_counts": {
     "independently-reviewed-installed-validated": 69,
-    "implementation-pending": 24,
-    "semantic-review-pending": 89,
+    "implementation-pending": 22,
+    "semantic-review-pending": 91,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 18,
     "excluded-by-user": 4
@@ -5620,12 +5620,27 @@
         "line": 66,
         "kind": "native-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
-      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "counterparts": [
+        "theseus_cutter_sessions"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Original synthetic native/MCP/UI controls passed; independent review and installed acceptance still pending.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "source-validation-pending-independent-review",
+        "task": 1120,
+        "tests": [
+          "theseus_tests/test_cutter.py"
+        ],
+        "proofs": [
+          "codex-cutter-tests22d.xml",
+          "codex-cutter-tests22e.xml",
+          "codex-cutter-native22e.json",
+          "codex-cutter-mcp22b.json",
+          "codex-cutter-ui22.json",
+          "codex-cutter-transfer22b.json",
+          "codex-cutter-ui-retained22.json"
+        ],
+        "limitations": "Partial document identity, Windows directory ACL unverified, engine return does not certify semantic effect; unknown response never retried. Worktree source only, not installed-release acceptance."
       },
       "group": "free-debugger-backends"
     },
@@ -5637,12 +5652,27 @@
         "line": 76,
         "kind": "native-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
-      "scope": "Native free-engine session/command/inspection backend still required; Ghidra support does not certify this separate backend.",
+      "counterparts": [
+        "theseus_cutter_command"
+      ],
+      "status": "semantic-review-pending",
+      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Original synthetic native/MCP/UI controls passed; independent review and installed acceptance still pending.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "source-validation-pending-independent-review",
+        "task": 1120,
+        "tests": [
+          "theseus_tests/test_cutter.py"
+        ],
+        "proofs": [
+          "codex-cutter-tests22d.xml",
+          "codex-cutter-tests22e.xml",
+          "codex-cutter-native22e.json",
+          "codex-cutter-mcp22b.json",
+          "codex-cutter-ui22.json",
+          "codex-cutter-transfer22b.json",
+          "codex-cutter-ui-retained22.json"
+        ],
+        "limitations": "Partial document identity, Windows directory ACL unverified, engine return does not certify semantic effect; unknown response never retried. Worktree source only, not installed-release acceptance."
       },
       "group": "free-debugger-backends"
     },

@@ -25,9 +25,11 @@ from pathlib import Path
 before=set(threading.enumerate())
 from vitruvius_hoard.software.host import catalog
 import mcp_server
-assert len(catalog())==125
-assert len({t['name'] for t in catalog()})==125
+assert len(catalog())==127
+assert len({t['name'] for t in catalog()})==127
 assert any(t['name']=='theseus_client_inspect' for t in catalog())
+assert any(t['name']=='theseus_cutter_sessions' for t in catalog())
+assert any(t['name']=='theseus_cutter_command' for t in catalog())
 assert not any(n in sys.modules for n in ('vitruvius_hoard.main','vitruvius_hoard.services','babels_hoard.api','theseus.api'))
 assert not Path(os.environ['VITRUVIUS_PROFILE_DIR']).exists()
 assert set(threading.enumerate())==before
@@ -144,7 +146,7 @@ async def test_stdio_catalog_and_native_handlers(tmp_path):
         async with ClientSession(reader,writer) as session:
             await session.initialize()
             tools=(await session.list_tools()).tools
-            assert len(tools)==125
+            assert len(tools)==127
             for native in catalog():
                 assert next(t for t in tools if t.name==native['name']).inputSchema==native['inputSchema']
             async def call(name,args=None):
