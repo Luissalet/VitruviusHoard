@@ -22,7 +22,7 @@ and explicitly side-aligned static/runtime hypotheses. Both passed independent
 revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
-The native catalogue contains 72 static/retained operations, 40 runtime operations
+The native catalogue contains 73 static/retained operations, 40 runtime operations
 and 52 binary-session operations, behind 42 Theseus tools and 127 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
@@ -183,6 +183,14 @@ Focal acceptance2PASS85.74s; real MCP35/static49 with evidence export/import and
 original hash preservation PASS. Browser reads invoke offsets0/6 and starts a
 method read that retains complete initializer Smali. See ANDROID-STATIC.md.
 ADB/runtime capabilities remain open and are not part of this static batch.
+
+Package/resource views extend this static surface with optional compact package
+delivery linked to the complete saved analysis, retained summary/UTF-16 manifest
+windows and explicit locale tables with lexical strings, counts and metadata.
+These views also read imported package observations without reopening originals.
+Source checks for task 1162: 34 area tests, six actual MCP observations and normal
+UI locale/window submissions. Independent and installed acceptance remain pending;
+see docs/ANDROID-VIEWS.md. Runtime/emulator scope is unchanged by these views.
 
 Android runtime extension adds 24 explicit operations and two MCP tools (37
 total; static49/binary50 unchanged). All 24 operations have been exercised on
