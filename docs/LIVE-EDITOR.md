@@ -16,6 +16,13 @@ its bridge idempotently during import as well, so discovery and commands still
 work on that build. A warning alone does not prove the bridge is running: use
 live discovery.
 
+The plugin releases its own Python-backed Qt object during shutdown, before
+the editor can finalize its embedded interpreter. A private test harness must
+also release its own Python-backed timers at that point; stopping a timer alone
+does not dispose it. Shutdown checks include normal native exit and descriptor
+removal after command traffic, rather than treating a returned command as proof
+of a clean editor shutdown.
+
 Both processes use `Vitruvius/cutter-bridge` under the user's local application
 data directory by default. Set `THESEUS_CUTTER_BRIDGE_DIR` to the same directory
 in both environments to use another profile. The bridge binds only loopback and
