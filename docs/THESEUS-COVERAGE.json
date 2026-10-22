@@ -11,7 +11,7 @@
   "completion": {
     "complete": false,
     "percentage": null,
-    "reason": "Reviewed original-fixture contracts are tracked separately from installed/publication acceptance. Remaining semantic, implementation and platform work stays open."
+    "reason": "Finite reviewed reader/native-session scopes have installed MCP/UI acceptance. Individually marked semantic, implementation and platform requirements remain open; publication is recorded separately."
   },
   "boundaries": [
     "No Sparks or substitute local text model used.",
@@ -19,7 +19,7 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "independently-reviewed-release-pending": 69,
+    "independently-reviewed-installed-validated": 69,
     "implementation-pending": 24,
     "semantic-review-pending": 89,
     "platform-required-implementation-pending": 3,
@@ -38,10 +38,10 @@
       "counterparts": [
         "theseus_binary_call:annotate_native_function"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Annotation changes round-trip in the private analysis session while original artifact bytes retain their hash.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -60,7 +60,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -74,10 +81,10 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_load_image"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Observed load-image ranges, original-file identities and byte mappings on ELF, PE and AArch64; rewritten memory is distinguished from original file bytes.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -96,7 +103,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -110,10 +124,10 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_data_type"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original C string/array declarations checked against recovered type identity, size/count/stride; unavailable types remain explicit.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -132,7 +146,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -146,10 +167,10 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_instruction"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Instruction bytes/length and direct call targets checked against original container/disassembly; unresolved computed targets remain unresolved.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -168,7 +189,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -182,10 +210,10 @@
       "counterparts": [
         "theseus_binary_call:resolve_native_call_targets"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Instruction bytes/length and direct call targets checked against original container/disassembly; unresolved computed targets remain unresolved.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -204,7 +232,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -218,10 +253,10 @@
       "counterparts": [
         "theseus_binary_call:address_name"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -240,7 +275,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -254,10 +296,10 @@
       "counterparts": [
         "theseus_binary_call:comment"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -276,7 +318,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -290,10 +339,10 @@
       "counterparts": [
         "theseus_binary_call:current_address"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -312,7 +361,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -326,10 +382,10 @@
       "counterparts": [
         "theseus_binary_call:current_procedure"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -348,7 +404,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -362,10 +425,10 @@
       "counterparts": [
         "theseus_binary_call:current_document"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Session/document identity bound to the original artifact SHA-256, language, base address and live session listing.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -384,7 +447,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -398,10 +468,10 @@
       "counterparts": [
         "theseus_binary_call:goto_address"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -420,7 +490,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -434,10 +511,10 @@
       "counterparts": [
         "theseus_binary_call:inline_comment"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -456,7 +533,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -470,10 +554,10 @@
       "counterparts": [
         "theseus_binary_call:list_bookmarks"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -492,7 +576,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -506,10 +597,10 @@
       "counterparts": [
         "theseus_binary_call:list_documents"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Session/document identity bound to the original artifact SHA-256, language, base address and live session listing.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -528,7 +619,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -542,10 +640,10 @@
       "counterparts": [
         "theseus_binary_call:list_names"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -564,7 +662,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -578,10 +683,10 @@
       "counterparts": [
         "theseus_binary_call:list_procedures"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -600,7 +705,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -614,10 +726,10 @@
       "counterparts": [
         "theseus_binary_call:list_segments"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Observed mapped sections checked against original ELF/PE container ranges, permissions and mapped/raw size distinctions.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -636,7 +748,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -650,10 +769,10 @@
       "counterparts": [
         "theseus_binary_call:list_strings"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original authored data strings, addresses, byte lengths and search selection checked against container bytes.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -672,7 +791,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -686,10 +812,10 @@
       "counterparts": [
         "theseus_binary_call:next_address"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -708,7 +834,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -722,10 +855,10 @@
       "counterparts": [
         "theseus_binary_call:prev_address"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Cursor navigation follows actual instruction addresses in both directions, reports its containing function and rejects unmapped addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -744,7 +877,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -758,10 +898,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_address"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -780,7 +920,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -794,10 +941,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_assembly"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Function assembly checked against an independent disassembler on x86; AArch64 is checked through original instruction words because installed objdump cannot decode that target.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -816,7 +963,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -830,10 +984,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_callees"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -852,7 +1006,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -866,10 +1027,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_callers"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -888,7 +1049,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -902,10 +1070,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_info"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original ELF/AArch64 symbol functions and PE unwind/string evidence contrasted with recovered function names, ranges and addresses.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -924,7 +1092,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -938,10 +1113,10 @@
       "counterparts": [
         "theseus_binary_call:read_function_instructions"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Function assembly checked against an independent disassembler on x86; AArch64 is checked through original instruction words because installed objdump cannot decode that target.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -960,7 +1135,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -974,10 +1156,10 @@
       "counterparts": [
         "theseus_binary_call:search_bytes"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Search matches checked against original container scanning; file offsets are only published when the loaded bytes match the original file.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -996,7 +1178,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1010,10 +1199,10 @@
       "counterparts": [
         "theseus_binary_call:read_bytes"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Read ranges and virtual/file address mapping checked against original bytes, including unavailable mappings.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1032,7 +1221,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1046,10 +1242,10 @@
       "counterparts": [
         "theseus_binary_call:address_to_file_offset"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Read ranges and virtual/file address mapping checked against original bytes, including unavailable mappings.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1068,7 +1264,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1082,10 +1285,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_references"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Instruction/data reference identities and incoming/outgoing directions checked against original disassembly and function-pointer data; omitted direction uses outgoing.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1104,7 +1307,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1118,10 +1328,10 @@
       "counterparts": [
         "theseus_binary_call:procedure_pseudo_code"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Single/batch pseudocode retains original authored callees, string/constant references and ordered selected function identities; no source-code equivalence claim.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1140,7 +1350,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1154,10 +1371,10 @@
       "counterparts": [
         "theseus_binary_call:resolve_containing_procedure"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Containing function resolution checked at original function entries/interiors and outside recovered functions.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1176,7 +1393,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1190,10 +1414,10 @@
       "counterparts": [
         "theseus_binary_call:search_procedures"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Name search selects the expected recovered original functions and follows session renaming.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1212,7 +1436,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1226,10 +1457,10 @@
       "counterparts": [
         "theseus_binary_call:search_strings"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original authored data strings, addresses, byte lengths and search selection checked against container bytes.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1248,7 +1479,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1262,10 +1500,10 @@
       "counterparts": [
         "theseus_binary_call:set_address_name"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1284,7 +1522,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1298,10 +1543,10 @@
       "counterparts": [
         "theseus_binary_call:set_addresses_names"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1320,7 +1565,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1334,10 +1586,10 @@
       "counterparts": [
         "theseus_binary_call:set_bookmark"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1356,7 +1608,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1370,10 +1629,10 @@
       "counterparts": [
         "theseus_binary_call:set_comment"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1392,7 +1651,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1406,10 +1672,10 @@
       "counterparts": [
         "theseus_binary_call:set_inline_comment"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1428,7 +1694,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1442,10 +1715,10 @@
       "counterparts": [
         "theseus_binary_call:unset_bookmark"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Names, comments, inline comments and bookmark categories round-trip in a private session, including unmapped-address failures and restored baseline names.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1464,7 +1737,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1478,10 +1758,10 @@
       "counterparts": [
         "theseus_binary_call:xrefs"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Instruction/data reference identities and incoming/outgoing directions checked against original disassembly and function-pointer data; omitted direction uses outgoing.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1500,7 +1780,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1592,10 +1879,10 @@
       "counterparts": [
         "theseus_binary_call:batch_decompile"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Single/batch pseudocode retains original authored callees, string/constant references and ordered selected function identities; no source-code equivalence claim.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1614,7 +1901,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1628,10 +1922,10 @@
       "counterparts": [
         "theseus_binary_call:get_call_graph"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Direct-call graph, incoming/outgoing neighbours and explicit unresolved computed edges checked against original source/disassembly; unresolved dispatch is not claimed complete.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1650,7 +1944,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1744,10 +2045,10 @@
       "counterparts": [
         "theseus_binary_call:analyze_function"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original C dossiers checked for body ranges, direct neighbours, pseudocode/assembly, typed arguments/returns, jump tables and selected high-p-code constants. Compiler/version breadth remains finite.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1766,7 +2067,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1780,10 +2088,10 @@
       "counterparts": [
         "theseus_binary_call:inspect_native_api"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original C dossiers checked for body ranges, direct neighbours, pseudocode/assembly, typed arguments/returns, jump tables and selected high-p-code constants. Compiler/version breadth remains finite.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1802,7 +2110,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1833,10 +2148,10 @@
       "counterparts": [
         "theseus_binary_call:trace_call_path"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original direct call paths checked against the authored graph and independently observed instruction call sites; indirect unknowns remain explicit.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1132,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -1855,7 +2170,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -1955,10 +2277,10 @@
       "counterparts": [
         "apple.macho"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original linked Mach-O slices checked with an independent reader; scoped bundle/image-folder dylib resolution, explicit paths/candidates, versions, flags and unknown system dependencies. No runtime loading or signature authentication.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1109,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -1979,7 +2301,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2011,10 +2340,10 @@
       "counterparts": [
         "apple.plist"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "XML/binary plist values and keyed archive identities/edges checked against independent construction and plistlib; boolean CF$UID dictionaries remain dictionaries. Expansion beyond one million values or 512 nesting levels fails explicitly, without silently truncating values.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1122,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2034,7 +2363,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2048,10 +2384,10 @@
       "counterparts": [
         "apple.macho"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original thin and universal Mach-O architecture slices with table-order identity, CPU/subtype, offset, size and alignment compared with an independent container reader; other formats use their own layout readers.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1109,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -2072,7 +2408,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2084,10 +2427,10 @@
         "kind": "native-provider"
       },
       "counterparts": [],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Official demangler on stdin, authoritative compact text plus separately matched classification; literal prefix markers, at-signs, wildcards and leading dollar signs are preserved. Tool version/bytes and failures retained; no arbitrary symbol expansion through argv.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1119,
         "submission_revision": 4,
         "reviewed_submission_revision": 4,
@@ -2109,7 +2452,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       },
       "group": "swift-demangle"
     },
@@ -2124,10 +2474,10 @@
       "counterparts": [
         "pe.resources"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original x86/x64 resource builds checked leaf by leaf against pefile and authored payloads; identities, offsets, hashes and icon relationships. Payloads remain raw, damaged trees fail explicitly.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1110,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -2147,7 +2497,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2242,10 +2599,10 @@
       "counterparts": [
         "artifact.inventory"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1115,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2265,7 +2622,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2279,10 +2643,10 @@
       "counterparts": [
         "artifact.extract"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1115,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2302,7 +2666,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2334,10 +2705,10 @@
       "counterparts": [
         "apple.keyed_archive"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "XML/binary plist values and keyed archive identities/edges checked against independent construction and plistlib; boolean CF$UID dictionaries remain dictionaries. Expansion beyond one million values or 512 nesting levels fails explicitly, without silently truncating values.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1122,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2357,7 +2728,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2389,10 +2767,10 @@
       "counterparts": [
         "apple.dylibs"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original linked Mach-O slices checked with an independent reader; scoped bundle/image-folder dylib resolution, explicit paths/candidates, versions, flags and unknown system dependencies. No runtime loading or signature authentication.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1109,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -2413,7 +2791,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2427,10 +2812,10 @@
       "counterparts": [
         "evm.interface"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original solc builds with optimization variants; selector/interface/storage facts and terminal CBOR metadata. Bytecode argument renderings and mutability retain conservative inference and known widening; no chain execution or authentication.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1104,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2450,7 +2835,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2464,10 +2856,10 @@
       "counterparts": [
         "go.build"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Compiler/module metadata and auditable dependency graphs on original Go and Rust builds; per-slice universal Mach-O evidence and original byte ranges. Pointer-encoded Go metadata has synthetic coverage; metadata does not authenticate a producer or recover all language types/functions.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1100,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -2488,7 +2880,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2502,10 +2901,10 @@
       "counterparts": [
         "rust.dependencies"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Compiler/module metadata and auditable dependency graphs on original Go and Rust builds; per-slice universal Mach-O evidence and original byte ranges. Pointer-encoded Go metadata has synthetic coverage; metadata does not authenticate a producer or recover all language types/functions.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1100,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -2526,7 +2925,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2632,10 +3038,10 @@
       "counterparts": [
         "sqlite.database"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Private read-only SQLite/WAL-family observations, schema and bounded queries; FTS5, BLOB bytes, int64 and text preservation checked against SQLite itself. No runtime/application equivalence.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1102,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2655,7 +3061,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2687,10 +3100,10 @@
       "counterparts": [
         "capture.packets"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original packet captures: outer transport endpoints, answer-only DNS from every message in a segment, separated chained URI observations, selected packet/stream limits and exact capture identity. Quoted ICMP/tunnel traffic is not attributed to the outer endpoint; encrypted bodies and uncaptured traffic remain unknown.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1123,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -2713,7 +3126,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2763,10 +3183,10 @@
       "counterparts": [
         "managed.artifact"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1107,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -2785,7 +3205,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2799,10 +3226,10 @@
       "counterparts": [
         "managed.members"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1107,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -2821,7 +3248,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -2835,10 +3269,10 @@
       "counterparts": [
         "managed.native_boundaries"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original managed builds and a complete opcode fixture contrasted with independent metadata readers: declarations, signatures, CIL bytes/digests, exception regions, references, strings and P/Invoke boundaries. Declared native imports do not prove runtime binding or NativeAOT body recovery.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1107,
         "submission_revision": 1,
         "reviewed_submission_revision": 1,
@@ -2857,7 +3291,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -3085,10 +3526,10 @@
       "counterparts": [
         "capture.packets"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original packet captures: outer transport endpoints, answer-only DNS from every message in a segment, separated chained URI observations, selected packet/stream limits and exact capture identity. Quoted ICMP/tunnel traffic is not attributed to the outer endpoint; encrypted bodies and uncaptured traffic remain unknown.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1123,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -3111,7 +3552,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -3125,10 +3573,10 @@
       "counterparts": [
         "flutter.elf"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original Dart AOT ELF and synthetic APK engine build-id fixtures: split and unified snapshot layouts, feature strings, symbol definition/extent and serialized-length checks. Snapshot headers and bounded printable strings are observed; Dart objects/types or decompiled application behavior are not recovered. Missing/tiny symbols and incomplete pools remain partial.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1118,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -3148,7 +3596,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -3162,10 +3617,10 @@
       "counterparts": [
         "flutter.elf"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original Dart AOT ELF and synthetic APK engine build-id fixtures: split and unified snapshot layouts, feature strings, symbol definition/extent and serialized-length checks. Snapshot headers and bounded printable strings are observed; Dart objects/types or decompiled application behavior are not recovered. Missing/tiny symbols and incomplete pools remain partial.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1118,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -3185,7 +3640,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -3695,10 +4157,10 @@
       "counterparts": [
         "firmware.regions"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original images assembled with real encoders, observed signature offsets/sizes, exact extracted bytes and retained extraction gaps; unavailable extractors and interrupted/partial outcomes remain explicit.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1106,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -3719,7 +4181,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -3733,10 +4202,10 @@
       "counterparts": [
         "firmware.extract"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original images assembled with real encoders, observed signature offsets/sizes, exact extracted bytes and retained extraction gaps; unavailable extractors and interrupted/partial outcomes remain explicit.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1106,
         "submission_revision": 3,
         "reviewed_submission_revision": 3,
@@ -3757,7 +4226,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -4699,10 +5175,10 @@
       "counterparts": [
         "artifact.compare"
       ],
-      "status": "independently-reviewed-release-pending",
+      "status": "independently-reviewed-installed-validated",
       "scope": "Original directory/archive inventories and extracted bytes, exact occurrence-aware differences. Unsupported readers, encrypted entries, duplicate names and ambiguous correspondence retain explicit limits.",
       "acceptance": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1115,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -4722,7 +5198,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
@@ -5238,7 +5721,7 @@
       },
       "group": "free-debugger-backends",
       "reviewed_partial_scope": {
-        "state": "independently-reviewed-source; installed acceptance and publication pending",
+        "state": "independently-reviewed-and-installed-validated-read-only-subset",
         "task": 1133,
         "submission_revision": 2,
         "reviewed_submission_revision": 2,
@@ -5258,7 +5741,14 @@
           "codex-browser-route22a.xml",
           "codex-full22a-ghidra.xml"
         ],
-        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim."
+        "limitations": "Finite original-fixture acceptance; no general behavioral equivalence or complete programme claim.",
+        "installed": {
+          "packaged_source_commit": "eef5f442507f672f4f0808b5946094b53ea972a8",
+          "runtime_tip": "b5b5f0d74562bbc54dfc4193c8100962af326833",
+          "wheel_sha256": "02ecbef7c76d2d96a941c8d3cabb1af0f3cb72deb0bed02e91d9464004fae594",
+          "receipt": "codex-installed-qa22a.json",
+          "scope": "Finite installed original-fixture MCP/UI acceptance; publication is tracked separately."
+        }
       }
     },
     {
