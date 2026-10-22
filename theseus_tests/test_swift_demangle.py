@@ -61,12 +61,22 @@ def test_every_release_vector_demangles_as_the_swift_test_suite_expects(client):
     assert all(row['exit_code'] == 0 and len(row['sha256']) == 64 for row in result['provenance'])
 
 
-def test_one_invocation_reads_every_symbol_from_standard_input(client):
+def test_each_output_stream_reads_every_symbol_from_standard_input(client):
     symbols = [mangled for mangled, _ in VECTORS] * 4
     single = call(client, [mangled for mangled, _ in VECTORS])['symbols']
     result = call(client, symbols)
     assert result['symbols'] == single * 4
-    assert [(row['argument_count'], row['input']) for row in result['provenance']] == [(len(symbols), 'stdin')]
+    assert [(row['argument_count'], row['input'], row['mode']) for row in result['provenance']] == [
+        (len(symbols), 'stdin', 'compact'), (len(symbols), 'stdin', 'classify')]
+
+
+def test_literal_classification_prefixes_are_preserved(client):
+    symbols = ['{N} main', '{C} plain', '{T:literal} plain', '  {C} plain',
+               '{N} $s4Test3fooyyF']
+    rows = call(client, symbols)['symbols']
+    assert [row['output'] for row in rows] == [*symbols[:-1], '{N} Test.foo() -> ()']
+    assert [row['status'] for row in rows] == ['unchanged'] * 4 + ['demangled']
+    assert all(not row['classification']['foreign_calling_convention'] and not row['classification']['thunk'] for row in rows)
 
 
 def test_symbols_are_never_read_as_response_files_wildcards_or_dollar_names(client, tmp_path):
