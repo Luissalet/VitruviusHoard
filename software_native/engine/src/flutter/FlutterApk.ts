@@ -239,7 +239,7 @@ export const inspectDartAot = async (bytes: Buffer, path: string, parameters: { 
       .sort((left, right) => order.indexOf(left.name) - order.indexOf(right.name))
       .map((row) => {
         const isData = row.name.endsWith("SnapshotData");
-        const read = isData ? readSnapshotHeader(data, row.offset, aotKind) : null;
+        const read = isData ? readSnapshotHeader(data, row.offset, aotKind, row.size) : null;
         return {
           row,
           read,
@@ -255,10 +255,16 @@ export const inspectDartAot = async (bytes: Buffer, path: string, parameters: { 
     const hashes = data_sections.map((item) => item.read!.hash).filter((hash): hash is string => hash !== null);
     const candidates = [...new Set(hashes)];
     const expected = layout === "unified" ? ["_kDartSnapshotData"] : ["_kDartVmSnapshotData", "_kDartIsolateSnapshotData"];
+    const required = layout === "unified" ? UNIFIED_SNAPSHOT_SYMBOLS : SPLIT_SNAPSHOT_SYMBOLS;
+    const absent = layout === "unified" ? SPLIT_SNAPSHOT_SYMBOLS : UNIFIED_SNAPSHOT_SYMBOLS;
+    const symbolFailures = symbols.failures.filter((row) =>
+      !absent.some((name) => row.reason === `symbol ${name} is not in the dynamic symbol table`));
     const extentsFit = sections.every((item) => item.row.offset + item.row.size <= data.length);
     const complete =
       header.failure === undefined &&
       layout !== null &&
+      required.every((name) => found.includes(name)) &&
+      symbolFailures.length === 0 &&
       expected.every((name) => data_sections.some((item) => item.row.name === name && item.read!.complete)) &&
       candidates.length === 1 &&
       extentsFit;

@@ -147,7 +147,7 @@ export async function analyzeFormat(operation:string,bytes:Buffer,path:string,pa
     const file=await open(path,'r');
     let build;
     try {build=await readElfBuildIds(file,bytes.length,undefined);} finally {await file.close();}
-    const snapshots=[...symbols.symbols.filter(row=>row.name.endsWith('Data')).map(row=>({name:row.name,file_offset:row.offset,...readSnapshotHeader(bytes,row.offset,aotKind)})),
+    const snapshots=[...symbols.symbols.filter(row=>row.name.endsWith('Data')).map(row=>({name:row.name,file_offset:row.offset,...readSnapshotHeader(bytes,row.offset,aotKind,row.size)})),
       ...(parameters.snapshot_offsets||[]).map(offset=>({name:'selected',file_offset:offset,...readSnapshotHeader(bytes,offset,aotKind)}))];
     return {header:header.header,layout,symbols:symbols.symbols,symbol_failures:symbolFailures,build_ids:build.candidates,
       build_id_failures:build.failures,snapshots,

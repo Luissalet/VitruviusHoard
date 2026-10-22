@@ -517,6 +517,7 @@ export const readSnapshotHeader = (
   bytes: Buffer,
   offset: number,
   fullAotKind: number | null = 3,
+  symbolSize: number = bytes.length - offset,
 ): {
   magicValid: boolean;
   kind: number | null;
@@ -525,6 +526,7 @@ export const readSnapshotHeader = (
   features: string | null;
   complete: boolean;
 } => {
+  bytes = bytes.subarray(0, Math.min(bytes.length, offset + symbolSize));
   const reader = new BoundedReader(bytes);
   // The Dart magic bytes f5 f5 dc dc read little-endian. Kind and length
   // fields are only meaningful in data-section headers; sections without
