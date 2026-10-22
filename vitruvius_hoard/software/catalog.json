@@ -3722,6 +3722,63 @@
     "module": "babel"
   },
   {
+    "name": "theseus_cutter_sessions",
+    "description": "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_cutter_command",
+    "description": "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expected_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$"
+        },
+        "json": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id",
+        "session_id",
+        "expected_generation",
+        "command"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_client_inspect",
     "description": "Explicitly inspect selected free Java/Apktool, TShark/capinfos or GNU objdump client paths, selection sources, file hashes and real version diagnostics. GNU objdump also reports its advertised BFD targets without an artifact; this does not certify target support. No project, artifact, decoding or capture is required. Cold discovery never invokes clients.",
     "inputSchema": {
