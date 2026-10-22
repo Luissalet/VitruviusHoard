@@ -21,6 +21,7 @@ dependencies = [
   "python-multipart>=0.0.20",
   "psutil>=5.9",
   "jsonschema>=4.20,<5",
+  "PyYAML>=6,<7",
   "websocket-client>=1.9",
   "websockets>=14",
   "pillow>=10",

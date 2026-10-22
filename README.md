@@ -8,6 +8,8 @@ A local software workbench with design/source projects, version-exact API docume
 
 Inspection can discover an already open local editor and send explicit commands through the bundled Python bridge. Commands may change files or the editor; uncertain completion is never retried automatically. Their retained observations remain readable and transferable after it closes. See [live editor sessions](docs/LIVE-EDITOR.md).
 
+Android package summaries link to their complete retained analysis. Read manifest windows from finished or imported evidence without reopening the APK, and select resource string tables by language or omit strings explicitly. Complete decoded files and uncertainty remain available. See [Android package and resource views](docs/ANDROID-VIEWS.md).
+
 Original compiler/encoder fixtures and independent reviews now cover Go/Rust metadata, SQLite values, EVM interfaces, firmware extraction, managed metadata/CIL, Mach-O dependencies, PE resources, artifact inventories, plist/keyed archives, packet captures, Flutter/Dart snapshot headers, symbol demangling and read-only binary queries. Native-session oracles distinguish unresolved branches and rewritten memory from original file offsets. Flutter observations retain partial symbols/pools; these readers do not prove application behavior. See [reader scope and acceptance](docs/COMPILED-READERS.md).
 
 Retained browser captures can export their script bytes and source maps, trace generated positions to original sources and resolve literal imports offline. Missing maps, duplicate sources and computed imports retain their uncertainty. See [retained web sources](docs/WEB-SOURCES.md).

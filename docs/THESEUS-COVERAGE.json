@@ -3310,13 +3310,28 @@
         "kind": "android-provider"
       },
       "counterparts": [
-        "android.package"
+        "android.package",
+        "android.package_view"
       ],
       "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "scope": "Complete saved package observations with optional linked summary delivery and retained summary/UTF-16 manifest windows from finished or imported sources. Independent and installed acceptance pending.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "source-MCP-UI-validated-pending-independent-installed",
+        "task": 1162,
+        "tests": [
+          "theseus_tests/test_android_projection.py",
+          "theseus_tests/test_android_static.py",
+          "theseus_tests/test_native_analysis.py",
+          "theseus_tests/test_retained_workflow.py",
+          "theseus_tests/test_structured_recovery.py"
+        ],
+        "source_proofs": [
+          "codex-android1162-c.xml",
+          "codex-android1162-mcp22b.json",
+          "codex-android1162-ui22.json",
+          "codex-android1162-ui-verified22.json"
+        ],
+        "scope": "34 area PASS, six actual MCP observations, UI-submitted locale selection and imported manifest window. First author count-oracle error preserved. No installed or whole-application equivalence claim."
       }
     },
     {
@@ -3456,10 +3471,24 @@
         "android.resources"
       ],
       "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "scope": "Complete decoded resource files, lexical direct string tables selected by locale/locales or explicitly omitted, raw scalar metadata, missing/malformed/unparsed counts and qualified coverage. Independent and installed acceptance pending.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "source-MCP-UI-validated-pending-independent-installed",
+        "task": 1162,
+        "tests": [
+          "theseus_tests/test_android_projection.py",
+          "theseus_tests/test_android_static.py",
+          "theseus_tests/test_native_analysis.py",
+          "theseus_tests/test_retained_workflow.py",
+          "theseus_tests/test_structured_recovery.py"
+        ],
+        "source_proofs": [
+          "codex-android1162-c.xml",
+          "codex-android1162-mcp22b.json",
+          "codex-android1162-ui22.json",
+          "codex-android1162-ui-verified22.json"
+        ],
+        "scope": "34 area PASS, six actual MCP observations, UI-submitted locale selection and imported manifest window. First author count-oracle error preserved. No installed or whole-application equivalence claim."
       }
     },
     {
