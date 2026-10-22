@@ -45,21 +45,25 @@ def demangle(symbols):
     version = subprocess.run([executable, '--version'], capture_output=True, timeout=60).stdout.decode('utf8', errors='replace')
     # Symbols travel on standard input, one per line, as in the Swift release suite. Never on the command line:
     # there the runtime expands @response files and wildcards and adds a $ to names that start with s or S.
-    command = [executable, '--compact', '--classify']
-    started = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    reply = subprocess.run(command, input=('\n'.join(symbols) + '\n').encode('utf8'), capture_output=True, timeout=300)
-    lines = [line[:-1] if line.endswith('\r') else line for line in reply.stdout.decode('utf8', errors='replace').split('\n')]
-    provenance = [{'executable': executable, 'sha256': digest, 'version': version.strip(), 'argument_count': len(symbols), 'input': 'stdin',
+    streams, provenance = [], []
+    for mode, options in [('compact', []), ('classify', ['--classify'])]:
+        started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        reply = subprocess.run([executable, '--compact', *options], input=('\n'.join(symbols) + '\n').encode('utf8'), capture_output=True, timeout=300)
+        lines = [line[:-1] if line.endswith('\r') else line for line in reply.stdout.decode('utf8', errors='replace').split('\n')]
+        provenance.append({'executable': executable, 'sha256': digest, 'version': version.strip(), 'argument_count': len(symbols), 'input': 'stdin', 'mode': mode,
                    'exit_code': reply.returncode, 'stderr': reply.stderr.decode('utf8', errors='replace'),
-                   'started_at': started, 'finished_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}]
-    if reply.returncode != 0 or len(lines) != len(symbols) + 1 or lines[-1] != '':
-        raise ValueError('swift-demangle did not return one line per symbol')
+                   'started_at': started, 'finished_at': datetime.datetime.now(datetime.timezone.utc).isoformat()})
+        if reply.returncode != 0 or len(lines) != len(symbols) + 1 or lines[-1] != '':
+            raise ValueError('swift-demangle did not return one line per symbol')
+        streams.append(lines)
     rows = []
-    for symbol, output in zip(symbols, lines):
+    for symbol, output, classified in zip(symbols, *streams):
         flags = []
-        match = CLASSIFICATION.match(output)
-        if match:
-            flags, output = match.group(2).split(','), match.group(1) + output[match.end():]
+        match = CLASSIFICATION.match(classified)
+        # Classification markers can also be literal user text. Only consume a
+        # prefix when removing it reproduces the independent compact stream.
+        if match and match.group(1) + classified[match.end():] == output:
+            flags = match.group(2).split(',')
         thunk = next((flag[2:] for flag in flags if flag.startswith('T:')), None)
         status = 'demangled' if output != symbol else 'invalid' if symbol.lstrip().startswith(PREFIXES) else 'unchanged'
         classification = {'swift_symbol': status != 'unchanged', 'thunk': thunk is not None,
