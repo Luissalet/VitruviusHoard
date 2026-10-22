@@ -70,5 +70,27 @@ The expanded import regression `codex-android1162-g.xml` passes 40 cases.
 The full run `codex-full22c` on the previous frozen source was stopped only after
 these independent defects made that candidate superseded; its exact owned tree,
 log, partial basetemp and interruption receipt are preserved. It is not a passing
-full run and does not validate this correction. Fresh native MCP/UI, final area
-checks and CAS2 review are still required before accepting the corrected source.
+full run and does not validate this correction.
+
+Fresh checks on code commit `56317d1af3d01e420d2abf3ffe8d320c6997058a`:
+
+- Expanded area H: 68 cases, 66 PASS and two failures after the test helper's
+  unchanged 20-second deadline (managed artifact and JavaScript recovery).
+  Their teardown cancelled still-running workers without a retained result.
+  Both cases pass in isolated I, 2 PASS, 33.396 seconds, without code or deadline
+  changes. H's 230.986-second failed run remains intact; this is not one green
+  area run. A separate engine-only diagnostic on H's exact DLL returns exit 0
+  in 2.931 seconds. The cause of the deadline overruns is not established.
+- Fresh actual MCP: seven observations, including following the action delivered
+  by the imported summary through two consecutive transfers. Local parent/action
+  IDs, recomputed view digests and complete canonical documents match.
+  `codex-android1162-mcp23a.json` fixes all three changed runtime file hashes.
+- Normal UI in the twice-imported project submitted a 140-unit manifest window,
+  read the destination IDs in the visible summary receipt, and read the resource
+  manifest with CRLF. The latter equals the actual decoded UTF-8 file; download
+  of the window is byte exact. `codex-android1162-ui23a.json` and
+  `codex-android1162-ui-verified23a.json`; both screenshots visually inspected.
+  Own tab 7 closed and private owner 64336 tree closed by exact identity;
+  `qa-codex-android1162r2-closed.json`. All profiles and previous failures remain.
+
+CAS2 independent review and fresh combined/installed acceptance remain required.
