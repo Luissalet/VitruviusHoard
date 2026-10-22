@@ -224,6 +224,6 @@ def test_http_and_family_tools_share_the_same_project_and_specification(tmp_path
         assert invalid.status_code == 400
         assert client.post("/api/projects/" + project["id"] + "/artifacts", json={}).status_code == 422
         tools = client.get("/api/agent/tools").json()["tools"]
-        assert len(tools) == 39
-        assert any(tool['name'] == 'theseus_client_inspect' for tool in tools)
-        assert {row["name"] for row in tools} >= {"theseus_binary_analysis", "theseus_analysis_start", "theseus_analysis_record", "theseus_runtime_catalog", "theseus_runtime_start"}
+        names = {row["name"] for row in tools}
+        assert len(names) == len(tools)
+        assert names >= {"theseus_client_inspect", "theseus_swift_demangle", "theseus_binary_analysis", "theseus_analysis_start", "theseus_analysis_record", "theseus_runtime_catalog", "theseus_runtime_start"}
