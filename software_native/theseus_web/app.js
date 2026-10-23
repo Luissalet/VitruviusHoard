@@ -653,7 +653,8 @@ function nativeAnalyses() {
   const source = sources.find(row=>row.id===draft("analysis-source-job")) || sources[0];
   const webTrace = ["javascript.trace_source", "javascript.trace_imports"].includes(selected?.name);
   const webChoices = source && state.webSourceChoices?.job_id===source.id && state.webSourceChoices.sha256===source.result.analysis_sha256 ? state.webSourceChoices : null;
-  let body = `<div class="reading"><h2>Análisis estático local</h2><p>Inspecciona archivos y aplicaciones con ubicaciones originales, o consulta los análisis guardados. El análisis estático no ejecuta el programa.</p>`;
+  const explicitCommand=selected?.name==="rizin.execute";
+  let body = `<div class="reading"><h2>${explicitCommand?"Orden local explícita":"Análisis estático local"}</h2><p>${explicitCommand?"La orden actúa sobre el archivo original y puede ejecutar código, modificar archivos o acceder a entradas externas. Sus efectos persisten aunque canceles la observación.":"Inspecciona archivos y aplicaciones con ubicaciones originales, o consulta los análisis guardados. El análisis estático no ejecuta el programa."}</p>`;
   if (!state.data.artifacts.length) return body + '<p>Añade un archivo desde Artefactos para analizarlo.</p><button data-action="tab" data-view="artifacts">Añadir artefacto</button></div>';
   body += `<form id="native-analysis-form">
     <label>Operación<select id="analysis-operation" name="operation" data-draft="analysis-operation">${operations.map(row => `<option value="${escape(row.name)}" ${row.name === selected?.name ? "selected" : ""}>${escape(row.title)}</option>`).join("")}</select></label>
@@ -663,7 +664,7 @@ function nativeAnalyses() {
       <label>Parámetros JSON<textarea class="mono" name="parameters" data-draft="${escape(parameterDraft)}" rows="6">${attr(parameterDraft, json(selected?.example || {}))}</textarea></label>
       <pre>${escape(json(selected?.inputSchema))}</pre>
     </details>
-    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) || (webTrace && !webChoices?.entries.some(row=>row.kind!=="inline-source-map" && row.state==="captured")) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : "Iniciar análisis"}</button>
+    <button class="primary" type="submit" ${selected?.available === false || (!state.catalog?.engine.available && selected?.worker !== "python") || (derived && !sources.length) || (pair && !candidateSources.length) || (webTrace && !webChoices?.entries.some(row=>row.kind!=="inline-source-map" && row.state==="captured")) ? "disabled" : ""}>${pair ? "Comparar análisis guardados" : derived ? "Consultar análisis guardado" : explicitCommand ? "Ejecutar orden" : "Iniciar análisis"}</button>
     ${!state.catalog?.engine.available && selected?.worker !== "python" ? '<p class="warning">El núcleo de análisis no está compilado. Ejecuta Install.ps1 y vuelve a abrir esta página.</p>' : ""}
   </form><h2>Análisis guardados</h2>`;
   body += runs.length ? runs.map(job => nativeAnalysisJob(job)).join("") : '<p class="muted">Todavía no hay análisis nativos en este proyecto.</p>';
