@@ -55,7 +55,23 @@ blob `7b6542be1aa1b5fec5b6922a4820230293a48156`. This is maintained product code
 not a relay to that reference application. Luis's requirement to preserve Ghidra
 sessions overrides its incidental session-closing behavior.
 
-Independent source review, full validation, installed acceptance and main
+Independent revision 1 requested changes after reproducing a suspended child
+surviving a failed Windows Job assignment. Its report and failed receipt remain
+in `review-rizin1154-r1`. The correction distinguishes Job creation from confirmed
+assignment: before assignment, it terminates the actual suspended child through
+its process handle and confirms exit; after assignment, normal Job cleanup
+continues. Cleanup success now describes the child actually stopped.
+
+Three real-process fault oracles exercise Job creation, assignment and resume.
+The initial RED run preserved two failures and one pass; its cleanup checked
+the exact identity before stopping the leaked oracle child. The corrected area
+run `codex-rizin1154-area-r2a.xml` passed 117 tests without skips in 87.94 seconds,
+including the existing Ghidra preservation control. The setup faults retain
+unknown completion, never run their marker code and leave no original child.
+Earlier MCP/UI evidence remains attributed to its original source revisions;
+this cleanup-only correction requires independent revision 2 before acceptance.
+
+Independent revision 2, full validation, installed acceptance and main
 publication remain pending. No shared owner/MCP, old5217, Sparks, substitute
 text model, GPU, SABER or shared ADB was used. Existing W2/main fac005a remains
 unchanged. This submission does not close the remaining 207-contract programme.
