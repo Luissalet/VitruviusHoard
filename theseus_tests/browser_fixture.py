@@ -65,11 +65,12 @@ def browser_fixture(folder,http_port=0,debugging_port=0,rule_limit=128,extra_scr
     finally:
         try:
             if process.poll() is None:
-                assert identity.create_time()==created and identity.cmdline()==arguments
+                assert identity.is_running() and identity.create_time()==created and identity.cmdline()==arguments
                 # Stop the parent first so it cannot replace a terminated utility.
                 owned=[identity,*identity.children(recursive=True)]
                 cleanup=[{'pid':p.pid,'create_time':p.create_time(),'command':p.cmdline()} for p in owned]
                 (folder/'cleanup-processes.json').write_text(json.dumps(cleanup),encoding='utf8')
+                closing={'started_epoch':time.time(),'grace_seconds':5,'confirmation_seconds':30,'confirmed':False}
                 # This fixture owns the whole browser. Close it gracefully before
                 # terminating verified leftovers; production observers never do this.
                 close={}
@@ -81,27 +82,49 @@ def browser_fixture(folder,http_port=0,debugging_port=0,rule_limit=128,extra_scr
                     finally:connection.close()
                 except (OSError,ValueError,AttributeError,websocket.WebSocketException) as exc:close['error']=str(exc)
                 (folder/'cleanup-close.json').write_text(json.dumps(close),encoding='utf8')
-                try:process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    for child,saved in zip(owned,cleanup):
+                try:
+                    try:process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        closing['grace_expired']=True
+                        # Refresh while the original root is still attached so
+                        # a utility created during the grace is also accounted for.
+                        if identity.is_running():
+                            assert identity.cmdline()==arguments
+                            seen={(row['pid'],row['create_time']) for row in cleanup}
+                            for child in identity.children(recursive=True):
+                                try:
+                                    saved={'pid':child.pid,'create_time':child.create_time(),'command':child.cmdline()}
+                                except psutil.NoSuchProcess:continue
+                                if (saved['pid'],saved['create_time']) not in seen:
+                                    owned.append(child);cleanup.append(saved)
+                                    seen.add((saved['pid'],saved['create_time']))
+                            (folder/'cleanup-processes.json').write_text(json.dumps(cleanup),encoding='utf8')
+                        for child,saved in zip(owned,cleanup):
+                            try:
+                                # is_running checks creation afresh; create_time
+                                # alone can return its cached value after PID reuse.
+                                if not child.is_running():continue
+                                assert child.create_time()==saved['create_time']
+                                child.terminate()
+                            except psutil.NoSuchProcess:pass
+                        # Windows termination can finish after the signal returns.
+                        # Confirm through the retained Popen handle, not a new PID.
+                        process.wait(timeout=30)
+                    live=[child for child in owned[1:] if child.is_running()]
+                    _,remaining=psutil.wait_procs(live,timeout=5)
+                    identities={row['pid']:row for row in cleanup}
+                    for child in remaining:
                         try:
-                            # Windows may no longer expose argv while this exact
-                            # owned process is exiting. PID plus creation time
-                            # still distinguishes it from a reused PID.
+                            if not child.is_running():continue
+                            saved=identities[child.pid]
                             assert child.create_time()==saved['create_time']
                             child.terminate()
                         except psutil.NoSuchProcess:pass
-                    process.wait(timeout=5)
-                _,remaining=psutil.wait_procs(owned[1:],timeout=5)
-                # A utility can outlive a gracefully closed parent. Verify each
-                # saved identity before terminating that exact leftover.
-                identities={row['pid']:row for row in cleanup}
-                for child in remaining:
-                    try:
-                        saved=identities[child.pid]
-                        assert child.create_time()==saved['create_time']
-                        child.terminate()
-                    except psutil.NoSuchProcess:pass
-                _,remaining=psutil.wait_procs(remaining,timeout=5)
-                assert not remaining,[(p.pid,p.name()) for p in remaining]
+                    _,remaining=psutil.wait_procs([child for child in remaining if child.is_running()],timeout=5)
+                    assert not remaining,[(p.pid,p.name()) for p in remaining]
+                    assert process.poll() is not None
+                    closing['confirmed']=True
+                finally:
+                    closing.update(finished_epoch=time.time(),root_exit_code=process.poll(),identities=cleanup)
+                    (folder/'cleanup-result.json').write_text(json.dumps(closing),encoding='utf8')
         finally:server.shutdown();server.server_close()
