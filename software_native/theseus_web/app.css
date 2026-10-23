@@ -505,6 +505,13 @@ summary {
 #native-analysis-form > p {
   overflow-wrap: anywhere;
 }
+#native-analysis-form fieldset .inline {
+  overflow-wrap: anywhere;
+  align-items: flex-start;
+}
+#native-analysis-form fieldset input[type="checkbox"] {
+  flex-shrink: 0;
+}
 .specification {
   min-height: 440px;
 }
