@@ -66,6 +66,50 @@ def test_real_contract_budget_and_continuous_writer_are_bounded(tmp_path):
         assert result['owned_group']['active_processes'] == 0
 
 
+@pytest.mark.skipif(os.name != 'nt', reason='Windows suspended process lifecycle')
+@pytest.mark.parametrize('stage', ['create', 'assign', 'resume'])
+def test_windows_setup_failure_stops_the_actual_child(tmp_path, monkeypatch, stage):
+    from theseus.process_windows import WindowsJob
+    def fail(*args, **kwargs):
+        raise OSError('owned setup fault: ' + stage)
+    monkeypatch.setattr(WindowsJob, {'create': '__init__', 'assign': 'assign', 'resume': 'resume'}[stage], fail)
+    marker = tmp_path / 'must-not-run.txt'
+    code = ('from pathlib import Path; import time; Path(' + repr(str(marker)) + ').write_text("ran"); '
+            'time.sleep(60)')
+    result = capture(tmp_path, code)
+    identity = result['process_identity']
+    live = None
+    try:
+        try:
+            child = psutil.Process(identity['pid'])
+            if child.create_time() == identity['created']:
+                assert child.cmdline() == identity['command']
+                live = child
+        except psutil.NoSuchProcess:
+            pass
+        assert live is None, 'The original suspended child survived setup failure'
+        assert not marker.exists()
+        assert result['completion_status'] == 'unknown'
+        assert 'owned setup fault: ' + stage in result['observer_error']
+        assert result['termination']['cleanup']['owned_process_stopped']
+        assert 'cleanup_error' not in result['termination']
+        assert result['exit_code'] is not None
+        assert result['stdout']['bytes'] == result['stderr']['bytes'] == 0
+        if stage != 'resume':
+            assert result['termination']['cleanup']['backend'] == 'Windows-process-handle'
+            assert not result['stream_complete']
+        else:
+            assert result['owned_group']['total_processes'] == 1
+            assert result['owned_group']['active_processes'] == 0
+    finally:
+        # Preserve the failed observation, then close only this oracle's own
+        # child after checking its exact identity. No suspended leak on RED.
+        if live is not None:
+            assert live.create_time() == identity['created'] and live.cmdline() == identity['command']
+            live.kill()
+            live.wait(timeout=5)
+
+
 @pytest.mark.parametrize('raw,invalid', [(b'\xef\xbf\xbd', False), (b'\xff\xc3', True)])
 def test_literal_replacement_character_and_invalid_utf8_are_distinct(tmp_path, raw, invalid):
     result = capture(tmp_path, 'import os; os.write(1,' + repr(raw) + '); raise SystemExit(7)')

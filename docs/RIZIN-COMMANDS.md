@@ -63,6 +63,14 @@ was not attempted or claimed. The private owner and tab have closed.
 
 An initial oracle used an unsupported echo spelling; a later launch-intent test
 omitted its parent directory. Both failed runs are preserved, separately from
-the corrected 114-test run. Independent review, full validation, installed
-acceptance and publication are pending. The previous reviewed W2 package
+the corrected 114-test run. Independent revision 1 then found that a failed
+Windows Job assignment could leave the newly created child suspended. The
+correction terminates that actual child through its handle before reporting
+cleanup success; an assigned Job still handles the normal descendant group.
+Creation, assignment and resume fault controls verify real child exit without
+executing their marker code. The corrected area passed 117 tests without skips;
+the initial failing fault run and independent report remain preserved.
+
+Independent revision 2, full validation, installed acceptance and publication
+are pending. The previous reviewed W2 package
 remains installed until those steps complete.

@@ -72,6 +72,7 @@ def _capture(argv, cwd, folder, context, *, limit=OUTPUT_LIMIT, cancelled=None):
     guard = threading.Lock()
     exceeded = threading.Event()
     process, job = None, None
+    job_assigned = False
     state = {**context, 'phase': 'launch-intent', 'exit_code': None, 'signal': None,
              'completion_status': 'unknown', 'output_truncated': False,
              'artifact_sha256_after': None, 'artifact_changed': None,
@@ -151,6 +152,7 @@ def _capture(argv, cwd, folder, context, *, limit=OUTPUT_LIMIT, cancelled=None):
                 from process_windows import WindowsJob
             job = WindowsJob()
             job.assign(process.pid)
+            job_assigned = True
         state['phase'] = 'capturing'
         persist()
         for channel, stream in [('stdout', process.stdout), ('stderr', process.stderr)]:
@@ -188,14 +190,17 @@ def _capture(argv, cwd, folder, context, *, limit=OUTPUT_LIMIT, cancelled=None):
         state['observer_error'] = type(error).__name__ + ': ' + str(error)
         if process is not None:
             try:
-                if job is not None:
+                if job_assigned:
                     stop('observer-error')
                 elif os.name == 'nt':
-                    # Assignment may have failed while the new child is still
-                    # suspended: it cannot have spawned any descendants.
+                    # A created but unassigned Job is empty. Kill the actual
+                    # suspended child through its Popen handle, then confirm
+                    # its exit before reporting cleanup success.
+                    state['termination'] = {'reason': 'launch-setup-error', 'imposed': True}
                     process.kill()
                     process.wait(timeout=5)
-                    state['termination'] = {'reason': 'launch-setup-error', 'imposed': True}
+                    state['termination']['cleanup'] = {
+                        'backend': 'Windows-process-handle', 'owned_process_stopped': True}
                 else:
                     stop('observer-error')
             except (OSError, subprocess.TimeoutExpired) as cleanup_error:
