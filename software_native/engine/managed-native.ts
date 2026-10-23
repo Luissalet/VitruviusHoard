@@ -12,6 +12,7 @@ import type {InspectMacho} from './src/domain/native/nativeInspection.js';
 export interface NativeObservationInput {
   path:string;sha256:string;artifact_path:string;artifact_sha256:string;
   artifact_format:'pe'|'elf'|'mach-o'|'unknown';version:string|null;job_id:string;
+  recorded_artifact_sha256?:string|undefined;artifact_binding?:'registered-content'|'admitted-source-change'|undefined;
   profile?:unknown;profile_sha256?:string|null|undefined;analysis_revision?:number|null|undefined;
 }
 interface ManagedSource {job_id:string;analysis_sha256:string;artifact_sha256:string}
@@ -68,6 +69,7 @@ export async function managedNativeVerification(bytes:Buffer,inputs:NativeObserv
       throw new Error('Native observation original artifact identity does not match its receipt');
     const dossier=functionDossierSchema.parse(document.result.value);
     const context={artifact_path:input.artifact_path,artifact_sha256:input.artifact_sha256,artifact_format:input.artifact_format,
+      recorded_artifact_sha256:input.recorded_artifact_sha256??null,artifact_binding:input.artifact_binding??'historical-binding-unreported',
       provider_profile:input.profile??null,profile_sha256:input.profile_sha256??null,
       analysis_revision:input.analysis_revision??null,recorded_provider_version:input.version};
     const evidence=createEvidence({path:input.artifact_path,sha256:input.artifact_sha256,format:input.artifact_format},provider,{

@@ -44,6 +44,7 @@ const requestSchema = z.object({
   source_input_roles:z.object({reference_job_id:z.string(),candidate_job_id:z.string()}).strict().optional(),
   managed_source:z.object({job_id:z.string(),analysis_sha256:z.string(),artifact_sha256:z.string()}).strict().optional(),
   native_inputs:z.array(z.object({path:z.string(),sha256:z.string(),artifact_path:z.string(),artifact_sha256:z.string(),
+    recorded_artifact_sha256:z.string().optional(),artifact_binding:z.enum(['registered-content','admitted-source-change']).optional(),
     artifact_format:z.enum(['pe','elf','mach-o','unknown']),version:z.string().nullable(),job_id:z.string(),
     profile:z.unknown().optional(),profile_sha256:z.string().nullable().optional(),
     analysis_revision:z.number().int().nonnegative().nullable().optional()}).strict()).optional(),
