@@ -24,3 +24,15 @@ Source review, full regression, normal package, private installed MCP/UI and
 independent installed acceptance are pending.
 No coverage row is promoted by this submission draft;1040/1157 remain open.
 W4 remains published separately atbe61ee3 with its own evidence and wheel.
+
+The independent source review of r1 requested changes:14 own controls passed
+and seven failed, while the31-case source area passed. Six failures accepted
+malformed encoded spaces; one stored a stale binding revision after a queued
+annotation completed. Their original reports/XML/basetemps remain intact.
+The correction validates encoded-space syntax before decoding and reads the
+current session inside the provider lock before dispatch.64 focused controls
+now pass, including all21 independent controls. The corrected combined area
+run1307-g passed61 cases, including a real-provider barrier that checks names
+and revision after an annotation and transfers that retained result twice.
+These are focused and area runs, not a new full regression. Renewed independent
+review, full regression and installed acceptance remain pending.

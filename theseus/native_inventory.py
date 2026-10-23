@@ -5,21 +5,30 @@ import re
 from urllib.parse import unquote
 
 OPERATIONS = {'resolve_name_references', 'binary_overview'}
+ADDRESS = re.compile(r'(?:(?P<space>(?:[A-Za-z0-9._~-]|%[0-9a-fA-F]{2})+):)?0[xX](?P<offset>[0-9a-fA-F]+)')
 
 
-def _address_key(value, default_space):
+def _address_parts(value):
     if not isinstance(value, str):
         return None
-    match = re.fullmatch(r'(?:(.+):)?0[xX]([0-9a-fA-F]+)', value)
+    match = ADDRESS.fullmatch(value)
     if not match:
         return None
     try:
-        space = unquote(match[1], errors='strict') if match[1] else default_space
+        space = unquote(match['space'], errors='strict') if match['space'] else None
     except UnicodeError:
         return None
+    return space, int(match['offset'], 16)
+
+
+def _address_key(value, default_space):
+    parts = _address_parts(value)
+    if parts is None:
+        return None
+    space = parts[0] if parts[0] is not None else default_space
     if not isinstance(space, str) or not space:
         return None
-    return space, int(match[2], 16)
+    return space, parts[1]
 
 
 def compose(runtime, session, operation, parameters, active):
@@ -100,6 +109,9 @@ def compose(runtime, session, operation, parameters, active):
         if not isinstance(raw, dict) or not isinstance(raw.get('segments'), list) or any(
                 not isinstance(row, dict) for row in raw['segments']):
             return invalid('The binary summary does not contain a complete segment list')
+        if any(row.get('image_base') is not None and _address_parts(row['image_base']) is None
+               for row in raw['segments']):
+            return invalid('The binary summary contains an invalid native base address')
         result = dict(raw)
         bases = [_address_key(row.get('image_base'), default_space) for row in raw['segments']]
         result.update(segment_count=len(raw['segments']), image_base=None,

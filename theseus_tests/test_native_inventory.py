@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import threading
+from types import SimpleNamespace
 
 import pytest
 
@@ -75,14 +77,16 @@ def test_resolved_name_with_zero_references_remains_resolved():
 
 def test_equivalent_numeric_forms_are_one_address_and_keep_all_observations():
     provider = Provider(names=[{'value': 'target', 'address': '0x0010'},
-        {'value': 'target', 'address': 'ram:0X10'}, {'value': 'target', 'address': '0x10'}])
+        {'value': 'target', 'address': 'ram:0X10'}, {'value': 'target', 'address': 'r%61m:0x10'},
+        {'value': 'target', 'address': '0x10'}])
     result = run(provider)['result']
     assert result['status'] == 'resolved' and result['addresses'] == ['0x0010']
     assert result['matches'] == provider.names
     assert provider.calls[-1] == ('xrefs', {'document': 'original.elf', 'address': '0x0010'})
 
 
-@pytest.mark.parametrize('address', ['not-an-address', '0xzz', 'bad%ff:0x10'])
+@pytest.mark.parametrize('address', ['not-an-address', '0xzz', 'bad%ff:0x10',
+    'bad%GG:0x10', 'bad%:0x10', 'a:b:0x10', 'space name:0x10'])
 def test_invalid_native_address_is_not_a_resolved_symbol(address):
     provider = Provider(names=[{'value': 'target', 'address': address}])
     reply = run(provider)
@@ -91,11 +95,13 @@ def test_invalid_native_address_is_not_a_resolved_symbol(address):
     assert [r[0] for r in provider.calls] == ['current_document', 'list_names']
 
 
-def test_invalid_reference_observation_is_retained_as_error():
-    provider = Provider(names=[{'value': 'target', 'address': '0x10'}], refs=['not-an-address'])
+@pytest.mark.parametrize('address', ['not-an-address', 'bad%GG:0x10', 'bad%:0x10',
+    'a:b:0x10', 'space name:0x10'])
+def test_invalid_reference_observation_is_retained_as_error(address):
+    provider = Provider(names=[{'value': 'target', 'address': '0x10'}], refs=[address])
     reply = run(provider)
     assert reply['ok'] is False and reply['error']['code'] == 'invalid_observation'
-    assert reply['observations'][-1]['response']['result'] == ['not-an-address']
+    assert reply['observations'][-1]['response']['result'] == [address]
 
 
 @pytest.mark.parametrize('method', ['current_document', 'list_names', 'xrefs'])
@@ -147,10 +153,51 @@ def test_unqualified_base_without_observed_default_space_is_unknown():
 
 
 def test_explicit_space_is_preserved_independently_of_segment_names():
-    provider = Provider(summary={'segments': [{'name': 'data', 'image_base': 'other%20space:0x0010'},
-                                            {'name': 'code', 'image_base': 'other%20space:0x10'}]})
+    provider = Provider(summary={'segments': [{'name': 'data', 'image_base': 'unicode%20%C3%B1:0x0010'},
+                                            {'name': 'code', 'image_base': 'unicode%20%C3%B1:0x10'}]})
     value = run(provider, operation='binary_overview')['result']
-    assert value['image_base'] == '0x10' and value['image_base_address_space'] == 'other space'
+    assert value['image_base'] == '0x10' and value['image_base_address_space'] == 'unicode ñ'
+
+
+@pytest.mark.parametrize('address', ['bad%GG:0x10', 'bad%:0x10', 'a:b:0x10', 'space name:0x10'])
+def test_invalid_base_space_is_a_retained_error(address):
+    summary = {'segments': [{'image_base': address}]}
+    reply = run(Provider(summary=summary), operation='binary_overview')
+    assert reply['ok'] is False and reply['error']['code'] == 'invalid_observation'
+    assert reply['observations'][0]['response']['result'] == summary
+
+
+def test_admitted_query_binds_revision_observed_after_prior_annotation(tmp_path):
+    from theseus.binary_sessions import BinarySessions
+    from theseus.store import Store
+    store = Store(tmp_path / 'profile'); project = store.create_project('Owned revision control')['id']
+    pending = []
+    manager = SimpleNamespace(store=store, pool=SimpleNamespace(submit=lambda f, *args: pending.append((f, args))),
+        lock=threading.Lock(), processes={}, cancelled=set())
+    sessions = BinarySessions(manager)
+    class MutableProvider(Provider):
+        lock = threading.RLock()
+        process = SimpleNamespace(poll=lambda: None)
+        def request(self, method, arguments):
+            if method == 'set_address_name':
+                self.names = [{'value': arguments['name'], 'address': '0x10'}]
+                return {'ok': True, 'result': {'name': arguments['name']}}
+            return super().request(method, arguments)
+    provider = MutableProvider(names=[{'value': 'old', 'address': '0x10'}])
+    sessions.runtimes[SESSION['id']] = provider
+    result = copy.deepcopy(SESSION['result'])
+    result.update(kind='binary_session', session_state='open', artifact_id='original-artifact', artifact_name='original.elf')
+    store.save_job(project, SESSION['id'], 'finished', result)
+    mutation = sessions.call(SESSION['id'], 'set_address_name', {'address': '0x10', 'name': 'changed'})
+    query = sessions.call(SESSION['id'], 'resolve_name_references', {'name': 'changed'})
+    assert len(pending) == 2
+    for function, arguments in pending:
+        function(*arguments)
+    assert store.job(mutation['id'])['state'] == 'finished'
+    job = store.job(query['id']); assert job['state'] == 'finished', job
+    document = json.loads(Path(job['result']['analysis_file']).read_bytes())['result']
+    assert document['status'] == 'resolved' and document['matches'][0]['value'] == 'changed'
+    assert document['binding']['analysis_revision'] == job['result']['analysis_revision'] == 8
 
 
 @pytest.mark.parametrize('parameters', [{}, {'name': ''}, {'name': None}, {'name': True},
@@ -239,9 +286,32 @@ def test_original_elf_compositions_records_and_transfer(tmp_path, monkeypatch):
         assert overview['image_base_address_space'] == session['result']['info']['target']['default_address_space']
         assert any(int(row['start'], 16) == text['sh_addr'] and int(row['end'], 16) - int(row['start'], 16) == text['sh_size']
                    for row in segments if row['name'] == '.text')
+        native = app.state.binary_sessions.runtimes[session['id']]
+        request = native.request; entered = threading.Event(); release = threading.Event()
+        before_revision = app.state.store.job(session['id'])['result']['revision']
+        def held_annotation(method, arguments):
+            if method == 'set_address_name':
+                entered.set()
+                assert release.wait(10), 'The controlled annotation was not released'
+            return request(method, arguments)
+        monkeypatch.setattr(native, 'request', held_annotation)
+        mutation = agent('theseus_binary_call', session_id=session['id'], operation='set_address_name',
+                         parameters={'address': named['address'], 'name': 'renamed_leaf'})
+        try:
+            assert entered.wait(10), 'The controlled annotation did not enter the provider'
+            queued = agent('theseus_binary_call', session_id=session['id'], operation='resolve_name_references',
+                           parameters={'name': 'renamed_leaf'})
+        finally:
+            release.set()
+        assert wait(client, mutation)['state'] == 'finished'
+        queued = wait(client, queued); assert queued['state'] == 'finished', queued
+        current = client.get('/api/jobs/'+queued['id']+'/analysis.json').json()['result']
+        assert current['status'] == 'resolved' and current['matches'][0]['value'] == 'renamed_leaf'
+        assert current['binding']['analysis_revision'] == queued['result']['analysis_revision'] == before_revision + 1
+        monkeypatch.setattr(native, 'request', request)
         documents = {row['id']: client.get('/api/jobs/'+row['id']+'/analysis.json').content
-                     for row in (names_job, missing_job, overview_job)}
-        for job, result in [(names_job, named), (missing_job, missing), (overview_job, overview)]:
+                     for row in (names_job, missing_job, overview_job, queued)}
+        for job, result in [(names_job, named), (missing_job, missing), (overview_job, overview), (queued, current)]:
             records = app.state.store.analysis_records(job['id'], section='observations', limit=None)['records']
             assert [app.state.store.analysis_record(job['id'], 'observations', row['record_key'])['record']
                     for row in records] == result['observations']

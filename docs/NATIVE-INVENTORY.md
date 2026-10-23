@@ -22,9 +22,14 @@ Equivalent hexadecimal forms compare numerically. Unqualified addresses require
 the default space actually observed in the session; a segment name or minimum
 start address cannot supply it. Empty, incomplete and conflicting observations
 produce a null base with an explicit reason.
+Malformed encoded addresses remain failed observations with their retained
+diagnostic; a missing default-space observation remains unknown.
 
 Both compositions retain their parsed provider envelopes, parameters, observation
 order and native session/artifact/revision binding. These are static analysis
+observations bound to the revision held when the session lock is acquired, so a
+previously admitted annotation is reflected if it completes before the reading.
+They remain sequential provider
 observations, with the provider's discovery limits; they do not establish runtime
 behavior or completeness of recovered symbols. Their documents and records use
 the existing evidence transfer, preserving historical bytes without reopening a
