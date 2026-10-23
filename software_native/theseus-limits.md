@@ -23,7 +23,7 @@ revision1 review and source/external-wheel MCP/UI acceptance and are integrated
 in the source above. No original path or live analysis session is needed for
 these retained queries; partial facets and missing evidence remain unknown.
 The native catalogue contains 75 static/retained operations, 40 runtime operations
-and 52 binary-session operations, behind 42 Theseus tools and 127 owner tools.
+and 54 binary-session operations, behind 42 Theseus tools and 127 owner tools.
 These counts do not certify the remaining source contracts. Free debugger
 backends and the other explicit gaps remain open. See [web/process acceptance](../tasks/submission1043-1046.md)
 and [evidence/function acceptance](../tasks/submission1059-1064.md).
