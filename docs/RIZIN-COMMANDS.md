@@ -46,6 +46,23 @@ or other inputs. If the original disappears or cannot be read afterwards, its
 after hash and change status stay unknown while the recorded streams survive.
 No target-equivalence or arbitrary-command success guarantee is made.
 
-Source implementation is undergoing area validation, MCP/UI checks and
-independent review under task 1154. Installed acceptance and publication require
-separate receipts; the previous reviewed package remains installed until then.
+Source validation under task 1154 passed 114 area tests without skips, including
+an existing Ghidra session that remained open and returned its original bytes.
+Ten workspace/cold-catalogue tests also passed after the discovery description
+was updated to acknowledge explicit command effects. Five actual stdio MCP
+observations covered arithmetic, a long Unicode line, a change to an original
+file, an engine diagnostic and cancellation with a retained prefix. Their five
+documents transferred exactly while the original path was absent.
+
+The normal UI created a separate arithmetic observation (899), then displayed
+the imported uncertain receipt and its 20-byte prefix. The 390 px view had no
+horizontal overflow. The form now names explicit execution and its effects;
+the previous generic static-analysis introduction is retained as failed UI
+evidence. Private HTTP document delivery was exact; a completed browser download
+was not attempted or claimed. The private owner and tab have closed.
+
+An initial oracle used an unsupported echo spelling; a later launch-intent test
+omitted its parent directory. Both failed runs are preserved, separately from
+the corrected 114-test run. Independent review, full validation, installed
+acceptance and publication are pending. The previous reviewed W2 package
+remains installed until those steps complete.
