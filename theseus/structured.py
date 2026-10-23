@@ -266,6 +266,9 @@ def main():
     elif request["operation"] == "rizin.command":
         from rizin import run_command
         result = run_command(source, request["parameters"], output_path, before)
+    elif request['operation'] == 'rizin.execute':
+        from rizin_execution import inspect
+        result = inspect(source, request['parameters'], output_path, before)
     elif request["operation"] == "apple.plist":
         result = inspect_plist(source)
     elif request["operation"] == "apple.signature":
