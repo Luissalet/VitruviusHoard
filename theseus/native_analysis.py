@@ -326,23 +326,37 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
                 raise ValueError("Select finished or imported native analyze_function observations in this project")
             original = manager.store.artifact(project_id, observed["result"]["artifact_id"])
             profile, profile_sha = None, None
+            session = None
             try:
                 session = manager.store.job(observed["result"]["session_id"])
-                if session["project_id"] != project_id or session["result"]["artifact_sha256"] != observed["result"]["artifact_sha256"]:
+            except (LookupError, KeyError):
+                pass
+            if session is not None:
+                context = session["result"]
+                if (session["project_id"] != project_id or context.get("kind") != "binary_session"
+                        or context.get("artifact_id") != observed["result"]["artifact_id"]
+                        or context.get("artifact_sha256") != observed["result"]["artifact_sha256"]):
                     raise ValueError("Retained native session context differs from its observation")
-                profile = session["result"].get("profile")
-                profile_sha = session["result"].get("profile_sha256")
+                if (context.get("recorded_artifact_sha256") is not None
+                        and context["recorded_artifact_sha256"] != original["sha256"]):
+                    raise ValueError("Retained native artifact registration differs from its session")
+                profile = context.get("profile")
+                profile_sha = context.get("profile_sha256")
                 if profile is not None and not isinstance(profile, dict):
                     raise ValueError("Retained native provider profile is malformed")
                 if profile is not None and profile_sha is not None and hashlib.sha256(
                         json.dumps(profile, sort_keys=True).encode()).hexdigest() != profile_sha:
                     raise ValueError("Retained native provider profile hash differs")
-            except (LookupError, KeyError):
-                profile, profile_sha = None, None
+            binding = "registered-content"
+            if original["sha256"] != observed["result"]["artifact_sha256"]:
+                if session is None or session["result"].get("recorded_artifact_sha256") != original["sha256"]:
+                    raise ValueError("Retained native artifact identity differs without recorded source-change continuity")
+                binding = "admitted-source-change"
             kind = original["inspection"]["format"]
             native_inputs.append({"path": str(analysis_file(manager.store,native_id)),
                 "sha256": observed["result"]["analysis_sha256"], "artifact_path": original["path"],
                 "artifact_sha256": observed["result"]["artifact_sha256"],
+                "recorded_artifact_sha256": original["sha256"], "artifact_binding": binding,
                 "artifact_format": kind if kind in {"pe","elf","mach-o"} else "unknown",
                 "version": profile.get("version") if profile else None, "job_id": native_id,
                 "profile": profile, "profile_sha256": profile_sha,

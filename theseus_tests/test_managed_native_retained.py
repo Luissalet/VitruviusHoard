@@ -15,6 +15,7 @@ import pytest
 
 from theseus.api import create_app
 from theseus.native_analysis import ENGINE, engine
+from theseus.workflow import fingerprint
 from test_binary_sessions import wait
 
 pytestmark = pytest.mark.skipif(os.environ.get('THESEUS_TEST_GHIDRA') != '1', reason='Opt-in real retained native observation')
@@ -460,3 +461,111 @@ def test_unavailable_historical_profile_stays_unknown_without_reopening(retained
         assert context['recorded_provider_version'] is None
     finally:
         app.state.store.save_job(project, row['id'], row['state'], row['result'])
+
+
+@pytest.mark.parametrize('invalid', ['native-artifact', 'session-artifact', 'registered-sha',
+    'missing-session-native-artifact'])
+def test_imported_native_artifact_contradictions_are_rejected_before_dispatch(retained, invalid):
+    client, app, project, artifacts, managed, native = retained
+    bundle = app.state.evidence.export(project)
+    rows = {row['id']: row for row in bundle['payload']['jobs']}
+    observed = rows[native[0]['id']]['result']
+    if invalid in {'native-artifact', 'missing-session-native-artifact'}:
+        observed['artifact_id'] = artifacts[0]['id']
+        if invalid.startswith('missing-session'):
+            observed['session_id'] = 'owned-missing-historical-session'
+    elif invalid == 'session-artifact':
+        rows[observed['session_id']]['result']['artifact_id'] = artifacts[0]['id']
+    else:
+        original = next(row for row in bundle['payload']['artifacts'] if row['id'] == artifacts[1]['id'])
+        original['sha256'] = '0' * 64
+    bundle['manifest']['sha256'] = fingerprint(bundle['payload'])
+    response = client.post('/api/agent/call', json={'tool': 'theseus_evidence_import',
+        'arguments': {'bundle': bundle, 'name': 'Owned incompatible historical binding'}})
+    assert response.status_code == 200, response.text
+    transfer = response.json()['result']
+    before = set((app.state.store.directory / 'analyses').iterdir())
+    response = client.post('/api/agent/call', json={'tool': 'theseus_analysis_start', 'arguments': {
+        'project_id': transfer['project']['id'], 'artifact_id': transfer['id_map'][artifacts[0]['id']],
+        'operation': 'managed.verify_native', 'parameters': {
+            'source_job_id': transfer['id_map'][managed['id']],
+            'native_job_ids': [transfer['id_map'][native[0]['id']]]}}})
+    # No work is admitted, even if the manifest and native document hashes agree.
+    assert response.status_code == 400, response.text
+    assert set((app.state.store.directory / 'analyses').iterdir()) == before
+    control = start(client, project, artifacts[0]['id'], 'managed.verify_native', {
+        'source_job_id': managed['id'], 'native_job_ids': [native[0]['id']]})
+    assert document(client, control)['verification']['summary']['verified'] == 1
+
+
+def test_real_source_change_retains_admission_binding_after_transfer(retained, tmp_path):
+    client, app, project, artifacts, managed, _ = retained
+    source = tmp_path / 'Original.c'
+    source.write_text('__declspec(dllexport) int owned_probe(int value) { return value+5; }', encoding='utf8')
+    script = tmp_path / 'compile.cmd'
+    script.write_text('@echo off\ncall "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Auxiliary/Build/vcvars64.bat" >nul\n'
+        'if errorlevel 1 exit /b 1\ncl /nologo /c /O2 /GS- Original.c /Fooriginal.obj\n'
+        'if errorlevel 1 exit /b 1\nlink /nologo /DLL /NOENTRY /NODEFAULTLIB /OUT:owned_probe.dll original.obj\n'
+        'exit /b %errorlevel%\n', encoding='utf8')
+    compiled = subprocess.run(['cmd.exe', '/d', '/c', str(script)], cwd=tmp_path, capture_output=True)
+    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+    binary = tmp_path / 'owned_probe.dll'
+    registered_sha = sha(binary.read_bytes())
+    artifact = app.state.store.add_artifact(project, binary)
+    assert artifact['sha256'] == registered_sha
+    # Change the actual input after registration, before real provider admission.
+    with binary.open('ab') as stream:
+        stream.write(b'Original owned post-registration overlay')
+    admitted_sha = sha(binary.read_bytes())
+    assert admitted_sha != registered_sha
+    opened = wait(client, client.post('/api/projects/' + project + '/artifacts/' + artifact['id'] + '/binary-sessions', json={}).json())
+    assert opened['state'] == 'finished', opened
+    try:
+        assert opened['result']['artifact_sha256'] == admitted_sha
+        assert opened['result']['recorded_artifact_sha256'] == registered_sha
+        native = wait(client, client.post('/api/binary-sessions/' + opened['id'] + '/call', json={
+            'operation': 'analyze_function', 'parameters': {'procedure': 'owned_probe'}}).json())
+        assert native['state'] == 'finished' and native['result']['artifact_sha256'] == admitted_sha, native
+    finally:
+        closed = wait(client, client.post('/api/binary-sessions/' + opened['id'] + '/close', json={}).json())
+        assert closed['state'] == 'finished', closed
+        assert app.state.store.job(opened['id'])['result']['session_state'] == 'closed'
+    parked = binary.with_name(binary.name + '.retained-original')
+    binary.rename(parked)
+    try:
+        original_exists = Path.exists
+        def retained_exists(path):
+            assert path.absolute() != binary.absolute(), 'Verification queried changed original-path availability'
+            return original_exists(path)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(Path, 'exists', retained_exists)
+            previous = None
+            managed_artifact = artifacts[0]['id']
+            for _ in range(3):
+                job = start(client, project, managed_artifact, 'managed.verify_native', {
+                    'source_job_id': managed['id'], 'native_job_ids': [native['id']]})
+                result = document(client, job)
+                assert result['verification']['summary']['verified'] == 1
+                context = result['source_observations'][1]['historical_context']
+                assert context['artifact_sha256'] == admitted_sha
+                assert context['recorded_artifact_sha256'] == registered_sha
+                assert context['artifact_binding'] == 'admitted-source-change'
+                if previous is not None:
+                    assert result['verification'] == previous['verification']
+                    assert result['source_observations'][1]['evidence'] == previous['source_observations'][1]['evidence']
+                previous = result
+                transfer = app.state.evidence.load(app.state.evidence.export(project))
+                project = transfer['project']['id']
+                managed_artifact = transfer['id_map'][managed_artifact]
+                managed = app.state.store.job(transfer['id_map'][managed['id']])
+                native = app.state.store.job(transfer['id_map'][native['id']])
+            # Missing continuity cannot authenticate a registered/admitted SHA mismatch.
+            native_result = {**native['result'], 'session_id': 'owned-missing-changed-source-session'}
+            app.state.store.save_job(project, native['id'], native['state'], native_result)
+            response = client.post('/api/agent/call', json={'tool': 'theseus_analysis_start', 'arguments': {
+                'project_id': project, 'artifact_id': managed_artifact, 'operation': 'managed.verify_native',
+                'parameters': {'source_job_id': managed['id'], 'native_job_ids': [native['id']]}}})
+            assert response.status_code == 400, response.text
+    finally:
+        parked.rename(binary)
+        assert sha(binary.read_bytes()) == admitted_sha
