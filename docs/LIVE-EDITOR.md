@@ -61,3 +61,25 @@ The original synthetic ELF checks cover ELF64 metadata, arithmetic, flag
 creation/read/removal, close/reopen of the same path, stale generation, JSON
 scalars and empty/non-JSON output. They do not certify every engine command,
 every platform build, complete file identity, or runtime behavior of a target.
+
+Installed W2 has independent finite acceptance for these observations. The
+author made 15 MCP observations and two normal UI commands; after a normal
+native exit0, 17 documents and 253 output records transferred exactly. A
+separate reviewer repeated 15 observations on another original fixture,
+obtained native exit0, and transferred 15 documents and 77 output records.
+The UI displayed the imported output after the editor closed. HTTP deliveries
+matched the saved documents; a completed browser download remains unverified.
+
+Shutdown attribution is limited. The original offscreen startup diagnostic
+reported an incompatible Qt platform DLL without loading the bridge; native
+Windows startup worked. The exact cause of the earlier fast-fail exit is not
+proven. A later shutdown comparison held the bridge and 15 requests constant:
+changing the private QA callback from a lambda to a named function changed the
+outcome to exit0. Explicit bridge disposal is retained, but its necessity and
+the exact interpreter-finalization failure were not isolated by that comparison.
+
+W2 SHA-256: `e63a58672846add8c6d6c2871ffc3aa91b1ab4c6d9b86cf0fce0e07bcf44e375`,
+packaged source `a5e4c50bcfab9dac43493750117108e01a9e1b21`. Global validation
+is composed: the full run retained 1910 passes, six failures and five skips;
+unchanged failed cases plus retained-document oracles passed in two separate
+nine-case runs. No single green full run or load-performance guarantee is claimed.

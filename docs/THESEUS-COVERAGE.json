@@ -19,9 +19,9 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "independently-reviewed-installed-validated": 69,
+    "independently-reviewed-installed-validated": 73,
     "implementation-pending": 22,
-    "semantic-review-pending": 91,
+    "semantic-review-pending": 87,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 18,
     "excluded-by-user": 4
@@ -3313,10 +3313,10 @@
         "android.package",
         "android.package_view"
       ],
-      "status": "semantic-review-pending",
-      "scope": "Complete saved package observations with optional linked summary delivery and retained summary/UTF-16 manifest windows from finished or imported sources. Independent and installed acceptance pending.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Complete saved package observations with optional linked summary delivery and retained summary/UTF-16 manifest windows from finished or imported sources. Source CAS2 and independent installed W2 acceptance cover finite original fixtures, two transfers and retained action links; APK never executed.",
       "acceptance": {
-        "state": "corrected-source-MCP-UI-validated-pending-independent-installed",
+        "state": "independently-reviewed-installed-finite-acceptance",
         "task": 1162,
         "tests": [
           "theseus_tests/test_android_projection.py",
@@ -3342,7 +3342,24 @@
           "codex-android1162-ui23a.json",
           "codex-android1162-ui-verified23a.json"
         ],
-        "scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
+        "scope": "Independent installed oracle4PASS: physical CRLF/CR/entity/duplicate strings,90UTF16windows, distinct summary, locale selection/missing aliases/omission and two transfers with own original absent. Root installed7MCP observations/two transfers; normal UI displays remapped second parent,140UTF16-unit manifest CRLF and Spanish table. Exact HTTP document delivery; completed browser download unverified.",
+        "submission_revision": 2,
+        "packaged_source_commit": "a5e4c50bcfab9dac43493750117108e01a9e1b21",
+        "installed_wheel_sha256": "e63a58672846add8c6d6c2871ffc3aa91b1ab4c6d9b86cf0fce0e07bcf44e375",
+        "installed_proofs": {
+          "codex-installed-qa23b.json": "45633561d662c6db6e76203d8474023fbb2914e0c4484ebb8aa7c47e418f7ec9",
+          "codex-validation-assessment23b.json": "10bfcb225fe6af42230d3531ef81b2bde1c6be8445a72c6dbdd8e0e7364bf0f0",
+          "review-composed-validation23b.md": "d0ef78bf0494efc78a324a15ea5f665e44b5c127d6800b8a511b96d6b175c38c",
+          "codex-android1162-installed23b.json": "e5a8892503be5fd42d95842435f1692c92e8702098aef269c8aaadfdad0ff960",
+          "codex-android1162-ui-installed23b.json": "2f812ebf536cb193f4506aedbb948f7cfc3e03cf0c6459b0b1673f2010860aa3",
+          "review-android1162-w2-23b/FINAL-REPORT.md": "8019fded396a13ef6c126bc876e23f6a9d1e9c64de3486146d85cb7348252823",
+          "review-android1162-w2-23b/receipt-index.json": "84b2c45bc2a73a58c070011d25830fcce3b257d2ee1c3b4ee2c8f9e027602ad2"
+        },
+        "main_publication": "Separate publication receipt required; not asserted by installed acceptance.",
+        "browser_download_completed": false,
+        "single_green_full_run": false,
+        "validation": "Full1910PASS6FAIL5SKIP preserved; unchanged original failed cases plus three retained-document oracles passed in separate root and independent nine-case runs. No timing cause or load-performance claim.",
+        "historical_source_scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
       }
     },
     {
@@ -3481,10 +3498,10 @@
       "counterparts": [
         "android.resources"
       ],
-      "status": "semantic-review-pending",
-      "scope": "Complete decoded resource files, lexical direct string tables selected by locale/locales or explicitly omitted, raw scalar metadata, missing/malformed/unparsed counts and qualified coverage. Independent and installed acceptance pending.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Complete decoded resource files, lexical direct string tables selected by locale/locales or explicitly omitted, raw scalar metadata, missing/malformed/unparsed counts and qualified coverage. Source CAS2 and independent installed W2 acceptance cover finite original fixtures, two transfers and retained action links; APK never executed.",
       "acceptance": {
-        "state": "corrected-source-MCP-UI-validated-pending-independent-installed",
+        "state": "independently-reviewed-installed-finite-acceptance",
         "task": 1162,
         "tests": [
           "theseus_tests/test_android_projection.py",
@@ -3510,7 +3527,24 @@
           "codex-android1162-ui23a.json",
           "codex-android1162-ui-verified23a.json"
         ],
-        "scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
+        "scope": "Independent installed oracle4PASS: physical CRLF/CR/entity/duplicate strings,90UTF16windows, distinct summary, locale selection/missing aliases/omission and two transfers with own original absent. Root installed7MCP observations/two transfers; normal UI displays remapped second parent,140UTF16-unit manifest CRLF and Spanish table. Exact HTTP document delivery; completed browser download unverified.",
+        "submission_revision": 2,
+        "packaged_source_commit": "a5e4c50bcfab9dac43493750117108e01a9e1b21",
+        "installed_wheel_sha256": "e63a58672846add8c6d6c2871ffc3aa91b1ab4c6d9b86cf0fce0e07bcf44e375",
+        "installed_proofs": {
+          "codex-installed-qa23b.json": "45633561d662c6db6e76203d8474023fbb2914e0c4484ebb8aa7c47e418f7ec9",
+          "codex-validation-assessment23b.json": "10bfcb225fe6af42230d3531ef81b2bde1c6be8445a72c6dbdd8e0e7364bf0f0",
+          "review-composed-validation23b.md": "d0ef78bf0494efc78a324a15ea5f665e44b5c127d6800b8a511b96d6b175c38c",
+          "codex-android1162-installed23b.json": "e5a8892503be5fd42d95842435f1692c92e8702098aef269c8aaadfdad0ff960",
+          "codex-android1162-ui-installed23b.json": "2f812ebf536cb193f4506aedbb948f7cfc3e03cf0c6459b0b1673f2010860aa3",
+          "review-android1162-w2-23b/FINAL-REPORT.md": "8019fded396a13ef6c126bc876e23f6a9d1e9c64de3486146d85cb7348252823",
+          "review-android1162-w2-23b/receipt-index.json": "84b2c45bc2a73a58c070011d25830fcce3b257d2ee1c3b4ee2c8f9e027602ad2"
+        },
+        "main_publication": "Separate publication receipt required; not asserted by installed acceptance.",
+        "browser_download_completed": false,
+        "single_green_full_run": false,
+        "validation": "Full1910PASS6FAIL5SKIP preserved; unchanged original failed cases plus three retained-document oracles passed in separate root and independent nine-case runs. No timing cause or load-performance claim.",
+        "historical_source_scope": "Initial 34 area PASS; corrected source: 40 import regression PASS; expanded H 66 PASS/2 deadline failures with unchanged isolated I 2 PASS, not a single green area run. Seven real MCP observations follow imported summary actions through two transfers; UI verifies current destination IDs, 140 UTF16-unit window, physical CRLF and exact download. Independent, combined and installed acceptance pending."
       }
     },
     {
@@ -5674,10 +5708,10 @@
       "counterparts": [
         "theseus_cutter_sessions"
       ],
-      "status": "semantic-review-pending",
-      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Original synthetic native/MCP/UI controls passed; independent review and installed acceptance still pending.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Source CAS4 and independent installed W2 acceptance cover finite native/MCP/UI controls and exact transfer after native exit0.",
       "acceptance": {
-        "state": "source-validation-pending-independent-review",
+        "state": "independently-reviewed-installed-finite-acceptance",
         "task": 1120,
         "tests": [
           "theseus_tests/test_cutter.py"
@@ -5691,7 +5725,25 @@
           "codex-cutter-transfer22b.json",
           "codex-cutter-ui-retained22.json"
         ],
-        "limitations": "Partial document identity, Windows directory ACL unverified, engine return does not certify semantic effect; unknown response never retried. Worktree source only, not installed-release acceptance."
+        "limitations": "Partial document identity; Windows directory ACL unverified; engine return does not establish arbitrary semantic effect. Unknown responses never retried. Root17documents/253records and independent15documents/77records transferred exactly after separate native exit0. UI screenshots reviewed with root attribution; completed browser download unverified. Standalone arbitrary binary commands remain task1154. Original fast-fail cause and necessity of bridge disposal not proven; callback-form QA comparison changed outcome with bridge/requests held constant.",
+        "submission_revision": 4,
+        "packaged_source_commit": "a5e4c50bcfab9dac43493750117108e01a9e1b21",
+        "installed_wheel_sha256": "e63a58672846add8c6d6c2871ffc3aa91b1ab4c6d9b86cf0fce0e07bcf44e375",
+        "installed_proofs": {
+          "codex-installed-qa23b.json": "45633561d662c6db6e76203d8474023fbb2914e0c4484ebb8aa7c47e418f7ec9",
+          "codex-validation-assessment23b.json": "10bfcb225fe6af42230d3531ef81b2bde1c6be8445a72c6dbdd8e0e7364bf0f0",
+          "review-composed-validation23b.md": "d0ef78bf0494efc78a324a15ea5f665e44b5c127d6800b8a511b96d6b175c38c",
+          "codex-cutter-installed23b-commands.json": "6ab6336331ce8d5e29cc2d3adca0790fc22f144d72171f24892c72a2627ff8e8",
+          "codex-cutter-installed23b-transfer.json": "cb496a29ad95ec5dc04fe2c8553bc1541a7ac247a6d72e58e812e02b4749bcd4",
+          "codex-cutter-ui-installed23b.json": "2b0184313ef2a5e54057c7ce8808795bd51db79c040ef0492ecb4a482f065e82",
+          "codex-cutter-ui-retained-installed23b.json": "8c9612c06b8964f16ff0d47c1c44431f1e90c838e5bb6991c7e42543c25deadc",
+          "review-cutter-installed23b.md": "1c218d4b648b1031627709e5d68de220e9e7bd7659111674815e16615fba7b4f",
+          "review-cutter-installed23b-receipt.json": "f12a4b4d7135ec633b3e7a6ae9af1850b81d7cde90c1fc0fdb30da9f1200f9c9"
+        },
+        "main_publication": "Separate publication receipt required; not asserted by installed acceptance.",
+        "browser_download_completed": false,
+        "single_green_full_run": false,
+        "validation": "Full1910PASS6FAIL5SKIP preserved; unchanged original failed cases plus three retained-document oracles passed in separate root and independent nine-case runs. No timing cause or load-performance claim."
       },
       "group": "free-debugger-backends"
     },
@@ -5706,10 +5758,10 @@
       "counterparts": [
         "theseus_cutter_command"
       ],
-      "status": "semantic-review-pending",
-      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Original synthetic native/MCP/UI controls passed; independent review and installed acceptance still pending.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Maintained live editor bridge, explicit session/generation, arbitrary commands and retained historical observations. Source CAS4 and independent installed W2 acceptance cover finite native/MCP/UI controls and exact transfer after native exit0.",
       "acceptance": {
-        "state": "source-validation-pending-independent-review",
+        "state": "independently-reviewed-installed-finite-acceptance",
         "task": 1120,
         "tests": [
           "theseus_tests/test_cutter.py"
@@ -5723,7 +5775,25 @@
           "codex-cutter-transfer22b.json",
           "codex-cutter-ui-retained22.json"
         ],
-        "limitations": "Partial document identity, Windows directory ACL unverified, engine return does not certify semantic effect; unknown response never retried. Worktree source only, not installed-release acceptance."
+        "limitations": "Partial document identity; Windows directory ACL unverified; engine return does not establish arbitrary semantic effect. Unknown responses never retried. Root17documents/253records and independent15documents/77records transferred exactly after separate native exit0. UI screenshots reviewed with root attribution; completed browser download unverified. Standalone arbitrary binary commands remain task1154. Original fast-fail cause and necessity of bridge disposal not proven; callback-form QA comparison changed outcome with bridge/requests held constant.",
+        "submission_revision": 4,
+        "packaged_source_commit": "a5e4c50bcfab9dac43493750117108e01a9e1b21",
+        "installed_wheel_sha256": "e63a58672846add8c6d6c2871ffc3aa91b1ab4c6d9b86cf0fce0e07bcf44e375",
+        "installed_proofs": {
+          "codex-installed-qa23b.json": "45633561d662c6db6e76203d8474023fbb2914e0c4484ebb8aa7c47e418f7ec9",
+          "codex-validation-assessment23b.json": "10bfcb225fe6af42230d3531ef81b2bde1c6be8445a72c6dbdd8e0e7364bf0f0",
+          "review-composed-validation23b.md": "d0ef78bf0494efc78a324a15ea5f665e44b5c127d6800b8a511b96d6b175c38c",
+          "codex-cutter-installed23b-commands.json": "6ab6336331ce8d5e29cc2d3adca0790fc22f144d72171f24892c72a2627ff8e8",
+          "codex-cutter-installed23b-transfer.json": "cb496a29ad95ec5dc04fe2c8553bc1541a7ac247a6d72e58e812e02b4749bcd4",
+          "codex-cutter-ui-installed23b.json": "2b0184313ef2a5e54057c7ce8808795bd51db79c040ef0492ecb4a482f065e82",
+          "codex-cutter-ui-retained-installed23b.json": "8c9612c06b8964f16ff0d47c1c44431f1e90c838e5bb6991c7e42543c25deadc",
+          "review-cutter-installed23b.md": "1c218d4b648b1031627709e5d68de220e9e7bd7659111674815e16615fba7b4f",
+          "review-cutter-installed23b-receipt.json": "f12a4b4d7135ec633b3e7a6ae9af1850b81d7cde90c1fc0fdb30da9f1200f9c9"
+        },
+        "main_publication": "Separate publication receipt required; not asserted by installed acceptance.",
+        "browser_download_completed": false,
+        "single_green_full_run": false,
+        "validation": "Full1910PASS6FAIL5SKIP preserved; unchanged original failed cases plus three retained-document oracles passed in separate root and independent nine-case runs. No timing cause or load-performance claim."
       },
       "group": "free-debugger-backends"
     },
