@@ -19,9 +19,9 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "independently-reviewed-installed-validated": 74,
+    "independently-reviewed-installed-validated": 78,
     "implementation-pending": 21,
-    "semantic-review-pending": 87,
+    "semantic-review-pending": 83,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 18,
     "excluded-by-user": 4
@@ -4332,11 +4332,49 @@
       "counterparts": [
         "managed.compare"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Retained and imported member observations compare exact build identities, signatures and normalized CIL without original assemblies; tokens remain build-local and ambiguous matches remain explicit.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-and-installed-validated",
+        "task": 1165,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "cbd0dfbf44b8af118c67ef2062b7e133c0345031",
+          "afb9a97652480c4cb030a566f048bf3839105265"
+        ],
+        "application_head": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+        "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+        "tests": [
+          "theseus_tests/test_managed_retained_workflows.py"
+        ],
+        "normal_ui": "Six new installed UI jobs; six exact HTTP documents and five complete displayed records match MCP. Imported sources work without originals, contradictory binding creates no job, width390 has no page overflow.",
+        "proofs": [
+          "codex-review-snapshot-document23f.json",
+          "codex-runtime-equivalence-document23f.json",
+          "codex-full23f-ghidra.xml",
+          "review-full23f-validation.md",
+          "review-doc1286-r1.md",
+          "codex-installed23f.json",
+          "codex-installed-ledger23f.json",
+          "codex-managed1165-installed-mcp23f.json",
+          "codex-managed1166-installed-mcp23f.json",
+          "codex-managed-native1253-installed-mcp23e.json",
+          "native1253-receipt-name-erratum.md",
+          "codex-managed-installed-ui23f.json",
+          "ui-close23f.json",
+          "codex-managed-installed23f-cleanup.json",
+          "review-managed-w4/FINAL-REPORT.md",
+          "review-managed-w4/receipt-hashes.json"
+        ],
+        "limitations": "Finite Windows original-fixture and retained-input acceptance. Supplied labels remain caller claims; no behavioral equivalence, CLR execution, physical phone or completed browser-download claim.",
+        "installed": {
+          "packaged_source_commit": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+          "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+          "wheel_sha256": "e9b00c059eba0aaa13137a7f513a65bb19b84a2faf01d1a61173cc443ab929ea",
+          "receipt": "codex-installed23f.json",
+          "scope": "Independent installed MCP acceptance uses fresh fixtures, two transfers and54 exact complete records. Source389 full and document-only child02c package remain distinct; publication is recorded separately."
+        }
       }
     },
     {
@@ -4350,11 +4388,52 @@
       "counterparts": [
         "managed.verify_native"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Saved/imported native dossiers and caller-supplied Evidence contrast P/Invoke names and module labels; complete values, source closure and registered/admitted content bindings survive transfer. This is static matching, not CLR binding or an observed call.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-and-installed-validated",
+        "task": 1253,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "0c096010ec5ed5b428741872998a1c6effeb3688",
+          "1a125e6b1ba2f9740600b72ba16bcd14df32d47f",
+          "1d4656416a806cf65e37c85bc0e7dc25b0103933",
+          "c9d5e58"
+        ],
+        "application_head": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+        "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+        "tests": [
+          "theseus_tests/test_managed_native_retained.py",
+          "theseus_tests/test_managed_native.py"
+        ],
+        "normal_ui": "Six new installed UI jobs; six exact HTTP documents and five complete displayed records match MCP. Imported sources work without originals, contradictory binding creates no job, width390 has no page overflow.",
+        "proofs": [
+          "codex-review-snapshot-document23f.json",
+          "codex-runtime-equivalence-document23f.json",
+          "codex-full23f-ghidra.xml",
+          "review-full23f-validation.md",
+          "review-doc1286-r1.md",
+          "codex-installed23f.json",
+          "codex-installed-ledger23f.json",
+          "codex-managed1165-installed-mcp23f.json",
+          "codex-managed1166-installed-mcp23f.json",
+          "codex-managed-native1253-installed-mcp23e.json",
+          "native1253-receipt-name-erratum.md",
+          "codex-managed-installed-ui23f.json",
+          "ui-close23f.json",
+          "codex-managed-installed23f-cleanup.json",
+          "review-managed-w4/FINAL-REPORT.md",
+          "review-managed-w4/receipt-hashes.json"
+        ],
+        "limitations": "Finite Windows original-fixture and retained-input acceptance. Supplied labels remain caller claims; no behavioral equivalence, CLR execution, physical phone or completed browser-download claim.",
+        "installed": {
+          "packaged_source_commit": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+          "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+          "wheel_sha256": "e9b00c059eba0aaa13137a7f513a65bb19b84a2faf01d1a61173cc443ab929ea",
+          "receipt": "codex-installed23f.json",
+          "scope": "Independent installed MCP acceptance uses fresh fixtures, two transfers and54 exact complete records. Source389 full and document-only child02c package remain distinct; publication is recorded separately."
+        }
       }
     },
     {
@@ -4368,11 +4447,49 @@
       "counterparts": [
         "managed.reconstruction"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "C#/IL/pseudocode imports bind to the retained member token, signature and normalized IL of an exact build; original Unicode and line endings persist. Imported text remains an unexecuted interpretation.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-and-installed-validated",
+        "task": 1165,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "cbd0dfbf44b8af118c67ef2062b7e133c0345031",
+          "afb9a97652480c4cb030a566f048bf3839105265"
+        ],
+        "application_head": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+        "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+        "tests": [
+          "theseus_tests/test_managed_retained_workflows.py"
+        ],
+        "normal_ui": "Six new installed UI jobs; six exact HTTP documents and five complete displayed records match MCP. Imported sources work without originals, contradictory binding creates no job, width390 has no page overflow.",
+        "proofs": [
+          "codex-review-snapshot-document23f.json",
+          "codex-runtime-equivalence-document23f.json",
+          "codex-full23f-ghidra.xml",
+          "review-full23f-validation.md",
+          "review-doc1286-r1.md",
+          "codex-installed23f.json",
+          "codex-installed-ledger23f.json",
+          "codex-managed1165-installed-mcp23f.json",
+          "codex-managed1166-installed-mcp23f.json",
+          "codex-managed-native1253-installed-mcp23e.json",
+          "native1253-receipt-name-erratum.md",
+          "codex-managed-installed-ui23f.json",
+          "ui-close23f.json",
+          "codex-managed-installed23f-cleanup.json",
+          "review-managed-w4/FINAL-REPORT.md",
+          "review-managed-w4/receipt-hashes.json"
+        ],
+        "limitations": "Finite Windows original-fixture and retained-input acceptance. Supplied labels remain caller claims; no behavioral equivalence, CLR execution, physical phone or completed browser-download claim.",
+        "installed": {
+          "packaged_source_commit": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+          "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+          "wheel_sha256": "e9b00c059eba0aaa13137a7f513a65bb19b84a2faf01d1a61173cc443ab929ea",
+          "receipt": "codex-installed23f.json",
+          "scope": "Independent installed MCP acceptance uses fresh fixtures, two transfers and54 exact complete records. Source389 full and document-only child02c package remain distinct; publication is recorded separately."
+        }
       }
     },
     {
@@ -4384,13 +4501,52 @@
         "kind": "application"
       },
       "counterparts": [
-        "managed.graph"
+        "managed.graph",
+        "managed.graph_retained"
       ],
-      "status": "semantic-review-pending",
-      "scope": "An existing native surface is identified. Its exact contract and original-fixture evidence still need individual semantic review.",
+      "status": "independently-reviewed-installed-validated",
+      "scope": "The existing binary graph and selected retained artifact/member/native-boundary facets remain available. Imported observations project containment and boundaries without originals; omitted facets and method windows remain explicit. This does not recover a CIL call graph or certify a complete binary inventory.",
       "acceptance": {
-        "state": "not-certified-by-name-linkage",
-        "tests": []
+        "state": "independently-reviewed-and-installed-validated",
+        "task": 1166,
+        "submission_revision": 1,
+        "reviewed_submission_revision": 1,
+        "reviewed_commits": [
+          "7745e8d9111a75750407fa8aa25c5910b8411ba5",
+          "3545dcfd339f72209f6321f6e8407dcce26cd77b"
+        ],
+        "application_head": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+        "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+        "tests": [
+          "theseus_tests/test_managed_retained_graph.py"
+        ],
+        "normal_ui": "Six new installed UI jobs; six exact HTTP documents and five complete displayed records match MCP. Imported sources work without originals, contradictory binding creates no job, width390 has no page overflow.",
+        "proofs": [
+          "codex-review-snapshot-document23f.json",
+          "codex-runtime-equivalence-document23f.json",
+          "codex-full23f-ghidra.xml",
+          "review-full23f-validation.md",
+          "review-doc1286-r1.md",
+          "codex-installed23f.json",
+          "codex-installed-ledger23f.json",
+          "codex-managed1165-installed-mcp23f.json",
+          "codex-managed1166-installed-mcp23f.json",
+          "codex-managed-native1253-installed-mcp23e.json",
+          "native1253-receipt-name-erratum.md",
+          "codex-managed-installed-ui23f.json",
+          "ui-close23f.json",
+          "codex-managed-installed23f-cleanup.json",
+          "review-managed-w4/FINAL-REPORT.md",
+          "review-managed-w4/receipt-hashes.json"
+        ],
+        "limitations": "Finite Windows original-fixture and retained-input acceptance. Supplied labels remain caller claims; no behavioral equivalence, CLR execution, physical phone or completed browser-download claim.",
+        "installed": {
+          "packaged_source_commit": "02c6a200b5789e29091ca07e5eb6b087ab1bf5ae",
+          "full_source_commit": "38984b3dfc122586d7ff5dde5ed0e606e0cea3cc",
+          "wheel_sha256": "e9b00c059eba0aaa13137a7f513a65bb19b84a2faf01d1a61173cc443ab929ea",
+          "receipt": "codex-installed23f.json",
+          "scope": "Independent installed MCP acceptance uses fresh fixtures, two transfers and54 exact complete records. Source389 full and document-only child02c package remain distinct; publication is recorded separately."
+        }
       }
     },
     {

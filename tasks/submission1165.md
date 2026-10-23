@@ -54,7 +54,9 @@ No phone hardware, browser download or general accessibility claim is made.
 
 MCP/UI receipts are codex-managed1165-mcp23d.json and
 codex-managed1165-ui23d.json. The backend source remains cbd0dfb; its later CSS
-and documentation-only delta is attributed separately. Independent review,
-installed acceptance and publication remain pending. W3/main b959769 is the
-previous reviewed release. Theseus207 remains incomplete; no ledger acceptance
-is promoted by this source change alone.
+and documentation-only delta is attributed separately. Independent revision1
+approved both source commits. W4 has independent installed MCP acceptance with
+fresh fixtures and two transfers, plus normal UI comparison/reconstruction and
+exact displayed records. The four-contract finite ledger update is based on
+that later installed acceptance, not on source approval alone. Publication is
+recorded separately; Theseus207 remains incomplete. See [W4 acceptance](submission-release23f.md).
