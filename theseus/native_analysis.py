@@ -20,6 +20,7 @@ from .retained_evidence import OPERATIONS as EVIDENCE_OPERATIONS
 from .elf_layout import OPERATIONS as ELF_OPERATIONS
 from .objdump_inspection import OPERATIONS as OBJDUMP_OPERATIONS, engine as objdump_engine
 from .rizin import OPERATIONS as RIZIN_OPERATIONS, engine as rizin_engine
+from .rizin_execution import OPERATIONS as RIZIN_EXECUTION_OPERATIONS
 
 ENGINE = Path(__file__).resolve().parent.parent / "software_native" / "engine"
 MEMBER_PARAMETERS = {"type": "object", "additionalProperties": False, "properties": {
@@ -180,6 +181,7 @@ OPERATIONS += STRUCTURED_OPERATIONS
 OPERATIONS += ELF_OPERATIONS
 OPERATIONS += OBJDUMP_OPERATIONS
 OPERATIONS += RIZIN_OPERATIONS
+OPERATIONS += RIZIN_EXECUTION_OPERATIONS
 OPERATIONS += EVIDENCE_OPERATIONS
 OPERATIONS += RECORDING_OPERATIONS
 OPERATIONS += SIGNAL_OPERATIONS
@@ -246,7 +248,7 @@ def catalog():
             reason = firmware_availability(row["name"])
         elif row["name"] == "binary.objdump" and not objdump_engine()['available']:
             reason = "Instala GNU objdump o configura THESEUS_OBJDUMP."
-        elif row["name"] == "rizin.command" and not rizin_engine():
+        elif row["name"] in {"rizin.command", "rizin.execute"} and not rizin_engine():
             reason = "Instala Rizin o configura THESEUS_RIZIN."
         rows.append({**row, "available": not reason, "availability_reason": reason})
     return {"engine": engine(), "operations": rows}
@@ -378,6 +380,11 @@ def _run(manager, project_id, job_id, artifact, folder, result):
     try:
         manager.store.save_job(project_id, job_id, "running", result)
         execution_definition = {}
+        if result['operation'] == 'rizin.execute':
+            from .rizin_execution import record_worker
+            def observe_worker(process):
+                result['worker_identity_recording'] = record_worker(folder, process, command)
+            execution_definition['spawn_observer'] = observe_worker
         if result['operation']=='wasm.artifact':
             from .wasm_recording import record_worker
             def observe_worker(process):
@@ -391,6 +398,14 @@ def _run(manager, project_id, job_id, artifact, folder, result):
         retained_firmware = False
         retained_objdump = False
         retained_wasm = False
+        retained_rizin = False
+        if result['operation'] == 'rizin.execute':
+            from .rizin_execution import recording
+            document = recording(folder, interrupted=stopped or failed_execution)
+            if document is not None:
+                output = folder / 'rizin-retained.json'
+                output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding='utf8')
+                retained_rizin = True
         if result['operation']=='wasm.artifact':
             from .wasm_recording import recording
             snapshot=recording(folder,output)
@@ -412,9 +427,9 @@ def _run(manager, project_id, job_id, artifact, folder, result):
             checkpoint = recording_file(folder, output)
             retained_firmware = checkpoint is not None
             if retained_firmware: output = checkpoint
-        if stopped and not (retained_firmware or retained_objdump or retained_wasm):
+        if stopped and not (retained_firmware or retained_objdump or retained_wasm or retained_rizin):
             state = "cancelled"
-        elif failed_execution and not (retained_firmware or retained_objdump or retained_wasm):
+        elif failed_execution and not (retained_firmware or retained_objdump or retained_wasm or retained_rizin):
             state = "failed"
             result["error"] = "The native analysis did not complete; inspect the engine diagnostic"
         else:
@@ -422,7 +437,7 @@ def _run(manager, project_id, job_id, artifact, folder, result):
                 from .firmware import freeze_recording
                 output = freeze_recording(folder, output)
             retain(manager.store, project_id, job_id, artifact, folder, output, result,
-                   observe_source=not (retained_wasm and (stopped or failed_execution)))
+                   observe_source=not (retained_rizin or retained_wasm and (stopped or failed_execution)))
             with manager.lock:
                 stopped = job_id in manager.cancelled
             state = "cancelled" if stopped else "failed" if failed_execution else "finished"
@@ -430,6 +445,18 @@ def _run(manager, project_id, job_id, artifact, folder, result):
         state = "cancelled"
     except Exception as exc:
         result["error"] = type(exc).__name__ + ": " + str(exc)
+        if result['operation'] == 'rizin.execute':
+            from . import rizin_execution
+            try:
+                cleanup = rizin_execution.stop_interrupted_worker(folder)
+                document = rizin_execution.recording(folder, interrupted=True)
+                if document is not None:
+                    document['result']['recovery_cleanup'] = cleanup
+                    output = folder / 'rizin-failed.json'
+                    output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding='utf8')
+                    retain(manager.store, project_id, job_id, artifact, folder, output, result, observe_source=False)
+            except Exception as retention_error:
+                result['retention_error'] = type(retention_error).__name__ + ': ' + str(retention_error)
         state = "failed"
     finally:
         if result["operation"].startswith("firmware."):
@@ -445,6 +472,9 @@ def _run(manager, project_id, job_id, artifact, folder, result):
 
 def retain(store, project_id, job_id, artifact, folder, output, result, *, observe_source=True):
     document = json.loads(output.read_text(encoding="utf-8"))
+    if result['operation'] == 'rizin.execute':
+        result['command_observation'] = {key: document['result'][key] for key in
+            ['exit_code', 'completion_status', 'stream_complete', 'output_truncated', 'artifact_changed']}
     if result['operation'] == 'binary.objdump':
         result['reader_observation'] = {key: document['result'][key] for key in
             ['exit_code', 'completion_status', 'stream_complete', 'artifact_changed']}
@@ -493,6 +523,23 @@ def recover(store):
     for project in store.projects():
         for job in store.items('jobs',project['id']):
             result=job['result']
+            if job['state'] == 'interrupted' and result.get('operation') == 'rizin.execute' and not result.get('analysis_file'):
+                from . import rizin_execution
+                folder = store.directory / 'analyses' / job['id']
+                try:
+                    cleanup = rizin_execution.stop_interrupted_worker(folder)
+                    document = rizin_execution.recording(folder, interrupted=True)
+                    if document is not None:
+                        document['result']['recovery_cleanup'] = cleanup
+                        output = folder / 'rizin-recovered.json'
+                        output.write_text(json.dumps(document, ensure_ascii=False, indent=2), encoding='utf8')
+                        retain(store, project['id'], job['id'], store.artifact(project['id'], result['artifact_id']),
+                               folder, output, result, observe_source=False)
+                        result['recovered_recording'] = True
+                except (OSError, ValueError, KeyError) as exc:
+                    result['recovery_error'] = str(exc)
+                store.save_job(project['id'], job['id'], 'interrupted', result)
+                continue
             if job['state']=='interrupted' and result.get('operation')=='wasm.artifact' and not result.get('analysis_file'):
                 from . import wasm_recording
                 import psutil
