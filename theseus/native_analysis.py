@@ -1,5 +1,6 @@
 """Native static analysis operations and persistent, individually readable results."""
 import json
+import hashlib
 import shutil
 import sys
 from pathlib import Path
@@ -228,11 +229,15 @@ OPERATIONS += [{"name": "managed.graph_retained", "title": ".NET · Grafo desde 
         "properties": {"source_job_ids": {"type": "array", "minItems": 1, "maxItems": 3,
             "uniqueItems": True, "items": {"type": "string", "minLength": 1}}}}},
     {"name": "managed.verify_native", "title": ".NET · Contrastar declaraciones con nativo",
-    "input": "analysis", "requires_operation": "managed.native_boundaries",
-    "description": "Contrasta P/Invoke del análisis guardado con funciones Ghidra guardadas del mismo proyecto. native_job_ids selecciona sus trabajos analyze_function; conserva hashes, módulos, candidatos y desconocidos. Una coincidencia estática no prueba ejecución ni enlace del sistema.",
-    "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id", "native_job_ids"],
+    "input": "analysis", "requires_operation": "managed.native_boundaries", "retained_only": True,
+    "source_states": ["finished", "imported"],
+    "description": "Contrasta P/Invoke guardado con native_job_ids de funciones guardadas/importadas del proyecto o query.native_observations con Evidence aportados por el llamante. Conserva bytes, etiquetas de módulo, hashes, candidatos y cobertura. Las etiquetas históricas o aportadas no se comprueban en archivos actuales; una coincidencia estática no prueba ejecución ni enlace del sistema.",
+    "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id"],
+        "anyOf": [{"required": ["native_job_ids"]}, {"required": ["query"]}],
         "properties": {"source_job_id": {"type": "string"}, "native_job_ids": {"type": "array", "minItems": 1,
-            "uniqueItems": True, "items": {"type": "string"}}}}}]
+            "uniqueItems": True, "items": {"type": "string"}},
+            "query": {"type": "object", "additionalProperties": False, "required": ["native_observations"],
+                "properties": {"native_observations": {"type": "array", "minItems": 1, "items": {"type": "object"}}}}}}}]
 
 
 def engine():
@@ -315,18 +320,33 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
         raise ValueError("Install the native analysis core with Install.ps1 (Node 22.19+ and engine build)")
     native_jobs, native_inputs = [], []
     if operation == "managed.verify_native":
-        for native_id in parameters["native_job_ids"]:
+        for native_id in parameters.get("native_job_ids", []):
             observed = manager.store.job(native_id)
-            if observed["project_id"] != project_id or observed["state"] != "finished" or observed["result"].get("operation") != "binary.analyze_function":
-                raise ValueError("Select completed native analyze_function observations in this project")
+            if observed["project_id"] != project_id or observed["state"] not in {"finished", "imported"} or observed["result"].get("operation") != "binary.analyze_function":
+                raise ValueError("Select finished or imported native analyze_function observations in this project")
             original = manager.store.artifact(project_id, observed["result"]["artifact_id"])
-            profile = manager.store.job(observed["result"]["session_id"])["result"]["profile"]
+            profile, profile_sha = None, None
+            try:
+                session = manager.store.job(observed["result"]["session_id"])
+                if session["project_id"] != project_id or session["result"]["artifact_sha256"] != observed["result"]["artifact_sha256"]:
+                    raise ValueError("Retained native session context differs from its observation")
+                profile = session["result"].get("profile")
+                profile_sha = session["result"].get("profile_sha256")
+                if profile is not None and not isinstance(profile, dict):
+                    raise ValueError("Retained native provider profile is malformed")
+                if profile is not None and profile_sha is not None and hashlib.sha256(
+                        json.dumps(profile, sort_keys=True).encode()).hexdigest() != profile_sha:
+                    raise ValueError("Retained native provider profile hash differs")
+            except (LookupError, KeyError):
+                profile, profile_sha = None, None
             kind = original["inspection"]["format"]
             native_inputs.append({"path": str(analysis_file(manager.store,native_id)),
                 "sha256": observed["result"]["analysis_sha256"], "artifact_path": original["path"],
                 "artifact_sha256": observed["result"]["artifact_sha256"],
                 "artifact_format": kind if kind in {"pe","elf","mach-o"} else "unknown",
-                "version": profile["version"], "job_id": native_id})
+                "version": profile.get("version") if profile else None, "job_id": native_id,
+                "profile": profile, "profile_sha256": profile_sha,
+                "analysis_revision": observed["result"].get("analysis_revision")})
             native_jobs.append(observed)
     job_id = identifier()
     folder = manager.store.directory / "analyses" / job_id
@@ -354,8 +374,10 @@ def start(manager, project_id, artifact_id, operation, parameters=None):
     if operation == "browser.export_scripts":
         request["parameters"]["output_directory"] = str(folder / "extracted")
     if operation == "managed.verify_native":
-        request["parameters"].pop("native_job_ids")
+        request["parameters"].pop("native_job_ids", None)
         request["native_inputs"] = native_inputs
+        request["managed_source"] = {"job_id": parent["id"], "analysis_sha256": parent["result"]["analysis_sha256"],
+            "artifact_sha256": parent["result"]["artifact_sha256"]}
     (folder / "request.json").write_text(json.dumps(request, ensure_ascii=False, indent=2), encoding="utf-8")
     result = {"kind": "native_analysis", "operation": operation, "title": definition["title"],
               "artifact_id": artifact_id, "artifact_name": artifact["name"],

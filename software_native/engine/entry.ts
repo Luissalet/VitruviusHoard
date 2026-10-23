@@ -42,7 +42,11 @@ const requestSchema = z.object({
   candidate_path:z.string().optional(),expected_candidate_sha256:z.string().optional(),
   source_inputs:z.array(retainedInputSchema).optional(),
   source_input_roles:z.object({reference_job_id:z.string(),candidate_job_id:z.string()}).strict().optional(),
-  native_inputs:z.array(z.object({path:z.string(),sha256:z.string(),artifact_path:z.string(),artifact_sha256:z.string(),artifact_format:z.enum(['pe','elf','mach-o','unknown']),version:z.string(),job_id:z.string()}).strict()).optional(),
+  managed_source:z.object({job_id:z.string(),analysis_sha256:z.string(),artifact_sha256:z.string()}).strict().optional(),
+  native_inputs:z.array(z.object({path:z.string(),sha256:z.string(),artifact_path:z.string(),artifact_sha256:z.string(),
+    artifact_format:z.enum(['pe','elf','mach-o','unknown']),version:z.string().nullable(),job_id:z.string(),
+    profile:z.unknown().optional(),profile_sha256:z.string().nullable().optional(),
+    analysis_revision:z.number().int().nonnegative().nullable().optional()}).strict()).optional(),
 }).strict();
 
 async function main() {
@@ -75,7 +79,7 @@ async function main() {
   } else if(request.operation==='managed.reconstruction') {
     result=managedReconstruction(bytes,parameters.query);
   } else if(request.operation==='managed.verify_native') {
-    result=await managedNativeVerification(bytes,request.native_inputs??[]);
+    result=await managedNativeVerification(bytes,request.native_inputs??[],parameters.query,request.managed_source);
   } else if(request.operation==='javascript.recover') {
     if(!parameters.output_directory) throw new Error('Recovery output directory is required');
     result=await recoverSources(bytes,path,parameters.output_directory,parameters.query);

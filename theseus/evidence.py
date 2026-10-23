@@ -269,6 +269,13 @@ class Evidence:
                 for row in payload["jobs"]:
                     key = mapping[row["id"]]
                     result = remap(row["result"])
+                    if result.get('kind') == 'native_analysis' and result.get('operation') == 'managed.verify_native':
+                        parameters = row['result'].get('parameters')
+                        query = parameters.get('query') if isinstance(parameters, dict) else None
+                        if isinstance(query, dict) and 'native_observations' in query:
+                            # Evidence payload IDs and module labels are literal input
+                            # values, not typed links into the receiving project.
+                            result['parameters']['query']['native_observations'] = query['native_observations']
                     if result.get('kind') == 'native_analysis' and result.get('operation') == 'android.package':
                         delivery = row['result'].get('delivery', {})
                         if isinstance(delivery, dict) and delivery.get('kind') == 'summary':
