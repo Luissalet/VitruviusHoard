@@ -71,6 +71,25 @@ Creation, assignment and resume fault controls verify real child exit without
 executing their marker code. The corrected area passed 117 tests without skips;
 the initial failing fault run and independent report remain preserved.
 
-Independent revision 2, full validation, installed acceptance and publication
-are pending. The previous reviewed W2 package
-remains installed until those steps complete.
+Independent revision 2 approved the corrected source after 35 focused tests.
+The complete run on `e36d23c` passed 1940 cases with five explicit skips and no
+failures or errors; a separate reviewer reconciled all 1945 XML/journal cases.
+The skips require two explicitly owned Android emulators, an unavailable GNU
+AArch64 decoder, or resource/Latin-1 content absent from one synthetic fixture.
+Earlier failed executions remain separate evidence.
+
+Installed W3 has finite independent acceptance: 3827 wheel members match the
+installation except RECORD; 13 reviewer tests in two runs cover setup faults,
+stream adversaries, five real MCP observations and exact retained records.
+The author made five additional installed MCP observations and one normal UI
+command returning3127, then displayed the imported uncertain receipt and its
+20-byte prefix while the original path was absent. The390px view has no
+horizontal overflow. Ten original/imported HTTP documents match their retained
+bytes; the served UI script matches the wheel. Both private owners and the
+author's tab closed, with their profiles and historical failures preserved.
+A completed browser download was neither attempted nor claimed.
+
+W3 SHA-256: `0296db6f984c5c187a36335c3b267f8a9c093f1cf26ce06ae07771e8347a8606`.
+Packaged source: `e36d23cb4f713f7eaba0cf96dd449099cbe2c49c`. Main integration,
+shared installation and publication are recorded separately in release receipts;
+this acceptance does not close the remaining programme.

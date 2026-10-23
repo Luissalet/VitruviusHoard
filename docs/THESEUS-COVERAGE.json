@@ -19,8 +19,8 @@
     "Actual platform requirements and explicitly excluded paid engines remain separate from implemented Windows capabilities."
   ],
   "status_counts": {
-    "independently-reviewed-installed-validated": 73,
-    "implementation-pending": 22,
+    "independently-reviewed-installed-validated": 74,
+    "implementation-pending": 21,
     "semantic-review-pending": 87,
     "platform-required-implementation-pending": 3,
     "integrated-tested-published": 18,
@@ -5859,16 +5859,48 @@
         "line": 46,
         "kind": "native-provider"
       },
-      "counterparts": [],
-      "status": "implementation-pending",
-      "scope": "Selected installed engine on a private read-only artifact: supported query grammar, actual numeric evaluation, full diagnostics and retained output/timeout/cancellation. No arbitrary shell/mutation command or live debugger backend; Cutter sessions remain separate pending work. The source contract also requires arbitrary commands and installed plugins; that remaining execution scope is tracked separately.",
+      "counterparts": [
+        "theseus_analysis_start:rizin.execute",
+        "theseus_analysis_start:rizin.command"
+      ],
+      "status": "independently-reviewed-installed-validated",
+      "scope": "Literal explicit command execution with installed plugins against the original artifact; retained byte-exact streams, diagnostics, endpoint changes and unknown interrupted completion. Existing read-only query remains available. Windows Job ownership is established before resume; no incidental closure of existing native sessions. Arbitrary effects and external brokers are not certified.",
       "acceptance": {
-        "state": "reviewed-read-only-subset; arbitrary-command-execution-pending",
+        "state": "independently-reviewed-and-installed-validated",
         "task": 1154,
-        "partial_implementation_task": 1133,
+        "submission_revision": 2,
+        "reviewed_submission_revision": 2,
+        "reviewed_commits": [
+          "28a84be3253246963c19eb820a9d32aa5399bcd2",
+          "1d8557173a12ecb12863343406eba8199dfa0667",
+          "e9dc2652a5f44ab9c6476242a317749bf8217e3a",
+          "0dd8ca8b2a5e15e887cfc43ab511f426612ce3e6",
+          "e36d23cb4f713f7eaba0cf96dd449099cbe2c49c"
+        ],
+        "application_head": "e36d23cb4f713f7eaba0cf96dd449099cbe2c49c",
         "tests": [
+          "theseus_tests/test_rizin_execute.py",
           "theseus_tests/test_rizin_command.py"
-        ]
+        ],
+        "normal_ui": "Installed private normal form: 3127 observed; imported unknown completion and exact 20-byte prefix; width390 without horizontal overflow.",
+        "proofs": [
+          "codex-review-snapshot23c.json",
+          "codex-full23c-ghidra.xml",
+          "review-full23c-validation.md",
+          "codex-rizin1154-area-r2a.xml",
+          "review-rizin1154-r2/REVIEW-R2.md",
+          "codex-rizin1154-installed23c.json",
+          "codex-rizin1154-ui23c.json",
+          "review-rizin1154-w3/FINAL-REPORT.md",
+          "review-rizin1154-w3/receipt-hashes.json"
+        ],
+        "limitations": "Finite original-fixture Windows acceptance; no general target equivalence, arbitrary-effect guarantee or completed browser-download claim. POSIX implementation is not runtime-accepted here.",
+        "installed": {
+          "packaged_source_commit": "e36d23cb4f713f7eaba0cf96dd449099cbe2c49c",
+          "wheel_sha256": "0296db6f984c5c187a36335c3b267f8a9c093f1cf26ce06ae07771e8347a8606",
+          "receipt": "codex-installed23c.json",
+          "scope": "Exact installed W3 independently exercised. Publication is recorded separately in the release receipt."
+        }
       },
       "group": "free-debugger-backends",
       "reviewed_partial_scope": {
