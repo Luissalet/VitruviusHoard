@@ -141,6 +141,7 @@ OPERATIONS += [
      "description": "Compara contenido, metadatos y relaciones por ocurrencia lógica de dos inventarios guardados. Conserva duplicados ambiguos y cobertura desconocida; no lee los originales ni demuestra equivalencia de comportamiento."},
     {"name": "managed.compare", "title": ".NET · Comparar miembros y CIL", "input": "pair",
      "requires_operation": "managed.members", "inputSchema": PAIR_PARAMETERS,
+     "source_states": ["finished", "imported"], "retained_only": True,
      "description": "Compara dos análisis guardados: firmas, miembros e IL normalizado. Los tokens se tratan como identidades de cada compilación; las coincidencias ambiguas y la cobertura parcial permanecen explícitas."},
     {"name": "javascript.compare_versions", "title": "JavaScript · Comparar versiones", "input": "pair",
      "requires_operation": "javascript.application", "inputSchema": PAIR_PARAMETERS,
@@ -206,7 +207,8 @@ OPERATIONS += [
      "requires_operation": "wasm.artifact", "inputSchema": {**PAIR_PARAMETERS, "properties": {**PAIR_PARAMETERS["properties"], "query": {"type": "object", "properties": {"scope": {"enum": ["both", "imports", "exports"]}}, "additionalProperties": False}}},
      "description": "Compara interfaces tipadas de dos análisis WABT guardados: cambios de firma y límites, duplicados y semántica desconocida explícitos; no ejecuta módulos."},
     {"name": "managed.reconstruction", "title": ".NET · Importar reconstrucción", "input": "analysis",
-     "requires_operation": "managed.members", "inputSchema": {"type": "object", "additionalProperties": False,
+     "requires_operation": "managed.members", "source_states": ["finished", "imported"], "retained_only": True,
+     "inputSchema": {"type": "object", "additionalProperties": False,
         "required": ["source_job_id", "query"], "properties": {"source_job_id": {"type": "string"}, "query": {"type": "object"}}},
      "description": "Importa texto C#/IL/pseudocódigo de un decompilador con tokens y hashes exactos del análisis CIL guardado. query requiere decompiler{name,family} y methods[{token,signature_sha256,normalized_il_sha256,reconstruction{kind,language,text}}]; se guarda como inferencia, sin ejecutar ni modificar el original."},
 ]

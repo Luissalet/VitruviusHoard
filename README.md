@@ -12,6 +12,8 @@ Android package summaries link to their complete retained analysis. Read manifes
 
 Binary analysis includes a read-only command query and explicit literal command execution against the original artifact. Execution can change files or run code; saved streams share a 16 MiB raw budget and interrupted results stay unknown without replay. Existing native sessions remain open. See [binary command observations](docs/RIZIN-COMMANDS.md) for source validation and release status.
 
+Saved .NET member analyses, including imported evidence, can feed comparison and reconstruction without consulting the original assemblies. Document hashes and exact build/method locks remain required; reconstruction text remains an inference. See [retained managed workflows](tasks/submission1165.md) for validation and release status.
+
 Original compiler/encoder fixtures and independent reviews now cover Go/Rust metadata, SQLite values, EVM interfaces, firmware extraction, managed metadata/CIL, Mach-O dependencies, PE resources, artifact inventories, plist/keyed archives, packet captures, Flutter/Dart snapshot headers, symbol demangling and read-only binary queries. Native-session oracles distinguish unresolved branches and rewritten memory from original file offsets. Flutter observations retain partial symbols/pools; these readers do not prove application behavior. See [reader scope and acceptance](docs/COMPILED-READERS.md).
 
 Retained browser captures can export their script bytes and source maps, trace generated positions to original sources and resolve literal imports offline. Missing maps, duplicate sources and computed imports retain their uncertainty. See [retained web sources](docs/WEB-SOURCES.md).
