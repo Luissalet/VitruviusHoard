@@ -18,6 +18,7 @@ import {managedNativeVerification} from './managed-native.js';
 import {traceWebSources} from './web-sources.js';
 import {callPaths,retainedInputSchema} from './retained-evidence.js';
 import {compareRetainedFunctions} from './retained-functions.js';
+import {retainedManagedGraph} from './managed-graph.js';
 import {inspectWasm} from './wasm-inspection.js';
 import {publishWasmPrefix} from './wasm-recording.js';
 
@@ -28,7 +29,7 @@ const requestSchema = z.object({
   operation:z.enum(['managed.artifact','managed.members','managed.native_boundaries','go.build','rust.dependencies',
     'electron.fuses','apple.macho','apple.dispatch','apple.keyed_archive','apple.nib','pe.resources','wasm.artifact','evm.interface','flutter.elf','flutter.build','flutter.aot','javascript.application','javascript.query','javascript.feature',
     'artifact.compare','managed.compare','javascript.compare_versions','javascript.compare_exports','javascript.recover','source.graph',
-    'javascript.compare_source','managed.reconstruction','managed.verify_native','wasm.compare_interfaces','javascript.trace_source','javascript.trace_imports','evidence.call_paths','evidence.compare_functions',...portfolioOperations]),
+    'javascript.compare_source','managed.reconstruction','managed.verify_native','managed.graph_retained','wasm.compare_interfaces','javascript.trace_source','javascript.trace_imports','evidence.call_paths','evidence.compare_functions',...portfolioOperations]),
   path:z.string().min(1),
   parameters:z.object({type_names:z.array(z.string()).optional(), method_offset:z.number().int().min(0).optional(),
     method_limit:z.number().int().min(0).optional(), user_strings:z.boolean().optional(),
@@ -58,7 +59,9 @@ async function main() {
     engine:'Theseus native analysis core',runtime:process.version};
   const parameters = request.parameters;
   let result:unknown;
-  if(request.operation==='evidence.compare_functions') {
+  if(request.operation==='managed.graph_retained') {
+    result=await retainedManagedGraph(request.source_inputs??[],sha256);
+  } else if(request.operation==='evidence.compare_functions') {
     if(!request.source_input_roles)throw new Error('Explicit retained function pair is required');
     result=await compareRetainedFunctions(request.source_inputs??[],request.source_input_roles);
   } else if(request.operation==='evidence.call_paths') {
@@ -93,7 +96,10 @@ async function main() {
   } else if(request.operation==='wasm.artifact') {
     result=await inspectWasm(bytes,path,parameters,observation=>publishWasmPrefix(outputFile,envelope,observation));
   } else result=await analyzeFormat(request.operation,bytes,path,parameters);
-  const output = {...envelope,result};
+  const output = {...envelope,result,
+    ...(request.operation==='managed.members'?{observation_scope:{
+      type_names:parameters.type_names??null,method_offset:parameters.method_offset??0,
+      method_limit:parameters.method_limit??null,user_strings:parameters.user_strings??true}}:{})};
   const temporary = outputFile + '.' + process.pid + '.tmp';
   await writeFile(temporary,JSON.stringify(output,null,2),'utf8');
   await rename(temporary,outputFile);

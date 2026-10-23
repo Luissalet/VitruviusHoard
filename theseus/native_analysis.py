@@ -163,7 +163,7 @@ OPERATIONS += [{"name": name, "title": title, "description": description, "input
     for name, title, description in [
         ("artifact.inventory", "Artefactos · Inventario completo", "Inventario de directorios y contenedores, con identidades, relaciones y limitaciones explícitas; no ejecuta su contenido."),
         ("artifact.extract", "Artefactos · Extraer contenido", "Extrae archivos y cortes de arquitectura a un directorio nuevo del trabajo; conserva hashes y rutas de origen."),
-        ("managed.graph", ".NET · Grafo de aplicación", "Relaciona ensamblados, módulos, tipos, miembros, llamadas CIL y fronteras P/Invoke con los metadatos del mismo archivo."),
+        ("managed.graph", ".NET · Grafo de aplicación", "Relaciona ensamblados, módulos, tipos, miembros y fronteras P/Invoke con los metadatos del mismo archivo. Proyección estática de pertenencia y fronteras, sin reconstruir un grafo de llamadas CIL."),
         ("apple.application", "Apple · Grafo de aplicación", "Proyecta el inventario IPA/app/ZIP en componentes, bundles, plataformas y posibles puentes; no afirma llamadas observadas."),
         ("android.application", "Android · Grafo de aplicación", "Proyecta inventarios APK, DEX, recursos y bibliotecas en un grafo con identidades y límites de cobertura."),
         ("harmony.application", "HarmonyOS · Grafo de aplicación", "Proyecta inventarios HAP/HSP/App Pack, manifiestos, bytecode, recursos y bibliotecas; no afirma decodificar semántica Ark."),
@@ -219,7 +219,15 @@ OPERATIONS += [{"name": "javascript.recover", "title": "JavaScript · Recuperar 
             "extraction_mode": {"enum": ["structural", "heuristic", "inspection"]},
             "rewrite_level": {"enum": ["minimal", "standard", "aggressive"]}}}}}}]
 
-OPERATIONS += [{"name": "managed.verify_native", "title": ".NET · Contrastar declaraciones con nativo",
+OPERATIONS += [{"name": "managed.graph_retained", "title": ".NET · Grafo desde evidencias guardadas",
+    "input": "set", "retained_only": True,
+    "source_states": ["finished", "failed", "cancelled", "interrupted", "imported"],
+    "requires_operation": ["managed.artifact", "managed.members", "managed.native_boundaries"],
+    "description": "Proyecta tipos, miembros y fronteras nativas de 1–3 observaciones guardadas del mismo contenido, una por faceta. Conserva fuentes, ventanas y omisiones; completo dentro de las entradas no significa inventario completo. No consulta el binario original.",
+    "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_ids"],
+        "properties": {"source_job_ids": {"type": "array", "minItems": 1, "maxItems": 3,
+            "uniqueItems": True, "items": {"type": "string", "minLength": 1}}}}},
+    {"name": "managed.verify_native", "title": ".NET · Contrastar declaraciones con nativo",
     "input": "analysis", "requires_operation": "managed.native_boundaries",
     "description": "Contrasta P/Invoke del análisis guardado con funciones Ghidra guardadas del mismo proyecto. native_job_ids selecciona sus trabajos analyze_function; conserva hashes, módulos, candidatos y desconocidos. Una coincidencia estática no prueba ejecución ni enlace del sistema.",
     "inputSchema": {"type": "object", "additionalProperties": False, "required": ["source_job_id", "native_job_ids"],
