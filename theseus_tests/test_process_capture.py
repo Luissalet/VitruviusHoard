@@ -90,16 +90,95 @@ def test_real_terminal_interaction_and_rendering(tmp_path):
     assert all(step['state']=='dispatched' for step in result['steps'])
 
 
-def test_timeout_keeps_prefix_and_stops_only_owned_program(tmp_path):
+def test_timeout_stops_owned_program_and_preserves_a_separate_job(tmp_path):
+    from theseus import process_capture
     program=tmp_path/'original-wait.py'
-    program.write_text('import time\nprint("prefix ñ😀",flush=True)\ntime.sleep(60)\n',encoding='utf8')
-    result=capture_process({'argv':[sys.executable,str(program)],'cwd':str(tmp_path),'mode':'pipes',
-        'timeout_seconds':.4,'environment':{'PYTHONIOENCODING':'utf-8'},'steps':[]},tmp_path/'capture')
+    program.write_text('import time\ntime.sleep(60)\n',encoding='utf8')
+    witness_program=tmp_path/'separate-witness.py'
+    witness_program.write_text('import sys\nprint("witness-ready",flush=True)\nsys.stdin.buffer.read()\n',encoding='utf8')
+    witness=process_capture.Pipes([sys.executable,str(witness_program)],str(tmp_path),dict(os.environ),{})
+    try:
+        process=psutil.Process(witness.pid)
+        identity={'pid':process.pid,'created':process.create_time(),'command':process.cmdline()}
+        ready=b'';deadline=time.monotonic()+10
+        while b'witness-ready' not in ready:
+            ready+=b''.join(data for channel,data in witness.read() if channel=='stdout')
+            assert witness.poll() is None,'The separate witness exited before the experiment'
+            assert time.monotonic()<deadline,'The separate witness did not become ready'
+            time.sleep(.002)
+        result=capture_process({'argv':[sys.executable,str(program)],'cwd':str(tmp_path),'mode':'pipes',
+            'timeout_seconds':.4,'steps':[]},tmp_path/'capture')
+        assert result['status']=='partial' and result['termination']['reason']=='explicit-timeout'
+        assert result['termination']['owned_process_stopped'] and result['stream_complete']
+        if os.name=='nt':assert result['process']['job_accounting']['active_processes']==0
+        try:
+            stopped=psutil.Process(result['process']['pid'])
+            if stopped.create_time()==result['process']['created']:
+                assert stopped.cmdline()==result['process']['command']
+                stopped.wait(timeout=5)
+        except psutil.NoSuchProcess:pass
+        assert witness.poll() is None
+        assert process.create_time()==identity['created'] and process.cmdline()==identity['command']
+        assert json.loads((tmp_path/'capture/analysis.json').read_text(encoding='utf8'))['result']==result
+        assert (tmp_path/'capture/analysis.json').read_bytes()==(tmp_path/'capture/capture-latest.json').read_bytes()
+        assert result['limitations']
+        (tmp_path/'separate-witness-oracle.json').write_text(json.dumps({
+            'identity':identity,'ready_before_capture':True,'alive_after_capture':True,
+            'native_timeout_seconds':.4,'capture_owner':result['process']['pid']},indent=2),encoding='utf8')
+    finally:
+        try:
+            witness.close_input()
+            try:witness.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                if witness.job is not None:witness.job.stop()
+                else:witness.process.terminate()
+                witness.process.wait(timeout=5)
+        finally:witness.close()
+
+
+def test_timeout_retains_a_published_prefix_with_a_controlled_clock(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    from theseus import process_capture
+    prefix='prefix ñ😀\r\n'.encode('utf8')
+    assert hashlib.sha256(prefix).hexdigest()=='fdc1e612d49c1d7966b336872aa912449ea5f45b4d9e8239bbef6d1ae1103c79'
+    program=tmp_path/'original-prefix.py'
+    program.write_text('import sys,time\ntime.sleep(.6)\nsys.stdout.buffer.write("prefix ñ😀\\r\\n".encode("utf8"))\n'
+        'sys.stdout.buffer.flush()\ntime.sleep(60)\n',encoding='utf8')
+    folder=tmp_path/'capture';real_started=time.monotonic();clock=[0.0];published=[]
+    original_write=process_capture._write
+    def sleep(seconds):
+        if not published and time.monotonic()-real_started>10:
+            raise TimeoutError('No nonempty native prefix checkpoint was published before the readiness watchdog')
+        time.sleep(seconds)
+    def write(path,document):
+        original_write(path,document)
+        if not published and path==folder/'capture-latest.json' and (
+                base64.b64decode(document['result']['stdout']['base64'])==prefix):
+            raw=path.read_bytes()
+            assert base64.b64decode(json.loads(raw)['result']['stdout']['base64'])==prefix
+            published.append(raw)
+            clock[0]=.5
+    # Only this module's clock is controlled; native Pipes/WindowsJob and the
+    # readiness watchdog retain real clocks. No startup-latency claim is made.
+    monkeypatch.setattr(process_capture,'time',SimpleNamespace(monotonic=lambda:clock[0],sleep=sleep))
+    monkeypatch.setattr(process_capture,'_write',write)
+    result=process_capture.capture_process({'argv':[sys.executable,str(program)],'cwd':str(tmp_path),'mode':'pipes',
+        'timeout_seconds':.4,'environment':{'PYTHONIOENCODING':'utf-8'},'steps':[]},folder)
+    assert published,'The test never observed its required nonempty checkpoint'
     assert result['status']=='partial' and result['termination']['reason']=='explicit-timeout'
-    assert base64.b64decode(result['stdout']['base64'])=='prefix ñ😀\r\n'.encode()
-    assert result['termination']['owned_process_stopped']
-    assert (tmp_path/'capture'/'analysis.json').is_file()
+    assert base64.b64decode(result['stdout']['base64'])==prefix
+    assert result['stdout']['sha256']==hashlib.sha256(prefix).hexdigest() and result['stdout']['bytes']==15
+    assert result['termination']['owned_process_stopped'] and result['stream_complete']
+    assert b''.join(base64.b64decode(event['base64']) for event in result['events']
+        if event['channel']=='stdout' and event['kind']=='output')==prefix
+    assert json.loads((folder/'analysis.json').read_text(encoding='utf8'))['result']==result
+    assert (folder/'analysis.json').read_bytes()==(folder/'capture-latest.json').read_bytes()
+    if os.name=='nt':assert result['process']['job_accounting']['active_processes']==0
     assert result['limitations']
+    (tmp_path/'prefix-readiness-oracle.json').write_text(json.dumps({'clock_controlled':True,'native_pipes':True,
+        'published_prefix_sha256':hashlib.sha256(prefix).hexdigest(),
+        'published_checkpoint_sha256':hashlib.sha256(published[0]).hexdigest(),
+        'virtual_monotonic_values':[0,.5],'readiness_watchdog_uses_real_time':True},indent=2),encoding='utf8')
 
 
 def test_unread_large_input_does_not_block_the_explicit_timeout(tmp_path):
