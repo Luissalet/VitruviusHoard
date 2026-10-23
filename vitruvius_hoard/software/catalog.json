@@ -4638,7 +4638,7 @@
   },
   {
     "name": "theseus_analysis_start",
-    "description": "Start a native static analysis of a project artifact. Discover the operation and parameters through theseus_analysis_catalog. Returns a persistent job; never executes target code.",
+    "description": "Start a selected native analysis or explicit command observation. Discover operations and parameters through theseus_analysis_catalog. Returns a persistent job. Caller-selected commands may execute code, mutate files, access the network and read external inputs; retained readers do not replay commands.",
     "inputSchema": {
       "type": "object",
       "properties": {
