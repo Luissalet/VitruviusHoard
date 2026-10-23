@@ -42,19 +42,69 @@ def external_command(target,chosen,method,params):
     finally:socket.close()
 
 
+def force_fixture_grace_expiry(monkeypatch,process):
+    original_wait=process.wait;timeouts=[]
+    def wait(timeout=None):
+        timeouts.append(timeout)
+        if len(timeouts)==1:
+            raise subprocess.TimeoutExpired(process.args,timeout)
+        return original_wait(timeout=timeout)
+    monkeypatch.setattr(process,'wait',wait)
+    return timeouts
+
+
+def test_owned_fixture_confirms_exit_after_expired_grace(tmp_path,monkeypatch):
+    folder=tmp_path/'fixture'
+    with browser_fixture(folder) as target:
+        timeouts=force_fixture_grace_expiry(monkeypatch,target['process'])
+    result=json.loads((folder/'cleanup-result.json').read_bytes())
+    assert timeouts[:2]==[5,30]
+    assert result['grace_expired'] and result['confirmed'] and result['root_exit_code'] is not None
+    assert target['process'].poll() is not None
+
+
+def test_owned_fixture_never_signals_or_waits_reused_pid(tmp_path,monkeypatch):
+    import psutil
+    class ReusedChild:
+        pid=2147483647
+        def create_time(self):return 1
+        def cmdline(self):return ['synthetic-descriptor-not-a-live-process']
+        def is_running(self):return False
+        def terminate(self):raise AssertionError('A reused PID must never receive a signal')
+        def wait(self,*args,**kwargs):raise AssertionError('A reused PID must never be waited on')
+    folder=tmp_path/'fixture';original_children=psutil.Process.children
+    with browser_fixture(folder) as target:
+        timeouts=force_fixture_grace_expiry(monkeypatch,target['process'])
+        def children(process,*args,**kwargs):
+            rows=original_children(process,*args,**kwargs)
+            return [*rows,ReusedChild()] if process.pid==target['process'].pid else rows
+        monkeypatch.setattr(psutil.Process,'children',children)
+    result=json.loads((folder/'cleanup-result.json').read_bytes())
+    assert timeouts[:2]==[5,30] and result['confirmed']
+    assert any(row['pid']==2147483647 for row in result['identities'])
+    assert target['process'].poll() is not None
+
+
 @pytest.mark.parametrize('value,expected',[(131,'high'),(42,'low')])
 def test_armed_precise_ranges_sources_and_initiators(tmp_path,value,expected):
     with browser_fixture(tmp_path/'fixture',extra_script=SCRIPT) as target,TestClient(create_app(tmp_path/'data'),base_url='http://127.0.0.1:5217') as client:
         client.get('/');project=client.app.state.store.create_project('Owned precise coverage')['id'];chosen=target_id(client,project,target)
-        job=client.post(f'/api/projects/{project}/runtime',json={'operation':'browser.coverage','parameters':{'inspector_endpoint':target['endpoint'],'target_id':chosen,'observation_ms':1500}}).json()
+        job=client.post(f'/api/projects/{project}/runtime',json={'operation':'browser.coverage','parameters':{'inspector_endpoint':target['endpoint'],'target_id':chosen,'observation_ms':5000}}).json()
         current=armed(client,job)
-        listed=client.get('/api/projects/'+project).json();assert next(row for row in listed['jobs'] if row['id']==job['id'])['result']['progress']['state']=='armed'
         assert '/coverage-hit' not in target['requests']
         reply=external_command(target,chosen,'Runtime.evaluate',{'expression':f'preciseRule({value})','returnByValue':True})
         assert reply['result']['result']['value']==expected,reply
+        listed=client.get('/api/projects/'+project).json()
+        progress=next(row for row in listed['jobs'] if row['id']==job['id'])['result']['progress']
+        assert progress['state'] in {'armed','sampling','ended'}
+        for key in ('armed_at','armed_protocol_sequence','frame_id','requested_ms'):
+            assert progress[key]==current['result']['progress'][key]
         terminal=wait(client,job);assert terminal['state']=='finished',terminal
         result=client.get('/api/jobs/'+job['id']+'/analysis.json').json()['result']
         assert result['coverage_window']['armed_at']==current['result']['progress']['armed_at']
+        assert result['coverage_window']['armed_protocol_sequence']==current['result']['progress']['armed_protocol_sequence']
+        assert result['coverage_target']['frame_id']==current['result']['progress']['frame_id']
+        assert result['coverage_window']['requested_ms']==5000
         assert result['instrumentation']['cleanup']=='confirmed' and not result['instrumentation']['executes_selected_code']
         script=next(row for row in result['coverage']['scripts'] if row['reported_url'].endswith('original-%C3%B1.js'))
         indexed=client.get('/api/jobs/'+job['id']+'/records/coverage.scripts',params={'query':'original-'}).json()
