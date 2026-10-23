@@ -83,3 +83,15 @@ packaged source `a5e4c50bcfab9dac43493750117108e01a9e1b21`. Global validation
 is composed: the full run retained 1910 passes, six failures and five skips;
 unchanged failed cases plus retained-document oracles passed in two separate
 nine-case runs. No single green full run or load-performance guarantee is claimed.
+
+A later read-only check of Windows Application Error records13466580 and13466820
+found the same Qt6Core.dll c0000409/offset1c888 signature in the two historical
+startup windows. The original probe lacks an exact PID/create/argv launch
+receipt linking it to an event; matching times and signatures do not prove an
+identical root cause. The offscreen loader error is a separate environmental
+control, and the later c0000005 callback comparison is a separate shutdown
+failure. None alone attributes the original abort to the bridge. The finite
+W2 native exit0 observations above remain the corrected delivery's acceptance.
+See codex-cutter-historical-events23c.json and its independent report.
+Full23c later passed1940 cases with five skips on e36d23c; it is separate from
+the earlier W2 composed validation and does not rewrite those six failures.

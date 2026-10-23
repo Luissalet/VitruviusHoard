@@ -71,7 +71,24 @@ unknown completion, never run their marker code and leave no original child.
 Earlier MCP/UI evidence remains attributed to its original source revisions;
 this cleanup-only correction requires independent revision 2 before acceptance.
 
-Independent revision 2, full validation, installed acceptance and main
-publication remain pending. No shared owner/MCP, old5217, Sparks, substitute
-text model, GPU, SABER or shared ADB was used. Existing W2/main fac005a remains
-unchanged. This submission does not close the remaining 207-contract programme.
+Independent revision2 approved the five source commits through e36d23c after
+35 focused tests. Full23c has1940PASS/5SKIP/0FAIL/0ERROR and exit0; independent
+read-only reconciliation matched all1945 XML/journal cases and the frozen CAS2.
+The omissions and all earlier failures remain explicit in their reports.
+
+W3 SHA0296db6f984c5c187a36335c3b267f8a9c093f1cf26ce06ae07771e8347a8606
+packages e36d23c. Independent installed acceptance verifies3827 members except
+RECORD, actual installed module paths,13 tests in two runs and five real MCP
+observations, their exact HTTP documents and complete imported stdout records.
+The author separately made five installed MCP observations and one normal UI
+command returning3127, then read the imported uncertain20-byte prefix without
+the original path. The390px view has no horizontal overflow. Both private
+owners and the author's tab are closed; profiles/failures remain available.
+No completed browser download is claimed.
+
+Source, installed and UI reports are retained in review-rizin1154-r2,
+review-rizin1154-w3 and codex-rizin1154-ui23c.json. Release23c records the final
+documentation candidate; integration, shared installation and publication have
+separate receipts and require the exact reviewed candidate and fresh merge lock.
+No shared owner/MCP, old5217, Sparks, substitute text model, GPU, SABER or shared
+ADB was used. This submission does not close the207-contract programme.
