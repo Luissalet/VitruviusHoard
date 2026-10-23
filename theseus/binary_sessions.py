@@ -314,6 +314,9 @@ class BinarySessions:
         try:
             with runtime.lock:
                 self._active(job_id)
+                # A queued call may follow a completed annotation. Bind its
+                # observations to the session revision held at dispatch.
+                session = self.store.job(session_id)
                 with self.manager.lock:
                     self.manager.processes[job_id] = runtime.process
                 self.store.save_job(session["project_id"], job_id, "running", result)
