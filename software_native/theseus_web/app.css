@@ -496,6 +496,15 @@ summary {
 .reading > form + h2 {
   margin-top: 32px;
 }
+#native-analysis-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+#native-analysis-form > * {
+  min-width: 0;
+}
+#native-analysis-form > p {
+  overflow-wrap: anywhere;
+}
 .specification {
   min-height: 440px;
 }

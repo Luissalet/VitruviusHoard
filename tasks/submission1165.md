@@ -34,6 +34,27 @@ remain available. This change does not alter the CIL comparison/reconstruction
 algorithms, execute the target, or complete graph task1166/native verification.
 Build-local tokens and inferred reconstruction do not prove target equivalence.
 
-Actual private MCP/UI, independent review, installed acceptance and publication
-are pending. W3/main b959769 is the previous reviewed release. Theseus207 remains
-incomplete; no ledger acceptance is promoted by this source change alone.
+Private stdio MCP on source cbd0dfb completed two original member observations,
+comparison, all three reconstruction forms and a deliberately false method
+lock. Both originals remain parked. Four workflow documents transferred exactly
+and were delivered byteexact by private HTTP; retained record queries succeeded.
+The normal UI separately created a comparison and reconstruction from imported
+sources, displayed Stable unchanged and Changed with a CIL difference, then
+showed the Unicode/CRLF reconstruction and inference metadata.
+
+That UI check exposed a mobile form overflow: the implicit grid column followed
+long option/description content. A scoped zero-minimum grid track and wrapping
+fix preserve all controls. The first390px observation had scrollWidth585. With
+the actual updated stylesheet loaded, the form/source selector are344px wide,
+document scrollWidth380 at viewport390; desktop keeps its900px form. An initial
+confirmation still loaded the old stylesheet from browser cache; its observation
+is preserved. A temporary developer cache override loaded the new source bytes,
+and was restored together with the viewport before closing the author's tabs.
+No phone hardware, browser download or general accessibility claim is made.
+
+MCP/UI receipts are codex-managed1165-mcp23d.json and
+codex-managed1165-ui23d.json. The backend source remains cbd0dfb; its later CSS
+and documentation-only delta is attributed separately. Independent review,
+installed acceptance and publication remain pending. W3/main b959769 is the
+previous reviewed release. Theseus207 remains incomplete; no ledger acceptance
+is promoted by this source change alone.
