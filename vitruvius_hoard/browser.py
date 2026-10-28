@@ -401,6 +401,159 @@ LAYOUT_JS = r"""
 """
 
 
+# A compact snapshot of the rendered DOM at one viewport width, for the render-time design rules: every visible element
+# (capped) with its box in page coordinates and the handful of computed styles those rules read. Defaults are left out
+# to keep it small. The rules read it in Python (``rules/dom.py``); nothing is judged here.
+DOM_JS = r"""
+() => {
+  const CAP = 520;
+  const W = window.innerWidth, H = window.innerHeight, sx = window.scrollX, sy = window.scrollY;
+  const doc = document.documentElement;
+  const out = {width: W, height: H, page_height: doc.scrollHeight, page_width: doc.scrollWidth, els: [], truncated: false};
+  const body = document.body;
+  if (!body) return out;
+  const n = (v) => { const f = parseFloat(v); return isNaN(f) ? 0 : Math.round(f * 100) / 100; };
+  const SKIP = new Set(['SCRIPT','STYLE','LINK','META','NOSCRIPT','TEMPLATE','HEAD','TITLE','BR','SOURCE','TRACK','WBR']);
+  const SVG_INNER = (el) => el.namespaceURI === 'http://www.w3.org/2000/svg' && el.localName !== 'svg';
+  const all = Array.from(body.querySelectorAll('*')).slice(0, 6000);
+  const index = new Map(), refs = [];
+  const put = (o, k, v, def) => { if (v !== def && v !== undefined && v !== null && v !== '') o[k] = v; };
+  const first4 = (cs, a, b, c, d) => [n(cs[a]), n(cs[b]), n(cs[c]), n(cs[d])];
+  const own = (el) => { let t = ''; for (const c of el.childNodes) if (c.nodeType === 3) t += c.textContent; return t.replace(/\s+/g, ' ').trim(); };
+  const lineCount = (el) => {
+    try {
+      const range = document.createRange(); range.selectNodeContents(el);
+      const tops = new Set(); for (const q of range.getClientRects()) if (q.width > 1 && q.height > 1) tops.add(Math.round(q.top / 4));
+      return tops.size;
+    } catch (e) { return 0; }
+  };
+  const lastLine = (el) => {
+    try {
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let node, last = null;
+      while ((node = w.nextNode())) if (node.textContent.trim()) last = node;
+      if (!last) return null;
+      const range = document.createRange(); range.selectNodeContents(last);
+      const rects = Array.from(range.getClientRects()).filter(q => q.width > 1 && q.height > 1);
+      if (!rects.length) return null;
+      const bottom = Math.max(...rects.map(q => q.bottom));
+      const lastRects = rects.filter(q => q.bottom > bottom - 2);
+      const left = Math.min(...lastRects.map(q => q.left)), right = Math.max(...lastRects.map(q => q.right));
+      return {w: Math.round(right - left), words: 0};
+    } catch (e) { return null; }
+  };
+  for (const el of all) {
+    if (out.els.length >= CAP) { out.truncated = true; break; }
+    if (SKIP.has(el.tagName) || SVG_INNER(el)) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none') continue;
+    const r = el.getBoundingClientRect();
+    const text = own(el);
+    const hasBox = r.width >= 1 && r.height >= 1;
+    if (!hasBox && !text) continue;
+    const rec = {i: out.els.length, tag: el.localName};
+    let p = el.parentElement; while (p && !index.has(p)) p = p.parentElement;
+    rec.p = p ? index.get(p) : -1;
+    const cls = (typeof el.className === 'string' ? el.className : '').trim();
+    put(rec, 'c', cls.slice(0, 80), '');
+    put(rec, 'id', el.id, '');
+    rec.r = [Math.round(r.left + sx), Math.round(r.top + sy), Math.round(r.width), Math.round(r.height)];
+    put(rec, 't', text.slice(0, 120), '');
+    if (text) rec.tl = text.length;
+    const s = {};
+    put(s, 'color', cs.color, '');
+    put(s, 'bg', cs.backgroundColor, 'rgba(0, 0, 0, 0)');
+    put(s, 'bgi', cs.backgroundImage.slice(0, 200), 'none');
+    s.fs = n(cs.fontSize); s.fw = cs.fontWeight;
+    s.ff = (cs.fontFamily || '').split(',')[0].replace(/["']/g, '').trim();
+    if (cs.lineHeight !== 'normal') s.lh = n(cs.lineHeight);
+    if (cs.letterSpacing !== 'normal') s.ls = n(cs.letterSpacing);
+    put(s, 'tt', cs.textTransform, 'none');
+    put(s, 'fst', cs.fontStyle, 'normal');
+    put(s, 'ta', cs.textAlign, 'start');
+    put(s, 'disp', cs.display, 'block');
+    put(s, 'pos', cs.position, 'static');
+    put(s, 'op', n(cs.opacity), 1);
+    put(s, 'vis', cs.visibility, 'visible');
+    put(s, 'ovx', cs.overflowX, 'visible'); put(s, 'ovy', cs.overflowY, 'visible');
+    put(s, 'cp', cs.clipPath, 'none');
+    put(s, 'sh', cs.boxShadow.slice(0, 200), 'none');
+    put(s, 'tsh', cs.textShadow.slice(0, 120), 'none');
+    put(s, 'bf', cs.backdropFilter, 'none'); put(s, 'flt', cs.filter, 'none');
+    put(s, 'tw', cs.textWrap, 'wrap'); put(s, 'fvn', cs.fontVariantNumeric, 'normal');
+    put(s, 'ws', cs.whiteSpace, 'normal'); put(s, 'to', cs.textOverflow, 'clip');
+    put(s, 'lc', cs.webkitLineClamp, 'none');
+    put(s, 'bg_clip', cs.webkitBackgroundClip || cs.backgroundClip, 'border-box');
+    const tl = n(cs.borderTopLeftRadius), tr = n(cs.borderTopRightRadius), bl = n(cs.borderBottomLeftRadius), br = n(cs.borderBottomRightRadius);
+    if (tl || tr || bl || br) s.rad = [tl, tr, br, bl];
+    const bw = first4(cs, 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth');
+    if (bw.some(v => v > 0)) {
+      s.bw = bw;
+      s.bc = [cs.borderTopColor, cs.borderRightColor, cs.borderBottomColor, cs.borderLeftColor];
+      s.bst = [cs.borderTopStyle, cs.borderRightStyle, cs.borderBottomStyle, cs.borderLeftStyle];
+    }
+    const pad = first4(cs, 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft');
+    if (pad.some(v => v > 0)) s.pad = pad;
+    const mar = first4(cs, 'marginTop', 'marginRight', 'marginBottom', 'marginLeft');
+    if (mar.some(v => v !== 0)) s.mar = mar;
+    if (cs.display.includes('grid')) s.gtc = cs.gridTemplateColumns.slice(0, 80);
+    if (cs.display.includes('flex')) { s.fd = cs.flexDirection; s.fwrap = cs.flexWrap; }
+    put(s, 'gap', n(cs.rowGap) || n(cs.columnGap) || 0, 0);
+    rec.s = s;
+    // direct element children that carry boxes
+    rec.n = el.children.length;
+    if (el.localName === 'img') {
+      rec.img = {nw: el.naturalWidth, nh: el.naturalHeight, ok: el.complete && el.naturalWidth > 0, done: el.complete, src: (el.currentSrc || el.getAttribute('src') || '').slice(0, 120),
+                 alt: el.hasAttribute('alt') ? el.getAttribute('alt') : null};
+    }
+    if (el.localName === 'svg') rec.svg = {shapes: el.querySelectorAll('path,circle,rect,ellipse,polygon,line,polyline').length};
+    if (el.localName === 'a' || el.localName === 'button') { rec.act = true; const href = el.getAttribute('href'); if (href) rec.href = href.slice(0, 120); }
+    if (el.localName === 'input' || el.localName === 'textarea' || el.localName === 'select') rec.ctl = el.getAttribute('type') || el.localName;
+    if (text && /^h[1-6]$|^p$|^li$|^a$|^button$|^label$|^span$|^div$/.test(el.localName) && r.width > 8) {
+      const lines = lineCount(el);
+      if (lines) rec.ln = lines;
+      if (lines >= 2 && r.width > 8) { const ll = lastLine(el); if (ll) rec.last = ll.w; }
+    }
+    out.els.push(rec);
+    index.set(el, rec.i); refs.push(el);
+  }
+  // Text in the first screen with something opaque painted over its centre (elementFromPoint ignores pointer-events:none
+  // layers, so a decorative overlay does not count).
+  out.occluded = [];
+  try {
+    for (const rec of out.els) {
+      if (out.occluded.length >= 8) break;
+      if (!rec.t || rec.tl < 3 || rec.r[1] > H || rec.r[1] + rec.r[3] < 0 || rec.s.op < 0.5 || rec.s.vis === 'hidden') continue;
+      const cx = Math.round(rec.r[0] - sx + Math.min(rec.r[2], 40) / 2 + 2), cy = Math.round(rec.r[1] - sy + Math.min(rec.r[3], 24) / 2);
+      if (cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
+      const top = document.elementFromPoint(cx, cy);
+      const mine = refs[rec.i];
+      if (!top || !mine || top === mine || mine.contains(top) || top.contains(mine) || top === body || top === doc) continue;
+      const tcs = getComputedStyle(top);
+      const m = (tcs.backgroundColor.match(/rgba?\(([^)]*)\)/) || [null, ''])[1].split(',').map(Number);
+      const opaque = ['IMG', 'VIDEO', 'CANVAS', 'PICTURE'].includes(top.tagName) || (m.length >= 3 && (m.length < 4 || m[3] > 0.9));
+      if (!opaque || parseFloat(tcs.opacity) < 0.9) continue;
+      out.occluded.push({el: rec.tag + ': ' + rec.t.slice(0, 40), by: top.localName + ((typeof top.className === 'string' && top.className) ? '.' + top.className.trim().split(/\s+/)[0] : '')});
+    }
+  } catch (e) {}
+  return out;
+}
+"""
+
+
+SOURCE_CAP = 400_000
+
+# The text of every readable stylesheet, for static rules on a captured URL (cross-origin sheets are skipped).
+CSS_TEXT_JS = r"""
+() => {
+  const out = [];
+  for (const sheet of document.styleSheets) {
+    try { out.push(Array.from(sheet.cssRules).map(r => r.cssText).join("\n")); } catch (e) {}
+  }
+  return out.join("\n");
+}
+"""
+
+
 def _sync_playwright_available() -> bool:
     return web_browser.playwright_installed()
 
@@ -587,6 +740,8 @@ class BrowserWorker:
         context = browser.new_context(color_scheme="dark" if dark else "light")
         self._guard(context)
         page = context.new_page()
+        script_errors: list[str] = []
+        page.on("pageerror", lambda error: script_errors.append(str(error)[:300]) if len(script_errors) < 10 else None)
         try:
             if html is not None:
                 page.set_content(html, wait_until="load")
@@ -601,6 +756,7 @@ class BrowserWorker:
 
             files = []
             layout: dict[str, Any] = {}
+            dom: dict[str, Any] = {}
             for w in widths:
                 page.set_viewport_size({"width": w, "height": 900})
                 try:
@@ -608,6 +764,10 @@ class BrowserWorker:
                     layout[str(w)] = page.evaluate(LAYOUT_JS)
                 except Exception as error:  # noqa: BLE001 - a page that breaks the probe still gets its screenshots
                     layout[str(w)] = {"error": str(error)[:200]}
+                try:
+                    dom[str(w)] = page.evaluate(DOM_JS)
+                except Exception as error:  # noqa: BLE001 - the snapshot is optional; the rules that need it skip
+                    dom[str(w)] = {"error": str(error)[:200]}
                 path = out_dir / f"{w}.png"
                 if full_page:
                     # Cap full-page height at 6000px via a clip.
@@ -627,6 +787,16 @@ class BrowserWorker:
                 probe = {"error": str(error)}
             if layout:
                 probe["layout"] = layout
+            if dom:
+                probe["dom"] = dom
+            probe["script_errors"] = script_errors
+            if url:
+                # a captured URL has no source HTML on our side: hand the rules the serialised page and its stylesheets
+                try:
+                    probe["html_text"] = page.content()[:SOURCE_CAP]
+                    probe["css_text"] = (page.evaluate(CSS_TEXT_JS) or "")[:SOURCE_CAP]
+                except Exception:  # noqa: BLE001
+                    pass
 
             video_path = None
             poster_path = None

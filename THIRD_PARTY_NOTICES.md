@@ -32,6 +32,33 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Design rules and themes (see NOTICE)
+
+The registry in `vitruvius_hoard/rules/` is original Python guided by the descriptions of an Apache-2.0 detector set (impeccable,
+Copyright 2025 Paul Bakaus, https://github.com/pbakaus/impeccable) and by the gate list of an MIT design skill (hallmark,
+Copyright (c) 2026 Hallmark contributors, https://github.com/Nutlope/hallmark). `vitruvius_hoard/themes.json` holds theme headers
+from the second one as data. The MIT licence text is the same as above with that copyright line; the Apache-2.0 text is at
+https://www.apache.org/licenses/LICENSE-2.0 and covers the studied material. No source file was copied; the root `NOTICE` lists
+what was used and how.
+
+```
+MIT License
+
+Copyright (c) 2026 Hallmark contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files
+(the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
 ## Swift demangling test vectors
 
 `theseus_tests/fixtures/swift_manglings.txt` is an unmodified copy of `test/Demangle/Inputs/manglings.txt`

@@ -22,7 +22,7 @@
         "DESIGN.md",
         "PRODUCT.md"
       ],
-      "note": "24 commands (craft, critique, audit, polish, animate, colorize, typeset, layout…) and 61 deterministic detector rules."
+      "note": "24 commands (craft, critique, audit, polish, animate, colorize, typeset, layout…) and 62 deterministic detector rules; the rule ids are mapped in the Vitruvius registry (source_id)."
     },
     {
       "id": "anti-slop",
@@ -60,7 +60,7 @@
       "paths": [
         "**/*.md"
       ],
-      "note": "21 themes, 57 slop-test gates, audit/redesign/study modes."
+      "note": "Hallmark 2.0: 50 themes (paper/display/accent headers, used as data by the theme dealer), render gates (M) and slop-test gates (R), about 88 in all, plus audit/redesign/study modes."
     },
     {
       "id": "superdesign-skill",

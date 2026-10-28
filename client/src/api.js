@@ -47,6 +47,13 @@ export const api = {
   renderCritique: (id, body) => request("POST", `/design/api/renders/${encodeURIComponent(id)}/critique`, { body }),
   lint: (body) => request("POST", "/design/api/lint", { body }),
   assay: (body) => request("POST", "/design/api/page-check", { body }),
+  rules: (params) => request("GET", "/design/api/rules", { params }),
+  rule: (id) => request("GET", `/design/api/rules/${id}`),
+  themes: (params) => request("GET", "/design/api/themes", { params }),
+  themesMemory: (limit) => request("GET", "/design/api/themes/memory", { params: { limit } }),
+  themesDeal: (body) => request("POST", "/design/api/themes/deal", { body }),
+  themesCheck: (body) => request("POST", "/design/api/themes/check", { body }),
+  keptList: (limit) => request("GET", "/design/api/kept", { params: { limit } }),
   renderCompare: (body) => request("POST", "/design/api/renders/compare", { body }),
 
   tokensList: (limit) => request("GET", "/design/api/tokens", { params: { limit } }),

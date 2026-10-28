@@ -7,6 +7,10 @@ from .hoard_link.service import run_main
 
 
 def main() -> int:
+    import sys
+    if "--list-rules" in sys.argv[1:]:
+        from .rules.cli import list_rules_main
+        return list_rules_main(sys.argv[1:])
     from .software.runtime import profile
     return run_main(service="vitruvius-hoard", package="vitruvius_hoard", default_port=5191, app_factory="vitruvius_hoard.software.host:create_app",
                     data_dir_env="VITRUVIUS_PROFILE_DIR", default_data_dir=profile, port_env="VITRUVIUS_PORT", title="Vitruvius's Hoard", open_browser_default=False)

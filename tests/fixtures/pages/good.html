@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller Brumario — encuadernación a mano en Zaragoza</title>
+<meta name="description" content="Libros cosidos y cuadernos hechos a mano en un taller de Zaragoza. Encargos por semana, entrega en el barrio.">
+<style>
+  :root { --ink: #1d1a17; --paper: #edf1ee; --clay: #a3412b; --moss: #3d5a45; --rule: #c3ccc4; --step: clamp(1rem, .95rem + .3vw, 1.125rem); }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'Newsreader', Georgia, serif; font-size: var(--step); line-height: 1.6; }
+  header, main > section, footer { padding-inline: clamp(20px, 6vw, 96px); }
+  header { display: flex; justify-content: space-between; align-items: baseline; padding-block: 28px; border-bottom: 1px solid var(--rule); }
+  header a { color: var(--ink); text-decoration: none; margin-left: 12px; display: inline-block; padding: 14px 12px; min-height: 44px; }
+  header a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; }
+  .hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 64px; padding-block: 120px 96px; align-items: end; }
+  h1 { font-family: 'Gloock', Georgia, serif; font-weight: 600; font-size: clamp(2.6rem, 1.6rem + 4.2vw, 5.4rem); line-height: 1.02; margin: 0; text-wrap: balance; max-width: 14ch; }
+  .lede { max-width: 56ch; margin: 28px 0 36px; }
+  .go { display: inline-block; background: var(--clay); color: #fff7ee; padding: 14px 26px; min-height: 44px; text-decoration: none; font-weight: 600; border-radius: 2px; white-space: nowrap; }
+  .go:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  figure { margin: 0; } figure img { width: 100%; height: auto; display: block; }
+  figcaption { font-size: .9rem; margin-top: 10px; color: #5a5148; }
+  .work { padding-block: 112px; border-top: 1px solid var(--rule); }
+  .work h2 { font-family: 'Gloock', Georgia, serif; font-size: clamp(2.2rem, 1.4rem + 3vw, 3.8rem); line-height: 1.08; margin: 0 0 48px; max-width: 18ch; text-wrap: balance; }
+  .rows { list-style: none; margin: 0; padding: 0; }
+  .rows li { display: grid; grid-template-columns: 9rem 1fr auto; gap: 24px; padding: 22px 0; border-top: 1px solid var(--rule); align-items: baseline; }
+  .rows b { font-variant-numeric: tabular-nums; }
+  .about { padding-block: 112px; background: var(--moss); color: #eef2ec; }
+  .about p { max-width: 40ch; font-family: 'Gloock', Georgia, serif; font-size: clamp(1.7rem, 1.2rem + 1.6vw, 2.3rem); line-height: 1.25; margin: 0; text-wrap: balance; }
+  footer { padding-block: 40px; font-size: .95rem; }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding-block: 72px; gap: 40px; } .rows li { grid-template-columns: 1fr; gap: 4px; } }
+  @media (prefers-reduced-motion: no-preference) { .go { transition: background-color .2s cubic-bezier(.22,1,.36,1); } .go:hover { background: #8a3622; } }
+</style>
+</head>
+<body>
+<header><strong>Taller Brumario</strong><nav><a href="#obra">Obra</a><a href="#taller">Taller</a><a href="#encargo">Encargar</a></nav></header>
+<main>
+<section class="hero">
+  <div>
+    <h1>Libros cosidos a mano, uno por semana</h1>
+    <p class="lede">Encuaderno cuadernos, álbumes y libros de firmas en un bajo del Arrabal. Cada encargo lleva papel que he elegido contigo y cuatro semanas de plazo.</p>
+    <a class="go" href="#encargo">Pedir presupuesto</a>
+  </div>
+  <figure><svg viewBox="0 0 400 300" role="img" aria-label="Lomo de un libro cosido con hilo rojo"><rect width="400" height="300" fill="#dde5df"/><path d="M60 40h280v220H60z" fill="#a3412b"/><path d="M60 40h28v220H60z" fill="#7d2f1e"/></svg><figcaption>Lomo cosido en cadeneta, hilo de lino.</figcaption></figure>
+</section>
+<section class="work" id="obra">
+  <h2>Lo que salió del taller este año</h2>
+  <ul class="rows">
+    <li><b>Marzo</b><span>Libro de firmas para la boda de Ana y Raúl, 120 páginas de algodón.</span><span>340 €</span></li>
+    <li><b>Mayo</b><span>Seis cuadernos de campo para el Instituto Pirenaico de Ecología.</span><span>420 €</span></li>
+    <li><b>Julio</b><span>Álbum de fotos de un viaje a Ordesa, tapa de lino teñida.</span><span>185 €</span></li>
+  </ul>
+</section>
+<section class="about" id="taller"><p>Trabajo solo, con prensa de madera y cuchillo de cuña. Si algo no queda bien, lo rehago; no sale del taller hasta que cierra sin forzar.</p></section>
+</main>
+<footer>Taller Brumario · Calle de la Cuarta 14, Zaragoza · hola@brumario.example</footer>
+</body>
+</html>

@@ -197,6 +197,48 @@ MIGRATIONS: list[str] = [
       PRIMARY KEY (hash, model)
     );
     """,
+    # 4: theme memory (the last themes built), waivers of reflex-tier rules, kept-element snapshots, clean-context reviews
+    """
+    CREATE TABLE theme_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts REAL NOT NULL,
+      slug TEXT NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      axes TEXT NOT NULL DEFAULT '',
+      tokens_id TEXT,
+      prompt TEXT NOT NULL DEFAULT '',
+      seed TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX theme_log_ts ON theme_log(ts);
+    CREATE TABLE waivers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      render_id TEXT NOT NULL,
+      rule_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      reason_key TEXT NOT NULL,
+      created_ts REAL NOT NULL,
+      UNIQUE (render_id, rule_id)
+    );
+    CREATE INDEX waivers_render ON waivers(render_id);
+    CREATE TABLE kept_snapshots (
+      id TEXT PRIMARY KEY,
+      created_ts REAL NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT '',
+      data TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX kept_created ON kept_snapshots(created_ts);
+    CREATE TABLE reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      render_id TEXT NOT NULL,
+      created_ts REAL NOT NULL,
+      verdict TEXT NOT NULL,
+      model TEXT NOT NULL DEFAULT '',
+      findings TEXT NOT NULL DEFAULT '[]',
+      ms REAL NOT NULL DEFAULT 0
+    );
+    CREATE INDEX reviews_render ON reviews(render_id);
+    """,
 ]
 
 

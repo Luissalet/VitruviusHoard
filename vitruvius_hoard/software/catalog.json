@@ -475,6 +475,20 @@
           "maxLength": 200,
           "title": "Title",
           "type": "string"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A tokens_generate system: the page is also compared with it (ds/* rules).",
+          "title": "Tokens Id"
         }
       },
       "title": "RenderArgs",
@@ -484,7 +498,7 @@
   },
   {
     "name": "design_lint",
-    "description": "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n29 checks with stable ids; each finding has area, severity, evidence and a concrete fix.\nSinónimos: lint, revisar diseño, patrones genéricos de IA, contraste, accesibilidad.",
+    "description": "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\nEvery rule is a row of data with a stable id (design_rules_list): core, slop, quality, craft and, with tokens_id, ds/* against a design system. Each finding has area, severity, tier (floor/reflex/finish), evidence and a concrete fix.\nSinónimos: lint, revisar diseño, patrones genéricos de IA, contraste, accesibilidad.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -545,6 +559,36 @@
           ],
           "default": null,
           "title": "Render Id"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A tokens_generate system: switches on the ds/* rules (fonts, colours, radii, type scale and spacing against the system).",
+          "title": "Tokens Id"
+        },
+        "packs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).",
+          "title": "Packs"
         }
       },
       "title": "LintArgs",
@@ -554,7 +598,7 @@
   },
   {
     "name": "design_critique",
-    "description": "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\nMerges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy).\nSinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
+    "description": "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\nMerges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy). Tiers: Floor errors always block, Reflex warnings block unless waived on the record (waivers=[{rule, reason}], reason 24+ characters, never repeated), Finish advisories never block. gate.state is pass or fix. clean_review=true adds a fresh-context verdict: recapture, rebuild, fix or ship.\nSinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -632,6 +676,37 @@
         "use_vision": {
           "default": true,
           "title": "Use Vision",
+          "type": "boolean"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A tokens_generate system to compare the page with (ds/* rules).",
+          "title": "Tokens Id"
+        },
+        "waivers": {
+          "description": "[{rule, reason}]: Reflex-tier (warning) rules left standing on purpose. The reason needs 24+ characters and may not repeat another waiver's; Floor (error) rules cannot be waived.",
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Waivers",
+          "type": "array"
+        },
+        "clean_review": {
+          "default": false,
+          "description": "Final review in a clean context: a fresh call to the global model with only the screenshots, the HTML and the findings. The verdict (recapture | rebuild | fix | ship) comes first; at most 8 findings.",
+          "title": "Clean Review",
           "type": "boolean"
         }
       },
@@ -713,6 +788,38 @@
           "minimum": 30,
           "title": "Timeout S",
           "type": "integer"
+        },
+        "before": {
+          "default": false,
+          "description": "Before a redesign: also save the page's links, form fields, event handlers and titles; the result carries kept_saved.id.",
+          "title": "Before",
+          "type": "boolean"
+        },
+        "kept": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "After a redesign: the id saved by an earlier `before`. The check fails when any saved link, field, handler or title is missing.",
+          "title": "Kept"
+        },
+        "snapshot_only": {
+          "default": false,
+          "description": "With before: save the snapshot and skip driving the page.",
+          "title": "Snapshot Only",
+          "type": "boolean"
+        },
+        "label": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Label",
+          "type": "string"
         },
         "criteria": {
           "description": "Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.",
@@ -904,6 +1011,85 @@
           ],
           "default": null,
           "title": "Density"
+        },
+        "theme": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A theme slug (theme_list). Refused when it is one of the last three built or shares their paper/display/accent triple, unless force_theme.",
+          "title": "Theme"
+        },
+        "deal": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Deal a theme from the memory of recent builds (reproducible: the result's theme.seed gives the same hand back) and fold its hue, fonts, radius style and density into whatever you left unsaid.",
+          "title": "Deal"
+        },
+        "genre": {
+          "anyOf": [
+            {
+              "pattern": "^(editorial|modern-minimal|atmospheric|playful)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Genre"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "reroll": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reroll"
+        },
+        "force_theme": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Force Theme"
         }
       },
       "required": [
@@ -3300,6 +3486,38 @@
           "title": "Timeout S",
           "type": "integer"
         },
+        "before": {
+          "default": false,
+          "description": "Before a redesign: also save the page's links, form fields, event handlers and titles; the result carries kept_saved.id.",
+          "title": "Before",
+          "type": "boolean"
+        },
+        "kept": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "After a redesign: the id saved by an earlier `before`. The check fails when any saved link, field, handler or title is missing.",
+          "title": "Kept"
+        },
+        "snapshot_only": {
+          "default": false,
+          "description": "With before: save the snapshot and skip driving the page.",
+          "title": "Snapshot Only",
+          "type": "boolean"
+        },
+        "label": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Label",
+          "type": "string"
+        },
         "criteria": {
           "description": "Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.",
           "items": {
@@ -3311,6 +3529,387 @@
         }
       },
       "title": "AssayArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_rules_list",
+    "description": "Design rules as data (id, engine, severity, tier). Reglas de diseño como datos.\nEach row: id, engine, scope, severity, tier, name, description, reference.\nEngines: static (HTML/CSS text), browser (what Chromium measured), visual (judged from screenshots). Severity maps to a tier: error = Floor, warning = Reflex, advisory = Finish. Packs: core, slop, quality, craft, visual, ds (against a design system). Each row says where the idea comes from (source, source_id).\nSinónimos: catálogo de reglas, lint rules, qué comprueba el lint, packs.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One rule by id (or alias): returns its full row.",
+          "title": "Id"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "pattern": "^(static|browser|visual)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Engine"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "maxLength": 20,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "pattern": "^(error|warning|advisory)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity"
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "pattern": "^(floor|reflex|finish)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tier"
+        },
+        "pack": {
+          "anyOf": [
+            {
+              "maxLength": 24,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "core, slop, quality, craft, visual or ds.",
+          "title": "Pack"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "maxLength": 24,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the idea comes from: vitruvius, impeccable or hallmark.",
+          "title": "Source"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "runnable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "false = the judged (visual) rules the vision model decides.",
+          "title": "Runnable"
+        },
+        "limit": {
+          "default": 300,
+          "maximum": 400,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "compact": {
+          "default": false,
+          "description": "Only id, engine, scope, severity, tier and name.",
+          "title": "Compact",
+          "type": "boolean"
+        }
+      },
+      "title": "RulesListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "theme_list",
+    "description": "List art-direction themes. Temas de dirección de arte.\nPaper, display face, accent, posture and material per theme.\nSinónimos: temas, estilos de página, catálogo de temas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "genre": {
+          "anyOf": [
+            {
+              "pattern": "^(editorial|modern-minimal|atmospheric|playful)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Genre"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        }
+      },
+      "title": "ThemeListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "theme_deal",
+    "description": "Deal themes clear of the last three builds. Repartir temas.\nBlocks the last 3 themes and any sharing their paper/display/accent triple; reproducible by seed; reroll for another hand.\nSinónimos: elegir tema, dirección de arte, evitar repetir, semilla.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "prompt": {
+          "default": "",
+          "description": "What the page is for, in the user's words.",
+          "maxLength": 600,
+          "title": "Prompt",
+          "type": "string"
+        },
+        "genre": {
+          "anyOf": [
+            {
+              "pattern": "^(editorial|modern-minimal|atmospheric|playful)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Genre"
+        },
+        "n": {
+          "default": 3,
+          "maximum": 6,
+          "minimum": 1,
+          "title": "N",
+          "type": "integer"
+        },
+        "reroll": {
+          "default": 0,
+          "description": "1 = the next hand, 2 = the one after...",
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Reroll",
+          "type": "integer"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A seed a previous deal printed: the same hand comes back.",
+          "title": "Seed"
+        }
+      },
+      "title": "ThemeDealArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "theme_check",
+    "description": "Check a plan against catalogue themes and recent builds. Comprobar un tema.\nAxes, display face and accent hue; says what it lands on.\nSinónimos: colisión de tipografía, parecido con otro tema, ¿es original?",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "axes": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "paper/display/accent, e.g. light/roman-serif/warm. paper: light|mid|dark.",
+          "title": "Axes"
+        },
+        "face": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The display face you plan to use.",
+          "title": "Face"
+        },
+        "hue": {
+          "anyOf": [
+            {
+              "maximum": 360,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The accent hue.",
+          "title": "Hue"
+        }
+      },
+      "title": "ThemeCheckArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "theme_memory",
+    "description": "Themes built recently, which theme_deal avoids. Memoria de temas.\nSinónimos: historial de temas, qué se usó, últimos temas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "ThemeMemoryArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "page_kept",
+    "description": "Snapshots of what a redesign must keep. Lo que un rediseño debe conservar.\nLinks, form fields, event handlers and titles.\nCreate one with page_check/page_assay before=true; compare after the redesign with kept=<id>.\nSinónimos: antes y después, conservar enlaces, no perder campos.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One saved snapshot (with its links, fields, handlers and titles); omit to list.",
+          "title": "Id"
+        },
+        "limit": {
+          "default": 30,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "KeptArgs",
       "type": "object"
     },
     "module": "design"

@@ -22,6 +22,7 @@ class RenderBody(BaseModel):
     wait_ms: int = 800
     lint: bool = True
     title: str = ""
+    tokens_id: Optional[str] = None
 
 
 def _strip(row: dict) -> dict:
@@ -66,20 +67,28 @@ def renders_file(request: Request, render_id: str, name: str):
 class CritiqueBody(BaseModel):
     focus: Optional[str] = None
     use_vision: bool = True
+    tokens_id: Optional[str] = None
+    waivers: list[dict] = Field(default_factory=list, description="[{rule, reason}]: Reflex-tier rules left standing on the record (reason: 24+ characters, never repeated).")
+    clean_review: bool = False
 
 
 @router.post("/renders/{render_id}/critique")
 def renders_critique(request: Request, render_id: str, body: CritiqueBody):
     try:
-        return services(request).critique_render(render_id, focus=body.focus, use_vision=body.use_vision)
+        return services(request).critique_render(render_id, focus=body.focus, use_vision=body.use_vision, tokens_id=body.tokens_id,
+                                                 waivers=body.waivers, clean_review=body.clean_review)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
 
 
 class LintBody(BaseModel):
     html: Optional[str] = None
     url: Optional[str] = None
     render_id: Optional[str] = None
+    tokens_id: Optional[str] = None
+    packs: Optional[list[str]] = None
 
 
 @router.post("/lint")
@@ -87,7 +96,7 @@ def lint_route(request: Request, body: LintBody):
     if not body.html and not body.url and not body.render_id:
         raise HTTPException(400, "html, url or render_id is required")
     try:
-        return services(request).lint_html(html=body.html, url=body.url, render_id=body.render_id)
+        return services(request).lint_html(html=body.html, url=body.url, render_id=body.render_id, tokens_id=body.tokens_id, packs=body.packs)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
@@ -101,6 +110,10 @@ class AssayBody(BaseModel):
     path: Optional[str] = None
     timeout_s: int = 300
     criteria: list[dict] = Field(default_factory=list)
+    before: bool = False
+    kept: Optional[str] = None
+    snapshot_only: bool = False
+    label: str = ""
 
 
 @router.post("/assay")
@@ -110,7 +123,8 @@ def assay_route(request: Request, body: AssayBody):
         raise HTTPException(400, "html, url, render_id or path is required")
     try:
         return services(request).assay_page(html=body.html, url=body.url, render_id=body.render_id, path=body.path,
-                                            timeout_s=max(30, min(900, body.timeout_s)), criteria=body.criteria)
+                                            timeout_s=max(30, min(900, body.timeout_s)), criteria=body.criteria,
+                                            before=body.before, kept=body.kept, snapshot_only=body.snapshot_only, label=body.label)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
