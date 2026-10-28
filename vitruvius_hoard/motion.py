@@ -40,6 +40,31 @@ class Scene(BaseModel):
         return self
 
 
+# The roles of a film's sound kit (the shared vocabulary of cue kinds) and its presets. Kept here as plain data so that a composition
+# validates without the optional sound engine; sound.py checks them against the installed bank.
+SOUND_ROLES = ("tick", "tick.crisp", "tock", "hit", "land", "land.light", "pop", "whoosh.short", "whoosh.long", "suck", "riser", "drop",
+               "key", "key.space", "key.return", "click", "click.confirm", "snap", "swell", "bell", "text")
+SOUND_PRESETS = ("calm", "crisp", "minimal", "launch")
+
+
+class SoundEvent(BaseModel):
+    """One sound at a moment of the picture: ``t`` seconds from the start and the role (``rol``) of the kit to sound there."""
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    t: float = Field(..., ge=0, le=60)
+    rol: Literal[SOUND_ROLES]  # type: ignore[valid-type]
+    gain_db: float | None = Field(None, ge=-24, le=6, description="Added to the role's own level; default 0.")
+
+
+class Sound(BaseModel):
+    """Sound design of a composition. Off by default (an MP4 stays silent). With ``auto`` the cues of the scenes and layers (a scene change,
+    a text arriving, a shape popping in) get a sound too; ``events`` are always sounded. The mix is set to -14 LUFS at export."""
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    enabled: bool = False
+    preset: Literal[SOUND_PRESETS] = "crisp"  # type: ignore[valid-type]
+    auto: bool = True
+    events: list[SoundEvent] = Field(default_factory=list, max_length=200)
+
+
 class Composition(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     title: str = Field(..., min_length=1, max_length=120)
@@ -47,11 +72,16 @@ class Composition(BaseModel):
     height: int = Field(720, ge=256, le=1920, multiple_of=2)
     fps: int = Field(24, ge=1, le=30)
     scenes: list[Scene] = Field(..., min_length=1, max_length=30)
+    sound: Sound = Field(default_factory=Sound)
 
     @model_validator(mode="after")
     def bounded(self):
-        if sum(s.duration for s in self.scenes) > 60:
+        total = sum(s.duration for s in self.scenes)
+        if total > 60:
             raise ValueError("A composition can last at most 60 seconds")
+        late = [e.t for e in self.sound.events if e.t >= total]
+        if late:
+            raise ValueError(f"Every sound event must happen before the composition ends ({total:g} s); got {late[0]:g} s")
         return self
 
 
@@ -108,7 +138,7 @@ def page(composition: Composition, *, at: float = 0) -> str:
     return _PAGE.replace("__COMPOSITION__", body).replace("__AT__", json.dumps(at))
 
 
-def export_frames(browser, composition: Composition, output: Path) -> dict:
+def export_frames(browser, composition: Composition, output: Path, audio: Path | None = None) -> dict:
     """Called only in the existing browser worker; every frame seeks the same scene clock."""
     import math
     from .hoard_link.media.ffmpeg import FFmpeg
@@ -126,9 +156,23 @@ def export_frames(browser, composition: Composition, output: Path) -> dict:
         for frame in range(count):
             tab.evaluate("t => window.motionSeek(t)", frame / composition.fps)
             tab.locator("#stage").screenshot(path=str(frames / f"{frame:06d}.png"), animations="disabled")
-        FFmpeg().run(["-framerate", str(composition.fps), "-i", frames / "%06d.png", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", output / "motion.mp4"], timeout=120)
+        ffmpeg = FFmpeg()
+        movie = output / "motion.mp4"
+        if audio is not None and Path(audio).is_file():
+            # The soundtrack was mixed to the exact length of the picture; the video is the master clock, so nothing is stretched.
+            ffmpeg.run(["-framerate", str(composition.fps), "-i", frames / "%06d.png", "-i", audio, "-map", "0:v:0", "-map", "1:a:0",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-t", f"{count / composition.fps:.6f}",
+                        "-movflags", "+faststart", movie], timeout=180)
+        else:
+            ffmpeg.run(["-framerate", str(composition.fps), "-i", frames / "%06d.png", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", movie], timeout=120)
         # PNG evidence remains alongside the MP4; no live recording or guessed timestamps.
-        return {"frames": count, "fps": composition.fps, "duration": count / composition.fps, "file": str(output / "motion.mp4"), "audio": False}
+        result = {"frames": count, "fps": composition.fps, "duration": count / composition.fps, "file": str(movie), "audio": False}
+        if audio is not None and Path(audio).is_file():
+            info = ffmpeg.summarize(ffmpeg.probe(movie))
+            measured = ffmpeg.loudness(movie)
+            result.update(audio=bool(info.get("has_audio")), audio_codec=info.get("audio_codec"), sample_rate=info.get("sample_rate"),
+                          channels=info.get("channels"), integrated_lufs=measured.get("integrated_lufs"), true_peak_dbfs=measured.get("true_peak_dbfs"))
+        return result
     finally:
         context.close()
 

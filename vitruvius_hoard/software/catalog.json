@@ -2162,6 +2162,9 @@
               "minItems": 1,
               "title": "Scenes",
               "type": "array"
+            },
+            "sound": {
+              "$ref": "#/$defs/Sound"
             }
           },
           "required": [
@@ -2301,6 +2304,103 @@
           ],
           "title": "Scene",
           "type": "object"
+        },
+        "Sound": {
+          "additionalProperties": false,
+          "description": "Sound design of a composition. Off by default (an MP4 stays silent). With ``auto`` the cues of the scenes and layers (a scene change,\na text arriving, a shape popping in) get a sound too; ``events`` are always sounded. The mix is set to -14 LUFS at export.",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "preset": {
+              "default": "crisp",
+              "enum": [
+                "calm",
+                "crisp",
+                "minimal",
+                "launch"
+              ],
+              "title": "Preset",
+              "type": "string"
+            },
+            "auto": {
+              "default": true,
+              "title": "Auto",
+              "type": "boolean"
+            },
+            "events": {
+              "items": {
+                "$ref": "#/$defs/SoundEvent"
+              },
+              "maxItems": 200,
+              "title": "Events",
+              "type": "array"
+            }
+          },
+          "title": "Sound",
+          "type": "object"
+        },
+        "SoundEvent": {
+          "additionalProperties": false,
+          "description": "One sound at a moment of the picture: ``t`` seconds from the start and the role (``rol``) of the kit to sound there.",
+          "properties": {
+            "t": {
+              "maximum": 60,
+              "minimum": 0,
+              "title": "T",
+              "type": "number"
+            },
+            "rol": {
+              "enum": [
+                "tick",
+                "tick.crisp",
+                "tock",
+                "hit",
+                "land",
+                "land.light",
+                "pop",
+                "whoosh.short",
+                "whoosh.long",
+                "suck",
+                "riser",
+                "drop",
+                "key",
+                "key.space",
+                "key.return",
+                "click",
+                "click.confirm",
+                "snap",
+                "swell",
+                "bell",
+                "text"
+              ],
+              "title": "Rol",
+              "type": "string"
+            },
+            "gain_db": {
+              "anyOf": [
+                {
+                  "maximum": 6,
+                  "minimum": -24,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Added to the role's own level; default 0.",
+              "title": "Gain Db"
+            }
+          },
+          "required": [
+            "t",
+            "rol"
+          ],
+          "title": "SoundEvent",
+          "type": "object"
         }
       },
       "properties": {
@@ -2412,7 +2512,7 @@
   },
   {
     "name": "motion_render",
-    "description": "Capture motion frames or export silent MP4. Renderizar vídeo.\nChromium and ffmpeg; may take minutes. Keywords: render, vídeo, fotogramas, motion.",
+    "description": "Capture motion frames or export MP4 (sound if enabled). Renderizar vídeo.\nChromium and ffmpeg; may take minutes. With sound.enabled the MP4 carries a -14 LUFS mix of code-made effects placed on the cues. Keywords: render, vídeo, fotogramas, motion, audio, sonido.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -2450,12 +2550,729 @@
           "default": false,
           "title": "Video",
           "type": "boolean"
+        },
+        "audio": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sound in the MP4 (mixed to -14 LUFS). Default: whatever the composition's sound.enabled says.",
+          "title": "Audio"
         }
       },
       "required": [
         "id"
       ],
       "title": "MotionRenderArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_sound_plan",
+    "description": "Plan the sound of a composition. Planificar sonido.\nWhich cues get which effect (scene changes, text, shapes and your {t, rol} events), the preset's roles and the engine status; renders nothing. Keywords: sonido, efectos, audio, motion, eventos.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "Composition": {
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Title",
+              "type": "string"
+            },
+            "width": {
+              "default": 1280,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 720,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Height",
+              "type": "integer"
+            },
+            "fps": {
+              "default": 24,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Fps",
+              "type": "integer"
+            },
+            "scenes": {
+              "items": {
+                "$ref": "#/$defs/Scene"
+              },
+              "maxItems": 30,
+              "minItems": 1,
+              "title": "Scenes",
+              "type": "array"
+            },
+            "sound": {
+              "$ref": "#/$defs/Sound"
+            }
+          },
+          "required": [
+            "title",
+            "scenes"
+          ],
+          "title": "Composition",
+          "type": "object"
+        },
+        "Layer": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "default": "text",
+              "enum": [
+                "text",
+                "rect",
+                "circle",
+                "line"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "text": {
+              "default": "",
+              "maxLength": 1000,
+              "title": "Text",
+              "type": "string"
+            },
+            "x": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Y",
+              "type": "number"
+            },
+            "width": {
+              "default": 0.8,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Width",
+              "type": "number"
+            },
+            "height": {
+              "default": 0.15,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Height",
+              "type": "number"
+            },
+            "size": {
+              "default": 56,
+              "maximum": 300,
+              "minimum": 8,
+              "title": "Size",
+              "type": "integer"
+            },
+            "color": {
+              "default": "#f5f0df",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Color",
+              "type": "string"
+            },
+            "effect": {
+              "default": "rise",
+              "enum": [
+                "none",
+                "fade",
+                "rise",
+                "slide",
+                "scale",
+                "reveal"
+              ],
+              "title": "Effect",
+              "type": "string"
+            },
+            "delay": {
+              "default": 0,
+              "maximum": 59,
+              "minimum": 0,
+              "title": "Delay",
+              "type": "number"
+            },
+            "enter": {
+              "default": 0.6,
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "title": "Enter",
+              "type": "number"
+            }
+          },
+          "title": "Layer",
+          "type": "object"
+        },
+        "Scene": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            },
+            "duration": {
+              "default": 3,
+              "maximum": 30,
+              "minimum": 0.2,
+              "title": "Duration",
+              "type": "number"
+            },
+            "background": {
+              "default": "#0b1130",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Background",
+              "type": "string"
+            },
+            "layers": {
+              "items": {
+                "$ref": "#/$defs/Layer"
+              },
+              "maxItems": 40,
+              "minItems": 1,
+              "title": "Layers",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "layers"
+          ],
+          "title": "Scene",
+          "type": "object"
+        },
+        "Sound": {
+          "additionalProperties": false,
+          "description": "Sound design of a composition. Off by default (an MP4 stays silent). With ``auto`` the cues of the scenes and layers (a scene change,\na text arriving, a shape popping in) get a sound too; ``events`` are always sounded. The mix is set to -14 LUFS at export.",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "preset": {
+              "default": "crisp",
+              "enum": [
+                "calm",
+                "crisp",
+                "minimal",
+                "launch"
+              ],
+              "title": "Preset",
+              "type": "string"
+            },
+            "auto": {
+              "default": true,
+              "title": "Auto",
+              "type": "boolean"
+            },
+            "events": {
+              "items": {
+                "$ref": "#/$defs/SoundEvent"
+              },
+              "maxItems": 200,
+              "title": "Events",
+              "type": "array"
+            }
+          },
+          "title": "Sound",
+          "type": "object"
+        },
+        "SoundEvent": {
+          "additionalProperties": false,
+          "description": "One sound at a moment of the picture: ``t`` seconds from the start and the role (``rol``) of the kit to sound there.",
+          "properties": {
+            "t": {
+              "maximum": 60,
+              "minimum": 0,
+              "title": "T",
+              "type": "number"
+            },
+            "rol": {
+              "enum": [
+                "tick",
+                "tick.crisp",
+                "tock",
+                "hit",
+                "land",
+                "land.light",
+                "pop",
+                "whoosh.short",
+                "whoosh.long",
+                "suck",
+                "riser",
+                "drop",
+                "key",
+                "key.space",
+                "key.return",
+                "click",
+                "click.confirm",
+                "snap",
+                "swell",
+                "bell",
+                "text"
+              ],
+              "title": "Rol",
+              "type": "string"
+            },
+            "gain_db": {
+              "anyOf": [
+                {
+                  "maximum": 6,
+                  "minimum": -24,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Added to the role's own level; default 0.",
+              "title": "Gain Db"
+            }
+          },
+          "required": [
+            "t",
+            "rol"
+          ],
+          "title": "SoundEvent",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A saved composition (with revision) ...",
+          "title": "Id"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "composition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Composition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "... or the composition itself, not saved."
+        },
+        "preset": {
+          "anyOf": [
+            {
+              "pattern": "^(calm|crisp|minimal|launch)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the composition's sound preset.",
+          "title": "Preset"
+        }
+      },
+      "title": "MotionSoundArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "motion_sound_render",
+    "description": "Mix the sound of a composition to a WAV. Mezclar sonido.\nPlaces each effect by its measured onset or peak, masters to -14 LUFS (-1 dBTP) and reports where every sound landed and the error in ms. Keywords: sonido, mezcla, LUFS, audio, motion.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "Composition": {
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Title",
+              "type": "string"
+            },
+            "width": {
+              "default": 1280,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Width",
+              "type": "integer"
+            },
+            "height": {
+              "default": 720,
+              "maximum": 1920,
+              "minimum": 256,
+              "multipleOf": 2,
+              "title": "Height",
+              "type": "integer"
+            },
+            "fps": {
+              "default": 24,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Fps",
+              "type": "integer"
+            },
+            "scenes": {
+              "items": {
+                "$ref": "#/$defs/Scene"
+              },
+              "maxItems": 30,
+              "minItems": 1,
+              "title": "Scenes",
+              "type": "array"
+            },
+            "sound": {
+              "$ref": "#/$defs/Sound"
+            }
+          },
+          "required": [
+            "title",
+            "scenes"
+          ],
+          "title": "Composition",
+          "type": "object"
+        },
+        "Layer": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "default": "text",
+              "enum": [
+                "text",
+                "rect",
+                "circle",
+                "line"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "text": {
+              "default": "",
+              "maxLength": 1000,
+              "title": "Text",
+              "type": "string"
+            },
+            "x": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "default": 0.5,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Y",
+              "type": "number"
+            },
+            "width": {
+              "default": 0.8,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Width",
+              "type": "number"
+            },
+            "height": {
+              "default": 0.15,
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "title": "Height",
+              "type": "number"
+            },
+            "size": {
+              "default": 56,
+              "maximum": 300,
+              "minimum": 8,
+              "title": "Size",
+              "type": "integer"
+            },
+            "color": {
+              "default": "#f5f0df",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Color",
+              "type": "string"
+            },
+            "effect": {
+              "default": "rise",
+              "enum": [
+                "none",
+                "fade",
+                "rise",
+                "slide",
+                "scale",
+                "reveal"
+              ],
+              "title": "Effect",
+              "type": "string"
+            },
+            "delay": {
+              "default": 0,
+              "maximum": 59,
+              "minimum": 0,
+              "title": "Delay",
+              "type": "number"
+            },
+            "enter": {
+              "default": 0.6,
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "title": "Enter",
+              "type": "number"
+            }
+          },
+          "title": "Layer",
+          "type": "object"
+        },
+        "Scene": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "maxLength": 120,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            },
+            "duration": {
+              "default": 3,
+              "maximum": 30,
+              "minimum": 0.2,
+              "title": "Duration",
+              "type": "number"
+            },
+            "background": {
+              "default": "#0b1130",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "title": "Background",
+              "type": "string"
+            },
+            "layers": {
+              "items": {
+                "$ref": "#/$defs/Layer"
+              },
+              "maxItems": 40,
+              "minItems": 1,
+              "title": "Layers",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "layers"
+          ],
+          "title": "Scene",
+          "type": "object"
+        },
+        "Sound": {
+          "additionalProperties": false,
+          "description": "Sound design of a composition. Off by default (an MP4 stays silent). With ``auto`` the cues of the scenes and layers (a scene change,\na text arriving, a shape popping in) get a sound too; ``events`` are always sounded. The mix is set to -14 LUFS at export.",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "preset": {
+              "default": "crisp",
+              "enum": [
+                "calm",
+                "crisp",
+                "minimal",
+                "launch"
+              ],
+              "title": "Preset",
+              "type": "string"
+            },
+            "auto": {
+              "default": true,
+              "title": "Auto",
+              "type": "boolean"
+            },
+            "events": {
+              "items": {
+                "$ref": "#/$defs/SoundEvent"
+              },
+              "maxItems": 200,
+              "title": "Events",
+              "type": "array"
+            }
+          },
+          "title": "Sound",
+          "type": "object"
+        },
+        "SoundEvent": {
+          "additionalProperties": false,
+          "description": "One sound at a moment of the picture: ``t`` seconds from the start and the role (``rol``) of the kit to sound there.",
+          "properties": {
+            "t": {
+              "maximum": 60,
+              "minimum": 0,
+              "title": "T",
+              "type": "number"
+            },
+            "rol": {
+              "enum": [
+                "tick",
+                "tick.crisp",
+                "tock",
+                "hit",
+                "land",
+                "land.light",
+                "pop",
+                "whoosh.short",
+                "whoosh.long",
+                "suck",
+                "riser",
+                "drop",
+                "key",
+                "key.space",
+                "key.return",
+                "click",
+                "click.confirm",
+                "snap",
+                "swell",
+                "bell",
+                "text"
+              ],
+              "title": "Rol",
+              "type": "string"
+            },
+            "gain_db": {
+              "anyOf": [
+                {
+                  "maximum": 6,
+                  "minimum": -24,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Added to the role's own level; default 0.",
+              "title": "Gain Db"
+            }
+          },
+          "required": [
+            "t",
+            "rol"
+          ],
+          "title": "SoundEvent",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A saved composition (with revision) ...",
+          "title": "Id"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "composition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Composition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "... or the composition itself, not saved."
+        },
+        "preset": {
+          "anyOf": [
+            {
+              "pattern": "^(calm|crisp|minimal|launch)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the composition's sound preset.",
+          "title": "Preset"
+        }
+      },
+      "title": "MotionSoundArgs",
       "type": "object"
     },
     "module": "design"

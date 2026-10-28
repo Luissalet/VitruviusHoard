@@ -1,7 +1,7 @@
 """Human UI and agent use the same validated motion handlers."""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from ..agent_tools import MotionSaveArgs, MotionRenderArgs, run_motion_save, run_motion_render
+from ..agent_tools import MotionSaveArgs, MotionRenderArgs, MotionSoundArgs, run_motion_save, run_motion_render, run_motion_sound_plan, run_motion_sound_render
 from ..motion import Composition, MotionStore, templates, page
 from .deps import services
 
@@ -31,6 +31,31 @@ def save(request: Request, body: MotionSaveArgs):
 @router.post("/render")
 def render(request: Request, body: MotionRenderArgs):
     return run_motion_render(services(request), body)
+
+
+@router.get("/sound/status")
+def sound_status():
+    from .. import sound
+    return sound.status()
+
+
+@router.post("/sound/plan")
+def sound_plan(request: Request, body: MotionSoundArgs):
+    try:
+        return run_motion_sound_plan(services(request), body)
+    except (ValueError, LookupError) as error:
+        raise HTTPException(400, str(error)) from error
+
+
+@router.post("/sound/render")
+def sound_render(request: Request, body: MotionSoundArgs):
+    try:
+        out = run_motion_sound_render(services(request), body)
+    except (ValueError, LookupError) as error:
+        raise HTTPException(400, str(error)) from error
+    if out.get("available") is False:
+        raise HTTPException(503, out["hint"])
+    return out
 
 
 @router.get("/{id}")

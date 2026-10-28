@@ -33,6 +33,9 @@ icon = ["pillow>=11", "numpy>=2"]
 vectors = ["numpy>=2", "fastembed>=0.5"]
 render = ["playwright>=1.45"]
 runtime = ["frida==17.24.2"]
+# Sound for motion exports. The sound engine itself (earshot, MIT) is installed without its model stack, which this feature never loads:
+#   pip install --no-deps "earshot @ git+https://github.com/Leonxlnx/earshot@591fa3e028032e6dce56620a20e932e35667e8d8"
+sound = ["numpy>=1.26", "scipy>=1.11", "soundfile>=0.12", "soxr>=0.3", "pyloudnorm>=0.1"]
 
 [project.scripts]
 vitruvius-hoard = "vitruvius_hoard.__main__:main"
