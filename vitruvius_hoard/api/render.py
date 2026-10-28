@@ -89,6 +89,7 @@ class LintBody(BaseModel):
     render_id: Optional[str] = None
     tokens_id: Optional[str] = None
     packs: Optional[list[str]] = None
+    engines: Optional[list[str]] = Field(None, description="Only rules of these engines (static | browser | visual). [\"static\"] with html reads the source alone: no browser is started.")
 
 
 @router.post("/lint")
@@ -96,7 +97,7 @@ def lint_route(request: Request, body: LintBody):
     if not body.html and not body.url and not body.render_id:
         raise HTTPException(400, "html, url or render_id is required")
     try:
-        return services(request).lint_html(html=body.html, url=body.url, render_id=body.render_id, tokens_id=body.tokens_id, packs=body.packs)
+        return services(request).lint_html(html=body.html, url=body.url, render_id=body.render_id, tokens_id=body.tokens_id, packs=body.packs, engines=body.engines)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:

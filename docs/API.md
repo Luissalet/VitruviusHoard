@@ -219,7 +219,7 @@ Response (a "critique" object):
 
 ### `POST /api/lint`
 
-Request: exactly one of `html`, `url`, or `render_id`.
+Request: exactly one of `html`, `url`, or `render_id`. Optional `packs` and `engines` (`static`, `browser`, `visual`): `engines: ["static"]` with `html` runs only the static rules over the source and never starts the browser.
 
 ```json
 {"html": "<html>...</html>"}

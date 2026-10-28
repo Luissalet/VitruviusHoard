@@ -91,6 +91,7 @@ class LintArgs(BaseModel):
     render_id: Optional[str] = Field(None, max_length=40)
     tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system: switches on the ds/* rules (fonts, colours, radii, type scale and spacing against the system).")
     packs: Optional[list[str]] = Field(None, description="Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).")
+    engines: Optional[list[str]] = Field(None, description="Only rules of these engines: static, browser, visual. [\"static\"] with html or path reads the source alone and starts no browser (fast; use it after each edit).")
 
 
 class AssayArgs(BaseModel):
@@ -362,7 +363,7 @@ def run_render_preview(services: Services, args: RenderArgs) -> dict:
 
 
 def run_design_lint(services: Services, args: LintArgs) -> dict:
-    return services.lint_html(html=_page_html(args), url=args.url, render_id=args.render_id, tokens_id=args.tokens_id, packs=args.packs)
+    return services.lint_html(html=_page_html(args), url=args.url, render_id=args.render_id, tokens_id=args.tokens_id, packs=args.packs, engines=args.engines)
 
 
 def run_page_assay(services: Services, args: AssayArgs) -> dict:

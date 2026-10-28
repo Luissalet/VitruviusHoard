@@ -107,6 +107,13 @@ def test_lint_route(client):
     assert "findings" in r.json()
 
 
+def test_lint_route_static_engine(client):
+    r = client.post("/api/lint", json={"html": "<html><body><p>Lorem ipsum dolor</p></body></html>", "engines": ["static"]})
+    assert r.status_code == 200
+    assert {f.get("engine") for f in r.json()["findings"]} <= {"static"}
+    assert client.post("/api/lint", json={"html": "<p>x</p>", "engines": ["nope"]}).status_code == 400
+
+
 def test_lint_route_requires_input(client):
     assert client.post("/api/lint", json={}).status_code == 400
 

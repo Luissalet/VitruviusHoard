@@ -33,6 +33,7 @@ from .hoard_link.atomic import write_json_atomic
 from .hoard_link.config import LinkConfig
 from .hoard_link.media import bins as media_bins
 from .hoard_link.web import safety
+from .rules.registry import ENGINES
 from .hoard_link.tokens import read_or_create_token
 from .ingest.git import git_available
 from .ingest.runner import IngestRunner, ingest_source
@@ -406,21 +407,27 @@ class Services:
         return row["tokens"]
 
     def lint_html(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,
-                  tokens_id: Optional[str] = None, packs: Optional[list[str]] = None) -> dict[str, Any]:
+                  tokens_id: Optional[str] = None, packs: Optional[list[str]] = None, engines: Optional[list[str]] = None) -> dict[str, Any]:
         tokens = self._system_tokens(tokens_id)
+        engines = [e for e in (engines or []) if e] or None
+        if engines and not set(engines) <= set(ENGINES):
+            raise ValueError(f"engines must be among {', '.join(ENGINES)}")
+        if engines == ["static"] and html is not None and not render_id and not url:
+            # The static rules read the source text and its cascade: no capture, no browser.
+            return lint_mod.run_lint({}, html, tokens=tokens, packs=packs, engines=engines)
         if render_id:
             render = self.get_render(render_id)
             if render is None:
                 raise LookupError(f"Unknown render '{render_id}'.")
             probe, source = self._render_lint_inputs(render)
-            return lint_mod.run_lint(probe, html or source, tokens=tokens, packs=packs)
+            return lint_mod.run_lint(probe, html or source, tokens=tokens, packs=packs, engines=engines)
         if html is None and url is None:
             raise ValueError("lint needs html, url or render_id")
         self.check_url(url)
         capture = self.browser.capture(html=html, url=url, widths=[390, 1440], full_page=False,
                                        out_dir=self.config.renders_dir / ("lint-" + uuid.uuid4().hex[:8]))
         probe = capture.get("probe") or {}
-        return lint_mod.run_lint(probe, html or "", tokens=tokens, packs=packs)
+        return lint_mod.run_lint(probe, html or "", tokens=tokens, packs=packs, engines=engines)
 
     # ---------------- rules as data ----------------
     def rules_list(self, **filters: Any) -> dict[str, Any]:
