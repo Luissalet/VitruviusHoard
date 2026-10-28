@@ -1,5 +1,5 @@
 Vitruvius's Hoard
-Attribution notices for the design-rule work (impeccable, hallmark) and the sound-in-motion work (earshot). The full text of each licence is in THIRD_PARTY_NOTICES.md.
+Attribution notices for the design-rule work (impeccable, hallmark) the sound-in-motion work (earshot) and the site-audit work (claude-seo). The full text of each licence is in THIRD_PARTY_NOTICES.md.
 
 1. impeccable (Apache License 2.0), Copyright 2025 Paul Bakaus, https://github.com/pbakaus/impeccable
    The deterministic detector rules of that project (62 ids, such as side-tab borders, purple gradients, bounce easing, dark glows,
@@ -21,5 +21,11 @@ Attribution notices for the design-rule work (impeccable, hallmark) and the soun
    with `pip install --no-deps` (extra `sound`); no file of it is copied into this repository and none of its models is loaded.
    The placement by measured onset/peak, the soft-saturation and limiter master to -14 LUFS, the AAC mux and the measurement of the
    offsets (vitruvius_hoard/sound.py) are original code. Changes: none to the library.
+
+4. claude-seo (MIT License), Copyright (c) 2026 agricidaniel, https://github.com/AgriciDaniel/claude-seo (studied at commit 6be93f45064ffbadced572b5d5c95f55fd263af0)
+   The shape of its audit was studied: the seven categories and their weights, the severities, the phased action plan, the JSON report,
+   the distinction between AI crawlers that train and AI crawlers that search or cite, and the rule that judgement items are not scored.
+   The checks, thresholds, fetching, scoring and Core Web Vitals measurement in vitruvius_hoard/seo_audit.py and the `vitals` job of
+   vitruvius_hoard/browser.py are original code; no file of that project is copied. Changes: all of them, this being a reimplementation.
 
 Licences: https://www.apache.org/licenses/LICENSE-2.0 and https://opensource.org/license/mit

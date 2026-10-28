@@ -776,6 +776,47 @@ TOOLS.extend([
     Tool("motion_sound_plan", "Plan the sound of a composition. Planificar sonido.\nWhich cues get which effect (scene changes, text, shapes and your {t, rol} events), the preset's roles and the engine status; renders nothing. Keywords: sonido, efectos, audio, motion, eventos.", MotionSoundArgs, ann(True), run_motion_sound_plan),
     Tool("motion_sound_render", "Mix the sound of a composition to a WAV. Mezclar sonido.\nPlaces each effect by its measured onset or peak, masters to -14 LUFS (-1 dBTP) and reports where every sound landed and the error in ms. Keywords: sonido, mezcla, LUFS, audio, motion.", MotionSoundArgs, ann(False, False, False), run_motion_sound_render),
 ])
+class SiteAuditArgs(BaseModel):
+    url: str = Field(..., min_length=3, max_length=2000, description="The site to audit (its home page); https:// is assumed when missing.")
+    max_pages: int = Field(10, ge=1, le=40, description="Pages to read: the home page, then those of the sitemap and of its links.")
+    check_links: bool = Field(True, description="Also request the internal and external links found (up to 40 and 15) to find broken ones.")
+    vitals: bool = Field(True, description="Measure LCP, CLS, INP, FCP, TTFB and TBT in a real Chromium load (lab data). Off: that category is left unmeasured.")
+    fresh: bool = Field(False, description="Audit again even when a report of this url younger than 10 minutes exists.")
+
+
+class SiteAuditReportsArgs(BaseModel):
+    id: Optional[str] = Field(None, max_length=60, pattern=r"^[0-9a-z-]{8,40}$", description="A report id: returns that whole report. Omit it to list the latest ones.")
+    url: Optional[str] = Field(None, max_length=2000, description="Only the reports of this url (list).")
+    limit: int = Field(20, ge=1, le=100)
+
+
+def run_site_audit(services: Services, args: SiteAuditArgs):
+    from . import seo_audit
+    try:
+        return seo_audit.run(services, args.url, max_pages=args.max_pages, check_links=args.check_links, vitals=args.vitals, fresh=args.fresh)
+    except seo_audit.AuditError as error:
+        raise ValueError(str(error)) from error
+
+
+def run_site_audit_reports(services: Services, args: SiteAuditReportsArgs):
+    from . import seo_audit
+    store = seo_audit.ReportStore(services.config.data_dir)
+    if args.id:
+        report = store.get(args.id)
+        if report is None:
+            raise AppError("not_found", f"No hay informe {args.id}.", hint="Lista los informes con site_audit_reports sin id.")
+        return report
+    url = seo_audit.normalize_url(args.url) if args.url else None
+    return {"reports": store.list(url, args.limit)}
+
+
+TOOLS.extend([
+    Tool("site_audit", "Audit a site for SEO and AI search. Auditoría SEO/GEO determinista.\nIndexability, robots, sitemap, canonicals, security headers, broken links, JSON-LD, Core Web Vitals in a real browser, AI crawlers (training vs citing), images. Returns score, categories with findings, action plan; judgement items are flagged and not scored. Takes 30-90 s. Keywords: SEO, GEO, posicionamiento, rastreadores IA, sitemap, robots, vitals.",
+         SiteAuditArgs, ann(False, False, True, True), run_site_audit, timeout_s=240),
+    Tool("site_audit_reports", "List or read saved site audits. Informes de auditoría SEO.\nWithout id: the latest reports (url, date, score). With id: the whole report, to compare runs. Keywords: auditoría, informe, deriva, vigilancia.",
+         SiteAuditReportsArgs, ann(True), run_site_audit_reports),
+])
+
 from .diagrams.tools import tools as _diagram_tools  # noqa: E402
 
 TOOLS.extend(_diagram_tools(Empty))
@@ -887,7 +928,8 @@ def tool_catalog() -> list[dict]:
 
 # Results that are the payload itself (a stylesheet, a page, image bytes) and must never be cut to the shared 20 KB cap.
 UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview", "motion_get", "diagram_render", "diagram_get",
-                            "diagram_document_get", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_document_compare"})
+                            "diagram_document_get", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_document_compare",
+                            "site_audit", "site_audit_reports"})
 
 
 def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:

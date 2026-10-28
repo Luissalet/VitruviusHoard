@@ -32,7 +32,7 @@
     "motion-compositions",
     "motion-timeline",
     "motion-mp4",
-    "motion-html", "motion-sound-events", "motion-sound-mix",
+    "motion-html", "motion-sound-events", "motion-sound-mix", "site-audit-seo", "site-audit-web-vitals", "site-audit-ai-crawlers", "site-audit-reports",
     "composition-revisions",
     "diagrams",
     "diagram-brand-profiles",

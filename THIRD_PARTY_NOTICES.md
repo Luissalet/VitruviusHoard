@@ -82,6 +82,12 @@ FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TOR
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+## Site audit checklist (claude-seo, MIT)
+
+The structure of `site_audit` (categories, weights, severities, phased plan, report shape) follows the open audit skill claude-seo,
+Copyright (c) 2026 agricidaniel, https://github.com/AgriciDaniel/claude-seo. No source file was copied; the checks are original code.
+The MIT licence text is the same as above with that copyright line.
+
 ## Swift demangling test vectors
 
 `theseus_tests/fixtures/swift_manglings.txt` is an unmodified copy of `test/Demangle/Inputs/manglings.txt`

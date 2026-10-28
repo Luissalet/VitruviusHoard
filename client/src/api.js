@@ -24,6 +24,9 @@ async function request(method, path, { params, body } = {}) {
 
 export const api = {
   health: () => request("GET", "/design/api/health"),
+  siteAudit: (body) => request("POST", "/design/api/site-audit", { body }),
+  siteAuditReports: (params) => request("GET", "/design/api/site-audit/reports", { params }),
+  siteAuditReport: (id) => request("GET", `/design/api/site-audit/reports/${id}`),
   status: () => request("GET", "/design/api/status"),
 
   librarySearch: (params) => request("GET", "/design/api/library/search", { params }),
