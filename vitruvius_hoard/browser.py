@@ -719,7 +719,8 @@ class BrowserWorker:
             return self._capture(browser, job.payload)
         if job.kind == "motion":
             from .motion import Composition, export_frames
-            return export_frames(browser, Composition.model_validate(job.payload["composition"]), Path(job.payload["out_dir"]))
+            audio = job.payload.get("audio")
+            return export_frames(browser, Composition.model_validate(job.payload["composition"]), Path(job.payload["out_dir"]), Path(audio) if audio else None)
         return {"error": f"unknown job kind {job.kind}"}
 
     # -- capture ---------------------------------------------------------

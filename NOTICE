@@ -1,5 +1,5 @@
 Vitruvius's Hoard
-Attribution notices for the design-rule work (impeccable, hallmark). The full text of each licence is in THIRD_PARTY_NOTICES.md.
+Attribution notices for the design-rule work (impeccable, hallmark) and the sound-in-motion work (earshot). The full text of each licence is in THIRD_PARTY_NOTICES.md.
 
 1. impeccable (Apache License 2.0), Copyright 2025 Paul Bakaus, https://github.com/pbakaus/impeccable
    The deterministic detector rules of that project (62 ids, such as side-tab borders, purple gradients, bounce easing, dark glows,
@@ -15,5 +15,11 @@ Attribution notices for the design-rule work (impeccable, hallmark). The full te
    b. The M/R gate list (render gates and slop-test gates) was studied. The corresponding rules in vitruvius_hoard/rules/ are original
       Python; `source_id` holds the gate number.
    The theme dealer (vitruvius_hoard/themes.py: fit scoring, memory of the last builds, reproducible seeds) is original code.
+
+3. earshot (MIT License), Copyright (c) 2026 Leon Lin, https://github.com/Leonxlnx/earshot (pinned to commit 591fa3e028032e6dce56620a20e932e35667e8d8, version 0.4.0)
+   Only its procedural effect bank and kit (earshot.forge.bank and earshot.forge.kit) are used, as an optional dependency installed
+   with `pip install --no-deps` (extra `sound`); no file of it is copied into this repository and none of its models is loaded.
+   The placement by measured onset/peak, the soft-saturation and limiter master to -14 LUFS, the AAC mux and the measurement of the
+   offsets (vitruvius_hoard/sound.py) are original code. Changes: none to the library.
 
 Licences: https://www.apache.org/licenses/LICENSE-2.0 and https://opensource.org/license/mit

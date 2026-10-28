@@ -675,6 +675,7 @@ class MotionRenderArgs(BaseModel):
     revision: Optional[int] = Field(None, ge=1)
     at: float = Field(1, ge=0, le=60, allow_inf_nan=False)
     video: bool = False
+    audio: Optional[bool] = Field(None, description="Sound in the MP4 (mixed to -14 LUFS). Default: whatever the composition's sound.enabled says.")
 
 
 def run_motion_save(services: Services, args: MotionSaveArgs):
@@ -696,9 +697,74 @@ def run_motion_render(services: Services, args: MotionRenderArgs):
         return services.render(html=motion_page(composition, at=args.at), title=composition.title, lint=False)
     export_id = uuid.uuid4().hex
     output = services.config.renders_dir / export_id
-    result = services.browser._submit("motion", {"composition": composition.model_dump(), "out_dir": str(output)})
-    return {"export_id": export_id, "composition_id": row["id"], "revision": row["revision"], **result,
-            "download": f"/api/renders/{export_id}/files/motion.mp4" if "error" not in result else None}
+    payload: dict = {"composition": composition.model_dump(), "out_dir": str(output)}
+    sound = None
+    if args.audio if args.audio is not None else composition.sound.enabled:
+        from . import sound as sound_mod
+        try:
+            sound = sound_mod.mix(composition, services.config.data_dir, output / "soundtrack.wav")
+        except sound_mod.SoundUnavailable as error:
+            return {"error": "sound engine unavailable", "hint": str(error), "composition_id": row["id"], "revision": row["revision"]}
+        if sound.get("file"):
+            payload["audio"] = sound["file"]
+    result = services.browser._submit("motion", payload)
+    out = {"export_id": export_id, "composition_id": row["id"], "revision": row["revision"], **result,
+           "download": f"/api/renders/{export_id}/files/motion.mp4" if "error" not in result else None}
+    if sound is not None:
+        out["sound"] = {k: sound.get(k) for k in ("preset", "events", "skipped", "loudness", "max_error_ms", "silent", "reason") if k in sound}
+        out["soundtrack"] = f"/api/renders/{export_id}/files/soundtrack.wav" if sound.get("file") else None
+    return out
+
+
+class MotionSoundArgs(BaseModel):
+    id: Optional[str] = Field(None, pattern=r"^[0-9a-f]{32}$", description="A saved composition (with revision) ...")
+    revision: Optional[int] = Field(None, ge=1)
+    composition: Optional[Composition] = Field(None, description="... or the composition itself, not saved.")
+    preset: Optional[str] = Field(None, pattern="^(calm|crisp|minimal|launch)$", description="Override the composition's sound preset.")
+
+
+def _sound_composition(services: Services, args: MotionSoundArgs) -> tuple[Composition, Optional[dict]]:
+    if args.composition is not None:
+        composition, row = args.composition, None
+    elif args.id:
+        row = MotionStore(services.config.data_dir).get(args.id, args.revision)
+        composition = Composition.model_validate(row["composition"])
+    else:
+        raise ValueError("Give id (a saved composition) or composition")
+    if args.preset:
+        composition = composition.model_copy(update={"sound": composition.sound.model_copy(update={"preset": args.preset})})
+    return composition, row
+
+
+def run_motion_sound_plan(services: Services, args: MotionSoundArgs):
+    """What would be sounded, with no rendering: the engine status, the roles of the preset and the cues in time order."""
+    from . import sound as sound_mod
+    composition, row = _sound_composition(services, args)
+    state = sound_mod.status()
+    out = {"engine": state, "preset": composition.sound.preset, "enabled": composition.sound.enabled, "auto": composition.sound.auto,
+           "duration_s": round(sum(s.duration for s in composition.scenes), 3), "events": sound_mod.plan(composition)}
+    if row:
+        out.update(id=row["id"], revision=row["revision"])
+    if state["available"]:
+        out["roles"] = sound_mod.roles(composition.sound.preset)
+    return out
+
+
+def run_motion_sound_render(services: Services, args: MotionSoundArgs):
+    """Render the mix to a WAV at -14 LUFS and measure where each sound landed (no video, no browser)."""
+    import uuid
+    from . import sound as sound_mod
+    composition, row = _sound_composition(services, args)
+    export_id = uuid.uuid4().hex
+    try:
+        result = sound_mod.mix(composition, services.config.data_dir, services.config.renders_dir / export_id / "soundtrack.wav")
+    except sound_mod.SoundUnavailable as error:
+        return {"available": False, "error": "sound engine unavailable", "hint": str(error)}
+    result["export_id"] = export_id
+    result["download"] = f"/api/renders/{export_id}/files/soundtrack.wav" if result.get("file") else None
+    if row:
+        result.update(composition_id=row["id"], revision=row["revision"])
+    return result
 
 
 TOOLS.extend([
@@ -706,7 +772,9 @@ TOOLS.extend([
     Tool("motion_save", "Save a versioned composition. Guardar composición animada.\nUpdates require expected_revision. Keywords: animación, montaje, motion graphics.", MotionSaveArgs, ann(False, False, False), run_motion_save),
     Tool("motion_list", "List saved editable motion compositions. Keywords: proyectos, animaciones, motion.", Empty, ann(True), lambda svc, args: {"compositions": MotionStore(svc.config.data_dir).list()}),
     Tool("motion_get", "Read a composition or export HTML. Leer o exportar animación.\nKeywords: timeline, previsualización, motion, frame seeking.", MotionGetArgs, ann(True), run_motion_get),
-    Tool("motion_render", "Capture motion frames or export silent MP4. Renderizar vídeo.\nChromium and ffmpeg; may take minutes. Keywords: render, vídeo, fotogramas, motion.", MotionRenderArgs, ann(False, False, False), run_motion_render),
+    Tool("motion_render", "Capture motion frames or export MP4 (sound if enabled). Renderizar vídeo.\nChromium and ffmpeg; may take minutes. With sound.enabled the MP4 carries a -14 LUFS mix of code-made effects placed on the cues. Keywords: render, vídeo, fotogramas, motion, audio, sonido.", MotionRenderArgs, ann(False, False, False), run_motion_render),
+    Tool("motion_sound_plan", "Plan the sound of a composition. Planificar sonido.\nWhich cues get which effect (scene changes, text, shapes and your {t, rol} events), the preset's roles and the engine status; renders nothing. Keywords: sonido, efectos, audio, motion, eventos.", MotionSoundArgs, ann(True), run_motion_sound_plan),
+    Tool("motion_sound_render", "Mix the sound of a composition to a WAV. Mezclar sonido.\nPlaces each effect by its measured onset or peak, masters to -14 LUFS (-1 dBTP) and reports where every sound landed and the error in ms. Keywords: sonido, mezcla, LUFS, audio, motion.", MotionSoundArgs, ann(False, False, False), run_motion_sound_render),
 ])
 from .diagrams.tools import tools as _diagram_tools  # noqa: E402
 
