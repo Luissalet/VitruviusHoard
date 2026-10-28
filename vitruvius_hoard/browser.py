@@ -582,6 +582,49 @@ def ffmpeg_path() -> Optional[str]:
     return tool.path if tool else None
 
 
+VITALS_MOBILE_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36")
+VITALS_INIT = """
+(() => {
+  const v = window.__vit = {lcp: 0, fcp: 0, shifts: [], longtasks: [], events: {}};
+  const watch = (type, cb, extra) => { try { new PerformanceObserver(l => l.getEntries().forEach(cb)).observe(Object.assign({type, buffered: true}, extra || {})); } catch (e) {} };
+  watch('largest-contentful-paint', e => { v.lcp = e.startTime; });
+  watch('paint', e => { if (e.name === 'first-contentful-paint') v.fcp = e.startTime; });
+  watch('layout-shift', e => { if (!e.hadRecentInput) v.shifts.push([e.startTime, e.value]); });
+  watch('longtask', e => { v.longtasks.push([e.startTime, e.duration]); });
+  watch('event', e => { if (e.interactionId) v.events[e.interactionId] = Math.max(v.events[e.interactionId] || 0, e.duration); }, {durationThreshold: 16});
+})();
+"""
+VITALS_SPOT = """
+() => {
+  const w = innerWidth, h = innerHeight;
+  for (let y = Math.round(h * 0.4); y < h; y += 24) for (let x = 6; x < w; x += 40) {
+    const el = document.elementFromPoint(x, y);
+    if (el && !el.closest('a,button,input,select,textarea,summary,label,[onclick],[role=button]')) return [x, y];
+  }
+  return null;
+}
+"""
+VITALS_COLLECT = """
+() => {
+  const v = window.__vit || {lcp: 0, fcp: 0, shifts: [], longtasks: [], events: {}};
+  const nav = performance.getEntriesByType('navigation')[0];
+  let cls = 0, win = 0, start = 0, last = 0;
+  for (const [t, val] of v.shifts) {
+    if (t - last > 1000 || t - start > 5000) { win = 0; start = t; }
+    win += val; last = t; cls = Math.max(cls, win);
+  }
+  let tbt = 0;
+  for (const [t, d] of v.longtasks) if (t >= v.fcp && d > 50) tbt += d - 50;
+  const inp = Object.values(v.events);
+  const res = performance.getEntriesByType('resource');
+  const bytes = res.reduce((n, r) => n + (r.transferSize || r.encodedBodySize || 0), 0) + (nav ? (nav.transferSize || 0) : 0);
+  return {lcp_ms: Math.round(v.lcp) || null, fcp_ms: Math.round(v.fcp) || null, cls: Math.round(cls * 1000) / 1000,
+          ttfb_ms: nav ? Math.round(nav.responseStart) : null, tbt_ms: Math.round(tbt), inp_ms: inp.length ? Math.round(Math.max(...inp)) : null,
+          transfer_bytes: bytes, requests: res.length + 1, text_chars: (document.body ? document.body.innerText.length : 0)};
+}
+"""
+
+
 class Job:
     def __init__(self, kind: str, payload: dict[str, Any]):
         self.kind = kind
@@ -704,7 +747,7 @@ class BrowserWorker:
         self.start()
         job = Job(kind, payload)
         self._queue.put(job)
-        timeout = max(self.timeout_s, 300) if kind == "motion" else self.timeout_s
+        timeout = max(self.timeout_s, 300) if kind == "motion" else (max(self.timeout_s, 150) if kind == "vitals" else self.timeout_s)
         if not job.event.wait(timeout):
             return {"error": "timeout", "hint": f"render job exceeded {self.timeout_s}s"}
         if job.error:
@@ -721,7 +764,66 @@ class BrowserWorker:
             from .motion import Composition, export_frames
             audio = job.payload.get("audio")
             return export_frames(browser, Composition.model_validate(job.payload["composition"]), Path(job.payload["out_dir"]), Path(audio) if audio else None)
+        if job.kind == "vitals":
+            return self._vitals(browser, job.payload)
         return {"error": f"unknown job kind {job.kind}"}
+
+    # -- Core Web Vitals (lab) -----------------------------------------------
+    def _vitals(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
+        """Load `url` once in a real page and read LCP, CLS, FCP, TTFB, TBT and an INP estimate from the performance observers.
+        Lab data: one load on this machine, optionally with the CPU and network slowed down (`throttle`). INP comes from three
+        synthetic interactions (a click on an empty spot and two Tab presses), so it is an estimate, not field INP."""
+        url = payload.get("url")
+        problem = self.url_problem(url)
+        if problem:
+            return {"error": "This URL cannot be opened.", "hint": problem}
+        mobile = payload.get("profile", "mobile") != "desktop"
+        throttle = bool(payload.get("throttle", True))
+        options: dict[str, Any] = ({"viewport": {"width": 390, "height": 844}, "device_scale_factor": 2, "is_mobile": True, "has_touch": True,
+                                    "user_agent": VITALS_MOBILE_UA} if mobile else {"viewport": {"width": 1350, "height": 940}})
+        context = browser.new_context(**options)
+        self._guard(context)
+        context.add_init_script(VITALS_INIT)
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)[:200]) if len(errors) < 10 else None)
+        conditions = {"label": "móvil" if mobile else "escritorio", "viewport": f"{options['viewport']['width']}x{options['viewport']['height']}",
+                      "cpu_slowdown": 1, "network": "sin limitar"}
+        try:
+            if throttle:
+                try:
+                    cdp = context.new_cdp_session(page)
+                    rate = 4 if mobile else 2
+                    cdp.send("Emulation.setCPUThrottlingRate", {"rate": rate})
+                    cdp.send("Network.enable")
+                    cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 150, "downloadThroughput": 1_600_000 / 8, "uploadThroughput": 750_000 / 8})
+                    conditions.update(cpu_slowdown=rate, network="1,6 Mbit/s con 150 ms de latencia")
+                    conditions["label"] += " con CPU " + str(rate) + "× más lenta y red 4G lenta"
+                except Exception:  # noqa: BLE001 - throttling is best effort; the conditions say what was applied
+                    pass
+            try:
+                page.goto(url, wait_until="load", timeout=60000)
+            except Exception as error:  # noqa: BLE001
+                return {"error": "page did not load", "hint": str(error).strip().splitlines()[0][:200] if str(error).strip() else type(error).__name__}
+            page.wait_for_timeout(2500)
+            try:
+                spot = page.evaluate(VITALS_SPOT)
+                if spot:
+                    page.mouse.click(spot[0], spot[1])
+                page.keyboard.press("Tab")
+                page.keyboard.press("Tab")
+                page.wait_for_timeout(600)
+            except Exception:  # noqa: BLE001 - no interaction: INP stays unmeasured
+                pass
+            data = page.evaluate(VITALS_COLLECT)
+            rendered_html = page.content()[:1_500_000]
+        finally:
+            context.close()
+        metrics = {k: data.get(k) for k in ("lcp_ms", "cls", "fcp_ms", "ttfb_ms", "tbt_ms", "inp_ms", "transfer_bytes", "requests")}
+        return {"profile": "mobile" if mobile else "desktop", "conditions": conditions, "metrics": metrics, "js_errors": errors,
+                "rendered_text_chars": data.get("text_chars", 0),
+                "rendered_html": rendered_html,
+                "note": "Medida de laboratorio: una carga en este equipo. INP se estima con tres interacciones sintéticas."}
 
     # -- capture ---------------------------------------------------------
     def _capture(self, browser, payload: dict[str, Any]) -> dict[str, Any]:

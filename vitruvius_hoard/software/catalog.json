@@ -3278,6 +3278,113 @@
     "module": "design"
   },
   {
+    "name": "site_audit",
+    "description": "Audit a site for SEO and AI search. Auditoría SEO/GEO determinista.\nIndexability, robots, sitemap, canonicals, security headers, broken links, JSON-LD, Core Web Vitals in a real browser, AI crawlers (training vs citing), images. Returns score, categories with findings, action plan; judgement items are flagged and not scored. Takes 30-90 s. Keywords: SEO, GEO, posicionamiento, rastreadores IA, sitemap, robots, vitals.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "properties": {
+        "url": {
+          "description": "The site to audit (its home page); https:// is assumed when missing.",
+          "maxLength": 2000,
+          "minLength": 3,
+          "title": "Url",
+          "type": "string"
+        },
+        "max_pages": {
+          "default": 10,
+          "description": "Pages to read: the home page, then those of the sitemap and of its links.",
+          "maximum": 40,
+          "minimum": 1,
+          "title": "Max Pages",
+          "type": "integer"
+        },
+        "check_links": {
+          "default": true,
+          "description": "Also request the internal and external links found (up to 40 and 15) to find broken ones.",
+          "title": "Check Links",
+          "type": "boolean"
+        },
+        "vitals": {
+          "default": true,
+          "description": "Measure LCP, CLS, INP, FCP, TTFB and TBT in a real Chromium load (lab data). Off: that category is left unmeasured.",
+          "title": "Vitals",
+          "type": "boolean"
+        },
+        "fresh": {
+          "default": false,
+          "description": "Audit again even when a report of this url younger than 10 minutes exists.",
+          "title": "Fresh",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "SiteAuditArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 240.0,
+    "module": "design"
+  },
+  {
+    "name": "site_audit_reports",
+    "description": "List or read saved site audits. Informes de auditoría SEO.\nWithout id: the latest reports (url, date, score). With id: the whole report, to compare runs. Keywords: auditoría, informe, deriva, vigilancia.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "pattern": "^[0-9a-z-]{8,40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A report id: returns that whole report. Omit it to list the latest ones.",
+          "title": "Id"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only the reports of this url (list).",
+          "title": "Url"
+        },
+        "limit": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "SiteAuditReportsArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "diagram_style_list",
     "description": "List reusable named shape styles. Estilos reutilizables.\nDoes not create a store.",
     "annotations": {
