@@ -53,6 +53,27 @@ def test_lint_html_direct(tmp_path):
     assert "findings" in result
 
 
+def test_lint_static_only_never_opens_the_browser(tmp_path):
+    svc = make_services(tmp_path)
+
+    class NoBrowser:
+        def capture(self, **kwargs):
+            raise AssertionError("the static lint must not capture")
+
+    svc.browser = NoBrowser()
+    page = "<html lang='en'><body><section style='height:100vh'><h1>Lorem ipsum dolor sit amet</h1></section></body></html>"
+    result = svc.lint_html(html=page, engines=["static"])
+    assert result["rules_run"] > 0
+    assert {f.get("engine") for f in result["findings"]} <= {"static"}
+    assert any(f["check_id"] == "content.lorem-ipsum" for f in result["findings"])
+
+
+def test_lint_rejects_an_unknown_engine(tmp_path):
+    svc = make_services(tmp_path)
+    with pytest.raises(ValueError):
+        svc.lint_html(html="<html></html>", engines=["telepathy"])
+
+
 def test_lint_by_render_id(tmp_path):
     svc = make_services(tmp_path)
     row = svc.render(html="<html></html>")
