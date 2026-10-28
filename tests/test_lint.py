@@ -370,7 +370,7 @@ def test_dark_no_scheme_negative():
 
 def test_run_lint_counts_and_score_shape():
     result = run_lint(default_probe(images_without_alt=1), "<html></html>")
-    assert set(result.keys()) == {"findings", "score", "counts"}
+    assert {"findings", "score", "counts"} <= set(result.keys())
     assert isinstance(result["score"], float)
     assert set(result["counts"].keys()) >= {"info", "warn", "error"}
 

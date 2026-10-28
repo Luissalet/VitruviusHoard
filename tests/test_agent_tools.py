@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 65
+    assert len(TOOLS) == 71
 
 
 def test_tool_names_are_unique():
@@ -31,7 +31,7 @@ def test_every_tool_first_line_has_english_and_spanish():
 
 def test_read_only_hints_correct():
     read_only_names = {"app_templates", "app_project_list", "app_project_get", "design_patterns", "design_pattern", "reference_collections", "design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
-                       "fonts_search", "design_lint", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
+                       "fonts_search", "design_lint", "design_rules_list", "theme_list", "theme_deal", "theme_check", "theme_memory", "page_kept", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
                        "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get",
                        "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare", "diagram_style_list", "diagram_style_get"}
     write_names = {"app_project_create", "app_project_update", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",

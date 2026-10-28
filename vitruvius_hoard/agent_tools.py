@@ -81,6 +81,7 @@ class RenderArgs(BaseModel):
     lint: bool = True
     include_images: bool = False
     title: str = Field("", max_length=200)
+    tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system: the page is also compared with it (ds/* rules).")
 
 
 class LintArgs(BaseModel):
@@ -88,6 +89,8 @@ class LintArgs(BaseModel):
     url: Optional[str] = Field(None, max_length=2000)
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     render_id: Optional[str] = Field(None, max_length=40)
+    tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system: switches on the ds/* rules (fonts, colours, radii, type scale and spacing against the system).")
+    packs: Optional[list[str]] = Field(None, description="Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).")
 
 
 class AssayArgs(BaseModel):
@@ -96,6 +99,10 @@ class AssayArgs(BaseModel):
     render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
     timeout_s: int = Field(300, ge=30, le=900)
+    before: bool = Field(False, description="Before a redesign: also save the page's links, form fields, event handlers and titles; the result carries kept_saved.id.")
+    kept: Optional[str] = Field(None, max_length=40, description="After a redesign: the id saved by an earlier `before`. The check fails when any saved link, field, handler or title is missing.")
+    snapshot_only: bool = Field(False, description="With before: save the snapshot and skip driving the page.")
+    label: str = Field("", max_length=200)
     criteria: list[dict[str, Any]] = Field(default_factory=list, description="Optional cases: id, what, acts (click/fill/press/hover/focus), expect (want/unchanged/painted/focused/no_overflow/no_motion), control. environment accepts viewport {width,height}, reduced_motion (reduce/no-preference), color_scheme (light/dark). Each case opens fresh and reports its measured state; local load/shift observations are not design certification.")
 
 
@@ -106,6 +113,9 @@ class CritiqueArgs(BaseModel):
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     focus: Optional[str] = Field(None, max_length=200)
     use_vision: bool = True
+    tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system to compare the page with (ds/* rules).")
+    waivers: list[dict[str, str]] = Field(default_factory=list, description="[{rule, reason}]: Reflex-tier (warning) rules left standing on purpose. The reason needs 24+ characters and may not repeat another waiver's; Floor (error) rules cannot be waived.")
+    clean_review: bool = Field(False, description="Final review in a clean context: a fresh call to the global model with only the screenshots, the HTML and the findings. The verdict (recapture | rebuild | fix | ship) comes first; at most 8 findings.")
 
 
 class CompareArgs(BaseModel):
@@ -127,6 +137,12 @@ class TokensGenerateArgs(BaseModel):
     fonts: Optional[dict[str, str]] = None
     radius: Optional[str] = Field(None, max_length=20)
     density: Optional[str] = Field(None, pattern="^(compact|comfortable|spacious)$")
+    theme: Optional[str] = Field(None, max_length=60, description="A theme slug (theme_list). Refused when it is one of the last three built or shares their paper/display/accent triple, unless force_theme.")
+    deal: Optional[bool] = Field(None, description="Deal a theme from the memory of recent builds (reproducible: the result's theme.seed gives the same hand back) and fold its hue, fonts, radius style and density into whatever you left unsaid.")
+    genre: Optional[str] = Field(None, pattern="^(editorial|modern-minimal|atmospheric|playful)$")
+    seed: Optional[str] = Field(None, max_length=200)
+    reroll: Optional[int] = Field(None, ge=0, le=20)
+    force_theme: Optional[bool] = None
 
 
 class TokensGetArgs(BaseModel):
@@ -338,7 +354,7 @@ def _page_html(args) -> Optional[str]:
 
 def run_render_preview(services: Services, args: RenderArgs) -> dict:
     row = services.render(html=_page_html(args), url=args.url, widths=args.widths, full_page=args.full_page, dark=args.dark,
-                          wait_ms=args.wait_ms, lint=args.lint, title=args.title)
+                          wait_ms=args.wait_ms, lint=args.lint, title=args.title, tokens_id=args.tokens_id)
     out = _strip_html(row)
     if not args.include_images:
         out["files"] = [{k: v for k, v in f.items() if k != "bytes"} for f in out["files"]]
@@ -346,21 +362,23 @@ def run_render_preview(services: Services, args: RenderArgs) -> dict:
 
 
 def run_design_lint(services: Services, args: LintArgs) -> dict:
-    return services.lint_html(html=_page_html(args), url=args.url, render_id=args.render_id)
+    return services.lint_html(html=_page_html(args), url=args.url, render_id=args.render_id, tokens_id=args.tokens_id, packs=args.packs)
 
 
 def run_page_assay(services: Services, args: AssayArgs) -> dict:
     if not (args.html or args.url or args.render_id or args.path):
         raise ValueError("page_assay needs html, url, render_id or path")
-    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s, criteria=args.criteria)
+    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s, criteria=args.criteria,
+                              before=args.before, kept=args.kept, snapshot_only=args.snapshot_only, label=args.label)
 
 
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
     render_id = args.render_id
     if render_id is None:
-        row = services.render(html=_page_html(args), url=args.url, widths=[390, 1024, 1440], full_page=True)
+        row = services.render(html=_page_html(args), url=args.url, widths=[390, 1024, 1440], full_page=True, tokens_id=args.tokens_id)
         render_id = row["id"]
-    return services.critique_render(render_id, focus=args.focus, use_vision=args.use_vision)
+    return services.critique_render(render_id, focus=args.focus, use_vision=args.use_vision, tokens_id=args.tokens_id,
+                                    waivers=args.waivers, clean_review=args.clean_review)
 
 
 def run_render_compare(services: Services, args: CompareArgs) -> dict:
@@ -401,7 +419,8 @@ def _resolve_style(services: Services, style: Optional[str], brief: dict) -> Opt
 
 
 def run_tokens_generate(services: Services, args: TokensGenerateArgs) -> dict:
-    brief = {"name": args.name, "base_color": args.base_color, "hue": args.hue, "vibe": args.vibe,
+    brief = {"name": args.name, "base_color": args.base_color, "hue": args.hue, "vibe": args.vibe, "theme": args.theme, "deal": args.deal,
+             "genre": args.genre, "seed": args.seed, "reroll": args.reroll, "force_theme": args.force_theme,
             "mode": args.mode, "fonts": args.fonts, "density": args.density}
     if args.knobs:
         brief.update(args.knobs)
@@ -531,12 +550,12 @@ TOOLS: list[Tool] = [
         RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
         "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n"
-        "29 checks with stable ids; each finding has area, severity, evidence and a concrete fix.\n"
+        "Every rule is a row of data with a stable id (design_rules_list): core, slop, quality, craft and, with tokens_id, ds/* against a design system. Each finding has area, severity, tier (floor/reflex/finish), evidence and a concrete fix.\n"
         "Sinónimos: lint, revisar diseño, patrones genéricos de IA, contraste, accesibilidad.",
         LintArgs, ann(True), run_design_lint),
     Tool("design_critique",
         "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\n"
-        "Merges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy).\n"
+        "Merges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy). Tiers: Floor errors always block, Reflex warnings block unless waived on the record (waivers=[{rule, reason}], reason 24+ characters, never repeated), Finish advisories never block. gate.state is pass or fix. clean_review=true adds a fresh-context verdict: recapture, rebuild, fix or ship.\n"
         "Sinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
         CritiqueArgs, ann(False, False, False), run_design_critique),
     Tool("page_assay",
@@ -694,6 +713,103 @@ from .diagrams.tools import tools as _diagram_tools  # noqa: E402
 TOOLS.extend(_diagram_tools(Empty))
 TOOLS.append(Tool("page_check", "Measure and test a page using Vitruvius's incorporated browser checker. Comprobar controles de una página.\nAccepts HTML, URL, a captured render or a local path. Reports actual cases, measurements and failures without a model or external application.",
                   AssayArgs, ann(True, False, False), run_page_assay))
+# ---------------- rules as data, themes with memory, what a redesign keeps ----------------
+
+class RulesListArgs(BaseModel):
+    id: Optional[str] = Field(None, max_length=80, description="One rule by id (or alias): returns its full row.")
+    engine: Optional[str] = Field(None, pattern="^(static|browser|visual)$")
+    scope: Optional[str] = Field(None, max_length=20)
+    severity: Optional[str] = Field(None, pattern="^(error|warning|advisory)$")
+    tier: Optional[str] = Field(None, pattern="^(floor|reflex|finish)$")
+    pack: Optional[str] = Field(None, max_length=24, description="core, slop, quality, craft, visual or ds.")
+    source: Optional[str] = Field(None, max_length=24, description="Where the idea comes from: vitruvius, impeccable or hallmark.")
+    query: Optional[str] = Field(None, max_length=120)
+    runnable: Optional[bool] = Field(None, description="false = the judged (visual) rules the vision model decides.")
+    limit: int = Field(300, ge=1, le=400)
+    compact: bool = Field(False, description="Only id, engine, scope, severity, tier and name.")
+
+
+def run_design_rules_list(services: Services, args: RulesListArgs) -> dict:
+    if args.id:
+        return {"rule": services.rule_get(args.id)}
+    out = services.rules_list(engine=args.engine, scope=args.scope, severity=args.severity, tier=args.tier, pack=args.pack, source=args.source,
+                              query=args.query, runnable=args.runnable)
+    rows = out["rules"][: args.limit]
+    if args.compact:
+        rows = [{k: r[k] for k in ("id", "engine", "scope", "severity", "tier", "name")} for r in rows]
+    return {"count": out["count"], "shown": len(rows), "summary": out["summary"], "rules": rows}
+
+
+class ThemeListArgs(BaseModel):
+    genre: Optional[str] = Field(None, pattern="^(editorial|modern-minimal|atmospheric|playful)$")
+    query: Optional[str] = Field(None, max_length=120)
+
+
+def run_theme_list(services: Services, args: ThemeListArgs) -> dict:
+    from . import themes
+    q = (args.query or "").lower()
+    rows = [themes.public(t) for t in themes.load() if (not args.genre or t["genre"] == args.genre)
+            and (not q or q in (t["slug"] + " " + t["name"] + " " + " ".join(t["keywords"]) + " " + t["material"]).lower())]
+    return {"count": len(rows), "themes": rows}
+
+
+class ThemeDealArgs(BaseModel):
+    prompt: str = Field("", max_length=600, description="What the page is for, in the user's words.")
+    genre: Optional[str] = Field(None, pattern="^(editorial|modern-minimal|atmospheric|playful)$")
+    n: int = Field(3, ge=1, le=6)
+    reroll: int = Field(0, ge=0, le=20, description="1 = the next hand, 2 = the one after...")
+    seed: Optional[str] = Field(None, max_length=200, description="A seed a previous deal printed: the same hand comes back.")
+
+
+class ThemeCheckArgs(BaseModel):
+    axes: Optional[str] = Field(None, max_length=120, description="paper/display/accent, e.g. light/roman-serif/warm. paper: light|mid|dark.")
+    face: Optional[str] = Field(None, max_length=80, description="The display face you plan to use.")
+    hue: Optional[float] = Field(None, ge=0, le=360, description="The accent hue.")
+
+
+class ThemeMemoryArgs(BaseModel):
+    limit: int = Field(10, ge=1, le=50)
+
+
+class KeptArgs(BaseModel):
+    id: Optional[str] = Field(None, max_length=40, description="One saved snapshot (with its links, fields, handlers and titles); omit to list.")
+    limit: int = Field(30, ge=1, le=200)
+
+
+def run_kept(services: Services, args: KeptArgs) -> dict:
+    if args.id:
+        return services.kept_get(args.id)
+    rows = services.kept_list(args.limit)
+    return {"count": len(rows), "kept": rows}
+
+
+TOOLS.extend([
+    Tool("design_rules_list",
+        "Design rules as data (id, engine, severity, tier). Reglas de diseño como datos.\n"
+        "Each row: id, engine, scope, severity, tier, name, description, reference.\n"
+        "Engines: static (HTML/CSS text), browser (what Chromium measured), visual (judged from screenshots). Severity maps to a tier: "
+        "error = Floor, warning = Reflex, advisory = Finish. Packs: core, slop, quality, craft, visual, ds (against a design system). "
+        "Each row says where the idea comes from (source, source_id).\nSinónimos: catálogo de reglas, lint rules, qué comprueba el lint, packs.",
+        RulesListArgs, ann(True), run_design_rules_list, capped=False),
+    Tool("theme_list", "List art-direction themes. Temas de dirección de arte.\nPaper, display face, accent, posture and material per theme.\nSinónimos: temas, estilos de página, catálogo de temas.",
+        ThemeListArgs, ann(True), run_theme_list, capped=False),
+    Tool("theme_deal",
+        "Deal themes clear of the last three builds. Repartir temas.\n"
+        "Blocks the last 3 themes and any sharing their paper/display/accent triple; reproducible by seed; reroll for another hand.\n"
+        "Sinónimos: elegir tema, dirección de arte, evitar repetir, semilla.",
+        ThemeDealArgs, ann(True), lambda services, args: services.theme_deal(**args.model_dump())),
+    Tool("theme_check",
+        "Check a plan against catalogue themes and recent builds. Comprobar un tema.\nAxes, display face and accent hue; says what it lands on.\nSinónimos: colisión de tipografía, parecido con otro tema, ¿es original?",
+        ThemeCheckArgs, ann(True), lambda services, args: services.theme_check(**args.model_dump())),
+    Tool("theme_memory", "Themes built recently, which theme_deal avoids. Memoria de temas.\nSinónimos: historial de temas, qué se usó, últimos temas.",
+        ThemeMemoryArgs, ann(True), lambda services, args: {"memory": services.theme_memory(args.limit)}),
+    Tool("page_kept",
+        "Snapshots of what a redesign must keep. Lo que un rediseño debe conservar.\n"
+        "Links, form fields, event handlers and titles.\n"
+        "Create one with page_check/page_assay before=true; compare after the redesign with kept=<id>.\nSinónimos: antes y después, conservar enlaces, no perder campos.",
+        KeptArgs, ann(True), run_kept, capped=False),
+])
+
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 

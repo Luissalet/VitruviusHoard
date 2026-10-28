@@ -513,19 +513,76 @@ CHECK_IDS = [
 ]
 
 
-def run_lint(probe: dict, html: str) -> dict[str, Any]:
-    probe = probe or {}
+def score_of(findings: list[Finding]) -> float:
+    """10 minus the weight of the findings that still stand (a waived finding is out of the sum)."""
+    penalty = sum(_SEVERITY_WEIGHT.get(f.get("severity"), 1.0) for f in findings if not f.get("waived"))
+    return round(max(0.0, 10.0 - penalty), 2)
+
+
+def _register_core() -> None:
+    """The 32 original checks, registered as data (``rules/core.py``) with their functions."""
+    from .rules.core import CORE_RULES
+    from .rules.registry import Rule, get_rule, register_rule
+    for spec, fn in zip(CORE_RULES, CHECKS):
+        rid, engine, scope, severity, name, description, reference, fix = spec
+        if get_rule(rid) is None:
+            register_rule(Rule(id=rid, engine=engine, scope=scope, severity=severity, name=name, description=description,
+                               reference=reference, fix=fix, pack="core", source="vitruvius", source_id=rid, check=fn))
+
+
+def ensure_rules() -> None:
+    from . import rules
+    _register_core()
+    rules.load_packs()
+
+
+def selected_rules(*, packs=None, only=None, skip=None, engines=None):
+    """The registered rules a run covers: every runnable rule, narrowed by pack / id / engine."""
+    from .rules.registry import all_rules
+    ensure_rules()
+    packs, only, skip, engines = set(packs or ()), set(only or ()), set(skip or ()), set(engines or ())
+    out = []
+    for rule in all_rules():
+        if rule.check is None or (packs and rule.pack not in packs) or (engines and rule.engine not in engines):
+            continue
+        if only and rule.id not in only:
+            continue
+        if rule.id in skip:
+            continue
+        out.append(rule)
+    return out
+
+
+def run_lint(probe: dict, html: str, *, tokens: dict | None = None, packs=None, only=None, skip=None, engines=None) -> dict[str, Any]:
+    """Run every registered rule over a probe and the page source.
+
+    ``tokens`` is a Vitruvius design system (``tokens_get``): with it the ``ds`` rules compare the page with the system, without
+    it they are skipped. ``packs`` / ``only`` / ``skip`` / ``engines`` narrow the run. Findings keep the legacy ``severity``
+    (info | warn | error) and carry ``level``, ``tier`` (floor | reflex | finish), ``engine``, ``scope`` and ``pack``.
+    """
+    from .rules.registry import enrich
+    probe = dict(probe or {})
     html = html or ""
+    if tokens:
+        probe["design_system"] = tokens
+    rules = selected_rules(packs=packs, only=only, skip=skip, engines=engines)
+    if not tokens:
+        rules = [r for r in rules if r.pack != "ds"]
     findings: list[Finding] = []
-    for check in CHECKS:
+    for rule in rules:
         try:
-            findings.extend(check(probe, html) or [])
+            for f in rule.check(probe, html) or []:
+                findings.append(enrich(f, rule) if f.get("check_id") == rule.id or not f.get("check_id") else f)
         except Exception as error:  # noqa: BLE001 — one bad check must not sink the rest
-            findings.append(_finding(getattr(check, "__name__", "unknown"), "internal", "info",
-                                     "Check failed", str(error)))
+            findings.append(enrich(_finding(rule.id, "internal", "info", "Check failed", str(error)), rule))
     counts: dict[str, int] = {"info": 0, "warn": 0, "error": 0}
+    tiers: dict[str, int] = {"floor": 0, "reflex": 0, "finish": 0}
     for f in findings:
         counts[f["severity"]] = counts.get(f["severity"], 0) + 1
-    penalty = sum(_SEVERITY_WEIGHT.get(f["severity"], 1.0) for f in findings)
-    score = max(0.0, 10.0 - penalty)
-    return {"findings": findings, "score": round(score, 2), "counts": counts}
+        if f.get("tier"):
+            tiers[f["tier"]] = tiers.get(f["tier"], 0) + 1
+    return {"findings": findings, "score": score_of(findings), "counts": counts, "tiers": tiers, "rules_run": len(rules),
+            "design_system": bool(tokens)}
+
+
+_register_core()

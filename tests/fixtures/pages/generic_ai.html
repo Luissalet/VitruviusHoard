@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus - Supercharge Your Workflow</title>
+<style>
+  :root { --violet: #7c3aed; --indigo: #4f46e5; --cyan: #06b6d4; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0b0b14; color: #e5e7eb; line-height: 1.2; }
+  .hero { min-height: 100vh; padding: 96px 24px; text-align: center; background: radial-gradient(circle at 50% 0%, rgba(124,58,237,.45), transparent 60%), linear-gradient(135deg, #4f46e5, #7c3aed 50%, #06b6d4); position: relative; overflow: hidden; }
+  .chip { display: inline-block; padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 20px; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 8px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .4; transform: scale(1.6);} }
+  h1 { font-size: 64px; letter-spacing: -0.09em; margin: 0 auto 20px; max-width: 900px; }
+  h1 span { background: linear-gradient(90deg, #a78bfa, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: 20px; max-width: 640px; margin: 0 auto 32px; opacity: .85; }
+  .btn { display: inline-block; padding: 14px 28px; border-radius: 12px; background-image: linear-gradient(90deg, #7c3aed, #3b82f6); color: #fff; border: 0; font-weight: 600; box-shadow: 0 0 40px rgba(124,58,237,.8); transition: all .3s cubic-bezier(.68,-0.55,.27,1.55); }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 64px 24px; max-width: 1100px; margin: 0 auto; }
+  .card { border-radius: 16px; padding: 24px; background: #151525; border: 1px solid #2a2a44; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  .card .inner { margin-top: 16px; padding: 16px; border-radius: 12px; border: 1px solid #2a2a44; background: #1b1b30; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+  .tile { width: 48px; height: 48px; border-radius: 12px; background: rgba(124,58,237,.2); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .accent { border-left: 4px solid #8b5cf6; border-radius: 12px; padding: 16px; background: #151525; margin: 0 24px 24px; }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .2em; color: #a78bfa; }
+  h2 { font-size: 28px; margin: 6px 0 12px; }
+  footer { padding: 32px; text-align: center; font-size: 11px; opacity: .6; }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="chip"><span class="pulse"></span>New — v2.0 is live</div>
+  <h1>Supercharge your workflow with <span>seamless</span> AI</h1>
+  <p class="lede">Not just another tool. A robust, cutting-edge platform that empowers your team — and unlocks the power of your data — effortlessly. In today's fast-paced world, you need more.</p>
+  <a class="btn" href="#">Get started →</a> <a class="btn" href="#">Learn more →</a>
+</section>
+<section class="features">
+  <div class="card"><div class="tile"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5.5 20l2-7L2 9h7z"/></svg></div><h3>Lightning fast</h3><p>Built for the modern team, with seamless integrations.</p><div class="inner"><p>Nested detail card with its own border and shadow.</p></div></div>
+  <div class="card"><div class="tile"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><h3>Secure by default</h3><p>Enterprise-grade security that scales — effortlessly.</p></div>
+  <div class="card"><div class="tile"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/></svg></div><h3>Insights that matter</h3><p>Drive growth and unlock the power of analytics.</p></div>
+</section>
+<div class="accent"><div class="eyebrow">01 / Process</div><h2>Trusted by teams worldwide</h2><p>"We shipped faster than ever," said Jane Doe, CEO of Acme Inc. Not a dashboard. A decision engine. Not a plugin. A platform. Not a tool. A teammate.</p></div>
+<footer>© 2026 Nexus Inc. — All rights reserved — Terms — Privacy</footer>
+</body>
+</html>

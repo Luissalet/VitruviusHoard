@@ -23,6 +23,12 @@ class TokensBody(BaseModel):
     fonts: Optional[dict[str, str]] = None
     radius: Optional[str] = None
     density: Optional[str] = None
+    theme: Optional[str] = None
+    deal: Optional[bool] = None
+    genre: Optional[str] = None
+    seed: Optional[str] = None
+    reroll: Optional[int] = None
+    force_theme: Optional[bool] = None
 
 
 @router.get("/tokens")
@@ -36,7 +42,12 @@ def tokens_create(request: Request, body: TokensBody):
     brief = {k: v for k, v in body.model_dump().items() if v is not None}
     if body.knobs:
         brief.update(body.knobs)
-    return services(request).tokens_generate(brief)
+    try:
+        return services(request).tokens_generate(brief)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
 
 
 @router.get("/tokens/{tokens_id}")

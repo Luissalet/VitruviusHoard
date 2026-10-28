@@ -20,6 +20,9 @@ from . import lint as lint_mod
 from . import references as references_mod
 from . import reference_collections, design_patterns
 from . import tokens as tokens_mod
+from . import kept as kept_mod
+from . import themes as themes_mod
+from . import waivers as waivers_mod
 from .browser import BrowserWorker
 from .app_projects import AppProjects
 from .config import Config
@@ -214,7 +217,14 @@ class Services:
 
     def library_brief(self, **kwargs) -> dict[str, Any]:
         use_model = kwargs.pop("use_model", False)
-        return library_mod.brief(self.db, use_model=use_model, link=self.link_sync if use_model else None, **kwargs)
+        out = library_mod.brief(self.db, use_model=use_model, link=self.link_sync if use_model else None, **kwargs)
+        try:
+            # the brief also deals three themes the memory of the recent builds allows (reproducible by its seed)
+            prompt = " ".join(str(kwargs.get(k) or "") for k in ("subject", "vibe", "product_type")).strip()
+            out["theme_deal"] = self.theme_deal(prompt=prompt, n=3)
+        except Exception:  # noqa: BLE001 — the brief never fails for want of a theme
+            log.warning("could not deal themes for the brief", exc_info=True)
+        return out
 
     def catalog_styles(self, limit: int = 100) -> list[dict[str, Any]]:
         rows = self.db.query("SELECT * FROM styles ORDER BY id LIMIT ?", (limit,))
@@ -252,7 +262,7 @@ class Services:
     # ---------------- renders ----------------
     def render(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: Optional[list[int]] = None,
               full_page: bool = True, dark: bool = False, wait_ms: int = 800, lint: bool = True,
-              record: bool = False, title: str = "", _browser=None, _app_project=None) -> dict[str, Any]:
+              record: bool = False, title: str = "", tokens_id: Optional[str] = None, _browser=None, _app_project=None) -> dict[str, Any]:
         if not html and not url:
             raise ValueError("render needs html or url")
         if _browser is None:
@@ -276,7 +286,7 @@ class Services:
         lint_result = {"findings": [], "score": 10.0, "counts": {}}
         probe = capture.get("probe") or {}
         if lint and "error" not in capture:
-            lint_result = lint_mod.run_lint(probe, html or "")
+            lint_result = lint_mod.run_lint(probe, html or "", tokens=self._system_tokens(tokens_id))
 
         files = capture.get("files") or []
         metrics = {
@@ -386,24 +396,56 @@ class Services:
         diff.save(out_path)
         return {"diff_pct": pct, "diff_image": str(out_path), "width": w, "height": h, "changed_bbox": bbox}
 
-    def lint_html(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None) -> dict[str, Any]:
+    def _system_tokens(self, tokens_id: Optional[str]) -> Optional[dict[str, Any]]:
+        """The tokens of a stored design system, for the rules that compare a page with it (None when none is asked for)."""
+        if not tokens_id:
+            return None
+        row = self.tokens_get(tokens_id)
+        if row is None:
+            raise LookupError(f"Unknown design system '{tokens_id}'.")
+        return row["tokens"]
+
+    def lint_html(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,
+                  tokens_id: Optional[str] = None, packs: Optional[list[str]] = None) -> dict[str, Any]:
+        tokens = self._system_tokens(tokens_id)
         if render_id:
             render = self.get_render(render_id)
             if render is None:
                 raise LookupError(f"Unknown render '{render_id}'.")
             probe, source = self._render_lint_inputs(render)
-            return lint_mod.run_lint(probe, html or source)
+            return lint_mod.run_lint(probe, html or source, tokens=tokens, packs=packs)
         if html is None and url is None:
             raise ValueError("lint needs html, url or render_id")
         self.check_url(url)
-        capture = self.browser.capture(html=html, url=url, widths=[1024], full_page=False,
+        capture = self.browser.capture(html=html, url=url, widths=[390, 1440], full_page=False,
                                        out_dir=self.config.renders_dir / ("lint-" + uuid.uuid4().hex[:8]))
         probe = capture.get("probe") or {}
-        return lint_mod.run_lint(probe, html or "")
+        return lint_mod.run_lint(probe, html or "", tokens=tokens, packs=packs)
+
+    # ---------------- rules as data ----------------
+    def rules_list(self, **filters: Any) -> dict[str, Any]:
+        from .rules import registry
+        lint_mod.ensure_rules()
+        rows = registry.list_rules(**{k: v for k, v in filters.items() if v not in (None, "")})
+        return {"count": len(rows), "summary": registry.summary(), "rules": rows}
+
+    def rule_get(self, rule_id: str) -> dict[str, Any]:
+        from .rules import registry
+        lint_mod.ensure_rules()
+        rule = registry.get_rule(rule_id)
+        if rule is None:
+            raise LookupError(f"Unknown rule '{rule_id}'.")
+        return rule.row()
 
     # ---------------- functional check (assay) ----------------
     def assay_page(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,
-                   path: Optional[str] = None, timeout_s: int = 300, criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
+                   path: Optional[str] = None, timeout_s: int = 300, criteria: Optional[list[dict[str, Any]]] = None,
+                   before: bool = False, kept: Optional[str] = None, snapshot_only: bool = False, label: str = "") -> dict[str, Any]:
+        """Drive the page's controls in a real browser. ``before`` also saves what a redesign must keep (links, fields, handlers, titles);
+        ``kept`` (an id from an earlier ``before``) fails the check when any of it is missing from this page."""
+        snapshot_before = None
+        if kept:
+            snapshot_before = self.kept_get(kept)
         if render_id:
             source = self.config.renders_dir / render_id / "source.html"
             if not source.is_file():
@@ -414,9 +456,57 @@ class Services:
             html = self._fetch_page(url)
         if html is None and not path:
             raise ValueError("page_assay needs html, url, render_id or a local path")
+        page_source = html if html is not None else self._read_page_file(path)
+        saved = self.kept_save(page_source, label=label or (url or path or "page"), source=url or path or "html") if before else None
+        if snapshot_only:
+            return {"works": True, "failed": 0, "kept": saved, "note": "Snapshot saved; run page_check with kept=<id> after the redesign."}
         result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner, criteria=criteria)
+        if saved:
+            result["kept_saved"] = saved
+        if snapshot_before is not None:
+            check = kept_mod.compare(snapshot_before["data"], page_source)
+            result["kept"] = {"id": kept, **check}
+            if not check["ok"]:
+                result["works"] = False
+                result["failed"] = int(result.get("failed") or 0) + check["total_missing"]
+                result.setdefault("failing", []).append({"id": "KEPT", "what": "everything the page had before the redesign is still there",
+                                                         "detail": f"{check['total_missing']} item(s) missing: " + ", ".join(f"{n} {k}" for k, n in check["missing_count"].items() if n),
+                                                         "measured": check["missing_count"], "acts": [], "environment": {}})
         self._emit_event("vitruvius.assay.done", {"id": result.get("id"), "works": result.get("works"), "failed": result.get("failed")})
         return result
+
+    @staticmethod
+    def _read_page_file(path: Optional[str]) -> str:
+        if not path:
+            return ""
+        target = Path(path).expanduser()
+        if target.is_dir():
+            target = target / "index.html"
+        try:
+            return target.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return ""
+
+    # ---------------- what a redesign must keep ----------------
+    def kept_save(self, html: str, *, label: str = "", source: str = "") -> dict[str, Any]:
+        data = kept_mod.snapshot(html)
+        kept_id = uuid.uuid4().hex[:12]
+        self.db.execute("INSERT INTO kept_snapshots(id, created_ts, label, source, data) VALUES (?,?,?,?,?)",
+                        (kept_id, time.time(), label[:200], source[:500], json.dumps(data)))
+        return {"id": kept_id, "label": label, "counts": data["counts"]}
+
+    def kept_get(self, kept_id: str) -> dict[str, Any]:
+        row = self.db.one("SELECT * FROM kept_snapshots WHERE id = ?", (kept_id,))
+        if row is None:
+            raise LookupError(f"Unknown kept snapshot '{kept_id}'.")
+        return {"id": row["id"], "created_ts": row["created_ts"], "label": row["label"], "source": row["source"], "data": json.loads(row["data"] or "{}")}
+
+    def kept_list(self, limit: int = 30) -> list[dict[str, Any]]:
+        out = []
+        for r in self.db.query("SELECT * FROM kept_snapshots ORDER BY created_ts DESC LIMIT ?", (limit,)):
+            data = json.loads(r["data"] or "{}")
+            out.append({"id": r["id"], "created_ts": r["created_ts"], "label": r["label"], "source": r["source"], "counts": data.get("counts", {})})
+        return out
 
     def _fetch_page(self, url: str) -> str:
         """The HTML of a page to check: through the family web service (one throttle and block memory for every app) when it is
@@ -436,42 +526,125 @@ class Services:
             raise ValueError(f"Could not fetch {url}: {result.get('error') or result.get('error_kind') or 'no answer'}")
         return str(result.get("text") or "")
 
-    def critique_render(self, render_id: str, *, focus: Optional[str] = None, use_vision: bool = True) -> dict[str, Any]:
+    def critique_render(self, render_id: str, *, focus: Optional[str] = None, use_vision: bool = True, tokens_id: Optional[str] = None,
+                        waivers: Any = None, clean_review: bool = False) -> dict[str, Any]:
         row = self.db.one("SELECT * FROM renders WHERE id = ?", (render_id,))
         if row is None:
             raise LookupError(f"Unknown render '{render_id}'.")
+        tokens = self._system_tokens(tokens_id)
         render = self._render_dict(row)
         probe, html = self._render_lint_inputs(render)
         images: list[bytes] = []
-        if use_vision:
+        if use_vision or clean_review:
             for f in render["files"]:
                 try:
                     images.append(Path(f["path"]).read_bytes())
                 except OSError:
                     continue
         result = critique_mod.critique(probe=probe, html=html, focus=focus, images=images or None,
-                                       link=self.link_sync if use_vision else None, use_vision=use_vision)
+                                       link=self.link_sync if (use_vision or clean_review) else None, use_vision=use_vision,
+                                       tokens=tokens, waivers=waivers, prior_waivers=waivers_mod.stored(self.db, render_id),
+                                       clean_review=clean_review)
+        waivers_mod.store(self.db, render_id, result["waivers"]["accepted"])
+        if result.get("review") and result["review"].get("verdict"):
+            rv = result["review"]
+            self.db.execute("INSERT INTO reviews(render_id, created_ts, verdict, model, findings, ms) VALUES (?,?,?,?,?,?)",
+                            (render_id, time.time(), rv["verdict"], rv.get("model") or "", json.dumps(rv.get("findings") or []), rv.get("ms") or 0))
         self.db.execute(
             "INSERT INTO critiques(render_id, created_ts, focus, score, heuristic_score, vision_model, findings, summary, ms) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
             (render_id, time.time(), focus or "", result["score"], result["heuristic_score"], result["vision_model"],
              json.dumps(result["findings"]), result["summary"], result["ms"]),
         )
-        self._emit_event("vitruvius.critique.done", {"render_id": render_id, "score": result["score"]})
+        self._emit_event("vitruvius.critique.done", {"render_id": render_id, "score": result["score"], "gate": result["gate"]["state"]})
         return result
 
     # ---------------- tokens ----------------
+    # ---------------- theme dealing with memory ----------------
+    def theme_memory(self, limit: int = 20) -> list[dict[str, Any]]:
+        rows = self.db.query("SELECT * FROM theme_log ORDER BY id DESC LIMIT ?", (limit,))
+        return [{"id": r["id"], "ts": r["ts"], "slug": r["slug"], "name": r["name"], "axes": r["axes"], "tokens_id": r["tokens_id"],
+                 "prompt": r["prompt"], "seed": r["seed"]} for r in rows]
+
+    def _theme_salt(self) -> str:
+        row = self.db.one("SELECT value FROM settings WHERE key = 'theme_salt'")
+        if row:
+            return row["value"]
+        salt = uuid.uuid4().hex[:8]
+        self.db.execute("INSERT OR REPLACE INTO settings(key, value) VALUES ('theme_salt', ?)", (salt,))
+        return salt
+
+    def theme_deal(self, *, prompt: str = "", genre: Optional[str] = None, n: int = 3, reroll: int = 0, seed: Optional[str] = None) -> dict[str, Any]:
+        """A hand of themes clear of the last three builds (see ``themes.deal``). The same seed gives the same hand."""
+        return themes_mod.deal(prompt=prompt, genre=genre, n=n, reroll=reroll, seed=seed, salt=self._theme_salt(), memory=self.theme_memory(themes_mod.MEMORY_DEPTH))
+
+    def theme_check(self, *, axes: Optional[str] = None, face: Optional[str] = None, hue: Optional[float] = None) -> dict[str, Any]:
+        return themes_mod.check(axes=axes, face=face, hue=hue, memory=self.theme_memory(themes_mod.MEMORY_DEPTH))
+
+    def theme_record(self, theme: dict[str, Any], *, tokens_id: Optional[str], prompt: str = "", seed: str = "") -> None:
+        self.db.execute("INSERT INTO theme_log(ts, slug, name, axes, tokens_id, prompt, seed) VALUES (?,?,?,?,?,?,?)",
+                        (time.time(), theme["slug"], theme["name"], themes_mod.triple(theme), tokens_id, prompt[:300], seed))
+
+    def _deal_into_brief(self, brief: dict[str, Any]) -> Optional[dict[str, Any]]:
+        """With ``theme`` (a slug), ``deal`` (true) or ``genre`` in the brief, take a theme the memory allows and fold its hue, fonts, style and
+        density into the brief for whatever the caller left unsaid. Returns {theme, seed, deal} or None when the brief asks for no theme."""
+        wants = brief.get("theme") or brief.get("deal") or brief.get("genre")
+        if not wants:
+            return None
+        memory = self.theme_memory(themes_mod.MEMORY_DEPTH)
+        prompt = " ".join(str(x) for x in (brief.get("vibe"), brief.get("name")) if x)
+        if brief.get("theme"):
+            theme = themes_mod.get(str(brief["theme"]))
+            if theme is None:
+                raise LookupError(f"Unknown theme '{brief['theme']}'; list them with theme_list.")
+            blocked = themes_mod.blocked_by(memory)
+            if theme["slug"] in blocked and not brief.get("force_theme"):
+                raise ValueError(f"Theme '{theme['slug']}' is blocked: {blocked[theme['slug']]}. Deal another one with theme_deal, or pass force_theme.")
+            hand = {"seed": brief.get("seed") or "", "deal": [themes_mod.public(theme)], "forced": theme["slug"] in blocked}
+        else:
+            hand = self.theme_deal(prompt=prompt, genre=brief.get("genre"), n=3, reroll=int(brief.get("reroll") or 0), seed=brief.get("seed"))
+            theme = themes_mod.get(hand["deal"][0]["slug"])
+        contribution = themes_mod.as_brief(theme)
+        for key in ("hue", "style", "density"):
+            if brief.get(key) is None and not (key == "hue" and brief.get("base_color")):
+                brief[key] = contribution[key]
+        brief["fonts"] = {**contribution["fonts"], **{k: v for k, v in (brief.get("fonts") or {}).items() if v}}
+        brief["theme"] = theme["slug"]
+        return {"theme": theme, "seed": hand.get("seed", ""), "hand": hand}
+
     def tokens_generate(self, brief: dict[str, Any]) -> dict[str, Any]:
         tokens_id = uuid.uuid4().hex[:12]
+        brief = dict(brief)
+        dealt = self._deal_into_brief(brief)
         tokens = tokens_mod.generate(brief)
+        if dealt:
+            t = dealt["theme"]
+            tokens["theme"] = {"slug": t["slug"], "name": t["name"], "genre": t["genre"], "posture": t["posture"], "axes": themes_mod.triple(t),
+                               "seed": dealt["seed"], "material": t["material"]}
+            brief["seed"] = dealt["seed"]
         css = tokens_mod.to_css(tokens)
         tailwind = tokens_mod.to_tailwind(tokens)
         self.db.execute(
             "INSERT INTO design_systems(id, name, created_ts, brief, tokens, css, tailwind) VALUES (?,?,?,?,?,?,?)",
             (tokens_id, brief.get("name") or tokens_id, time.time(), json.dumps(brief), json.dumps(tokens), css, tailwind),
         )
+        if dealt:
+            self.theme_record(dealt["theme"], tokens_id=tokens_id, prompt=" ".join(str(x) for x in (brief.get("vibe"), brief.get("name")) if x), seed=dealt["seed"])
         self._emit_event("vitruvius.tokens.created", {"id": tokens_id})
-        return self.tokens_get(tokens_id)
+        row = self.tokens_get(tokens_id)
+        if dealt:
+            row["theme_deal"] = dealt["hand"]
+        else:
+            # a plan made by hand still gets told when it lands on a catalogue theme or a recent build
+            fonts = brief.get("fonts") or {}
+            try:
+                heading = str(fonts.get("heading") or "").split(",")[0].strip().strip("'\"")
+                check = self.theme_check(face=heading or None, hue=brief.get("hue") if brief.get("hue") is not None else None) if (heading or brief.get("hue") is not None) else None
+            except ValueError:
+                check = None
+            if check and not check["clear"]:
+                row["theme_check"] = check
+        return row
 
     @staticmethod
     def _tokens_dict(r) -> dict[str, Any]:

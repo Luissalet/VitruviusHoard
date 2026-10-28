@@ -4,6 +4,9 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, SeverityChip, ScoreDial } from "../components/ui.jsx";
+import GatePanel from "../components/GatePanel.jsx";
+import RulesPanel, { TierChip } from "../components/RulesPanel.jsx";
+import ThemeDealer from "../components/ThemeDealer.jsx";
 import { clock, fileRelPath } from "../format.js";
 
 // The probe reports fonts as { loaded: [...], h1, h2, p, button } and colours as
@@ -110,7 +113,7 @@ function RenderView({ render, t }) {
                   <div key={i} className="card">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-[13px]">{f.title}</span>
-                      <SeverityChip severity={f.severity} t={t} />
+                      <span className="flex gap-1"><TierChip tier={f.tier} t={t} /><SeverityChip severity={f.severity} t={t} /></span>
                     </div>
                     <div className="text-[13px] mt-1">{f.detail}</div>
                     {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {f.fix}</div>}
@@ -146,7 +149,7 @@ function CritiqueView({ critique, t }) {
               <div key={i} className="card mb-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold text-[13px]">{f.title}</span>
-                  <SeverityChip severity={f.severity} t={t} />
+                  <span className="flex gap-1"><TierChip tier={f.tier} t={t} />{f.waived && <span className="chip">{t("dq_waived")}</span>}<SeverityChip severity={f.severity} t={t} /></span>
                 </div>
                 <div className="text-[13px] mt-1">{f.detail}</div>
                 {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {f.fix}</div>}
@@ -192,6 +195,11 @@ function AssayView({ assay, t }) {
           ))}
         </div>
       )}
+      {assay.kept && (
+        <div className="help mt-2" data-testid="kept-result">
+          {assay.kept.ok ? t("dq_kept_ok") : `${t("dq_kept_missing")}: ${Object.entries(assay.kept.missing_count || {}).filter(([, n]) => n).map(([k, n]) => `${n} ${k}`).join(", ")}`}
+        </div>
+      )}
       <div className="help mt-2">{Math.round((assay.ms || 0) / 1000)} s</div>
     </div>
   );
@@ -218,6 +226,19 @@ export default function Critique() {
   const [checkControl, setCheckControl] = useState("");
   const [checkText, setCheckText] = useState("");
   const [history, setHistory] = useState(null);
+  const [tokensList, setTokensList] = useState([]);
+  const [tokensId, setTokensId] = useState("");
+  const [cleanReview, setCleanReview] = useState(false);
+  const [waivers, setWaivers] = useState({});
+  const [keptList, setKeptList] = useState([]);
+  const [keptId, setKeptId] = useState("");
+  const [keptLabel, setKeptLabel] = useState("");
+  const [keptSaved, setKeptSaved] = useState(null);
+  const loadKept = () => api.keptList(30).then((r) => setKeptList(r.kept || [])).catch(() => {});
+  useEffect(() => {
+    api.tokensList(30).then((r) => setTokensList(r.design_systems || [])).catch(() => {});
+    loadKept();
+  }, []);
 
   const loadHistory = async () => {
     try {
@@ -242,6 +263,7 @@ export default function Critique() {
     setAssay(null);
     try {
       const body = { widths: widths.length ? widths : WIDTHS, dark, full_page: true, lint: true };
+      if (tokensId) body.tokens_id = tokensId;
       if (html.trim()) body.html = html;
       else body.url = url;
       const row = await api.renderCreate(body);
@@ -264,6 +286,7 @@ export default function Critique() {
     setAssay(null);
     try {
       const body = html.trim() ? { html } : { url };
+      if (keptId) body.kept = keptId;
       if (checkControl.trim()) body.criteria = [{
         id: "requested-click-result", what: checkText.trim(),
         acts: [{ click: checkControl.trim() }], expect: { want: checkText.trim() },
@@ -277,11 +300,34 @@ export default function Critique() {
     }
   };
 
-  const doCritique = async () => {
+  const saveKept = async () => {
+    if (!html.trim() && !url.trim()) return;
+    setBusyAssay(true);
+    try {
+      const body = html.trim() ? { html } : { url };
+      const res = await api.assay({ ...body, before: true, snapshot_only: true, label: keptLabel.trim() });
+      setKeptSaved(res.kept);
+      setKeptId(res.kept?.id || "");
+      loadKept();
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setBusyAssay(false);
+    }
+  };
+
+  const doCritique = async (withWaivers = false) => {
     if (!render) return;
     setBusyCritique(true);
     try {
-      const res = await api.renderCritique(render.id, { use_vision: true });
+      const body = { use_vision: true, clean_review: cleanReview };
+      if (tokensId) body.tokens_id = tokensId;
+      if (withWaivers) {
+        body.waivers = Object.entries(waivers).filter(([, reason]) => reason && reason.trim()).map(([rule, reason]) => ({ rule, reason: reason.trim() }));
+      } else {
+        setWaivers({});
+      }
+      const res = await api.renderCritique(render.id, body);
       setCritique(res);
     } catch (e) {
       notify(e.message);
@@ -341,6 +387,40 @@ export default function Critique() {
                 {t("critique_dark")}
               </label>
             </div>
+            <div className="grid gap-3 md:grid-cols-2 mt-3">
+              <div>
+                <label className="label" htmlFor="critique-tokens">{t("dq_tokens_system")}</label>
+                <select id="critique-tokens" className="field" value={tokensId} onChange={(e) => setTokensId(e.target.value)}>
+                  <option value="">{t("dq_tokens_none")}</option>
+                  {tokensList.map((x) => <option key={x.id} value={x.id}>{x.name || x.brief?.name || x.id}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-[13px] mt-6">
+                  <input type="checkbox" checked={cleanReview} onChange={(e) => setCleanReview(e.target.checked)} />
+                  {t("dq_clean_review")}
+                </label>
+                <div className="help">{t("dq_clean_review_help")}</div>
+              </div>
+            </div>
+            <details className="mt-3">
+              <summary className="text-[13px] cursor-pointer">{t("dq_kept_title")}</summary>
+              <div className="grid gap-3 md:grid-cols-2 mt-2">
+                <div>
+                  <label className="label" htmlFor="kept-label">{t("dq_kept_label")}</label>
+                  <input id="kept-label" className="field" value={keptLabel} onChange={(e) => setKeptLabel(e.target.value)} />
+                  <button type="button" className="btn mt-2" onClick={saveKept} disabled={busyAssay || (!html.trim() && !url.trim())}>{t("dq_kept_save")}</button>
+                  {keptSaved && <div className="help mt-1" data-testid="kept-saved">{t("dq_kept_saved")}: {keptSaved.id} · {Object.entries(keptSaved.counts || {}).map(([k, n]) => `${n} ${k}`).join(", ")}</div>}
+                </div>
+                <div>
+                  <label className="label" htmlFor="kept-use">{t("dq_kept_use")}</label>
+                  <select id="kept-use" className="field" value={keptId} onChange={(e) => setKeptId(e.target.value)}>
+                    <option value="">{t("dq_kept_none")}</option>
+                    {keptList.map((k) => <option key={k.id} value={k.id}>{k.label || k.id} · {Object.entries(k.counts || {}).map(([a, n]) => `${n} ${a}`).join(", ")}</option>)}
+                  </select>
+                </div>
+              </div>
+            </details>
             <details className="mt-3">
               <summary className="text-[13px] cursor-pointer">{t("assay_expect")}</summary>
               <div className="grid gap-3 md:grid-cols-2 mt-2">
@@ -354,7 +434,7 @@ export default function Critique() {
               <button type="button" className="btn btn-primary" onClick={doRender} disabled={busyRender || (!html.trim() && !url.trim())}>
                 {busyRender ? t("critique_rendering") : t("critique_render")}
               </button>
-              <button type="button" className="btn" onClick={doCritique} disabled={!render || busyCritique}>
+              <button type="button" className="btn" onClick={() => doCritique(false)} disabled={!render || busyCritique}>
                 {busyCritique ? t("critique_critiquing") : t("critique_with_vision")}
               </button>
               <button type="button" className="btn" onClick={doAssay} disabled={busyAssay || (!html.trim() && !url.trim())} title={t("assay_hint")}>
@@ -365,6 +445,7 @@ export default function Critique() {
 
           {!render && <div className="mt-4"><Empty>{t("critique_empty")}</Empty></div>}
           <RenderView render={render} t={t} />
+          <GatePanel critique={critique} t={t} waivers={waivers} setWaivers={setWaivers} onApply={() => doCritique(true)} busy={busyCritique} />
           <CritiqueView critique={critique} t={t} />
           <AssayView assay={assay} t={t} />
         </div>
@@ -390,6 +471,8 @@ export default function Critique() {
           </div>
         </div>
       </div>
+      <ThemeDealer t={t} notify={notify} />
+      <RulesPanel t={t} notify={notify} />
     </div>
   );
 }
