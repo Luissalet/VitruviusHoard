@@ -32,6 +32,10 @@ Pantalla **Protocolos**, rutas `/api/protocols/*` y herramienta `protocol_check`
 
 `violated` (con traza, `schedule` y estado final), `holds` (se recorrió **todo** el espacio alcanzable dentro de los límites) o `inconclusive` (límite de estados o de tiempo). Siempre acompaña la lista de **supuestos**: la conclusión vale para el modelo, no para el código.
 
+Los `schedule` conservan la elección no determinista como cuarto elemento opcional: `[proceso, etiqueta, tipo, rama]`, con índice de rama desde cero. Las secuencias anteriores de tres elementos siguen eligiendo la primera rama habilitada; una rama solicitada pero no habilitada produce un error. El test exportado transmite la rama al hook real, que debe conectarse con esa elección del sistema.
+
+Repetir comprueba las mismas invariantes, condiciones finales y bloqueos que explorar, incluido el estado inicial (paso0). La pantalla muestra el incumplimiento aunque no se haya ejecutado ningún paso. Todas las propiedades se comprueban al extraer los estados de la cola BFS, para conservar el contraejemplo más corto entre tipos distintos de propiedad. Los estados admitidos al límite se comprueban; omitir nuevos estados deja la conclusión inconclusa. Diccionarios y secuencias son valores distintos en las expresiones y en el conjunto de estados visitados.
+
 ## Ejemplos incluidos
 
 `pago-no-atomico` (doble cobro en 4 pasos), `pago-reserva-atomica` (se cumple con caídas: 148 estados), `contador` (incremento perdido), `cerrojos` (bloqueo en 2 pasos).
