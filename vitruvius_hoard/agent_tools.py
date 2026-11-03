@@ -90,7 +90,7 @@ class LintArgs(BaseModel):
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     render_id: Optional[str] = Field(None, max_length=40)
     tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system: switches on the ds/* rules (fonts, colours, radii, type scale and spacing against the system).")
-    packs: Optional[list[str]] = Field(None, description="Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).")
+    packs: Optional[list[str]] = Field(None, description="Only these rule packs: core, slop, unslop, quality, craft, ds (design_rules_list shows them).")
     engines: Optional[list[str]] = Field(None, description="Only rules of these engines: static, browser, visual. [\"static\"] with html or path reads the source alone and starts no browser (fast; use it after each edit).")
 
 
@@ -831,8 +831,8 @@ class RulesListArgs(BaseModel):
     scope: Optional[str] = Field(None, max_length=20)
     severity: Optional[str] = Field(None, pattern="^(error|warning|advisory)$")
     tier: Optional[str] = Field(None, pattern="^(floor|reflex|finish)$")
-    pack: Optional[str] = Field(None, max_length=24, description="core, slop, quality, craft, visual or ds.")
-    source: Optional[str] = Field(None, max_length=24, description="Where the idea comes from: vitruvius, impeccable or hallmark.")
+    pack: Optional[str] = Field(None, max_length=24, description="core, slop, unslop, quality, craft, visual or ds.")
+    source: Optional[str] = Field(None, max_length=24, description="Where the idea comes from: vitruvius, impeccable, hallmark or unslop.")
     query: Optional[str] = Field(None, max_length=120)
     runnable: Optional[bool] = Field(None, description="false = the judged (visual) rules the vision model decides.")
     limit: int = Field(300, ge=1, le=400)
@@ -918,6 +918,144 @@ TOOLS.extend([
         "Links, form fields, event handlers and titles.\n"
         "Create one with page_check/page_assay before=true; compare after the redesign with kept=<id>.\nSinónimos: antes y después, conservar enlaces, no perder campos.",
         KeptArgs, ann(True), run_kept, capped=False),
+])
+
+# ---------------- slop audit, direction brief, presets, Figma import ----------------
+
+class SlopAuditArgs(BaseModel):
+    render_id: Optional[str] = Field(None, max_length=40, description="Audit a stored render (re-rendered at 8 widths when it has fewer than 5 and its source is kept).")
+    html: Optional[str] = Field(None, max_length=2_000_000)
+    url: Optional[str] = Field(None, max_length=2000)
+    path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
+    widths: Optional[list[int]] = Field(None, description="Default 320, 375, 414, 768, 1024, 1280, 1440, 1920.")
+    rerender: Optional[bool] = Field(None, description="With render_id: force (true) or skip (false) the 8-width re-render.")
+    full: bool = Field(False, description="Return every finding with its boxes (large); default is the compact plan.")
+
+
+def run_design_slop_audit(services: Services, args: SlopAuditArgs) -> dict:
+    from . import slop_audit
+    if not (args.render_id or args.html or args.url or args.path):
+        raise ValueError("design_slop_audit needs render_id, html, url or path")
+    out = slop_audit.run(services, render_id=args.render_id, html=_page_html(args), url=args.url, widths=args.widths, rerender=args.rerender)
+    if args.full:
+        return out
+    shots = {s["width"]: str(services.config.renders_dir / out["render_id"] / s["file"]) for s in out["screenshots"]}
+    findings = [{"rule": f["check_id"], "title": f["title"], "pass": f["pass"], "tier": f.get("tier"), "slop": f["slop"],
+                 "widths": (f.get("evidence") or {}).get("widths") if isinstance(f.get("evidence"), dict) else None} for f in out["findings"]]
+    return {k: out[k] for k in ("render_id", "slop_score", "mode", "signs", "sign_ids", "by_pass", "plan", "rules_run", "ms", "credit")} | {
+        "findings": findings, "screenshots": shots, "ui": f"/design/#/critique/{out['render_id']}"}
+
+
+class DirectionBriefArgs(BaseModel):
+    render_id: Optional[str] = Field(None, max_length=40)
+    html: Optional[str] = Field(None, max_length=2_000_000)
+    url: Optional[str] = Field(None, max_length=2000)
+    path: Optional[str] = Field(None, max_length=1000)
+    text: Optional[str] = Field(None, max_length=20000, description="The page's text, when you already have it.")
+    use_model: bool = Field(True, description="false = the deterministic brief from the theme catalogue, no model call.")
+
+
+def run_design_direction_brief(services: Services, args: DirectionBriefArgs) -> dict:
+    from . import slop_audit
+    return slop_audit.direction_brief(services, render_id=args.render_id, html=_page_html(args), url=args.url, text=args.text, use_model=args.use_model)
+
+
+class PresetListArgs(BaseModel):
+    name: Optional[str] = Field(None, max_length=80, description="One preset in full (tokens light/dark, radius, fonts, spacing, motion) plus its shadcn registry item.")
+    source: Optional[Literal["vitruvius", "hallmark", "hoard"]] = None
+    query: Optional[str] = Field(None, max_length=120)
+    limit: int = Field(60, ge=1, le=200)
+
+
+def run_design_preset_list(services: Services, args: PresetListArgs) -> dict:
+    from . import presets
+    if args.name:
+        p = presets.get(args.name)
+        if p is None:
+            raise LookupError(f"Unknown preset '{args.name}'.")
+        return {"preset": p, "registry_item": presets.registry_item(p), "registry_url": f"/api/design/registry/{p['name']}.json"}
+    rows = presets.listing(source=args.source, query=args.query, limit=args.limit)
+    return {"count": len(rows), "total": len(presets.catalogue()), "presets": rows}
+
+
+class PickThemesArgs(BaseModel):
+    brief: str = Field(..., min_length=3, max_length=2000, description="What the design is for, in the user's words.")
+    n: int = Field(3, ge=1, le=6)
+    use_model: bool = Field(True, description="false = keyword ranking only.")
+
+
+def run_design_pick_themes(services: Services, args: PickThemesArgs) -> dict:
+    from . import presets
+    return presets.pick(services, args.brief, n=args.n, use_model=args.use_model)
+
+
+class PresetApplyArgs(BaseModel):
+    preset: str = Field(..., max_length=80, description="A preset name from design_preset_list or design_pick_themes.")
+    tokens_id: Optional[str] = Field(None, max_length=40, description="The design system to change; omit to create a new one from the whole preset.")
+    parts: Optional[list[Literal["colors", "radius", "type", "spacing", "motion"]]] = Field(None, description="Which parts to apply (default colors, radius, type).")
+    name: Optional[str] = Field(None, max_length=120, description="Name of the new design system (when tokens_id is omitted).")
+
+
+def run_design_preset_apply(services: Services, args: PresetApplyArgs) -> dict:
+    from . import presets
+    return presets.apply(services, args.preset, tokens_id=args.tokens_id, parts=list(args.parts) if args.parts else None, title=args.name)
+
+
+class FigmaImportArgs(BaseModel):
+    link: Optional[str] = Field(None, max_length=2000, description="Link to a Figma frame (https://www.figma.com/design/<key>/...?node-id=12-34). Needs the token saved in Settings.")
+    nodes_json: Optional[dict[str, Any]] = Field(None, description="Instead of fetching: the JSON answer of GET /v1/files/:key/nodes (works without a token).")
+    image_base64: Optional[str] = Field(None, max_length=20_000_000, description="With nodes_json: Figma's PNG of the frame, to compare.")
+    make_tokens: bool = Field(True, description="Also create a design system from the frame's colours, fonts and radii.")
+    critique: bool = Field(True, description="Run the critique on the rendered import.")
+
+
+def run_design_figma_import(services: Services, args: FigmaImportArgs) -> dict:
+    import base64
+    from . import figma
+    if not (args.link or args.nodes_json):
+        raise ValueError("design_figma_import needs link or nodes_json")
+    png = base64.b64decode(args.image_base64) if args.image_base64 else None
+    try:
+        return figma.import_frame(services, link=args.link, nodes_json=args.nodes_json, image_png=png, make_tokens=args.make_tokens, critique=args.critique)
+    except PermissionError as error:
+        raise AppError("not_configured", str(error), hint=figma.TOKEN_HELP) from error
+
+
+TOOLS.extend([
+    Tool("design_slop_audit",
+        "Audit a page for the generated look and plan the fix. Auditoría de slop.\n"
+        "Renders at 8 widths (320-1920), runs the slop, unslop, craft, quality and core rules, scores the slop 0-100 (0 = clean) and decides "
+        "the mode: heavy = ordered fix passes (spacing, color, icons, copy, type, layout, details, visuals, motion), light = a short polish list, "
+        "none = leave it. Each finding names its pass, tier and the widths where it fired. Sign list: unslop by Damir Sokolovsky (CC BY 4.0).\n"
+        "Sinónimos: slop, parece hecho por IA, genérico, plantilla, unslop, desgenerizar, plan de arreglo.",
+        SlopAuditArgs, ann(False, False, False), run_design_slop_audit, timeout_s=240),
+    Tool("design_direction_brief",
+        "Write the five-line design direction of a page from its own text. Dirección de diseño.\n"
+        "Product / Character / Bright moment / Signature / Avoid, by the family model; falls back to the theme catalogue when no model answers. "
+        "Avoid lists the slop signs already found on that render.\nSinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
+        DirectionBriefArgs, ann(True, False, False), run_design_direction_brief, timeout_s=180),
+    Tool("design_preset_list",
+        "List design presets, or read one in full. Presets de diseño.\n"
+        "112+ presets: authored ones, one per hallmark theme and the Hoard family palettes; each with light/dark colour roles (shadcn names), "
+        "radius, fonts, spacing, motion and character. name=... returns the preset and its shadcn registry-item.json.\n"
+        "Sinónimos: temas, paletas, presets, registry, shadcn, estilo base.",
+        PresetListArgs, ann(True), run_design_preset_list, capped=False),
+    Tool("design_pick_themes",
+        "Pick three presets for a brief, one recommended. Elegir tema para un brief.\n"
+        "Keyword ranking over the catalogue, re-ranked with reasons by the family model when it answers.\n"
+        "Sinónimos: qué estilo usar, elegir paleta, propuesta de temas, tres opciones.",
+        PickThemesArgs, ann(True, False, False), run_design_pick_themes, timeout_s=120),
+    Tool("design_preset_apply",
+        "Apply a preset (all, or only colours / radius / type / spacing / motion) to a design system. Aplicar preset.\n"
+        "Without tokens_id a new design system is created from the whole preset; CSS and Tailwind exports are rebuilt.\n"
+        "Sinónimos: aplicar tema, cambiar colores, cambiar tipografía, cambiar radios.",
+        PresetApplyArgs, ann(False, False, True), run_design_preset_apply),
+    Tool("design_figma_import",
+        "Import a Figma frame as spec, HTML/CSS and design project, compared with Figma. Importar de Figma.\n"
+        "Auto-layout becomes flex, repeated styles become named style ids; the page is rendered, a design system is extracted, the "
+        "critique runs and the pixel difference with Figma's PNG is measured. Needs the Figma token in Settings, or pass nodes_json.\n"
+        "Sinónimos: figma, importar diseño, frame, de diseño a código.",
+        FigmaImportArgs, ann(False, False, True, True), run_design_figma_import, timeout_s=240),
 ])
 
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}

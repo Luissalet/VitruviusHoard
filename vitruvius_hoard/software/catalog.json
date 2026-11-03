@@ -587,7 +587,7 @@
             }
           ],
           "default": null,
-          "description": "Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).",
+          "description": "Only these rule packs: core, slop, unslop, quality, craft, ds (design_rules_list shows them).",
           "title": "Packs"
         },
         "engines": {
@@ -4561,7 +4561,7 @@
             }
           ],
           "default": null,
-          "description": "core, slop, quality, craft, visual or ds.",
+          "description": "core, slop, unslop, quality, craft, visual or ds.",
           "title": "Pack"
         },
         "source": {
@@ -4575,7 +4575,7 @@
             }
           ],
           "default": null,
-          "description": "Where the idea comes from: vitruvius, impeccable or hallmark.",
+          "description": "Where the idea comes from: vitruvius, impeccable, hallmark or unslop.",
           "title": "Source"
         },
         "query": {
@@ -4852,6 +4852,461 @@
       "title": "KeptArgs",
       "type": "object"
     },
+    "module": "design"
+  },
+  {
+    "name": "design_slop_audit",
+    "description": "Audit a page for the generated look and plan the fix. Auditoría de slop.\nRenders at 8 widths (320-1920), runs the slop, unslop, craft, quality and core rules, scores the slop 0-100 (0 = clean) and decides the mode: heavy = ordered fix passes (spacing, color, icons, copy, type, layout, details, visuals, motion), light = a short polish list, none = leave it. Each finding names its pass, tier and the widths where it fired. Sign list: unslop by Damir Sokolovsky (CC BY 4.0).\nSinónimos: slop, parece hecho por IA, genérico, plantilla, unslop, desgenerizar, plan de arreglo.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Audit a stored render (re-rendered at 8 widths when it has fewer than 5 and its source is kept).",
+          "title": "Render Id"
+        },
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local .html file or a folder holding index.html.",
+          "title": "Path"
+        },
+        "widths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default 320, 375, 414, 768, 1024, 1280, 1440, 1920.",
+          "title": "Widths"
+        },
+        "rerender": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "With render_id: force (true) or skip (false) the 8-width re-render.",
+          "title": "Rerender"
+        },
+        "full": {
+          "default": false,
+          "description": "Return every finding with its boxes (large); default is the compact plan.",
+          "title": "Full",
+          "type": "boolean"
+        }
+      },
+      "title": "SlopAuditArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 240.0,
+    "module": "design"
+  },
+  {
+    "name": "design_direction_brief",
+    "description": "Write the five-line design direction of a page from its own text. Dirección de diseño.\nProduct / Character / Bright moment / Signature / Avoid, by the family model; falls back to the theme catalogue when no model answers. Avoid lists the slop signs already found on that render.\nSinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "render_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Render Id"
+        },
+        "html": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The page's text, when you already have it.",
+          "title": "Text"
+        },
+        "use_model": {
+          "default": true,
+          "description": "false = the deterministic brief from the theme catalogue, no model call.",
+          "title": "Use Model",
+          "type": "boolean"
+        }
+      },
+      "title": "DirectionBriefArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 180.0,
+    "module": "design"
+  },
+  {
+    "name": "design_preset_list",
+    "description": "List design presets, or read one in full. Presets de diseño.\n112+ presets: authored ones, one per hallmark theme and the Hoard family palettes; each with light/dark colour roles (shadcn names), radius, fonts, spacing, motion and character. name=... returns the preset and its shadcn registry-item.json.\nSinónimos: temas, paletas, presets, registry, shadcn, estilo base.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One preset in full (tokens light/dark, radius, fonts, spacing, motion) plus its shadcn registry item.",
+          "title": "Name"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "vitruvius",
+                "hallmark",
+                "hoard"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "limit": {
+          "default": 60,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "PresetListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_pick_themes",
+    "description": "Pick three presets for a brief, one recommended. Elegir tema para un brief.\nKeyword ranking over the catalogue, re-ranked with reasons by the family model when it answers.\nSinónimos: qué estilo usar, elegir paleta, propuesta de temas, tres opciones.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "brief": {
+          "description": "What the design is for, in the user's words.",
+          "maxLength": 2000,
+          "minLength": 3,
+          "title": "Brief",
+          "type": "string"
+        },
+        "n": {
+          "default": 3,
+          "maximum": 6,
+          "minimum": 1,
+          "title": "N",
+          "type": "integer"
+        },
+        "use_model": {
+          "default": true,
+          "description": "false = keyword ranking only.",
+          "title": "Use Model",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "brief"
+      ],
+      "title": "PickThemesArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 120.0,
+    "module": "design"
+  },
+  {
+    "name": "design_preset_apply",
+    "description": "Apply a preset (all, or only colours / radius / type / spacing / motion) to a design system. Aplicar preset.\nWithout tokens_id a new design system is created from the whole preset; CSS and Tailwind exports are rebuilt.\nSinónimos: aplicar tema, cambiar colores, cambiar tipografía, cambiar radios.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "preset": {
+          "description": "A preset name from design_preset_list or design_pick_themes.",
+          "maxLength": 80,
+          "title": "Preset",
+          "type": "string"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The design system to change; omit to create a new one from the whole preset.",
+          "title": "Tokens Id"
+        },
+        "parts": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "colors",
+                  "radius",
+                  "type",
+                  "spacing",
+                  "motion"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which parts to apply (default colors, radius, type).",
+          "title": "Parts"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of the new design system (when tokens_id is omitted).",
+          "title": "Name"
+        }
+      },
+      "required": [
+        "preset"
+      ],
+      "title": "PresetApplyArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_figma_import",
+    "description": "Import a Figma frame as spec, HTML/CSS and design project, compared with Figma. Importar de Figma.\nAuto-layout becomes flex, repeated styles become named style ids; the page is rendered, a design system is extracted, the critique runs and the pixel difference with Figma's PNG is measured. Needs the Figma token in Settings, or pass nodes_json.\nSinónimos: figma, importar diseño, frame, de diseño a código.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "properties": {
+        "link": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Link to a Figma frame (https://www.figma.com/design/<key>/...?node-id=12-34). Needs the token saved in Settings.",
+          "title": "Link"
+        },
+        "nodes_json": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Instead of fetching: the JSON answer of GET /v1/files/:key/nodes (works without a token).",
+          "title": "Nodes Json"
+        },
+        "image_base64": {
+          "anyOf": [
+            {
+              "maxLength": 20000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "With nodes_json: Figma's PNG of the frame, to compare.",
+          "title": "Image Base64"
+        },
+        "make_tokens": {
+          "default": true,
+          "description": "Also create a design system from the frame's colours, fonts and radii.",
+          "title": "Make Tokens",
+          "type": "boolean"
+        },
+        "critique": {
+          "default": true,
+          "description": "Run the critique on the rendered import.",
+          "title": "Critique",
+          "type": "boolean"
+        }
+      },
+      "title": "FigmaImportArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 240.0,
     "module": "design"
   },
   {

@@ -1,0 +1,62 @@
+{
+ "name": "Harbor dashboard",
+ "lastModified": "2026-10-30T10:00:00Z",
+ "version": "1",
+ "nodes": {
+  "12:34": {
+   "document": {
+    "id": "12:34", "name": "Shipments", "type": "FRAME", "visible": true,
+    "absoluteBoundingBox": {"x": 1000, "y": 500, "width": 960, "height": 640},
+    "fills": [{"type": "SOLID", "color": {"r": 0.969, "g": 0.973, "b": 0.98, "a": 1}}],
+    "layoutMode": "VERTICAL", "itemSpacing": 24, "paddingTop": 32, "paddingRight": 40, "paddingBottom": 32, "paddingLeft": 40,
+    "primaryAxisAlignItems": "MIN", "counterAxisAlignItems": "MIN", "clipsContent": true,
+    "children": [
+     {"id": "12:35", "name": "Header", "type": "FRAME", "absoluteBoundingBox": {"x": 1040, "y": 532, "width": 880, "height": 48},
+      "layoutMode": "HORIZONTAL", "itemSpacing": 16, "primaryAxisAlignItems": "SPACE_BETWEEN", "counterAxisAlignItems": "CENTER",
+      "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "HUG", "fills": [],
+      "children": [
+       {"id": "12:36", "name": "Title", "type": "TEXT", "characters": "Shipments this week",
+        "absoluteBoundingBox": {"x": 1040, "y": 540, "width": 300, "height": 32}, "layoutSizingHorizontal": "HUG", "layoutSizingVertical": "HUG",
+        "fills": [{"type": "SOLID", "color": {"r": 0.07, "g": 0.09, "b": 0.12, "a": 1}}],
+        "style": {"fontFamily": "Barlow Semi Condensed", "fontWeight": 600, "fontSize": 28, "lineHeightPx": 32, "textAlignHorizontal": "LEFT"}},
+       {"id": "12:37", "name": "Action", "type": "FRAME", "absoluteBoundingBox": {"x": 1800, "y": 536, "width": 120, "height": 40},
+        "layoutMode": "HORIZONTAL", "paddingTop": 10, "paddingRight": 16, "paddingBottom": 10, "paddingLeft": 16, "primaryAxisAlignItems": "CENTER", "counterAxisAlignItems": "CENTER",
+        "layoutSizingHorizontal": "HUG", "layoutSizingVertical": "FIXED", "cornerRadius": 6,
+        "fills": [{"type": "SOLID", "color": {"r": 0.91, "g": 0.42, "b": 0.12, "a": 1}}],
+        "children": [
+         {"id": "12:38", "name": "Label", "type": "TEXT", "characters": "New shipment",
+          "absoluteBoundingBox": {"x": 1816, "y": 546, "width": 88, "height": 20}, "layoutSizingHorizontal": "HUG", "layoutSizingVertical": "HUG",
+          "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}],
+          "style": {"fontFamily": "Barlow", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}}
+        ]}
+      ]},
+     {"id": "12:40", "name": "Stats", "type": "FRAME", "absoluteBoundingBox": {"x": 1040, "y": 604, "width": 880, "height": 120},
+      "layoutMode": "HORIZONTAL", "itemSpacing": 16, "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "FIXED", "fills": [],
+      "children": [
+       {"id": "12:41", "name": "Stat", "type": "FRAME", "absoluteBoundingBox": {"x": 1040, "y": 604, "width": 282, "height": 120}, "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "FILL",
+        "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}], "cornerRadius": 8,
+        "strokes": [{"type": "SOLID", "color": {"r": 0.86, "g": 0.88, "b": 0.9, "a": 1}}], "strokeWeight": 1,
+        "children": [{"id": "12:42", "name": "Value", "type": "TEXT", "characters": "128 in transit", "absoluteBoundingBox": {"x": 1056, "y": 620, "width": 200, "height": 28},
+                      "fills": [{"type": "SOLID", "color": {"r": 0.07, "g": 0.09, "b": 0.12, "a": 1}}], "style": {"fontFamily": "Barlow", "fontWeight": 500, "fontSize": 22, "lineHeightPx": 28}}]},
+       {"id": "12:43", "name": "Stat", "type": "FRAME", "absoluteBoundingBox": {"x": 1338, "y": 604, "width": 282, "height": 120}, "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "FILL",
+        "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}], "cornerRadius": 8,
+        "strokes": [{"type": "SOLID", "color": {"r": 0.86, "g": 0.88, "b": 0.9, "a": 1}}], "strokeWeight": 1,
+        "children": [{"id": "12:44", "name": "Value", "type": "TEXT", "characters": "14 delayed", "absoluteBoundingBox": {"x": 1354, "y": 620, "width": 200, "height": 28},
+                      "fills": [{"type": "SOLID", "color": {"r": 0.07, "g": 0.09, "b": 0.12, "a": 1}}], "style": {"fontFamily": "Barlow", "fontWeight": 500, "fontSize": 22, "lineHeightPx": 28}}]},
+       {"id": "12:45", "name": "Stat", "type": "FRAME", "absoluteBoundingBox": {"x": 1636, "y": 604, "width": 284, "height": 120}, "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "FILL",
+        "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}], "cornerRadius": 8,
+        "strokes": [{"type": "SOLID", "color": {"r": 0.86, "g": 0.88, "b": 0.9, "a": 1}}], "strokeWeight": 1,
+        "children": [{"id": "12:46", "name": "Value", "type": "TEXT", "characters": "3 at customs", "absoluteBoundingBox": {"x": 1652, "y": 620, "width": 200, "height": 28},
+                      "fills": [{"type": "SOLID", "color": {"r": 0.07, "g": 0.09, "b": 0.12, "a": 1}}], "style": {"fontFamily": "Barlow", "fontWeight": 500, "fontSize": 22, "lineHeightPx": 28}}]}
+      ]},
+     {"id": "12:50", "name": "Map", "type": "RECTANGLE", "absoluteBoundingBox": {"x": 1040, "y": 748, "width": 880, "height": 360}, "layoutSizingHorizontal": "FILL", "layoutSizingVertical": "FIXED",
+      "fills": [{"type": "IMAGE", "imageRef": "abc", "scaleMode": "FILL"}], "cornerRadius": 8,
+      "effects": [{"type": "DROP_SHADOW", "visible": true, "color": {"r": 0, "g": 0, "b": 0, "a": 0.08}, "offset": {"x": 0, "y": 2}, "radius": 6, "spread": 0}]},
+     {"id": "12:51", "name": "Live dot", "type": "ELLIPSE", "layoutPositioning": "ABSOLUTE", "absoluteBoundingBox": {"x": 1890, "y": 760, "width": 12, "height": 12},
+      "fills": [{"type": "SOLID", "color": {"r": 0.13, "g": 0.6, "b": 0.33, "a": 1}}]}
+    ]
+   },
+   "components": {}, "styles": {}
+  }
+ }
+}

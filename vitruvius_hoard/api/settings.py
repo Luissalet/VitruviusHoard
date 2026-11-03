@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .deps import services
 
@@ -18,6 +18,7 @@ class SettingsBody(BaseModel):
     widths: Optional[list[int]] = None
     video_enabled: Optional[bool] = None
     language: Optional[str] = None
+    figma_token: Optional[str] = Field(None, max_length=400, description="Figma personal access token; empty string removes it.")
 
 
 @router.get("/settings")

@@ -7,6 +7,7 @@ import { Empty, SeverityChip, ScoreDial } from "../components/ui.jsx";
 import GatePanel from "../components/GatePanel.jsx";
 import RulesPanel, { TierChip } from "../components/RulesPanel.jsx";
 import ThemeDealer from "../components/ThemeDealer.jsx";
+import SlopAudit from "../components/SlopAudit.jsx";
 import { clock, fileRelPath } from "../format.js";
 
 // The probe reports fonts as { loaded: [...], h1, h2, p, button } and colours as
@@ -205,7 +206,7 @@ function AssayView({ assay, t }) {
   );
 }
 
-export default function Critique() {
+export default function Critique({ param }) {
   const { t, notify, lang } = useApp();
   const [draft, setDraft] = useState({ html: "", previous: [] });
   const html = draft.html;
@@ -445,6 +446,7 @@ export default function Critique() {
 
           {!render && <div className="mt-4"><Empty>{t("critique_empty")}</Empty></div>}
           <RenderView render={render} t={t} />
+          <SlopAudit render={render} html={html} url={url} lang={lang} notify={notify} t={t} initialId={/^[0-9a-f]{12}$/.test(param || "") ? param : null} />
           <GatePanel critique={critique} t={t} waivers={waivers} setWaivers={setWaivers} onApply={() => doCritique(true)} busy={busyCritique} />
           <CritiqueView critique={critique} t={t} />
           <AssayView assay={assay} t={t} />

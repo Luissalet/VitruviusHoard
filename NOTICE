@@ -28,4 +28,24 @@ Attribution notices for the design-rule work (impeccable, hallmark) the sound-in
    The checks, thresholds, fetching, scoring and Core Web Vitals measurement in vitruvius_hoard/seo_audit.py and the `vitals` job of
    vitruvius_hoard/browser.py are original code; no file of that project is copied. Changes: all of them, this being a reimplementation.
 
+5. unslop (Creative Commons Attribution 4.0), by Damir Sokolovsky (@heydamir), https://github.com/heydamir/unslop
+   Its sign list (skills/unslop/references/signs.md: each sign of a generated-looking interface and the fix it asks for), the
+   heavy / light / none decision, the order of the fix passes (spacing, color, icons, copy, type, layout, details, visuals, motion)
+   and the idea of a short direction brief written from the product's own world were used. The `unslop/` rules in
+   vitruvius_hoard/rules/unslop.py and rules/catalog.py, the score and the plan in vitruvius_hoard/slop_audit.py are original code
+   and wording; SIGN_COVERAGE maps every sign to the rule that answers it. Changes: the signs were reworded and turned into
+   measurements; no text of the original is copied. Licence: https://creativecommons.org/licenses/by/4.0/
+
+6. hallmark (MIT, see 2) also gave the idea of linting one page at many widths (its sloplint): the eight-width render of the slop
+   audit is original code. The 50 hallmark presets in vitruvius_hoard/presets.py are computed here from the theme headers of 2a.
+
+7. shadcn/ui (MIT License), Copyright (c) 2023 shadcn, https://github.com/shadcn-ui/ui
+   The registry-item.json / registry.json shape (type registry:theme, cssVars theme / light / dark) and the theme variable names
+   (background, foreground, card, primary, muted, accent, border, input, ring...) are followed by GET /api/design/registry/*.
+   No file of that project is copied.
+
+8. Figma-Context-MCP (MIT License), by GLips, https://github.com/GLips/Figma-Context-MCP
+   The idea of reducing a Figma node tree to a compact layout/style description (auto-layout as flex, repeated styles under shared
+   ids) was studied. vitruvius_hoard/figma.py is original code; no file of that project is copied.
+
 Licences: https://www.apache.org/licenses/LICENSE-2.0 and https://opensource.org/license/mit

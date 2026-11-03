@@ -285,6 +285,66 @@ _VISUAL = [
     ("squint-hierarchy", "H", "Hierarchy under a squint", "With the page blurred, the eye should still find the headline, the action and the order of the rest."),
 ]
 
+# unslop (Damir Sokolovsky, CC BY 4.0, references/signs.md): the signs the earlier packs did not measure. Original wording;
+# the last field is the section of the sign list. rules/unslop.py SIGN_COVERAGE maps every sign to the rule that answers it.
+_UNSLOP = [
+    ("gradient-text-measured", "browser", "color", "warning", "Gradient-filled text (measured)",
+     "Text painted with a gradient through background-clip: text, found in the computed styles (utility classes included).",
+     "Solid primary text colour.", "surfaces and color"),
+    ("saturated-shadow", "browser", "color", "warning", "Coloured shadow or glow",
+     "A blurred shadow or text-shadow in a saturated colour, on any ground.",
+     "Remove it; make depth with surface steps and hairline borders.", "surfaces and color"),
+    ("purple-gradient-hero", "browser", "color", "warning", "Purple gradient hero",
+     "The first screen sits on a wide purple, violet or blue-to-pink gradient.",
+     "One neutral surface; the accent only where it carries meaning.", "surfaces and color"),
+    ("neon-border", "browser", "color", "advisory", "Neon borders",
+     "Three or more boxes outlined in a saturated, bright colour.", "Faint hairlines.", "surfaces and color"),
+    ("many-text-tints", "browser", "color", "advisory", "Many grey tints for text",
+     "More than five distinct greys used for text.", "Three text roles (primary, secondary, muted) from one neutral ramp.", "surfaces and color"),
+    ("heavy-headings", "browser", "type", "advisory", "Headings at 800-900",
+     "Most headings are set at weight 800 or 900.", "400 to 500; let size make the hierarchy.", "type"),
+    ("too-many-sizes", "browser", "type", "warning", "Too many font sizes",
+     "More than eight distinct font sizes on one page at one width.", "A few steps of one scale; weights 400 and 500.", "type"),
+    ("tracked-caps-measured", "browser", "type", "warning", "Uppercase tracked labels (measured)",
+     "Two or more small labels set uppercase with letter-spacing of 0.05em or more, from the computed styles.",
+     "Sentence case, normal tracking.", "type"),
+    ("small-negative-tracking", "browser", "type", "advisory", "Negative tracking on small text",
+     "Text under 16px tracked tighter than zero.", "Zero or slightly positive tracking.", "type"),
+    ("single-default-sans", "browser", "type", "warning", "One default sans for everything",
+     "95% or more of the text is set in one stock sans (Inter, Roboto, system-ui...) with no display face: the template look.",
+     "A display face and palette drawn from the product's own world.", "template look"),
+    ("emoji-in-ui", "browser", "imagery", "warning", "Emoji as icons in the interface",
+     "Emoji (the sparkle included) in navigation, buttons, headings, labels or pills.",
+     "One line icon set, or none; plain numbers in counts.", "icons"),
+    ("off-grid-spacing", "browser", "layout", "warning", "Spacing off the 4px grid",
+     "A quarter or more of the paddings, gaps and margins are not multiples of 4px.", "Steps of a 4px scale.", "spacing"),
+    ("uniform-card-grid", "browser", "layout", "warning", "Identical cards in a row",
+     "Three or more cards in one row with the same width and height.",
+     "One main element, compact stats, varied widths.", "components"),
+    ("uneven-sibling-padding", "browser", "layout", "advisory", "Uneven padding across sibling cards",
+     "Cards in one row padded differently (more than 8px apart).", "Uniform padding.", "spacing"),
+    ("greeting-headline", "browser", "copy", "warning", "Greeting headline",
+     "The headline says hello or welcome instead of naming the page.", "Use the page, the object or the period as the title.", "copy"),
+    ("exclamation-copy", "browser", "copy", "advisory", "Exclamation marks",
+     "Headings, buttons or lines that end with an exclamation mark.", "Plain statements.", "copy"),
+    ("label-trailing-period", "browser", "copy", "advisory", "Full stop on a label",
+     "Button and label texts that end with a full stop.", "Remove the full stop.", "copy"),
+    ("unsourced-proof", "browser", "copy", "warning", "Unsourced social proof",
+     "User counts, star ratings or 'trusted by' claims with no source.", "Verify it, then make it specific, or remove it.", "landing pages"),
+    ("stacked-badges", "browser", "content", "advisory", "Pro / New / Beta badges",
+     "Two or more promotional badges.", "Remove them, or one quiet text badge.", "components"),
+    ("pill-everything", "browser", "layout", "advisory", "Pills on every element",
+     "Most boxes, panels included, are fully rounded pills.", "Radius scaled to the element's size.", "components"),
+    ("too-many-ctas", "browser", "layout", "warning", "Three or more buttons in the first screen",
+     "The first screen offers three or more buttons outside the navigation.", "One primary and at most one secondary.", "landing pages"),
+    ("centered-hero-stack", "browser", "layout", "advisory", "Centred stack of everything",
+     "Headline, lede and actions on one centred axis at desktop width.", "An asymmetric layout or a large product view.", "landing pages"),
+    ("hover-scale", "static", "motion", "advisory", "Scale on hover",
+     "Elements that grow (scale 1.03 or more) on hover.", "A colour or surface change on hover; a slight scale on press.", "motion"),
+    ("floating-loop", "static", "motion", "advisory", "Floating loops and parallax",
+     "Infinite translate animations, parallax attributes or fixed backgrounds that move with the scroll.", "A static layout.", "motion"),
+]
+
 _DS = [
     ("font", "type", "warning", "Font outside the design system",
      "A font family the page uses that the chosen design system (tokens_get) does not declare.", "Use the system's heading, body or mono family."),
@@ -347,6 +407,11 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
             out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name,
                         "description": description, "fix": fix, "source": source, "source_id": source_id,
                         "reference": f"{source} {'gate ' if source == 'hallmark' else ''}{source_id}"})
+    elif pack == "unslop":
+        for name_id, engine, scope, severity, name, description, fix, section in _UNSLOP:
+            out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name,
+                        "description": description, "fix": fix, "source": "unslop", "source_id": section,
+                        "reference": f"unslop references/signs.md § {section} (Damir Sokolovsky, CC BY 4.0)"})
     elif pack == "visual":
         for name_id, source_id, name, description in _VISUAL:
             out.append({"name_id": name_id, "engine": "visual", "scope": "layout", "severity": "warning", "name": name,
@@ -368,4 +433,4 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
     return out
 
 
-PACKS = ("slop", "quality", "craft", "visual", "ds")
+PACKS = ("slop", "quality", "craft", "unslop", "visual", "ds")
