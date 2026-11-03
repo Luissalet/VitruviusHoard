@@ -24,7 +24,9 @@ from . import kept as kept_mod
 from . import themes as themes_mod
 from . import waivers as waivers_mod
 from .browser import BrowserWorker
+from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
+from .instruments import Instruments
 from .config import Config
 from .db import Database
 from .hoard_link import fam_web
@@ -78,6 +80,8 @@ class Services:
         self.db = Database(config.db_path)
 
         self.app_projects = AppProjects(config.data_dir)
+        self.alternatives = AlternativeStudies(self)
+        self.instruments = Instruments(self.app_projects)
         self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")
         self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s, profile=config.url_profile)
 
