@@ -23,6 +23,15 @@ class FDict(tuple):
     def __new__(cls, items):
         return super().__new__(cls, tuple(sorted(items, key=lambda kv: repr(kv[0]))))
 
+    def __eq__(self, other):
+        return isinstance(other, FDict) and tuple.__eq__(self, other)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash((FDict, tuple(self)))
+
     def get(self, key, default=None):
         for k, v in self:
             if k == key:

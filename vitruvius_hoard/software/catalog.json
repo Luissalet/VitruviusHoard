@@ -4919,7 +4919,7 @@
             }
           ],
           "default": null,
-          "description": "replay: [[process, label, 'step'|'crash'], ...] as returned by check",
+          "description": "replay: [[process, label, 'step'|'crash', branch?], ...] as returned by check; branch is zero-based",
           "title": "Schedule"
         },
         "time_limit": {

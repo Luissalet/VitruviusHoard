@@ -958,7 +958,7 @@ class ProtocolArgs(BaseModel):
         "[{name, check}], at_end [{name, check}], deadlock, max_states. Expressions: Python-like subset (and/or/not, "
         "comparisons, in, + - * // %, x if c else y, literals, len/min/max/abs/sorted/append/put/without/set_add/set_remove).")
     example: Optional[str] = Field(None, max_length=60)
-    schedule: Optional[list[list[Any]]] = Field(None, description="replay: [[process, label, 'step'|'crash'], ...] as returned by check")
+    schedule: Optional[list[list[Any]]] = Field(None, description="replay: [[process, label, 'step'|'crash', branch?], ...] as returned by check; branch is zero-based")
     time_limit: float = Field(60, gt=0, le=3600, description="check/test: seconds of exploration")
 
 
@@ -978,7 +978,7 @@ def run_protocol_check(services: Services, args: ProtocolArgs):
         if args.action == "check":
             return explore(spec, time_limit=args.time_limit)
         if args.action == "replay":
-            if not args.schedule:
+            if args.schedule is None:
                 raise ValueError("falta schedule")
             return replay(spec, args.schedule)
         result = explore(spec, time_limit=args.time_limit)
