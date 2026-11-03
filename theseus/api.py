@@ -22,6 +22,7 @@ from .inspection import excerpt, image_png
 from .store import Store, identifier
 from .workflow import Workflow
 from .equivalence import Equivalence
+from .perf import Perf
 from .evidence import Evidence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +66,12 @@ RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'na
         'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
 VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 EQUIVALENCE_SUITE = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"}
+PERF_COMMAND = {"type": "object", "description": "{argv:[python, script.py, ...], cwd, env, timeout_seconds}. Python invocations are profiled with cProfile; use {sandbox}, {src} (copied source) and {port} placeholders."}
+PERF_VERSION = {"type": "object", "description": "{argv, cwd, env, timeout_seconds, source_dir | git:{repo,ref}}. source_dir or git (a commit/tag/branch) is copied to a temp folder and referenced as {src} in argv/cwd/env."}
+PERF_INPUT = {"type": "object", "description": "One operation, identical for every run: {args, stdin, files:{relpath:text}, db:{path,seed_sql}}."}
+PERF_HTTP = {"type": "object", "description": "Measure an HTTP request against a server the command starts: {request:{method,path,headers,body}, ready_timeout_seconds, port_env}. The server gets a free port in {port} and in the port_env variable (default PORT)."}
+PERF_COMMON = {"warmup": {"type": "integer", "minimum": 0, "maximum": 10}, "runs": {"type": "integer", "minimum": 3, "maximum": 50},
+               "model_functions": {"type": "array", "items": S}, "user_paths": {"type": "array", "items": S}, "http": PERF_HTTP}
 TOOLS = [
     tool("theseus_cutter_sessions", "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.", {}),
     tool("theseus_cutter_command", "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.", {**PROJECT, "session_id": {"type": "string", "format": "uuid"}, "expected_generation": {"type": "integer", "minimum": 0}, "command": {"type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$"}, "json": {"type": "boolean"}}, ["project_id", "session_id", "expected_generation", "command"], False, True),
@@ -109,6 +116,8 @@ TOOLS = [
     tool("theseus_equivalence_suite_save", "Save an equivalence suite: reference and candidate commands (argv, cwd, env, timeout) plus cases (stdin, args, input files for a fresh sandbox, optional SQLite seed, multi-step sequences), explicit opt-in normalisers, authorized deviations and seeded generators (integers, decimals, strings, permutations). Suite de equivalencia.", {**PROJECT, "name": S, "suite": EQUIVALENCE_SUITE, "suite_id": S}, ["project_id", "name", "suite"], False),
     tool("theseus_equivalence_suite_read", "Read one saved equivalence suite, or list the project's suites when suite_id is omitted.", {**PROJECT, "suite_id": S}, ["project_id"]),
     tool("theseus_equivalence_run", "Run a saved or inline equivalence suite as a background job. Both programs run on identical fresh sandboxes; exit code, stdout, stderr, file effects and SQLite state are compared per step. Reports the first disagreement per case, authorized deviations separately, a constant-candidate strength check (weak suites are flagged) and shrinks generated failing inputs by re-running both programs. Read the job with theseus_job_read. Agreement covers only the listed cases and channels; it is not whole-program equivalence. Comprobar equivalencia.", {**PROJECT, "suite_id": S, "suite": EQUIVALENCE_SUITE, "strength": {"type": "boolean"}, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id"], False),
+    tool("theseus_perf_profile", "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.", {**PROJECT, "command": PERF_COMMAND, "input": PERF_INPUT, **PERF_COMMON, "top": {"type": "integer", "minimum": 1, "maximum": 50}}, ["project_id", "command"], False),
+    tool("theseus_perf_compare", "Before/after performance comparison of two versions (two commands, or two directories or git commits copied to temp folders) on the same input: interleaved runs, per-category and total change with a Mann-Whitney U test and a bootstrap interval, and an output check with the equivalence runner (exit code, stdout, stderr, files, SQLite; HTTP status and body). A speed-up that changes results is reported as failed. Background job; read it with theseus_job_read. Comparar rendimiento.", {**PROJECT, "before": PERF_VERSION, "after": PERF_VERSION, "input": PERF_INPUT, **PERF_COMMON, "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "check_inputs": {"type": "array", "items": PERF_INPUT}, "normalisers": {"type": "array"}}, ["project_id", "before", "after"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
 ]
@@ -243,6 +252,31 @@ class EquivalenceRun(Payload):
     shrink_budget: int = 100
 
 
+class PerfProfile(Payload):
+    command: dict[str, Any]
+    input: dict[str, Any] | None = None
+    warmup: int = 1
+    runs: int = 5
+    model_functions: list[str] | None = None
+    user_paths: list[str] | None = None
+    top: int = 10
+    http: dict[str, Any] | None = None
+
+
+class PerfCompare(Payload):
+    before: dict[str, Any]
+    after: dict[str, Any]
+    input: dict[str, Any] | None = None
+    warmup: int = 1
+    runs: int = 6
+    alpha: float = 0.05
+    model_functions: list[str] | None = None
+    user_paths: list[str] | None = None
+    check_inputs: list[dict[str, Any]] | None = None
+    normalisers: list[Any] | None = None
+    http: dict[str, Any] | None = None
+
+
 class ReconstructionVerify(ComparisonStart):
     handoff_id: str
 
@@ -291,6 +325,7 @@ def create_app(data=None, port=5217, recover=True):
     workflow = Workflow(comparisons)
     evidence = Evidence(workflow)
     equivalence = Equivalence(comparisons)
+    perf = Perf(comparisons, equivalence)
     sessions = binary_sessions.BinarySessions(comparisons)
     cutter = CutterBridge(store)
     # This only records uncertain historical commands; it never reconnects or
@@ -316,6 +351,7 @@ def create_app(data=None, port=5217, recover=True):
     app.state.workflow = workflow
     app.state.evidence = evidence
     app.state.equivalence = equivalence
+    app.state.perf = perf
     from vitruvius_hoard.software.cleanup import Shutdown
     app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
     install_copilot(app, "theseus", str(store.directory), app_name="Theseus's Hoard")
@@ -431,6 +467,10 @@ def create_app(data=None, port=5217, recover=True):
             return equivalence.read_suite(**args)
         if name == "theseus_equivalence_run":
             return equivalence.start(**args)
+        if name == "theseus_perf_profile":
+            return perf.profile(**args)
+        if name == "theseus_perf_compare":
+            return perf.compare(**args)
         if name == "theseus_evidence_export":
             return evidence.export(**args)
         if name == "theseus_evidence_import":
@@ -651,6 +691,14 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/equivalence/runs")
     def equivalence_run(project_id: str, body: EquivalenceRun):
         return equivalence.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/perf/profile")
+    def perf_profile(project_id: str, body: PerfProfile):
+        return perf.profile(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/perf/compare")
+    def perf_compare(project_id: str, body: PerfCompare):
+        return perf.compare(project_id, **body.model_dump())
 
     @app.post("/api/projects/{project_id}/comparisons")
     def comparison_start(project_id: str, body: ComparisonStart):
