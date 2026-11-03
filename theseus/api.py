@@ -24,6 +24,7 @@ from .workflow import Workflow
 from .equivalence import Equivalence
 from .rules import Rules
 from .repro import Repro
+from .perf import Perf
 from .evidence import Evidence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +70,12 @@ VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 EQUIVALENCE_SUITE = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"}
 RULE_CHECK = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, predicate, when, cases:[equivalence cases], generators:[equivalence generators]}. predicate/when use a safe expression language over stdin, args, files, exit_code, stdout, stderr, output_files, steps, value, index (comparisons, arithmetic, string and regex helpers, round_half_up/round_half_even; no attribute access, imports or arbitrary calls)."}
 REPRO_REPORT = {"type": "object", "description": "{command:{argv,cwd,env,timeout_seconds}, stdin, files:{path:text|{base64}}, env:{name:value}, description, expected_predicate (true when output is correct), signature:{exit_code|'nonzero', stderr_regex, stdout_regex, timed_out, predicate}}"}
+PERF_COMMAND = {"type": "object", "description": "{argv:[python, script.py, ...], cwd, env, timeout_seconds}. Python invocations are profiled with cProfile; use {sandbox}, {src} (copied source) and {port} placeholders."}
+PERF_VERSION = {"type": "object", "description": "{argv, cwd, env, timeout_seconds, source_dir | git:{repo,ref}}. source_dir or git (a commit/tag/branch) is copied to a temp folder and referenced as {src} in argv/cwd/env."}
+PERF_INPUT = {"type": "object", "description": "One operation, identical for every run: {args, stdin, files:{relpath:text}, db:{path,seed_sql}}."}
+PERF_HTTP = {"type": "object", "description": "Measure an HTTP request against a server the command starts: {request:{method,path,headers,body}, ready_timeout_seconds, port_env}. The server gets a free port in {port} and in the port_env variable (default PORT)."}
+PERF_COMMON = {"warmup": {"type": "integer", "minimum": 0, "maximum": 10}, "runs": {"type": "integer", "minimum": 3, "maximum": 50},
+               "model_functions": {"type": "array", "items": S}, "user_paths": {"type": "array", "items": S}, "http": PERF_HTTP}
 TOOLS = [
     tool("theseus_cutter_sessions", "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.", {}),
     tool("theseus_cutter_command", "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.", {**PROJECT, "session_id": {"type": "string", "format": "uuid"}, "expected_generation": {"type": "integer", "minimum": 0}, "command": {"type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$"}, "json": {"type": "boolean"}}, ["project_id", "session_id", "expected_generation", "command"], False, True),
@@ -119,6 +126,8 @@ TOOLS = [
     tool("theseus_rules_export", "Export the rules bank (optionally filtered by ids or statuses) as client-ready Markdown: statement, status, code evidence, examples and counterexample per rule.", {**PROJECT, "rule_ids": IDS, "statuses": {"type": "array", "items": {"type": "string", "enum": ["hypothesis", "observed", "contradicted"]}}, "title": S}, ["project_id"]),
     tool("theseus_repro_create", "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.", {**PROJECT, "report": REPRO_REPORT, "max_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "output_dir": S}, ["project_id", "report"], False),
     tool("theseus_repro_verify", "Run a repro bundle (by bundle_dir or the repro job id) against the recorded program or an override argv such as a fixed version, and report reproduces or no_longer_reproduces plus environment differences. Verificar reproduccion.", {**PROJECT, "bundle_dir": S, "repro_id": S, "argv": IDS, "attempts": {"type": "integer", "minimum": 1, "maximum": 10}, "timeout_seconds": {"type": "number", "exclusiveMinimum": 0}}, ["project_id"], False),
+    tool("theseus_perf_profile", "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.", {**PROJECT, "command": PERF_COMMAND, "input": PERF_INPUT, **PERF_COMMON, "top": {"type": "integer", "minimum": 1, "maximum": 50}}, ["project_id", "command"], False),
+    tool("theseus_perf_compare", "Before/after performance comparison of two versions (two commands, or two directories or git commits copied to temp folders) on the same input: interleaved runs, per-category and total change with a Mann-Whitney U test and a bootstrap interval, and an output check with the equivalence runner (exit code, stdout, stderr, files, SQLite; HTTP status and body). A speed-up that changes results is reported as failed. Background job; read it with theseus_job_read. Comparar rendimiento.", {**PROJECT, "before": PERF_VERSION, "after": PERF_VERSION, "input": PERF_INPUT, **PERF_COMMON, "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "check_inputs": {"type": "array", "items": PERF_INPUT}, "normalisers": {"type": "array"}}, ["project_id", "before", "after"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
 ]
@@ -288,6 +297,29 @@ class ReproVerify(Payload):
     argv: list[str] | None = None
     attempts: int = 1
     timeout_seconds: float | None = None
+class PerfProfile(Payload):
+    command: dict[str, Any]
+    input: dict[str, Any] | None = None
+    warmup: int = 1
+    runs: int = 5
+    model_functions: list[str] | None = None
+    user_paths: list[str] | None = None
+    top: int = 10
+    http: dict[str, Any] | None = None
+
+
+class PerfCompare(Payload):
+    before: dict[str, Any]
+    after: dict[str, Any]
+    input: dict[str, Any] | None = None
+    warmup: int = 1
+    runs: int = 6
+    alpha: float = 0.05
+    model_functions: list[str] | None = None
+    user_paths: list[str] | None = None
+    check_inputs: list[dict[str, Any]] | None = None
+    normalisers: list[Any] | None = None
+    http: dict[str, Any] | None = None
 
 
 class ReconstructionVerify(ComparisonStart):
@@ -340,6 +372,7 @@ def create_app(data=None, port=5217, recover=True):
     equivalence = Equivalence(comparisons)
     rules = Rules(comparisons, equivalence)
     repro = Repro(comparisons, equivalence)
+    perf = Perf(comparisons, equivalence)
     sessions = binary_sessions.BinarySessions(comparisons)
     cutter = CutterBridge(store)
     # This only records uncertain historical commands; it never reconnects or
@@ -367,6 +400,7 @@ def create_app(data=None, port=5217, recover=True):
     app.state.equivalence = equivalence
     app.state.rules = rules
     app.state.repro = repro
+    app.state.perf = perf
     from vitruvius_hoard.software.cleanup import Shutdown
     app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
     install_copilot(app, "theseus", str(store.directory), app_name="Theseus's Hoard")
@@ -494,6 +528,10 @@ def create_app(data=None, port=5217, recover=True):
             return repro.start(**args)
         if name == "theseus_repro_verify":
             return repro.verify(**args)
+        if name == "theseus_perf_profile":
+            return perf.profile(**args)
+        if name == "theseus_perf_compare":
+            return perf.compare(**args)
         if name == "theseus_evidence_export":
             return evidence.export(**args)
         if name == "theseus_evidence_import":
@@ -742,6 +780,13 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/repro/verify")
     def repro_verify(project_id: str, body: ReproVerify):
         return repro.verify(project_id, **body.model_dump())
+    @app.post("/api/projects/{project_id}/perf/profile")
+    def perf_profile(project_id: str, body: PerfProfile):
+        return perf.profile(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/perf/compare")
+    def perf_compare(project_id: str, body: PerfCompare):
+        return perf.compare(project_id, **body.model_dump())
 
     @app.post("/api/projects/{project_id}/comparisons")
     def comparison_start(project_id: str, body: ComparisonStart):

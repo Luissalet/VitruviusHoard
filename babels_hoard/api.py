@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
-from . import __version__, backend, checker, db, deps, docsets, environments, indexing, jobs, locales, markdown_index, node_indexing, search
+from . import __version__, backend, checker, db, deps, docsets, environments, indexing, jobs, locales, markdown_index, node_indexing, rehearsal, search
 from .hoard_link import Link
 from .hoard_link import family, tokens
 from .hoard_link.guard import install_guard
@@ -106,6 +106,25 @@ class ApiCheckCodeArgs(BaseModel):
     code: str
     env: str | None = None
     language: str = "python"
+
+
+class ApiUpgradeRehearsalArgs(BaseModel):
+    project_path: str
+    package: str
+    target_version: str
+    old_version: str | None = None
+    old_path: str | None = None
+    new_path: str | None = None
+    import_names: list[str] | None = None
+    requirement: str | None = None
+    old_requirement: str | None = None
+    pip_args: list[str] | None = None
+    install_dependencies: bool = False
+    language: str = "python"
+    run_tests: bool = True
+    test_command: str | list[str] | None = None
+    test_timeout: float = 300.0
+    changelog_paths: list[str] | None = None
 
 
 class DocsReadArgs(BaseModel):
@@ -368,6 +387,18 @@ def create_app(
             return checker.api_check_code(conn, args.code, env_row=env_row, language=args.language)
 
         return call_tool("api_check_code", f"{len(args.code)} chars, {args.language}", run)
+
+    @app.post("/api/agent/api_upgrade_rehearsal", dependencies=AGENT_AUTH)
+    def agent_api_upgrade_rehearsal(args: ApiUpgradeRehearsalArgs):
+        def run(conn):
+            try:
+                return rehearsal.rehearse(**args.model_dump())
+            except rehearsal.RehearsalError as exc:
+                text = str(exc)
+                code = text.split(":", 1)[0] if text.startswith("unsupported_language") else "rehearsal_failed"
+                raise AgentError(code, text) from exc
+
+        return call_tool("api_upgrade_rehearsal", f"{args.package}=={args.target_version} in {args.project_path}", run)
 
     @app.post("/api/agent/docs_read", dependencies=AGENT_AUTH)
     def agent_docs_read(args: DocsReadArgs):
