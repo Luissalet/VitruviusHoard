@@ -226,3 +226,66 @@ def test_sql_queries_are_read_only(tmp_path):
         core.sqlite_state(db, None, {"w": "WITH x AS (SELECT 1) SELECT * FROM x; DELETE FROM t"})
     with sqlite3.connect(db) as c:
         assert c.execute("SELECT COUNT(*) FROM t").fetchone()[0] == 1
+
+
+def test_messages_exist_in_english_and_spanish_with_the_same_placeholders():
+    import string
+    from theseus import stateful  # noqa: F401  (registers the orchestration messages)
+    for key, (en, es) in core.MESSAGES.items():
+        assert en and es, key
+        fields = lambda text: sorted(f for _, f, _, _ in string.Formatter().parse(text) if f)
+        assert fields(en) == fields(es), key
+
+
+def test_spanish_texts_keep_machine_fields_and_raw_stderr(workspace):
+    client, app, pid, _ = workspace
+    stderr = "Boom: port busy (raw stderr, not translated)"
+    broken = quotes_recipe("v2", target={"argv": ["{python}", "-c", "import sys; print(%r, file=sys.stderr); sys.exit(3)" % stderr],
+                                         "ready": "/health", "ready_timeout_seconds": 5})
+    for lang, framing, note in (("es", "el destino terminó con código 3 antes de estar listo", "no se ha concluido nada"),
+                                ("en", "target exited with code 3 before becoming ready", "nothing was concluded")):
+        result = run(workspace, recipe=broken, lang=lang)["result"]
+        assert result["summary"]["verdict"] == "inconclusive" and result["runs"][0]["outcome"] == "inconclusive"
+        assert framing in result["runs"][0]["reason"] and stderr in result["runs"][0]["reason"]
+        assert note in result["summary"]["note"] and result["lang"] == lang
+    es_run = run(workspace, recipe=quotes_recipe("v2"), runs=1, lang="es")["result"]
+    assert es_run["scope"].startswith("Sólo se ejecutaron") and "transiciones" in es_run["coverage"]["note"]
+    assert es_run["summary"]["verdict"] == "no_counterexample_found"
+    # a failing sequence: Spanish framing, unchanged kinds, evidence and signature
+    recipe = core.validate_recipe(quotes_recipe("v1"), strategies.validate)
+    sequence = [{"action": "create_quote", "params": {"customer": "Imprenta Sol"}, "picks": {}},
+                {"action": "add_line", "params": {"qty": 1, "unit": 500}, "picks": {}},
+                {"action": "confirm", "params": {"new_key": "00000000"}, "picks": {}},
+                {"action": "retry_confirm", "params": {}, "picks": {}}]
+    with core.language("es"):
+        failed = core.run_sequence(recipe, sequence)
+        text = core.describe(failed)
+        refused = core.run_sequence(recipe, [{"action": "create_quote", "params": {"customer": ""}, "picks": {}}])
+    assert failed["signature"] == ["retry_confirm", "postcondition", "same charge on retry"]
+    assert text.startswith("El paso 4 (retry_confirm) falló: postcondition same charge on retry, con evidencia http.")
+    assert refused["failure"]["kind"] == "http_status" and "no es un estado aceptado" in refused["failure"]["detail"]
+    assert core.describe(failed).startswith("Step 4 (retry_confirm) failed")  # outside the block: English again
+
+
+def test_lang_parameter_on_tools_and_rest(workspace):
+    client, app, pid, _ = workspace
+    for tool_name in ("theseus_stateful_recipe_save", "theseus_stateful_recipe_read", "theseus_stateful_run",
+                      "theseus_stateful_replay", "theseus_stateful_export"):
+        schema = next(t for t in TOOLS if t["name"] == tool_name)["inputSchema"]
+        assert schema["properties"]["lang"]["enum"] == ["en", "es"] and "lang" not in schema["required"]
+    bad = quotes_recipe("v2", queries={"x": "DELETE FROM quotes"})
+    es = client.post("/api/projects/%s/stateful/recipes" % pid, json={"recipe": bad, "lang": "es"})
+    assert es.status_code == 400 and "debe ser una única sentencia SELECT" in es.text
+    en = client.post("/api/agent/call", json={"tool": "theseus_stateful_recipe_save", "arguments": {"project_id": pid, "recipe": bad}})
+    assert en.status_code == 400 and "must be a single SELECT statement" in en.text
+    missing = client.get("/api/projects/%s/stateful/recipes/nope?lang=es" % pid)
+    assert missing.status_code == 404 and "No se encuentra la receta" in missing.text
+    assert client.get("/api/projects/%s/stateful/recipes?lang=fr" % pid).status_code == 422
+    done = first_failure(workspace)
+    replay = call(client, "theseus_stateful_replay", project_id=pid, job_id=done["id"], target=target("v2"), lang="es")["result"]
+    assert replay["note"].startswith("Los identificadores") and replay["explanation"].startswith("Se ejecutaron los")
+    assert replay["result"]["outcome"] == "passed" and replay["lang"] == "es"
+    exported = call(client, "theseus_stateful_export", project_id=pid, job_id=done["id"], lang="es")
+    assert exported["note"].startswith("Sólo biblioteca estándar") and "elige otra versión" in exported["override"]
+    adapter = next(f["text"] for f in exported["files"] if f["name"] == "theseus_stateful_adapter.py")
+    assert "import contextvars" in adapter and "\nimport theseus" not in adapter

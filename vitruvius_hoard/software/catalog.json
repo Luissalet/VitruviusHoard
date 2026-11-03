@@ -8746,6 +8746,14 @@
         "project_id": {
           "type": "string"
         },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "description": "Language of human-readable text (default en); machine fields are unchanged."
+        },
         "name": {
           "type": "string"
         },
@@ -8779,6 +8787,14 @@
         "project_id": {
           "type": "string"
         },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "description": "Language of human-readable text (default en); machine fields are unchanged."
+        },
         "recipe_id": {
           "type": "string"
         }
@@ -8803,6 +8819,14 @@
       "properties": {
         "project_id": {
           "type": "string"
+        },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "description": "Language of human-readable text (default en); machine fields are unchanged."
         },
         "recipe_id": {
           "type": "string"
@@ -8852,6 +8876,14 @@
       "properties": {
         "project_id": {
           "type": "string"
+        },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "description": "Language of human-readable text (default en); machine fields are unchanged."
         },
         "job_id": {
           "type": "string"
@@ -8904,6 +8936,14 @@
       "properties": {
         "project_id": {
           "type": "string"
+        },
+        "lang": {
+          "type": "string",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "description": "Language of human-readable text (default en); machine fields are unchanged."
         },
         "job_id": {
           "type": "string"
