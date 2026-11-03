@@ -437,7 +437,18 @@ def store_dir(data_dir: Path) -> Path:
     return d
 
 
-def _diff(png_a: Path, png_b: Path, out: Path) -> dict[str, Any]:
+CAPTURE_VIEWPORT_H = 900   # the viewport height browser.capture shoots every width with
+
+
+def _viewport_fill(img, start: int) -> int:
+    """Rows from `start` to the bottom when they are all one flat colour (else 0)."""
+    if start <= 0 or start >= img.height:
+        return 0
+    extrema = img.crop((0, start, img.width, img.height)).getextrema()
+    return img.height - start if all(lo == hi for lo, hi in extrema) else 0
+
+
+def _diff(png_a: Path, png_b: Path, out: Path, *, viewport_fill_from: Optional[int] = None) -> dict[str, Any]:
     """Pixel difference of the frame's PNG (a) and the render (b) over the whole canvas of both.
 
     `diff_pct` counts the rows only one image has (a truncated render, an extra footer) as different, so a partial match
@@ -450,6 +461,12 @@ def _diff(png_a: Path, png_b: Path, out: Path) -> dict[str, Any]:
         return {"diff_pct": None, "error": "Pillow not available"}
     a, b = Image.open(png_a).convert("RGB"), Image.open(png_b).convert("RGB")
     reference_size, render_size = [a.width, a.height], [b.width, b.height]
+    # A page shorter than the capture viewport is padded to the viewport height with the empty canvas. The caller passes
+    # viewport_fill_from (the frame height) only for such a capture; flat rows below it are that padding, not page
+    # content, and are dropped (reported as viewport_fill_rows). Anything drawn there keeps counting as extra rows.
+    fill = _viewport_fill(b, viewport_fill_from) if viewport_fill_from else 0
+    if fill:
+        b = b.crop((0, 0, b.width, b.height - fill))
     scale = 1.0
     if b.width != a.width:
         # Declared normalisation: the render is resized to the frame's width (aspect kept) before comparing.
@@ -464,14 +481,16 @@ def _diff(png_a: Path, png_b: Path, out: Path) -> dict[str, Any]:
     canvas.paste(d, (0, 0))
     canvas.save(out)
     area = w * h
-    scope = "partial" if oh < h else ("normalized" if scale != 1.0 else "full")
+    scope = "partial" if oh < h else ("normalized" if scale != 1.0 or fill else "full")
+    steps = ([f"{fill} flat viewport-padding rows below the frame height dropped"] if fill else []) + \
+        ([f"render resized x{scale:.4g} to the frame width {a.width}px"] if scale != 1.0 else [])
     return {
         "diff_pct": round(100.0 * (differing + unmatched) / area, 2) if area else None,
         "overlap_diff_pct": round(100.0 * differing / (w * oh), 2) if w * oh else None,
         "diff_image": str(out), "width": w, "height": h,
         "reference_size": reference_size, "render_size": render_size, "render_compared_size": [b.width, b.height],
-        "render_scale": round(scale, 4),
-        "normalization": f"render resized x{scale:.4g} to the frame width {a.width}px" if scale != 1.0 else None,
+        "render_scale": round(scale, 4), "viewport_fill_rows": fill,
+        "normalization": "; ".join(steps) or None,
         "compared_rect": [0, 0, w, oh], "coverage": round(oh / h, 4) if h else 0.0,
         "missing_rows": a.height - oh, "extra_rows": b.height - oh,
         "scope": scope,
@@ -524,9 +543,13 @@ def import_frame(svc, *, link: Optional[str] = None, nodes_json: Optional[dict] 
         fig = folder / "figma.png"
         fig.write_bytes(image_png)
         out["figma_image"] = str(fig)
-        shot = next((Path(f["path"]) for f in render.get("files") or [] if f["width"] == width), None)
+        entry = next((f for f in render.get("files") or [] if f["width"] == width), None)
+        shot = Path(entry["path"]) if entry else None
         if shot and shot.is_file():
-            out["compare"] = _diff(fig, shot, folder / "diff.png")
+            # browser.capture shoots at least one 900px viewport: a shorter frame gets padding rows below its height.
+            frame_h = int(round(float(spec.get("height") or 0)))
+            padded = entry.get("full_page") and int(entry.get("h") or 0) == CAPTURE_VIEWPORT_H and 0 < frame_h < CAPTURE_VIEWPORT_H
+            out["compare"] = _diff(fig, shot, folder / "diff.png", viewport_fill_from=frame_h if padded else None)
     if critique and not (render.get("metrics") or {}).get("error"):
         try:
             c = svc.critique_render(render["id"], use_vision=use_vision, tokens_id=out.get("tokens_id"))

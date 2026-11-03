@@ -12,6 +12,7 @@ export function compareText(c, L) {
   if (!c.scope) return s;
   if (c.scope === "full") return `${s} (${L("mismo tamaño", "same size")} ${c.width}×${c.height})`;
   const parts = [`Figma ${c.reference_size[0]}×${c.reference_size[1]}`, `render ${c.render_size[0]}×${c.render_size[1]}`];
+  if (c.viewport_fill_rows) parts.push(L(`${c.viewport_fill_rows} filas planas de relleno del visor descartadas`, `${c.viewport_fill_rows} flat viewport padding rows dropped`));
   if (c.render_scale !== 1) parts.push(L(`render escalado ×${c.render_scale}`, `render scaled ×${c.render_scale}`));
   if (c.scope === "partial") {
     parts.push(L(`cobertura ${Math.round(c.coverage * 100)}%`, `coverage ${Math.round(c.coverage * 100)}%`));
@@ -31,6 +32,15 @@ export default function FigmaImport({ lang, notify, onOpenTokens }) {
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
+  const [png, setPng] = useState(null); // {name, data}: Figma's PNG of the frame (Export > PNG 1x), for the pixel diff without a token
+
+  const pickPng = (file) => {
+    if (!file) { setPng(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => setPng({ name: file.name, data: String(reader.result).split(",", 2)[1] || "" });
+    reader.onerror = () => notify(L("No se pudo leer la imagen.", "Could not read the image."));
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (open) api.figmaImports(8).then(setState).catch(() => setState(null));
@@ -43,6 +53,7 @@ export default function FigmaImport({ lang, notify, onOpenTokens }) {
       const body = {};
       if (json.trim()) body.nodes_json = JSON.parse(json);
       if (link.trim()) body.link = link.trim();
+      if (png) body.image_base64 = png.data;
       setResult(await api.figmaImport(body));
     } catch (e) {
       notify(e instanceof SyntaxError ? L("El JSON no es válido.", "That JSON does not parse.") : e.message);
@@ -79,6 +90,16 @@ export default function FigmaImport({ lang, notify, onOpenTokens }) {
               <summary className="text-[13px] cursor-pointer">{L("…o pega el JSON de la API (GET /v1/files/:key/nodes)", "…or paste the API JSON (GET /v1/files/:key/nodes)")}</summary>
               <textarea className="field mono mt-2" rows={6} value={json} onChange={(e) => setJson(e.target.value)} aria-label="nodes JSON" data-testid="figma-json" />
             </details>
+            <div className="mt-3">
+              <label className="label" htmlFor="figma-png">{L("PNG del frame exportado de Figma (opcional, para la diferencia de píxeles)", "Frame PNG exported from Figma (optional, for the pixel difference)")}</label>
+              <div className="flex gap-2 items-center flex-wrap">
+                <input id="figma-png" type="file" accept="image/png" className="text-[13px]" data-testid="figma-png"
+                  onChange={(e) => pickPng(e.target.files && e.target.files[0])} />
+                {png && <span className="help">{png.name}</span>}
+                {png && <button type="button" className="btn btn-sm" onClick={() => { setPng(null); const el = document.getElementById("figma-png"); if (el) el.value = ""; }}>{L("Quitar", "Remove")}</button>}
+              </div>
+              <div className="help mt-1">{L("Con enlace y token, Figma da la imagen sola; con JSON pegado, súbela aquí (Exportar > PNG 1x).", "With a link and token Figma provides the image; with pasted JSON, add it here (Export > PNG 1x).")}</div>
+            </div>
             <div className="flex gap-2 mt-3">
               <button type="button" className="btn btn-primary" onClick={run} disabled={busy || !canRun} data-testid="figma-import">
                 {busy ? L("Importando…", "Importing…") : L("Importar", "Import")}

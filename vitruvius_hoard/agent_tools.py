@@ -1060,7 +1060,8 @@ TOOLS.extend([
         "Auto-layout becomes flex, repeated styles become named style ids; the page is rendered, a design system is extracted, the "
         "critique runs and the pixel difference with Figma's PNG is measured. Needs the Figma token in Settings, or pass nodes_json.\n"
         "compare.diff_pct covers the canvas of both images: rows only one has (truncated render, extra footer) count as different. "
-        "compare.scope is full, normalized (render scaled to the frame width: render_scale) or partial (heights differ: coverage, "
+        "compare.scope is full, normalized (render scaled to the frame width: render_scale; flat padding of the 900px capture "
+        "viewport below a shorter frame dropped: viewport_fill_rows) or partial (heights differ: coverage, "
         "missing_rows, extra_rows, overlap_diff_pct); both sizes are given. A pixel measure, not semantic equivalence.\n"
         "Sinónimos: figma, importar diseño, frame, de diseño a código.",
         FigmaImportArgs, ann(False, False, True, True), run_design_figma_import, timeout_s=240),
