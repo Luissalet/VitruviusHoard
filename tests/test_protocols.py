@@ -96,7 +96,7 @@ def test_skeleton_is_valid_python():
     spec = load_spec(EXAMPLES["pago-no-atomico"]())
     code = counterexample_test(spec, explore(spec)["violation"])
     compile(code, "skeleton", "exec")
-    assert "('intento2', 'cobrar', 'step')" in code
+    assert "('intento2', 'cobrar', 'step', 1)" in code
 
 
 # --- agent tool -------------------------------------------------------------
@@ -125,8 +125,84 @@ def test_http_routes(client):
     spec = client.get("/api/protocols/examples/contador").json()["spec"]
     out = client.post("/api/protocols/check", json={"spec": spec}).json()
     assert out["violation"]["kind"] == "at_end"
-    assert client.post("/api/protocols/replay", json={"spec": spec, "schedule": out["violation"]["schedule"]}).json()["status"] == "completed"
+    assert client.post("/api/protocols/replay", json={"spec": spec, "schedule": out["violation"]["schedule"]}).json()["status"] == "violated"
     t = client.post("/api/protocols/test.py", json={"spec": spec})
     assert t.status_code == 200 and "attachment" in t.headers["content-disposition"]
     assert client.post("/api/protocols/check", json={"spec": {"processes": []}}).status_code == 400
     assert client.get("/api/protocols/examples/nada").status_code == 400
+
+
+def test_choice_counterexample_replays_the_same_branch_and_exports_it():
+    spec = load_spec({"vars": {"v": 0}, "processes": [{"name": "p", "steps": [
+        {"label": "pick", "choose": [{"set": {"v": "1"}}, {"set": {"v": "2"}}]}]}],
+        "invariants": [{"name": "not_two", "check": "v != 2"}]})
+    violation = explore(spec)["violation"]
+    assert violation["schedule"] == [["p", "pick", "step", 1]]
+    repeated = replay(spec, violation["schedule"])
+    assert repeated["status"] == "violated" and repeated["kind"] == "invariant"
+    assert repeated["state"] == violation["final_state"]
+    assert repeated["steps"][0]["branch"] == 1
+    namespace = {}
+    exec(counterexample_test(spec, violation), namespace)
+    assert namespace["SCHEDULE"] == [("p", "pick", "step", 1)]
+    seen = []
+    namespace["run_step"] = lambda *args: seen.append(args)
+    namespace["check_property"] = lambda: True
+    namespace["test_not_two"]()
+    assert seen == [("p", "pick", "step", 1)]
+    with pytest.raises(SpecError, match="rama"):
+        replay(spec, [["p", "pick", "step", 99]])
+
+
+@pytest.mark.parametrize("extra,kind", [
+    ({"invariants": ["x == 1"]}, "invariant"),
+    ({"invariants": ["x == 1"], "processes": [{"name": "p", "steps": [{"set": {"x": "1 // 0"}}]}]}, "invariant"),
+    ({"processes": [{"name": "p", "steps": [{"when": "False"}]}]}, "deadlock"),
+])
+def test_replay_checks_the_initial_state_even_with_an_empty_schedule(extra, kind):
+    raw = {"vars": {"x": 0}, "processes": [{"name": "p", "steps": [{}]}], **extra}
+    spec = load_spec(raw)
+    assert explore(spec)["violation"]["length"] == 0
+    repeated = replay(spec, [])
+    assert repeated["status"] == "violated" and repeated["kind"] == kind
+    assert repeated["at_step"] == 0
+    from vitruvius_hoard.agent_tools import ProtocolArgs, run_protocol_check
+    assert run_protocol_check(None, ProtocolArgs(action="replay", spec=raw, schedule=[]))["at_step"] == 0
+
+
+def test_replay_checks_terminal_properties():
+    spec = load_spec({"vars": {"x": 0}, "processes": [{"name": "p", "steps": [
+        {"label": "finish", "set": {"x": "1"}}]}], "at_end": ["x == 2"]})
+    violation = explore(spec)["violation"]
+    repeated = replay(spec, violation["schedule"])
+    assert repeated["status"] == "violated" and repeated["kind"] == "at_end"
+    assert repeated["at_step"] == 1 and repeated["state"] == violation["final_state"]
+
+
+def test_bfs_checks_all_property_kinds_at_the_same_depth():
+    raw = {"vars": {"x": 0}, "processes": [{"name": "p", "steps": [
+        {"label": "pick", "choose": [{"goto": "later"}, {"set": {"x": "1"}, "goto": "end"}]},
+        {"label": "later", "set": {"x": "3"}}]}], "invariants": ["x != 3"], "at_end": ["x == 2"]}
+    spec = load_spec(raw)
+    violation = explore(spec)["violation"]
+    assert violation["kind"] == "at_end" and violation["length"] == 1
+    assert replay(spec, violation["schedule"])["kind"] == "at_end"
+    # A state admitted at the bound is still checked; an omitted state cannot prove holds.
+    bounded = load_spec({**raw, "max_states": 3})
+    assert explore(bounded)["violation"]["length"] == 1
+
+
+def test_dictionary_and_sequence_are_distinct_hashed_states():
+    from vitruvius_hoard.protocols.expr import Expr, freeze
+    assert Expr("{} == []").eval({}) is False
+    assert Expr("{} != []").eval({}) is True
+    assert Expr("[] == {}").eval({}) is False
+    assert Expr("{} == {}").eval({}) is True
+    assert len({freeze({}), freeze([])}) == 2
+    assert len({freeze({"x": 1}), freeze([["x", 1]])}) == 2
+    spec = load_spec({"vars": {"v": []}, "processes": [{"name": "p", "steps": [
+        {"label": "pick", "choose": [{"set": {"v": "[]"}}, {"set": {"v": "{}"}}]}]}],
+        "invariants": ["v != {}"]})
+    violation = explore(spec)["violation"]
+    assert violation["length"] == 1 and violation["trace"][0]["branch"] == 1
+    assert violation["trace"][0]["changes"] == {"v": [[], {}]}
