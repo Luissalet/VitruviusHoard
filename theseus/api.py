@@ -23,6 +23,8 @@ from .store import Store, identifier
 from .workflow import Workflow
 from .equivalence import Equivalence
 from .rules import Rules
+from .properties import Properties
+from .synthesis import Synthesis
 from .repro import Repro
 from .perf import Perf
 from .evidence import Evidence
@@ -124,6 +126,8 @@ TOOLS = [
     tool("theseus_rules_read", "Read one rule with evidence, history and last check, or list the project's rules with status counts when rule_id is omitted.", {**PROJECT, "rule_id": S}, ["project_id"]),
     tool("theseus_rules_check", "Run a rule's check as a background job: the reference program runs on generated and listed cases in fresh sandboxes and the predicate is evaluated. hypothesis becomes observed only if every applicable case holds; the first contradicting case is shrunk by re-running the program and the rule becomes contradicted. Status changes are kept in the rule history. Observed is evidence on the executed cases, not proof. Read the job with theseus_job_read.", {**PROJECT, "rule_id": S, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id", "rule_id"], False),
     tool("theseus_rules_export", "Export the rules bank (optionally filtered by ids or statuses) as client-ready Markdown: statement, status, code evidence, examples and counterexample per rule.", {**PROJECT, "rule_ids": IDS, "statuses": {"type": "array", "items": {"type": "string", "enum": ["hypothesis", "observed", "contradicted"]}}, "title": S}, ["project_id"]),
+    tool("theseus_property_run", "Run a property and business-sequence suite as a background job. A target program (argv command or a Python callable 'module:function' in a subprocess) is driven by seeded, composable input strategies (integers, decimals, text, lists, dicts, one_of, tuples) and checked against properties written in the safe expression language: invariants, round trips (export then import), idempotence f(f(x))==f(x), metamorphic relations and reference-model comparisons. Stateful suites execute random command sequences (with preconditions, a model updated by expressions and postconditions) against the real program in one sandbox. Failures are shrunk by re-executing every candidate and keeping the same violated property; the minimal case is returned. Oracles that only compare the program with itself are warned about. No counterexample found is evidence on the executed runs, not a proof. Read the job with theseus_job_read.", {**PROJECT, "suite": {"type": "object", "description": "{target:{argv|callable,path,encode,decode}, input:<strategy>, runs, seed, properties:[{kind:invariant|roundtrip|idempotent|metamorphic|model, name, when, expr, then, transform, reference, input}], stateful:[{name, program, init, files, db, commands:[{name,args,stdin,params,pre,update,post}], runs, max_length, seed}]}"}, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id", "suite"], False),
+    tool("theseus_synthesize", "Synthesize a business rule as a safe expression from input/output examples (and outputs it must not produce) as a background job: enumerative search by size with observational-equivalence pruning over arithmetic, comparisons, conditionals, rounding functions and string operations, then a counterexample-guided loop that validates the simplest consistent expression against a reference program on generated and boundary inputs, turning every disagreement into a new example. Returns the expression, the examples used, the validation coverage and, on failure, the closest candidates with their counterexamples. save_rule stores the expression as a hypothesis in the rules bank (status changes only through theseus_rules_check). Read the job with theseus_job_read.", {**PROJECT, "examples": {"type": "array", "items": {"type": "object"}, "description": "[{input:{x:10}, output:12.1}] (or flat {x:10, output:12.1})"}, "rejected": {"type": "array", "items": {"type": "object"}, "description": "[{input:{x:10}, output:99}]: outputs the expression must not produce for that input"}, "variables": IDS, "reference": {"type": "object", "description": "{argv|callable, path, encode: text|json|json_object, decode: auto|json|text, cwd, env, timeout_seconds}"}, "domain": {"type": "object", "description": "{variable: input strategy} used to generate validation inputs"}, "max_size": {"type": "integer", "minimum": 3, "maximum": 12}, "time_budget_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 300}, "max_rounds": {"type": "integer", "minimum": 1, "maximum": 20}, "samples": {"type": "integer", "minimum": 1, "maximum": 200}, "max_reference_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "seed": {"type": "integer"}, "max_splits": {"type": "integer", "minimum": 0, "maximum": 3}, "save_rule": {"type": "object", "description": "{statement, title, rule_id, evidence, tags}"}}, ["project_id", "examples"], False),
     tool("theseus_repro_create", "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.", {**PROJECT, "report": REPRO_REPORT, "max_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "output_dir": S}, ["project_id", "report"], False),
     tool("theseus_repro_verify", "Run a repro bundle (by bundle_dir or the repro job id) against the recorded program or an override argv such as a fixed version, and report reproduces or no_longer_reproduces plus environment differences. Verificar reproduccion.", {**PROJECT, "bundle_dir": S, "repro_id": S, "argv": IDS, "attempts": {"type": "integer", "minimum": 1, "maximum": 10}, "timeout_seconds": {"type": "number", "exclusiveMinimum": 0}}, ["project_id"], False),
     tool("theseus_perf_profile", "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.", {**PROJECT, "command": PERF_COMMAND, "input": PERF_INPUT, **PERF_COMMON, "top": {"type": "integer", "minimum": 1, "maximum": 50}}, ["project_id", "command"], False),
@@ -285,6 +289,28 @@ class RulesExport(Payload):
     title: str = "Business rules of the legacy program"
 
 
+class PropertyRun(Payload):
+    suite: dict[str, Any]
+    shrink: bool = True
+    shrink_budget: int = 100
+
+
+class SynthesisRun(Payload):
+    examples: list[dict[str, Any]]
+    rejected: list[dict[str, Any]] | None = None
+    variables: list[str] | None = None
+    reference: dict[str, Any] | None = None
+    domain: dict[str, Any] | None = None
+    max_size: int = 8
+    time_budget_seconds: float = 20
+    max_rounds: int = 8
+    samples: int = 30
+    max_reference_runs: int = 300
+    seed: int = 1
+    max_splits: int = 1
+    save_rule: dict[str, Any] | None = None
+
+
 class ReproCreate(Payload):
     report: dict[str, Any]
     max_runs: int = 300
@@ -372,6 +398,8 @@ def create_app(data=None, port=5217, recover=True):
     equivalence = Equivalence(comparisons)
     rules = Rules(comparisons, equivalence)
     repro = Repro(comparisons, equivalence)
+    properties = Properties(comparisons, equivalence)
+    synthesis = Synthesis(comparisons, equivalence, rules)
     perf = Perf(comparisons, equivalence)
     sessions = binary_sessions.BinarySessions(comparisons)
     cutter = CutterBridge(store)
@@ -400,6 +428,8 @@ def create_app(data=None, port=5217, recover=True):
     app.state.equivalence = equivalence
     app.state.rules = rules
     app.state.repro = repro
+    app.state.properties = properties
+    app.state.synthesis = synthesis
     app.state.perf = perf
     from vitruvius_hoard.software.cleanup import Shutdown
     app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
@@ -524,6 +554,10 @@ def create_app(data=None, port=5217, recover=True):
             return rules.start(**args)
         if name == "theseus_rules_export":
             return rules.export(**args)
+        if name == "theseus_property_run":
+            return properties.start(**args)
+        if name == "theseus_synthesize":
+            return synthesis.start(**args)
         if name == "theseus_repro_create":
             return repro.start(**args)
         if name == "theseus_repro_verify":
@@ -768,6 +802,14 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/rules/checks")
     def rules_check(project_id: str, body: RulesCheck):
         return rules.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/properties/runs")
+    def property_run(project_id: str, body: PropertyRun):
+        return properties.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/synthesis/runs")
+    def synthesis_run(project_id: str, body: SynthesisRun):
+        return synthesis.start(project_id, **body.model_dump())
 
     @app.post("/api/projects/{project_id}/rules/export")
     def rules_export(project_id: str, body: RulesExport):
