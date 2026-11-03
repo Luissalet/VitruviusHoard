@@ -430,19 +430,25 @@ class Services:
         return lint_mod.run_lint(probe, html or "", tokens=tokens, packs=packs, engines=engines)
 
     # ---------------- rules as data ----------------
-    def rules_list(self, **filters: Any) -> dict[str, Any]:
+    def rules_list(self, lang: Optional[str] = None, **filters: Any) -> dict[str, Any]:
+        """Rules as rows; ``lang`` "es" renders name / description / fix in Spanish (the search still matches the English text too)."""
+        from . import i18n
         from .rules import registry
         lint_mod.ensure_rules()
         rows = registry.list_rules(**{k: v for k, v in filters.items() if v not in (None, "")})
-        return {"count": len(rows), "summary": registry.summary(), "rules": rows}
+        if lang:
+            lang = i18n.norm_lang(lang)
+            rows = [i18n.localize_rule_row(r, lang) for r in rows]
+        return {"count": len(rows), "summary": registry.summary(), "rules": rows, **({"lang": lang} if lang else {})}
 
-    def rule_get(self, rule_id: str) -> dict[str, Any]:
+    def rule_get(self, rule_id: str, lang: Optional[str] = None) -> dict[str, Any]:
+        from . import i18n
         from .rules import registry
         lint_mod.ensure_rules()
         rule = registry.get_rule(rule_id)
         if rule is None:
             raise LookupError(f"Unknown rule '{rule_id}'.")
-        return rule.row()
+        return i18n.localize_rule_row(rule.row(), i18n.norm_lang(lang)) if lang else rule.row()
 
     # ---------------- functional check (assay) ----------------
     def assay_page(self, *, html: Optional[str] = None, url: Optional[str] = None, render_id: Optional[str] = None,

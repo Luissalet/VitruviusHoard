@@ -7,6 +7,8 @@ import { TierChip } from "./RulesPanel.jsx";
 const PASSES = ["spacing", "color", "icons", "copy", "type", "layout", "details", "visuals", "motion"];
 const PASS_ES = { spacing: "Espaciado", color: "Color", icons: "Iconos", copy: "Texto", type: "Tipografía", layout: "Composición",
   details: "Detalles", visuals: "Imágenes", motion: "Movimiento" };
+const PASS_EN = { spacing: "Spacing", color: "Colour", icons: "Icons", copy: "Copy", type: "Type", layout: "Layout", details: "Details",
+  visuals: "Visuals", motion: "Motion" };
 const MODE = {
   heavy: ["Rediseño por pasadas", "Full fix passes", "chip-danger"],
   light: ["Retoque", "Light polish", "chip-amber"],
@@ -26,15 +28,20 @@ export default function SlopAudit({ render, html, url, lang, notify, initialId, 
   const show = (res) => { setAudit(res); setWidth(res.display_width); setSelected(null); };
   useEffect(() => {
     setBrief(null);
-    if (initialId) api.slopAuditGet(initialId).then(show).catch(() => {});
+    if (initialId) api.slopAuditGet(initialId, lang).then(show).catch(() => {});
   }, [initialId]);
+  // The stored audit is English; switching the UI language re-renders it (and the brief) without auditing again.
+  useEffect(() => {
+    setBrief(null);
+    if (audit?.render_id && audit.lang !== lang) api.slopAuditGet(audit.render_id, lang).then((res) => setAudit(res)).catch(() => {});
+  }, [lang]);
 
   const run = async () => {
     setBusy(true);
     setBrief(null);
     try {
       const body = render ? { render_id: render.id } : html?.trim() ? { html } : { url };
-      show(await api.slopAudit(body));
+      show(await api.slopAudit({ ...body, lang }));
     } catch (e) {
       notify(e.message);
     } finally {
@@ -45,7 +52,7 @@ export default function SlopAudit({ render, html, url, lang, notify, initialId, 
   const writeBrief = async () => {
     setBusyBrief(true);
     try {
-      setBrief(await api.directionBrief(audit ? { render_id: audit.render_id } : render ? { render_id: render.id } : html?.trim() ? { html } : { url }));
+      setBrief(await api.directionBrief({ ...(audit ? { render_id: audit.render_id } : render ? { render_id: render.id } : html?.trim() ? { html } : { url }), lang }));
     } catch (e) {
       notify(e.message);
     } finally {
@@ -137,7 +144,7 @@ export default function SlopAudit({ render, html, url, lang, notify, initialId, 
             <div className="flex flex-col gap-3" style={{ maxHeight: 680, overflowY: "auto" }}>
               {grouped.map(([pass, rows]) => (
                 <div key={pass}>
-                  <div className="text-[12px] font-semibold mb-1" style={{ color: "var(--muted)" }}>{L(PASS_ES[pass], pass)} · {rows.length}</div>
+                  <div className="text-[12px] font-semibold mb-1" style={{ color: "var(--muted)" }}>{L(PASS_ES[pass], PASS_EN[pass])} · {rows.length}</div>
                   {rows.map(({ f, i }) => (
                     <button key={i} type="button" className="card text-left w-full mb-2" onClick={() => pick(i)} data-testid="slop-finding"
                       style={selected === i ? { outline: "2px solid #e5534b" } : undefined}>

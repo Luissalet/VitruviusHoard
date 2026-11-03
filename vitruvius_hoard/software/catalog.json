@@ -4616,6 +4616,23 @@
           "description": "Only id, engine, scope, severity, tier and name.",
           "title": "Compact",
           "type": "boolean"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "enum": [
+                "es",
+                "en"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "es = names, descriptions and fixes in Spanish (Spain); en or omitted = English.",
+          "title": "Lang"
         }
       },
       "title": "RulesListArgs",
@@ -4953,6 +4970,23 @@
           "description": "Return every finding with its boxes (large); default is the compact plan.",
           "title": "Full",
           "type": "boolean"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "enum": [
+                "es",
+                "en"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Language of titles, details, fixes, pass names and summaries: es (Spanish, Spain; default) or en.",
+          "title": "Lang"
         }
       },
       "title": "SlopAuditArgs",
@@ -5043,6 +5077,23 @@
           "description": "false = the deterministic brief from the theme catalogue, no model call.",
           "title": "Use Model",
           "type": "boolean"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "enum": [
+                "es",
+                "en"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Language the brief is written in: es (Spanish, Spain; default) or en.",
+          "title": "Lang"
         }
       },
       "title": "DirectionBriefArgs",

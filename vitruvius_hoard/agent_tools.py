@@ -837,13 +837,14 @@ class RulesListArgs(BaseModel):
     runnable: Optional[bool] = Field(None, description="false = the judged (visual) rules the vision model decides.")
     limit: int = Field(300, ge=1, le=400)
     compact: bool = Field(False, description="Only id, engine, scope, severity, tier and name.")
+    lang: Optional[Literal["es", "en"]] = Field(None, description="es = names, descriptions and fixes in Spanish (Spain); en or omitted = English.")
 
 
 def run_design_rules_list(services: Services, args: RulesListArgs) -> dict:
     if args.id:
-        return {"rule": services.rule_get(args.id)}
+        return {"rule": services.rule_get(args.id, args.lang)}
     out = services.rules_list(engine=args.engine, scope=args.scope, severity=args.severity, tier=args.tier, pack=args.pack, source=args.source,
-                              query=args.query, runnable=args.runnable)
+                              query=args.query, runnable=args.runnable, lang=args.lang)
     rows = out["rules"][: args.limit]
     if args.compact:
         rows = [{k: r[k] for k in ("id", "engine", "scope", "severity", "tier", "name")} for r in rows]
@@ -930,19 +931,21 @@ class SlopAuditArgs(BaseModel):
     widths: Optional[list[int]] = Field(None, description="Default 320, 375, 414, 768, 1024, 1280, 1440, 1920.")
     rerender: Optional[bool] = Field(None, description="With render_id: force (true) or skip (false) the 8-width re-render.")
     full: bool = Field(False, description="Return every finding with its boxes (large); default is the compact plan.")
+    lang: Optional[Literal["es", "en"]] = Field(None, description="Language of titles, details, fixes, pass names and summaries: es (Spanish, Spain; default) or en.")
 
 
 def run_design_slop_audit(services: Services, args: SlopAuditArgs) -> dict:
     from . import slop_audit
     if not (args.render_id or args.html or args.url or args.path):
         raise ValueError("design_slop_audit needs render_id, html, url or path")
-    out = slop_audit.run(services, render_id=args.render_id, html=_page_html(args), url=args.url, widths=args.widths, rerender=args.rerender)
+    out = slop_audit.run(services, render_id=args.render_id, html=_page_html(args), url=args.url, widths=args.widths, rerender=args.rerender,
+                         lang=args.lang)
     if args.full:
         return out
     shots = {s["width"]: str(services.config.renders_dir / out["render_id"] / s["file"]) for s in out["screenshots"]}
     findings = [{"rule": f["check_id"], "title": f["title"], "pass": f["pass"], "tier": f.get("tier"), "slop": f["slop"],
                  "widths": (f.get("evidence") or {}).get("widths") if isinstance(f.get("evidence"), dict) else None} for f in out["findings"]]
-    return {k: out[k] for k in ("render_id", "slop_score", "mode", "signs", "sign_ids", "by_pass", "plan", "rules_run", "ms", "credit")} | {
+    return {k: out[k] for k in ("render_id", "slop_score", "mode", "signs", "sign_ids", "by_pass", "plan", "rules_run", "ms", "credit", "lang")} | {
         "findings": findings, "screenshots": shots, "ui": f"/design/#/critique/{out['render_id']}"}
 
 
@@ -953,11 +956,13 @@ class DirectionBriefArgs(BaseModel):
     path: Optional[str] = Field(None, max_length=1000)
     text: Optional[str] = Field(None, max_length=20000, description="The page's text, when you already have it.")
     use_model: bool = Field(True, description="false = the deterministic brief from the theme catalogue, no model call.")
+    lang: Optional[Literal["es", "en"]] = Field(None, description="Language the brief is written in: es (Spanish, Spain; default) or en.")
 
 
 def run_design_direction_brief(services: Services, args: DirectionBriefArgs) -> dict:
     from . import slop_audit
-    return slop_audit.direction_brief(services, render_id=args.render_id, html=_page_html(args), url=args.url, text=args.text, use_model=args.use_model)
+    return slop_audit.direction_brief(services, render_id=args.render_id, html=_page_html(args), url=args.url, text=args.text, use_model=args.use_model,
+                                      lang=args.lang)
 
 
 class PresetListArgs(BaseModel):

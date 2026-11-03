@@ -10,7 +10,7 @@ export function TierChip({ tier, t }) {
 }
 
 // Browsable registry of every lint rule: filter by pack, engine, tier or text.
-export default function RulesPanel({ t, notify }) {
+export default function RulesPanel({ t, notify, lang }) {
   const [data, setData] = useState(null);
   const [pack, setPack] = useState("");
   const [engine, setEngine] = useState("");
@@ -21,11 +21,11 @@ export default function RulesPanel({ t, notify }) {
 
   useEffect(() => {
     let live = true;
-    api.rules({ pack: pack || undefined, engine: engine || undefined, tier: tier || undefined, q: q.trim() || undefined })
+    api.rules({ pack: pack || undefined, engine: engine || undefined, tier: tier || undefined, q: q.trim() || undefined, lang: lang || undefined })
       .then((res) => { if (live) { setData(res); setShown(PAGE); } })
       .catch((e) => notify(e.message));
     return () => { live = false; };
-  }, [pack, engine, tier, q]);
+  }, [pack, engine, tier, q, lang]);
 
   const summary = data?.summary;
   const packs = useMemo(() => Object.keys(summary?.by_pack || {}).sort(), [summary]);

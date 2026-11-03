@@ -15,14 +15,16 @@ router = APIRouter(prefix="/api")
 @router.get("/rules")
 def rules_list(request: Request, engine: Optional[str] = None, scope: Optional[str] = None, severity: Optional[str] = None,
                tier: Optional[str] = None, pack: Optional[str] = None, source: Optional[str] = None, q: Optional[str] = Query(None, max_length=120),
-               runnable: Optional[bool] = None):
-    return services(request).rules_list(engine=engine, scope=scope, severity=severity, tier=tier, pack=pack, source=source, query=q, runnable=runnable)
+               runnable: Optional[bool] = None, lang: Optional[str] = Query(None, max_length=8)):
+    """``lang`` es|en: names, descriptions and fixes in that language (default: English, as stored)."""
+    return services(request).rules_list(engine=engine, scope=scope, severity=severity, tier=tier, pack=pack, source=source, query=q, runnable=runnable,
+                                        lang=lang)
 
 
 @router.get("/rules/{rule_id:path}")
-def rules_get(request: Request, rule_id: str):
+def rules_get(request: Request, rule_id: str, lang: Optional[str] = Query(None, max_length=8)):
     try:
-        return services(request).rule_get(rule_id)
+        return services(request).rule_get(rule_id, lang)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
 
