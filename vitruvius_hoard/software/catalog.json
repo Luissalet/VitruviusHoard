@@ -589,6 +589,22 @@
           "default": null,
           "description": "Only these rule packs: core, slop, quality, craft, ds (design_rules_list shows them).",
           "title": "Packs"
+        },
+        "engines": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only rules of these engines: static, browser, visual. [\"static\"] with html or path reads the source alone and starts no browser (fast; use it after each edit).",
+          "title": "Engines"
         }
       },
       "title": "LintArgs",
@@ -4834,6 +4850,88 @@
         }
       },
       "title": "KeptArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "protocol_check",
+    "description": "Explore every interleaving of a bounded protocol and find the shortest counterexample. Comprobar un protocolo.\nShared state, processes of atomic labelled steps, nondeterministic choices, bounded crashes with restart, invariants, end conditions and deadlock. Breadth-first: a violation comes with the shortest schedule, a replay and a pytest file to reproduce it on the real system; 'holds' means every reachable state within the bounds was checked, under the listed assumptions (the model, not the code).\nSinónimos: verificar protocolo, condición de carrera, doble cobro, idempotencia, reintentos, interbloqueo, deadlock, intercalaciones, contraejemplo, model checking, comprobar concurrencia.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "action": {
+          "default": "check",
+          "description": "examples: list bundled protocols; example: get one (example=id); check: explore every interleaving of spec (bounded) and return the shortest counterexample; replay: run a schedule step by step; test: pytest file that replays the counterexample against the real system (hooks to fill in).",
+          "enum": [
+            "examples",
+            "example",
+            "check",
+            "replay",
+            "test"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "spec": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Protocol: vars (shared state), const, processes [{name, count, locals, steps [{label, when, set {var: expr}, goto | choose [...]}], crash {max, restart, keep_locals}}], invariants [{name, check}], at_end [{name, check}], deadlock, max_states. Expressions: Python-like subset (and/or/not, comparisons, in, + - * // %, x if c else y, literals, len/min/max/abs/sorted/append/put/without/set_add/set_remove).",
+          "title": "Spec"
+        },
+        "example": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Example"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {},
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "replay: [[process, label, 'step'|'crash'], ...] as returned by check",
+          "title": "Schedule"
+        },
+        "time_limit": {
+          "default": 60,
+          "description": "check/test: seconds of exploration",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "title": "Time Limit",
+          "type": "number"
+        }
+      },
+      "title": "ProtocolArgs",
       "type": "object"
     },
     "module": "design"

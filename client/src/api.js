@@ -27,6 +27,15 @@ export const api = {
   siteAudit: (body) => request("POST", "/design/api/site-audit", { body }),
   siteAuditReports: (params) => request("GET", "/design/api/site-audit/reports", { params }),
   siteAuditReport: (id) => request("GET", `/design/api/site-audit/reports/${id}`),
+  protocolExamples: () => request("GET", "/design/api/protocols/examples"),
+  protocolExample: (id) => request("GET", `/design/api/protocols/examples/${id}`),
+  protocolCheck: (body) => request("POST", "/design/api/protocols/check", { body }),
+  protocolReplay: (body) => request("POST", "/design/api/protocols/replay", { body }),
+  protocolTest: async (body) => {
+    const r = await fetch(new URL("/design/api/protocols/test.py", window.location.origin), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `Error ${r.status}`); }
+    return r.blob();
+  },
   status: () => request("GET", "/design/api/status"),
 
   librarySearch: (params) => request("GET", "/design/api/library/search", { params }),

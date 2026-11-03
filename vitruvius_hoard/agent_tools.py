@@ -944,3 +944,59 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
         if isinstance(error, KeyError):  # an unknown tool: the router answers 404 unknown_tool itself
             raise
         raise AppError("not_found", str(error), status=404) from error
+
+
+# ---------------- protocols ----------------
+
+class ProtocolArgs(BaseModel):
+    action: Literal["examples", "example", "check", "replay", "test"] = Field(
+        "check", description="examples: list bundled protocols; example: get one (example=id); check: explore every interleaving "
+        "of spec (bounded) and return the shortest counterexample; replay: run a schedule step by step; test: pytest file that "
+        "replays the counterexample against the real system (hooks to fill in).")
+    spec: Optional[dict[str, Any]] = Field(None, description="Protocol: vars (shared state), const, processes [{name, count, locals, "
+        "steps [{label, when, set {var: expr}, goto | choose [...]}], crash {max, restart, keep_locals}}], invariants "
+        "[{name, check}], at_end [{name, check}], deadlock, max_states. Expressions: Python-like subset (and/or/not, "
+        "comparisons, in, + - * // %, x if c else y, literals, len/min/max/abs/sorted/append/put/without/set_add/set_remove).")
+    example: Optional[str] = Field(None, max_length=60)
+    schedule: Optional[list[list[Any]]] = Field(None, description="replay: [[process, label, 'step'|'crash'], ...] as returned by check")
+    time_limit: float = Field(60, gt=0, le=3600, description="check/test: seconds of exploration")
+
+
+def run_protocol_check(services: Services, args: ProtocolArgs):
+    from .protocols import SpecError, counterexample_test, explore, load_spec, replay
+    from .protocols.examples import EXAMPLES
+    if args.action == "examples":
+        return {"examples": [{"id": k, "name": f()["name"], "doc": (f.__doc__ or "").strip()} for k, f in EXAMPLES.items()]}
+    if args.action == "example":
+        if args.example not in EXAMPLES:
+            raise ValueError(f"no existe el ejemplo {args.example!r}; disponibles: {', '.join(EXAMPLES)}")
+        return {"id": args.example, "spec": EXAMPLES[args.example]()}
+    if not args.spec:
+        raise ValueError("falta spec")
+    try:
+        spec = load_spec(args.spec)
+        if args.action == "check":
+            return explore(spec, time_limit=args.time_limit)
+        if args.action == "replay":
+            if not args.schedule:
+                raise ValueError("falta schedule")
+            return replay(spec, args.schedule)
+        result = explore(spec, time_limit=args.time_limit)
+        if not result["violation"]:
+            raise ValueError("no hay contraejemplo que convertir en test: " + result["status"])
+        return {"code": counterexample_test(spec, result["violation"]), "violation": result["violation"]}
+    except SpecError as error:
+        raise ValueError(str(error)) from error
+
+
+TOOLS.append(Tool(
+    "protocol_check",
+    "Explore every interleaving of a bounded protocol and find the shortest counterexample. Comprobar un protocolo.\n"
+    "Shared state, processes of atomic labelled steps, nondeterministic choices, bounded crashes with restart, invariants, "
+    "end conditions and deadlock. Breadth-first: a violation comes with the shortest schedule, a replay and a pytest file to "
+    "reproduce it on the real system; 'holds' means every reachable state within the bounds was checked, under the listed "
+    "assumptions (the model, not the code).\n"
+    "Sinónimos: verificar protocolo, condición de carrera, doble cobro, idempotencia, reintentos, interbloqueo, deadlock, "
+    "intercalaciones, contraejemplo, model checking, comprobar concurrencia.",
+    ProtocolArgs, ann(True), run_protocol_check))
+TOOLS_BY_NAME[TOOLS[-1].name] = TOOLS[-1]
