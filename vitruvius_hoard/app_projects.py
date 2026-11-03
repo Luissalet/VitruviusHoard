@@ -194,7 +194,10 @@ class AppProjects:
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None):
-        files = starter_files(name, template, description, accent, fields)
+        return self.create_from_files(name, template, starter_files(name, template, description, accent, fields))
+
+    def create_from_files(self, name, template, files):
+        """Create a project from a complete generated source (instruments use this)."""
         with self.lock:
             id = uuid.uuid4().hex[:16]
             root = self.root / id

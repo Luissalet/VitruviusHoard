@@ -1143,3 +1143,8 @@ TOOLS.append(Tool(
     "intercalaciones, contraejemplo, model checking, comprobar concurrencia.",
     ProtocolArgs, ann(True), run_protocol_check))
 TOOLS_BY_NAME[TOOLS[-1].name] = TOOLS[-1]
+
+from .study_tools import tools as _study_tools  # noqa: E402
+
+TOOLS.extend(_study_tools())
+TOOLS_BY_NAME.update({t.name: t for t in TOOLS})

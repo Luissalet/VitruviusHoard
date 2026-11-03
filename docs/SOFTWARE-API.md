@@ -116,6 +116,8 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `theseus_rules_read` | theseus |
 | `theseus_rules_check` | theseus |
 | `theseus_rules_export` | theseus |
+| `theseus_property_run` | theseus |
+| `theseus_synthesize` | theseus |
 | `theseus_repro_create` | theseus |
 | `theseus_repro_verify` | theseus |
 | `theseus_perf_profile` | theseus |
