@@ -6,8 +6,10 @@ the receiver runs exactly the same code without Theseus, network access or a lan
 
 A recipe declares a target (a command started on a free port with a fresh sandbox per run, or a base URL with an
 optional reset request), a model (named variables with initial values), actions and oracles. An action has an
-explicit precondition over the model, seeded parameters, picks of values bound by earlier responses (recorded by
-index, never by value, so a replay against another process or version re-binds identifiers from its own responses),
+explicit precondition over the model, seeded parameters, picks of values bound by earlier responses (recorded either
+by index into the model list, or by producer: ``{"from": <step id>, "var": <extractor>}``, the value that step
+extracted; never by value, so a replay against another process or version re-binds identifiers from its own
+responses),
 a request template, an expected status, extractors, model updates and postconditions. Invariants are checked after
 every step and may read declared read-only SQLite queries. An optional reference target receives the same symbolic
 steps and ``agree`` relations compare both responses.
@@ -101,8 +103,20 @@ MESSAGES = {
                     "cada acción necesita un nombre único de letras, dígitos, '.', '_' o '-'"),
     "params_shape": ("{where}: params map identifiers (distinct from model variables) to strategies",
                      "{where}: params asocia identificadores (distintos de las variables del modelo) con estrategias"),
-    "pick_shape": ("{where}: pick maps a new name to a list model variable (an element is chosen by index)",
-                   "{where}: pick asocia un nombre nuevo con una variable lista del modelo (se elige un elemento por índice)"),
+    "pick_shape": ("{where}: pick maps a new name to a list model variable (an element is chosen by index, or by the "
+                   "step that produced it)",
+                   "{where}: pick asocia un nombre nuevo con una variable lista del modelo (se elige un elemento por "
+                   "índice o por el paso que lo produjo)"),
+    "pick_ref_shape": ("step {n}: pick {pick} is an index or {{from, var}} naming a step id and one of its extractors",
+                       "paso {n}: la elección {pick} es un índice o {{from, var}} con el id de un paso y uno de sus extractores"),
+    "step_id_shape": ("step {n}: id must be unique text of letters, digits, '.', '_' or '-'",
+                      "paso {n}: id debe ser un texto único de letras, dígitos, '.', '_' o '-'"),
+    "pick_producer_unknown": ("step {n}: pick {pick} refers to {producer}.{var}, which is not an extractor of an earlier step",
+                              "paso {n}: la elección {pick} se refiere a {producer}.{var}, que no es un extractor de un paso anterior"),
+    "pick_unavailable": ("pick {pick}: step {producer} produced no {var} before this step",
+                         "elección {pick}: el paso {producer} no produjo {var} antes de este paso"),
+    "pick_gone": ("pick {pick}: the {var} produced by step {producer} is no longer in {pool}",
+                  "elección {pick}: el {var} producido por el paso {producer} ya no está en {pool}"),
     "extract_shape": ("{where}: extract maps new local names to expressions over the response",
                       "{where}: extract asocia nombres locales nuevos con expresiones sobre la respuesta"),
     "update_shape": ("{where}: update assigns existing model variables", "{where}: update asigna variables existentes del modelo"),
@@ -191,6 +205,52 @@ FATAL = ("http_status", "crash", "timeout", "transport", "extraction")
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 CLIP = 2000
 LIMIT_ACTIONS, LIMIT_RUNS, LIMIT_LENGTH = 40, 500, 60
+
+
+def _same(a, b):
+    return type(a) is type(b) and a == b
+
+
+def _find(values, value):
+    for i, item in enumerate(values):
+        if _same(item, value):
+            return i
+    return -1
+
+
+def _scalar(value):
+    return isinstance(value, (str, int)) and not isinstance(value, bool)
+
+
+def pick_ref(value):
+    """A producer pick is {"from": step id, "var": extractor name}; anything else is an index."""
+    return isinstance(value, dict) and set(value) == {"from", "var"} and all(isinstance(v, str) and v for v in value.values())
+
+
+def check_sequence(recipe, sequence):
+    """Reject malformed steps before execution: picks are indexes or well-formed producer references to an
+    extractor of an earlier step (unique ids). Whether the referenced value is still live is decided at run time and
+    reported as an invalid step with its reason, never swallowed."""
+    ids, extractors = set(), {}
+    for n, step in enumerate(sequence, 1):
+        if "id" in step:
+            ident = step["id"]
+            if not isinstance(ident, str) or not re.match(r"^[A-Za-z0-9_.-]+$", ident) or ident in ids:
+                raise RecipeError(t("step_id_shape", n=n))
+        if not isinstance(step.get("picks", {}), dict) or not isinstance(step.get("params", {}), dict):
+            raise RecipeError(t("pick_ref_shape", n=n, pick="picks"))
+        for name, ref in step.get("picks", {}).items():
+            if isinstance(ref, dict):
+                if not pick_ref(ref):
+                    raise RecipeError(t("pick_ref_shape", n=n, pick=name))
+                if ref["var"] not in extractors.get(ref["from"], ()):
+                    raise RecipeError(t("pick_producer_unknown", n=n, pick=name, producer=ref["from"], var=ref["var"]))
+            elif not isinstance(ref, int) or isinstance(ref, bool):
+                raise RecipeError(t("pick_ref_shape", n=n, pick=name))
+        if "id" in step:
+            ids.add(step["id"])
+            action = next((a for a in recipe["actions"] if a["name"] == step["action"]), None)
+            extractors[step["id"]] = set(action["extract"]) if action else set()
 
 
 class SetupFailure(Exception):
@@ -626,6 +686,8 @@ class Lane:
         self.host, self.port = "127.0.0.1", None
         self.model = json.loads(json.dumps(recipe["model"]))
         self.err_path = None
+        self.produced = {}  # step id -> {extractor: value this lane's own response gave}
+        self.born = set()   # (step id, extractor) whose value entered a model list in that same step
 
     def _sub(self, text):
         text = text.replace("{python}", sys.executable)
@@ -811,25 +873,57 @@ class Session:
         self.state = [lane.snapshot() for lane in self.lanes]
 
     # ---- symbolic steps
-    def bind(self, lane, step):
-        """Environment for a step on one lane (model + params + picks), or None if the precondition fails."""
+    def _bind(self, lane, step):
+        """(environment, None) for a step on one lane (model + params + picks), or (None, reason) if the precondition
+        or a pick does not hold."""
         action = self.actions.get(step["action"])
         if action is None:
-            return None
+            return None, t("precondition_failed")
         env = {**lane.model, **step.get("params", {})}
         for name, var in action["pick"].items():
-            index = step.get("picks", {}).get(name)
+            ref = step.get("picks", {}).get(name)
             values = lane.model.get(var)
-            if not isinstance(values, list) or not isinstance(index, int) or not 0 <= index < len(values):
-                return None
+            if not isinstance(values, list):
+                return None, t("precondition_failed")
+            if isinstance(ref, dict):
+                if not pick_ref(ref):
+                    return None, t("pick_ref_shape", n=step.get("id", "?"), pick=name)
+                got = lane.produced.get(ref["from"])
+                if got is None or ref["var"] not in got:
+                    return None, t("pick_unavailable", pick=name, producer=ref["from"], var=ref["var"])
+                index = _find(values, got[ref["var"]])
+                if index < 0:
+                    return None, t("pick_gone", pick=name, producer=ref["from"], var=ref["var"], pool=var)
+            else:
+                index = ref
+                if not isinstance(index, int) or not 0 <= index < len(values):
+                    return None, t("precondition_failed")
             env[name], env[name + "_index"] = values[index], index
         if action["pre"]:
             try:
                 if not _evaluate(action["pre"], env):
-                    return None
+                    return None, t("precondition_failed")
             except ExpressionError:
-                return None
-        return env
+                return None, t("precondition_failed")
+        return env, None
+
+    def bind(self, lane, step):
+        return self._bind(lane, step)[0]
+
+    def provenance(self, lane, var, index):
+        """The producer reference of the element at ``index`` of model list ``var``: the latest step whose extracted
+        value entered a model list in its own step and equals the element (and whose first occurrence is ``index``,
+        so resolving the reference gives back the same position). None when the element has no such origin."""
+        values = lane.model.get(var)
+        if not isinstance(values, list) or not 0 <= index < len(values) or not _scalar(values[index]):
+            return None
+        if _find(values, values[index]) != index:
+            return None
+        for sid in reversed(list(lane.produced)):
+            for evar, got in lane.produced[sid].items():
+                if (sid, evar) in lane.born and _same(got, values[index]):
+                    return {"from": sid, "var": evar}
+        return None
 
     def enabled(self, step):
         return all(self.bind(lane, step) is not None for lane in self.lanes)
@@ -867,12 +961,13 @@ class Session:
         """Execute one symbolic step on every lane. Returns the step record; record['outcome'] is
         'ok', 'failed', 'invalid' or 'error'."""
         action = self.actions[step["action"]]
-        record = {"index": index, "action": action["name"], "params": step.get("params", {}), "picks": step.get("picks", {}),
+        record = {"index": index, **({"id": step["id"]} if step.get("id") else {}), "action": action["name"], "params": step.get("params", {}), "picks": step.get("picks", {}),
                   "lanes": {}, "violations": [], "errors": [], "outcome": "ok"}
-        envs = [self.bind(lane, step) for lane in self.lanes]
+        bound = [self._bind(lane, step) for lane in self.lanes]
+        envs = [b[0] for b in bound]
         if envs[0] is None:
             record["outcome"] = "invalid"
-            record["detail"] = t("precondition_failed")
+            record["detail"] = bound[0][1]
             return record
         if len(envs) > 1 and envs[1] is None:
             record["outcome"] = "inconclusive"
@@ -902,6 +997,10 @@ class Session:
                         fatal = {"kind": "extraction", "name": var, "expr": source, "evidence": "http",
                                  "detail": t("extractor_failed", detail=exc), "observed": {"status": got["status"], "body": clip(got["body"])}}
                         break
+                if step.get("id"):
+                    lane.produced[step["id"]] = dict(extracted)
+                if action["pick"]:
+                    lane_record["bound"] = {n: {"index": env[n + "_index"], "value": clip(env[n])} for n in action["pick"]}
                 if extracted:
                     lane_record["extracted"] = {k: clip(v) for k, v in extracted.items()}
                     if lane is self.main:
@@ -941,6 +1040,11 @@ class Session:
             self.state[n] = after
             old = lane.model
             lane.model = new
+            if step.get("id"):
+                for evar, value in extracted.items():
+                    if _scalar(value) and any(isinstance(new.get(v), list) and _find(new[v], value) >= 0
+                                              and _find(old.get(v) if isinstance(old.get(v), list) else [], value) < 0 for v in new):
+                        lane.born.add((step["id"], evar))
             lane_record["model"] = {k: clip(v) for k, v in new.items()}
             if lane is not self.main:
                 continue
