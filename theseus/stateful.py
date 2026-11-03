@@ -10,6 +10,7 @@ proof of correctness. A chain whose preparation failed (start, reset, setup, ref
 Oracles are the recipe's: invariants, postconditions, relations with an authorised reference or between steps.
 Nothing is inferred from endpoint names, and a drafted oracle is a proposal until it is executed here.
 """
+import functools
 import hashlib
 import json
 from pathlib import Path
@@ -22,10 +23,73 @@ from .equivalence import Equivalence
 from .repro import BudgetExceeded, ddmin
 from .store import identifier, now
 
-SCOPE = ("Only the generated sequences listed here were executed against fresh target processes. No counterexample "
-         "found is evidence on those runs, not a proof of correctness; coverage shows what never ran. A chain whose "
-         "preparation failed is inconclusive, not a pass.")
 EXPORT_FORMAT = "theseus-stateful-export/1"
+core.MESSAGES.update({
+    "scope": ("Only the generated sequences listed here were executed against fresh target processes. No counterexample "
+              "found is evidence on those runs, not a proof of correctness; coverage shows what never ran. A chain whose "
+              "preparation failed is inconclusive, not a pass.",
+              "Sólo se ejecutaron las secuencias generadas que aparecen aquí, contra procesos de destino nuevos. No encontrar "
+              "contraejemplo es evidencia sobre esas ejecuciones, no una prueba de corrección; la cobertura muestra lo que no "
+              "se ejecutó. Una cadena cuya preparación falló es inconclusa, no un éxito."),
+    "coverage_note": ("Transitions not observed include pairs that the preconditions may make impossible; they are listed as "
+                      "not executed, not as defects.",
+                      "Las transiciones no observadas incluyen pares que las precondiciones pueden hacer imposibles; se "
+                      "enumeran como no ejecutadas, no como defectos."),
+    "shared_state": ("{lane} is a base_url without a reset request: state is shared between runs, so a failure may depend "
+                     "on earlier runs.",
+                     "{lane} es una base_url sin petición de reinicio: el estado se comparte entre ejecuciones, así que un "
+                     "fallo puede depender de ejecuciones anteriores."),
+    "note_counterexample_found": ("A generated sequence broke a declared oracle; the reduced sequence below was re-executed "
+                                  "on fresh processes and keeps the same failure signature.",
+                                  "Una secuencia generada incumplió un oráculo declarado; la secuencia reducida se volvió a "
+                                  "ejecutar en procesos nuevos y conserva la misma firma de fallo."),
+    "note_inconclusive": ("The target could not be prepared or an oracle could not be evaluated; nothing was concluded.",
+                          "No se pudo preparar el destino o no se pudo evaluar un oráculo; no se ha concluido nada."),
+    "note_no_counterexample_found": ("No declared oracle failed on the executed runs. {scope}",
+                                     "Ningún oráculo declarado falló en las ejecuciones realizadas. {scope}"),
+    "reproduce_note": ("Running the same recipe with this seed and runs=1 regenerates the original sequence.",
+                       "Ejecutar la misma receta con esta semilla y runs=1 vuelve a generar la secuencia original."),
+    "reduction_note": ("Each accepted reduction restarted the target, re-bound identifiers from its own responses, kept every "
+                       "precondition valid and reproduced the same (action, kind, oracle) signature; the minimum is local.",
+                       "Cada reducción aceptada reinició el destino, volvió a obtener los identificadores de sus propias "
+                       "respuestas, mantuvo válidas todas las precondiciones y reprodujo la misma firma (acción, tipo, "
+                       "oráculo); el mínimo es local."),
+    "replay_note": ("Identifiers were re-bound from this target's own responses; none were carried over from earlier runs.",
+                    "Los identificadores se obtuvieron de las respuestas de este destino; no se reutilizó ninguno de "
+                    "ejecuciones anteriores."),
+    "export_override": ("THESEUS_TARGET_ARGV='[\"{{python}}\", \"/path/to/fixed_service.py\", ...]' selects another version; "
+                        "THESEUS_TARGET_URL=http://host:port targets a running service instead.",
+                        "THESEUS_TARGET_ARGV='[\"{{python}}\", \"/ruta/servicio_corregido.py\", ...]' elige otra versión; "
+                        "THESEUS_TARGET_URL=http://host:puerto apunta a un servicio ya en marcha."),
+    "export_note": ("Standard library only (urllib/http.client, sqlite3, subprocess) plus pytest; no Theseus, network or "
+                    "model needed. The exported files and their messages are in English.",
+                    "Sólo biblioteca estándar (urllib/http.client, sqlite3, subprocess) y pytest; no necesita Theseus, red "
+                    "ni modelo. Los archivos exportados y sus mensajes están en inglés."),
+    "default_recipe_name": ("Stateful recipe", "Receta de secuencias"),
+    "err_recipe_other_project": ("Recipe belongs to another project", "La receta pertenece a otro proyecto"),
+    "err_recipe_not_found": ("Recipe not found in this project", "No se encuentra la receta en este proyecto"),
+    "err_recipe_either": ("Give either recipe_id or an inline recipe", "Indica recipe_id o una receta completa, no ambos"),
+    "err_budget": ("shrink_budget is an integer from 1 to 2000", "shrink_budget es un entero de 1 a 2000"),
+    "err_job_not_found": ("Job not found in this project", "No se encuentra la ejecución en este proyecto"),
+    "err_not_stateful": ("job_id is not a stateful run", "job_id no es una ejecución de secuencias"),
+    "err_which": ("which is minimal or original", "which es minimal u original"),
+    "err_attempts": ("attempts is an integer from 1 to 10", "attempts es un entero de 1 a 10"),
+    "err_no_counterexample_sequence": ("That run found no counterexample; pass a sequence explicitly",
+                                       "Esa ejecución no encontró contraejemplo; indica una secuencia explícita"),
+    "err_need_source": ("Give job_id, or recipe with sequence", "Indica job_id, o una receta con su secuencia"),
+    "err_sequence_shape": ("sequence is a list of {{action, params, picks}}", "sequence es una lista de {{action, params, picks}}"),
+    "err_no_counterexample_export": ("That run found no counterexample to export",
+                                     "Esa ejecución no encontró ningún contraejemplo que exportar"),
+})
+
+
+def localised(method):
+    """Public entry points take ``lang`` (en or es) and produce their human-readable text in it."""
+    @functools.wraps(method)
+    def run(self, *args, lang=None, **kwargs):
+        with core.language(lang):
+            return method(self, *args, **kwargs)
+    return run
 
 
 def validate(recipe):
@@ -71,8 +135,7 @@ class Coverage:
                 "transitions_observed": dict(sorted(self.transitions.items())),
                 "transitions_declared": len(declared),
                 "transitions_not_observed": [e for e in declared if e not in self.transitions],
-                "note": "Transitions not observed include pairs that the preconditions may make impossible; they are "
-                        "listed as not executed, not as defects."}
+                "note": core.t("coverage_note")}
 
 
 class Stateful:
@@ -88,6 +151,7 @@ class Stateful:
             """)
 
     # ---- recipes
+    @localised
     def save_recipe(self, project_id, recipe, name="", recipe_id=""):
         self.store.project(project_id)
         normalised = validate(recipe)
@@ -95,20 +159,21 @@ class Stateful:
         with self.store.db() as db:
             previous = db.execute("SELECT project_id,revision FROM stateful_recipes WHERE id=?", (key,)).fetchone()
             if previous is not None and previous[0] != project_id:
-                raise ValueError("Recipe belongs to another project")
+                raise ValueError(core.t("err_recipe_other_project"))
             revision = (previous[1] if previous else 0) + 1
             db.execute("INSERT OR REPLACE INTO stateful_recipes VALUES (?,?,?,?,?,?)",
-                       (key, project_id, (name or normalised["name"]).strip() or "Stateful recipe",
+                       (key, project_id, (name or normalised["name"]).strip() or core.t("default_recipe_name"),
                         json.dumps(recipe, ensure_ascii=False), revision, now()))
         return self.read_recipe(project_id, key)
 
+    @localised
     def read_recipe(self, project_id, recipe_id=""):
         self.store.project(project_id)
         with self.store.db() as db:
             if recipe_id:
                 row = db.execute("SELECT * FROM stateful_recipes WHERE id=? AND project_id=?", (recipe_id, project_id)).fetchone()
                 if row is None:
-                    raise LookupError("Recipe not found in this project")
+                    raise LookupError(core.t("err_recipe_not_found"))
                 return {"id": row["id"], "name": row["name"], "revision": row["revision"], "updated_at": row["updated_at"],
                         "recipe": json.loads(row["recipe"])}
             rows = db.execute("SELECT * FROM stateful_recipes WHERE project_id=? ORDER BY rowid", (project_id,)).fetchall()
@@ -116,11 +181,12 @@ class Stateful:
                              "actions": [a.get("name") for a in json.loads(r["recipe"]).get("actions", [])]} for r in rows]}
 
     # ---- runs
+    @localised
     def start(self, project_id, recipe_id="", recipe=None, runs=None, max_length=None, seed=None, shrink=True,
               shrink_budget=200):
         self.store.project(project_id)
         if bool(recipe_id) == bool(recipe):
-            raise ValueError("Give either recipe_id or an inline recipe")
+            raise ValueError(core.t("err_recipe_either"))
         revision = None
         if recipe_id:
             saved = self.read_recipe(project_id, recipe_id)
@@ -129,9 +195,9 @@ class Stateful:
         source = {**recipe, **overrides}
         normalised = validate(source)
         if isinstance(shrink_budget, bool) or not isinstance(shrink_budget, int) or not 1 <= shrink_budget <= 2000:
-            raise ValueError("shrink_budget is an integer from 1 to 2000")
+            raise ValueError(core.t("err_budget"))
         job_id = identifier()
-        result = {"kind": "stateful_run", "scope": SCOPE, "recipe_id": recipe_id or None, "recipe_revision": revision,
+        result = {"kind": "stateful_run", "lang": core.current_language(), "scope": core.t("scope"), "recipe_id": recipe_id or None, "recipe_revision": revision,
                   "recipe": source, "recipe_sha256": hashlib.sha256(_key(source).encode()).hexdigest(),
                   "options": {"runs": normalised["runs"], "max_length": normalised["max_length"], "seed": normalised["seed"],
                               "shrink": bool(shrink), "shrink_budget": shrink_budget},
@@ -139,8 +205,7 @@ class Stateful:
         for label in ("target", "reference"):
             spec = normalised[label]
             if spec and "base_url" in spec and not spec["reset"]:
-                result["warnings"].append("%s is a base_url without a reset request: state is shared between runs, so a "
-                                          "failure may depend on earlier runs." % label)
+                result["warnings"].append(core.t("shared_state", lane=core.lane_name(label)))
         self.store.save_job(project_id, job_id, "queued", result)
         self.manager.pool.submit(self._run, project_id, job_id, result, normalised)
         return self.store.job(job_id)
@@ -153,7 +218,7 @@ class Stateful:
             try:
                 session.start()
             except core.SetupFailure as exc:
-                return sequence, {"outcome": "inconclusive", "reason": "setup: " + str(exc), "trace": [], "steps_run": 0}
+                return sequence, {"outcome": "inconclusive", "reason": core.t("setup_prefix", detail=exc), "trace": [], "steps_run": 0}
             previous = None
             for i in range(length):
                 self.equivalence._check(job_id)
@@ -185,12 +250,16 @@ class Stateful:
                         result["violations"] = record["violations"]
                         result["signature"] = core.signature(result["failure"])
                     else:
-                        result["reason"] = record.get("detail") or json.dumps(record.get("errors"), ensure_ascii=False)
+                        result["reason"] = record.get("detail") or core.t("oracle_error")
                         result["errors"] = record.get("errors", [])
                     return sequence, result
             return sequence, {"outcome": "passed", "trace": session.trace, "steps_run": len(sequence), "ids": session.ids}
 
     def _run(self, project_id, job_id, result, recipe):
+        with core.language(result.get("lang", "en")):
+            self._run_job(project_id, job_id, result, recipe)
+
+    def _run_job(self, project_id, job_id, result, recipe):
         try:
             self.store.save_job(project_id, job_id, "running", result)
             coverage = Coverage(recipe)
@@ -224,10 +293,7 @@ class Stateful:
             result["summary"] = {
                 "verdict": verdict, "runs_executed": len(result["runs"]), "outcomes": counts,
                 "never_executed_actions": cov["never_executed"],
-                "note": {"counterexample_found": "A generated sequence broke a declared oracle; the reduced sequence below was "
-                                                 "re-executed on fresh processes and keeps the same failure signature.",
-                         "inconclusive": "The target could not be prepared or an oracle could not be evaluated; nothing was concluded.",
-                         "no_counterexample_found": "No declared oracle failed on the executed runs. " + SCOPE}[verdict]}
+                "note": core.t("note_" + verdict, scope=core.t("scope"))}
             self.store.save_job(project_id, job_id, "finished", result)
         except InterruptedError as exc:
             result["message"] = str(exc)
@@ -298,31 +364,31 @@ class Stateful:
         confirmed = all(c["outcome"] == "failed" and c["signature"] == target for c in confirmations)
         final = confirmations[0]
         return {"seed": run_seed, "reproduce": {"seed": run_seed, "runs": 1,
-                                                "note": "Running the same recipe with this seed and runs=1 regenerates the original sequence."},
+                                                "note": core.t("reproduce_note")},
                 "signature": target, "original": sequence[:outcome["at"] + 1], "original_length": outcome["at"] + 1,
                 "minimal": current, "minimal_length": len(current), "reductions": trail, "reruns": budget["runs"],
                 "budget_exhausted": exhausted, "reexecuted_and_confirmed": confirmed,
                 "failure": final.get("failure"), "violations": final.get("violations"), "trace": final.get("trace"),
                 "explanation": core.describe(final), "ids_observed": final.get("ids", []),
-                "note": "Each accepted reduction restarted the target, re-bound identifiers from its own responses, kept every "
-                        "precondition valid and reproduced the same (action, kind, oracle) signature; the minimum is local."}
+                "note": core.t("reduction_note")}
 
     # ---- replay
     def _counterexample(self, project_id, job_id):
         job = self.store.job(job_id)
         if job["project_id"] != project_id:
-            raise LookupError("Job not found in this project")
+            raise LookupError(core.t("err_job_not_found"))
         if job["result"].get("kind") != "stateful_run":
-            raise ValueError("job_id is not a stateful run")
+            raise ValueError(core.t("err_not_stateful"))
         return job
 
+    @localised
     def replay(self, project_id, job_id="", sequence=None, which="minimal", target=None, reference=None, recipe=None,
                attempts=1):
         self.store.project(project_id)
         if which not in ("minimal", "original"):
-            raise ValueError("which is minimal or original")
+            raise ValueError(core.t("err_which"))
         if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 10:
-            raise ValueError("attempts is an integer from 1 to 10")
+            raise ValueError(core.t("err_attempts"))
         source = None
         if job_id:
             job = self._counterexample(project_id, job_id)
@@ -330,25 +396,25 @@ class Stateful:
             if sequence is None:
                 example = job["result"].get("counterexample")
                 if not example:
-                    raise ValueError("That run found no counterexample; pass a sequence explicitly")
+                    raise ValueError(core.t("err_no_counterexample_sequence"))
                 sequence = example[which]
         if recipe is not None:
             source = recipe
         if source is None or sequence is None:
-            raise ValueError("Give job_id, or recipe with sequence")
+            raise ValueError(core.t("err_need_source"))
         normalised = validate(source)
         tgt = core.validate_target(target, "target") if target else None
         ref = core.validate_target(reference, "reference") if reference else None
         if not isinstance(sequence, list) or any(not isinstance(s, dict) or "action" not in s for s in sequence):
-            raise ValueError("sequence is a list of {action, params, picks}")
+            raise ValueError(core.t("err_sequence_shape"))
         runs = [core.run_sequence(normalised, sequence, tgt, ref) for _ in range(attempts)]
         outcomes = [r["outcome"] for r in runs]
         replay_id = identifier()
-        result = {"kind": "stateful_replay", "scope": SCOPE, "source_job_id": job_id or None, "which": which,
+        result = {"kind": "stateful_replay", "lang": core.current_language(), "scope": core.t("scope"), "source_job_id": job_id or None, "which": which,
                   "target": tgt or normalised["target"], "sequence": sequence, "attempts": attempts, "outcomes": outcomes,
                   "stable": len(set(outcomes)) == 1, "result": runs[0], "explanation": core.describe(runs[0]),
                   "ids_observed": [r.get("ids", []) for r in runs],
-                  "note": "Identifiers were re-bound from this target's own responses; none were carried over from earlier runs."}
+                  "note": core.t("replay_note")}
         if job_id:
             original = (self.store.job(job_id)["result"].get("counterexample") or {})
             if original.get("signature"):
@@ -357,13 +423,14 @@ class Stateful:
         return self.store.job(replay_id)
 
     # ---- export
+    @localised
     def export(self, project_id, job_id, which="minimal", output_dir=""):
         job = self._counterexample(project_id, job_id)
         example = job["result"].get("counterexample")
         if not example:
-            raise ValueError("That run found no counterexample to export")
+            raise ValueError(core.t("err_no_counterexample_export"))
         if which not in ("minimal", "original"):
-            raise ValueError("which is minimal or original")
+            raise ValueError(core.t("err_which"))
         recipe = job["result"]["recipe"]
         validate(recipe)
         name = re.sub(r"[^a-z0-9_]+", "_", str(recipe.get("name") or "stateful").lower()).strip("_") or "stateful"
@@ -388,9 +455,7 @@ class Stateful:
                             "text": text})
         return {"directory": str(directory.resolve()), "files": written, "test": "test_%s_regression.py" % name,
                 "command": "python -m pytest -q test_%s_regression.py" % name,
-                "override": "THESEUS_TARGET_ARGV='[\"{python}\", \"/path/to/fixed_service.py\", ...]' selects another version; "
-                            "THESEUS_TARGET_URL=http://host:port targets a running service instead.",
-                "note": "Standard library only (urllib/http.client, sqlite3, subprocess) plus pytest; no Theseus, network or model needed."}
+                "override": core.t("export_override"), "note": core.t("export_note")}
 
 
 TEST_TEMPLATE = '''"""Regression for a stateful failure found and reduced by Theseus (__NAME__).

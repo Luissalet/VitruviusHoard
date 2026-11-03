@@ -235,7 +235,7 @@ async function load(id) {
   if (sequence !== state.sequence) return;
   if (state.data?.project.id !== data.project.id) state.cutterObservation = null;
   state.data = data;
-  try { state.statefulRecipes = (await api(`/projects/${data.project.id}/stateful/recipes`)).recipes; } catch { state.statefulRecipes = []; }
+  try { state.statefulRecipes = (await api(`/projects/${data.project.id}/stateful/recipes?lang=es`)).recipes; } catch { state.statefulRecipes = []; }
   if (sequence !== state.sequence) return;
   if (!data.artifacts.some((row) => row.id === state.artifact)) {
     state.artifact = data.artifacts[0]?.id || "";
@@ -1121,17 +1121,17 @@ document.addEventListener("click", (event) => {
     keepDrafts(); render(); $("#stateful-form textarea").focus(); return;
   }
   if (action === "stateful-load") return act(async () => {
-    const saved = await api(`/projects/${projectId()}/stateful/recipes/${id}`);
+    const saved = await api(`/projects/${projectId()}/stateful/recipes/${id}?lang=es`);
     state.drafts[projectId()] ||= {};
     Object.assign(state.drafts[projectId()], {"stateful-recipe": json(saved.recipe), "stateful-name": saved.name, "stateful-recipe-id": saved.id});
     keepDrafts(); notice("Receta cargada en el editor.");
   });
   if (action === "stateful-replay") return act(async () => {
-    await api(`/projects/${projectId()}/stateful/replay`, {job_id: id});
+    await api(`/projects/${projectId()}/stateful/replay`, {job_id: id, lang: "es"});
     await refresh(); notice("Secuencia reducida reproducida en un proceso nuevo.");
   });
   if (action === "stateful-export") return act(async () => {
-    state.statefulExport = {...await api(`/projects/${projectId()}/stateful/export`, {job_id: id}), job_id: id};
+    state.statefulExport = {...await api(`/projects/${projectId()}/stateful/export`, {job_id: id, lang: "es"}), job_id: id};
     notice("Regresión pytest exportada. No necesita Theseus, red ni modelo para ejecutarse.");
   });
   if (action === "new-project") return openNewProject();
@@ -1351,11 +1351,11 @@ document.addEventListener("submit", (event) => {
       let recipe;
       try { recipe = JSON.parse(fields.recipe || ""); } catch { throw new Error("La receta debe ser JSON válido."); }
       if (event.submitter?.value === "save") {
-        const saved = await api(`/projects/${projectId()}/stateful/recipes`, {recipe, name: fields.name || "", recipe_id: draft("stateful-recipe-id") === "" ? "" : (draft("stateful-name") === fields.name ? draft("stateful-recipe-id") : "")});
+        const saved = await api(`/projects/${projectId()}/stateful/recipes`, {recipe, lang: "es", name: fields.name || "", recipe_id: draft("stateful-recipe-id") === "" ? "" : (draft("stateful-name") === fields.name ? draft("stateful-recipe-id") : "")});
         state.drafts[projectId()] ||= {}; state.drafts[projectId()]["stateful-recipe-id"] = saved.id; keepDrafts();
         await refresh(); notice(`Receta guardada (revisión ${saved.revision}).`);
       } else {
-        const options = {recipe, shrink_budget: Number(fields.shrink_budget || 200)};
+        const options = {recipe, lang: "es", shrink_budget: Number(fields.shrink_budget || 200)};
         for (const key of ["runs", "seed", "max_length"]) if (fields[key] !== "") options[key] = Number(fields[key]);
         await api(`/projects/${projectId()}/stateful/runs`, options);
         await refresh(); notice("Ejecución de secuencias iniciada. El resultado aparece aquí al terminar.");
@@ -1364,7 +1364,7 @@ document.addEventListener("submit", (event) => {
     if (form.classList.contains("stateful-replay-form")) {
       let target;
       try { target = JSON.parse(fields.target || ""); } catch { throw new Error("El destino debe ser JSON válido."); }
-      await api(`/projects/${projectId()}/stateful/replay`, {job_id: form.dataset.job, target});
+      await api(`/projects/${projectId()}/stateful/replay`, {job_id: form.dataset.job, target, lang: "es"});
       await refresh(); notice("Secuencia reproducida contra el destino indicado.");
     }
     if (form.id === "verify-form") {

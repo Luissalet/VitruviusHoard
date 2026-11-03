@@ -72,6 +72,14 @@ table) and file effects (`watch.files` globs).
 `theseus_stateful_adapter.py` and `theseus_expressions.py`; `python -m pytest -q test_quotes_regression.py` fails
 on v1 and passes with `THESEUS_TARGET_ARGV='["{python}", ".../quotes_v2.py", "--db", "{sandbox}/quotes.db", "--port", "{port}"]'`.
 
+## Language
+
+All five tools and REST routes take `lang` (`en` by default, or `es` for Spanish of Spain); GET routes take it as a
+query parameter. It applies to every human-readable text: validation errors, setup and inconclusive reasons,
+violation details, explanations, notes and scope. Machine fields (verdicts, outcomes, kinds, evidence, signatures,
+JSON field paths) never change. Raw process stderr and expression-evaluator details are data and stay verbatim inside
+the translated sentence. The *Secuencias* tab requests Spanish. The exported regression's own messages are English.
+
 ## Limits
 
 - Only executed sequences are evidence; coverage shows what never ran. Not a proof of correctness.
