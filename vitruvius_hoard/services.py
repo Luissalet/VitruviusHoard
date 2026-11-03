@@ -792,7 +792,13 @@ class Services:
             "widths": list(self.db.get_setting("widths", [390, 1024, 1440])),
             "video_enabled": bool(self.db.get_setting("video_enabled", True)),
             "language": self.db.get_setting("language", "en"),
+            **self._figma_token_state(),
         }
+
+    def _figma_token_state(self) -> dict[str, Any]:
+        from . import figma as figma_mod
+        token = figma_mod.read_token(self.config.data_dir)
+        return {"figma_token_set": bool(token), "figma_token_hint": ("…" + token[-4:]) if len(token) >= 8 else ""}
 
     def update_settings(self, patch: dict[str, Any]) -> dict[str, Any]:
         if "backend" in patch and patch["backend"] is not None:
@@ -805,6 +811,9 @@ class Services:
             self.db.set_setting("video_enabled", bool(patch["video_enabled"]))
         if "language" in patch and patch["language"] in ("en", "es"):
             self.db.set_setting("language", patch["language"])
+        if "figma_token" in patch and patch["figma_token"] is not None:
+            from . import figma as figma_mod
+            figma_mod.write_token(self.config.data_dir, str(patch["figma_token"]))
         return self.get_settings()
 
     # ---------------- status ----------------

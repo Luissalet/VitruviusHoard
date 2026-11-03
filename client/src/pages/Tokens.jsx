@@ -4,6 +4,8 @@ import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ContrastSwatch, ConfirmButton } from "../components/ui.jsx";
 import { clock } from "../format.js";
+import PresetPicker from "../components/PresetPicker.jsx";
+import FigmaImport from "../components/FigmaImport.jsx";
 
 const STYLE_OPTIONS = ["sharp", "soft", "pill", "flat", "hard-offset"];
 const FORM_DEFAULTS = {
@@ -270,7 +272,10 @@ export default function Tokens() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-[20px] font-semibold">{t("nav_tokens")}</h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-[20px] font-semibold">{t("nav_tokens")}</h1>
+        <FigmaImport lang={lang} notify={notify} onOpenTokens={(id) => { loadSaved(); openSaved(id); }} />
+      </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-6">
           <div className="panel">
@@ -329,6 +334,8 @@ export default function Tokens() {
               </button>
             </form>
           </div>
+
+          <PresetPicker lang={lang} notify={notify} saved={saved} currentId={current?.id} onApplied={(id) => { loadSaved(); openSaved(id); }} />
 
           <div className="panel">
             <h2 className="text-[14px] font-semibold mb-3">{t("tokens_saved_title")}</h2>

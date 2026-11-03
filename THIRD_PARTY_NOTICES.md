@@ -88,6 +88,17 @@ The structure of `site_audit` (categories, weights, severities, phased plan, rep
 Copyright (c) 2026 agricidaniel, https://github.com/AgriciDaniel/claude-seo. No source file was copied; the checks are original code.
 The MIT licence text is the same as above with that copyright line.
 
+## Slop audit, presets and Figma import (see NOTICE 5-8)
+
+- **unslop** by Damir Sokolovsky (@heydamir), https://github.com/heydamir/unslop, licensed under Creative Commons Attribution 4.0
+  (https://creativecommons.org/licenses/by/4.0/). The sign list, the heavy / light / none decision, the order of the fix passes and
+  the direction brief guided the `unslop/` rules and `vitruvius_hoard/slop_audit.py`. The wording and the code here are original;
+  the signs were reworded and turned into measurements of the rendered page.
+- **hallmark** (MIT): the many-widths lint idea (sloplint) and the theme headers from which 50 presets are computed.
+- **shadcn/ui** (MIT): the `registry-item.json` shape and the theme variable names served by `/api/design/registry/*`.
+- **Figma-Context-MCP** by GLips (MIT): the idea of a compact layout/style reduction of a Figma frame; `vitruvius_hoard/figma.py`
+  is original code.
+
 ## Swift demangling test vectors
 
 `theseus_tests/fixtures/swift_manglings.txt` is an unmodified copy of `test/Demangle/Inputs/manglings.txt`

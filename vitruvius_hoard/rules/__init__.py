@@ -15,7 +15,7 @@ _LOADED = False
 
 def implementations() -> dict:
     """Every packaged check, by rule id."""
-    from . import dom_rules, static_a, static_b  # noqa: F401 — static_b registers into static_a's table
+    from . import dom_rules, static_a, static_b, unslop  # noqa: F401 — static_b registers into static_a's table
     return {**static_a.CHECKS, **dom_rules.CHECKS}
 
 

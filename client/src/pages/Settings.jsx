@@ -32,6 +32,38 @@ function ModelRow({ label, resolution }) {
   );
 }
 
+// The Figma personal access token for "Import from Figma": saved in the app's data folder, never shown back in full.
+function FigmaTokenPanel({ lang, notify, settings, onSaved }) {
+  const L = (es, en) => (lang === "es" ? es : en);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = async (token) => {
+    setBusy(true);
+    try {
+      onSaved(await api.settingsUpdate({ figma_token: token }));
+      setValue("");
+      notify(token ? L("Token de Figma guardado.", "Figma token saved.") : L("Token de Figma quitado.", "Figma token removed."));
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="panel" data-testid="figma-token-panel">
+      <h2 className="text-[14px] font-semibold mb-2">{L("Token de Figma", "Figma token")}</h2>
+      <p className="help mb-2">{L("Para «Importar de Figma» (Design systems). En Figma: Settings > Security > Personal access tokens, con permiso de lectura de contenido. Se guarda solo en la carpeta de datos de la app.",
+        "For Import from Figma (Design systems). In Figma: Settings > Security > Personal access tokens, with file content read access. It is kept only in the app's data folder.")}</p>
+      <div className="flex gap-2 flex-wrap items-center">
+        <input type="password" className="field flex-1" style={{ minWidth: 220 }} value={value} onChange={(e) => setValue(e.target.value)} placeholder="figd_…" aria-label={L("Token de Figma", "Figma token")} autoComplete="off" />
+        <button type="button" className="btn btn-primary" disabled={busy || !value.trim()} onClick={() => save(value.trim())}>{L("Guardar token", "Save token")}</button>
+        {settings?.figma_token_set && <button type="button" className="btn" disabled={busy} onClick={() => save("")}>{L("Quitar", "Remove")}</button>}
+      </div>
+      <div className="help mt-2" data-testid="figma-token-state">{settings?.figma_token_set ? `${L("Guardado", "Saved")} ${settings.figma_token_hint || ""}` : L("Sin token.", "No token saved.")}</div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { t, notify, lang } = useApp();
   const [status, setStatus] = useState(null);
@@ -153,6 +185,8 @@ export default function Settings() {
 
         <button type="submit" className="btn btn-primary self-start" disabled={busy}>{t("save")}</button>
       </form>
+
+      <FigmaTokenPanel lang={lang} notify={notify} settings={settings} onSaved={(cfg) => setSettings(cfg)} />
 
       <div className="panel">
         <h2 className="text-[14px] font-semibold mb-2">{t("settings_mcp_token")}</h2>
