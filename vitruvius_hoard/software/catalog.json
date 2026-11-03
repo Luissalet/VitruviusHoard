@@ -7590,6 +7590,129 @@
     "module": "theseus"
   },
   {
+    "name": "theseus_property_run",
+    "description": "Run a property and business-sequence suite as a background job. A target program (argv command or a Python callable 'module:function' in a subprocess) is driven by seeded, composable input strategies (integers, decimals, text, lists, dicts, one_of, tuples) and checked against properties written in the safe expression language: invariants, round trips (export then import), idempotence f(f(x))==f(x), metamorphic relations and reference-model comparisons. Stateful suites execute random command sequences (with preconditions, a model updated by expressions and postconditions) against the real program in one sandbox. Failures are shrunk by re-executing every candidate and keeping the same violated property; the minimal case is returned. Oracles that only compare the program with itself are warned about. No counterexample found is evidence on the executed runs, not a proof. Read the job with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "suite": {
+          "type": "object",
+          "description": "{target:{argv|callable,path,encode,decode}, input:<strategy>, runs, seed, properties:[{kind:invariant|roundtrip|idempotent|metamorphic|model, name, when, expr, then, transform, reference, input}], stateful:[{name, program, init, files, db, commands:[{name,args,stdin,params,pre,update,post}], runs, max_length, seed}]}"
+        },
+        "shrink": {
+          "type": "boolean"
+        },
+        "shrink_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "project_id",
+        "suite"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_synthesize",
+    "description": "Synthesize a business rule as a safe expression from input/output examples (and outputs it must not produce) as a background job: enumerative search by size with observational-equivalence pruning over arithmetic, comparisons, conditionals, rounding functions and string operations, then a counterexample-guided loop that validates the simplest consistent expression against a reference program on generated and boundary inputs, turning every disagreement into a new example. Returns the expression, the examples used, the validation coverage and, on failure, the closest candidates with their counterexamples. save_rule stores the expression as a hypothesis in the rules bank (status changes only through theseus_rules_check). Read the job with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "[{input:{x:10}, output:12.1}] (or flat {x:10, output:12.1})"
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "[{input:{x:10}, output:99}]: outputs the expression must not produce for that input"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reference": {
+          "type": "object",
+          "description": "{argv|callable, path, encode: text|json|json_object, decode: auto|json|text, cwd, env, timeout_seconds}"
+        },
+        "domain": {
+          "type": "object",
+          "description": "{variable: input strategy} used to generate validation inputs"
+        },
+        "max_size": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 12
+        },
+        "time_budget_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "max_rounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "max_reference_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "max_splits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "save_rule": {
+          "type": "object",
+          "description": "{statement, title, rule_id, evidence, tags}"
+        }
+      },
+      "required": [
+        "project_id",
+        "examples"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_repro_create",
     "description": "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.",
     "inputSchema": {
