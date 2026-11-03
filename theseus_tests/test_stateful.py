@@ -8,7 +8,7 @@ import time
 from fastapi.testclient import TestClient
 import pytest
 
-from theseus import stateful_core as core, strategies
+from theseus import stateful, stateful_core as core, strategies
 from theseus.api import TOOLS, create_app
 from stateful_fixture import quotes_recipe, service, target
 
@@ -60,7 +60,7 @@ def test_seeded_run_finds_and_reduces_a_failure_that_still_fails(workspace):
     example = result["counterexample"]
     assert example["reexecuted_and_confirmed"] is True
     assert example["minimal_length"] < example["original_length"]
-    assert example["minimal_length"] <= 6
+    assert example["minimal_length"] == 4  # see test_seed_five_reduces_to_the_true_minimum
     action, kind, name = example["signature"]
     assert kind in {"postcondition", "invariant"}
     assert (action, name) in {("remove_line", "total after edit"), ("retry_confirm", "same charge on retry"),
@@ -289,3 +289,151 @@ def test_lang_parameter_on_tools_and_rest(workspace):
     assert exported["note"].startswith("Sólo biblioteca estándar") and "elige otra versión" in exported["override"]
     adapter = next(f["text"] for f in exported["files"] if f["name"] == "theseus_stateful_adapter.py")
     assert "import contextvars" in adapter and "\nimport theseus" not in adapter
+
+
+# ---------------------------------------------------------------- picks by producer step
+
+def _recipe(version="v1"):
+    return core.validate_recipe(quotes_recipe(version), strategies.validate)
+
+
+def _step(sid, action, params=None, picks=None):
+    return {"id": sid, "action": action, "params": params or {}, "picks": picks or {}}
+
+
+LINE_S2 = {"from": "s2", "var": "line_id"}
+
+
+def test_seed_five_reduces_to_the_true_minimum(workspace):
+    """Seed 5 used to stop at 5 steps: after one line was removed, index 0 pointed at the other (cheap) line and
+    rounding hid the defect. The minimum is 4 and cannot be 3, by hand: remove_line needs a draft quote (create_quote)
+    and a line (add_line) = 2 steps before it; with only those three steps the total after removal is 0, as expected,
+    so the oracle 'total after edit' cannot fail. It needs a discount whose rounding differs once the line is subtracted
+    from the already discounted total (v1 computes discounted(S) - u, expected discounted(S - u); they differ once the
+    removed line is dear enough for the discount on it to survive rounding, e.g. a 51-cent line at 1%), and that is a
+    fourth step: create_quote, add_line, apply_discount (before or after the line) and
+    remove_line."""
+    example = first_failure(workspace)["result"]["counterexample"]
+    assert example["original_length"] == 6 and example["minimal_length"] == 4
+    assert example["signature"] == ["remove_line", "postcondition", "total after edit"]
+    assert sorted(s["action"] for s in example["minimal"]) == ["add_line", "apply_discount", "create_quote", "remove_line"]
+    recipe = core.validate_recipe(quotes_recipe("v1"), strategies.validate)
+    lines = [s for s in example["minimal"] if s["action"] == "add_line"]
+    assert len(lines) == 1
+    pick = example["minimal"][-1]["picks"]["line"]
+    # the pick names the step that produced the line, and that step is in the minimal sequence before the removal
+    assert pick == {"from": lines[0]["id"], "var": "line_id"}
+    core.check_sequence(recipe, example["minimal"])
+    # no sequence of three steps keeps the signature: the only ones with the needed actions lack the discount
+    three = [_step("a", "create_quote", {"customer": "Imprenta Sol"}), _step("b", "add_line", {"qty": 5, "unit": 9999}),
+             _step("c", "remove_line", picks={"line": {"from": "b", "var": "line_id"}})]
+    assert core.run_sequence(recipe, three)["outcome"] == "passed"
+    assert "producer" in example["note"]
+
+
+def test_old_index_picks_recipes_and_stored_jobs_still_replay(workspace):
+    client, app, pid, _ = workspace
+    old_minimal = [{"action": "create_quote", "params": {"customer": "Talleres Norte"}, "picks": {}},
+                   {"action": "add_line", "params": {"qty": 1, "unit": 1}, "picks": {}},
+                   {"action": "apply_discount", "params": {"percent": 1}, "picks": {}},
+                   {"action": "add_line", "params": {"qty": 1, "unit": 50}, "picks": {}},
+                   {"action": "remove_line", "params": {}, "picks": {"line": 0}}]  # no step ids, index pick
+    recipe = _recipe()
+    assert core.run_sequence(recipe, old_minimal)["signature"] == ["remove_line", "postcondition", "total after edit"]
+    # a job stored by the previous version (index picks, no ids) is replayed through the tool
+    done = first_failure(workspace)
+    result = done["result"]
+    result["counterexample"]["minimal"] = old_minimal
+    app.state.store.save_job(pid, done["id"], "finished", result)
+    replay = call(client, "theseus_stateful_replay", project_id=pid, job_id=done["id"])["result"]
+    assert replay["reproduces_original_signature"] is True and replay["result"]["outcome"] == "failed"
+    fixed = call(client, "theseus_stateful_replay", project_id=pid, job_id=done["id"], target=target("v2"))["result"]
+    assert fixed["result"]["outcome"] == "passed"
+
+
+def test_producer_picks_rebind_on_other_targets_and_never_fail_silently(workspace):
+    recipe_v1, recipe_v2 = _recipe("v1"), _recipe("v2")
+    base = [_step("s1", "create_quote", {"customer": "Imprenta Sol"}), _step("s2", "add_line", {"qty": 1, "unit": 99}),
+            _step("s3", "apply_discount", {"percent": 50}), _step("s4", "remove_line", picks={"line": LINE_S2})]
+    failed = core.run_sequence(recipe_v1, base)
+    assert failed["signature"] == ["remove_line", "postcondition", "total after edit"]
+    assert failed["trace"][-1]["lanes"]["target"]["bound"]["line"]["index"] == 0
+    ok = core.run_sequence(recipe_v2, base)
+    assert ok["outcome"] == "passed"
+    # the value is bound from this target's own response, never the one of an earlier run
+    assert failed["trace"][1]["lanes"]["target"]["extracted"]["line_id"] != ok["trace"][1]["lanes"]["target"]["extracted"]["line_id"]
+    # a value already removed is an explicit invalid step with its reason, not a skipped or passing step
+    twice = base[:2] + [_step("s3", "remove_line", picks={"line": LINE_S2}), _step("s4", "remove_line", picks={"line": LINE_S2})]
+    got = core.run_sequence(recipe_v2, twice)
+    assert got["outcome"] == "invalid" and got["at"] == 3 and "no longer in line_ids" in got["reason"]
+    # a producer that is missing from the sequence is refused before anything runs, in both languages
+    for lang, text in (("en", "not an extractor of an earlier step"), ("es", "que no es un extractor de un paso anterior")):
+        with core.language(lang), pytest.raises(core.RecipeError, match=text):
+            core.check_sequence(recipe_v2, [base[0], base[3]])
+    with pytest.raises(core.RecipeError):  # forward reference and malformed references
+        core.check_sequence(recipe_v2, [base[0], _step("s4", "remove_line", picks={"line": LINE_S2}), base[1]])
+    with pytest.raises(core.RecipeError):
+        core.check_sequence(recipe_v2, [base[0], _step("s2", "remove_line", picks={"line": {"from": "s1"}})])
+    client, app, pid, _ = workspace
+    response = client.post("/api/projects/%s/stateful/replay" % pid,
+                           json={"recipe": quotes_recipe("v2"), "sequence": [base[0], base[3]], "lang": "es"})
+    assert response.status_code == 400 and "que no es un extractor" in response.text
+
+
+def test_remapping_picks_when_the_producer_is_removed():
+    pick_vars = {"remove_line": {"line": "line_ids"}}
+    pools = {"line_ids": [{"from": "s2", "var": "line_id"}, {"from": "s4", "var": "line_id"}]}
+    sequence = [_step("s1", "create_quote"), _step("s2", "add_line"), _step("s3", "apply_discount"),
+                _step("s4", "add_line"), _step("s5", "remove_line", picks={"line": {"from": "s4", "var": "line_id"}})]
+    # nothing removed: the sequence is its own only candidate
+    assert stateful.remap(sequence, pools, pick_vars) == [sequence]
+    # producer s4 removed: re-mapped to the nearest and to the earliest live producer of the pool (here the same one)
+    without = [x for x in sequence if x["id"] != "s4"]
+    got = stateful.remap(without, pools, pick_vars)
+    assert [c[-1]["picks"]["line"] for c in got] == [{"from": "s2", "var": "line_id"}]
+    # two live producers: both are tried
+    pools["line_ids"].append({"from": "s3", "var": "line_id"})
+    both = stateful.remap([sequence[0], sequence[1], _step("s3", "add_line"), sequence[2], sequence[4]], pools, pick_vars)
+    assert [c[-1]["picks"]["line"]["from"] for c in both] == ["s3", "s2"]
+    # no live producer before the pick: no candidate at all, so nothing is run
+    assert stateful.remap([sequence[0], sequence[4]], pools, pick_vars) == []
+    assert stateful.remap([sequence[4], sequence[1]], pools, pick_vars) == []  # producer only later: also refused
+    # index picks are not re-mapped
+    by_index = [_step("s1", "remove_line", picks={"line": 0})]
+    assert stateful.remap(by_index, pools, pick_vars) == [by_index]
+
+
+def test_remapped_candidate_executes_and_keeps_the_signature():
+    recipe = _recipe("v1")
+    pick_vars = {"remove_line": {"line": "line_ids"}}
+    pools = {"line_ids": [{"from": "s2", "var": "line_id"}, {"from": "s4", "var": "line_id"}]}
+    original = [_step("s1", "create_quote", {"customer": "Imprenta Sol"}), _step("s2", "add_line", {"qty": 1, "unit": 99}),
+                _step("s3", "apply_discount", {"percent": 1}), _step("s4", "add_line", {"qty": 1, "unit": 1}),
+                _step("s5", "remove_line", picks={"line": {"from": "s4", "var": "line_id"}})]
+    # the original removes the cheap line: at 1% rounding hides the defect (99 - 1 = 98 = discounted 99)
+    assert core.run_sequence(recipe, original)["outcome"] == "passed"
+    shorter = [x for x in original if x["id"] != "s4"]
+    for candidate in stateful.remap(shorter, pools, pick_vars):
+        got = core.run_sequence(recipe, candidate)
+        # re-bound to the expensive line s2, the same sequence now exposes the defect with an explicit binding
+        assert got["signature"] == ["remove_line", "postcondition", "total after edit"]
+        assert got["trace"][-1]["lanes"]["target"]["bound"]["line"]["index"] == 0
+
+
+def test_export_of_a_producer_pick_sequence_fails_on_v1_and_passes_on_v2(workspace, tmp_path):
+    client, app, pid, _ = workspace
+    done = first_failure(workspace)
+    out = tmp_path / "producer"
+    exported = call(client, "theseus_stateful_export", project_id=pid, job_id=done["id"], output_dir=str(out))
+    document = json.loads((out / "regression.json").read_text(encoding="utf-8"))
+    assert any(isinstance(v, dict) and set(v) == {"from", "var"} for st in document["sequence"] for v in st["picks"].values())
+    # the standalone adapter is a verbatim copy of the core and still imports only the standard library
+    here = Path(core.__file__).resolve()
+    assert (out / "theseus_stateful_adapter.py").read_text(encoding="utf-8") == here.read_text(encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "THESEUS_TARGET_ARGV", "THESEUS_TARGET_URL")}
+    command = [sys.executable, "-I", "-m", "pytest", "-q", "-p", "no:cacheprovider", exported["test"]]
+    buggy = subprocess.run(command, cwd=out, env=env, capture_output=True, text=True, timeout=300)
+    assert buggy.returncode == 1 and "total after edit" in buggy.stdout, buggy.stdout + buggy.stderr
+    fixed_env = {**env, "THESEUS_TARGET_ARGV": json.dumps(["{python}", service("v2"), "--db", "{sandbox}/quotes.db", "--port", "{port}"])}
+    fixed = subprocess.run(command, cwd=out, env=fixed_env, capture_output=True, text=True, timeout=300)
+    assert fixed.returncode == 0 and "1 passed" in fixed.stdout, fixed.stdout + fixed.stderr

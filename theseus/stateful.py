@@ -65,6 +65,13 @@ core.MESSAGES.update({
                     "model needed. The exported files and their messages are in English.",
                     "Sólo biblioteca estándar (urllib/http.client, sqlite3, subprocess) y pytest; no necesita Theseus, red "
                     "ni modelo. Los archivos exportados y sus mensajes están en inglés."),
+    "reduction_note_producers": ("Picks that name the step that produced a value were re-mapped whenever a reduction removed "
+                                 "that step: to the nearest or the earliest surviving producer of the same pool, both tried; "
+                                 "a candidate with no surviving producer was discarded without running.",
+                                 "Las elecciones que nombran el paso que produjo un valor se volvieron a asignar cada vez que "
+                                 "una reducción quitó ese paso: al productor superviviente más cercano o al más antiguo del "
+                                 "mismo conjunto, probando ambos; un candidato sin productor superviviente se descartó sin "
+                                 "ejecutarlo."),
     "default_recipe_name": ("Stateful recipe", "Receta de secuencias"),
     "err_recipe_other_project": ("Recipe belongs to another project", "La receta pertenece a otro proyecto"),
     "err_recipe_not_found": ("Recipe not found in this project", "No se encuentra la receta en este proyecto"),
@@ -77,7 +84,10 @@ core.MESSAGES.update({
     "err_no_counterexample_sequence": ("That run found no counterexample; pass a sequence explicitly",
                                        "Esa ejecución no encontró contraejemplo; indica una secuencia explícita"),
     "err_need_source": ("Give job_id, or recipe with sequence", "Indica job_id, o una receta con su secuencia"),
-    "err_sequence_shape": ("sequence is a list of {{action, params, picks}}", "sequence es una lista de {{action, params, picks}}"),
+    "err_sequence_shape": ("sequence is a list of {{action, params, picks}} (optionally with an id; a pick is an index or "
+                           "{{from, var}})",
+                           "sequence es una lista de {{action, params, picks}} (con id opcional; una elección es un índice o "
+                           "{{from, var}})"),
     "err_no_counterexample_export": ("That run found no counterexample to export",
                                      "Esa ejecución no encontró ningún contraejemplo que exportar"),
 })
@@ -101,6 +111,33 @@ def validate(recipe):
 
 def _key(sequence):
     return json.dumps(sequence, sort_keys=True, ensure_ascii=False)
+
+
+def remap(sub, pools, pick_vars):
+    """Candidate sequences for a subsequence whose steps may have lost the producers their picks name.
+
+    A producer pick whose step is no longer in ``sub`` (or not before the picking step) is re-mapped to another live
+    producer of the same pool (``pools[var]``, recorded at generation): the nearest earlier one and also the earliest
+    one, both returned. With no such producer there is no valid candidate and [] is returned (nothing is run). A
+    subsequence with no orphan pick is its own only candidate. Index picks are never touched."""
+    position = {x["id"]: n for n, x in enumerate(sub) if x.get("id")}
+    near, early, orphan = [], [], False
+    for n, step in enumerate(sub):
+        picks_near, picks_early = dict(step["picks"]), dict(step["picks"])
+        for name, ref in step["picks"].items():
+            if isinstance(ref, dict) and position.get(ref["from"], n) >= n:
+                orphan = True
+                alive = sorted((position[r["from"]], r["from"], r["var"]) for r in pools.get(pick_vars[step["action"]][name], [])
+                               if position.get(r["from"], n) < n)
+                if not alive:
+                    return []
+                picks_near[name] = {"from": alive[-1][1], "var": alive[-1][2]}
+                picks_early[name] = {"from": alive[0][1], "var": alive[0][2]}
+        near.append({**step, "picks": picks_near})
+        early.append({**step, "picks": picks_early})
+    if not orphan:
+        return [sub]
+    return [near] if _key(near) == _key(early) else [near, early]
 
 
 class Coverage:
@@ -213,12 +250,13 @@ class Stateful:
     def _generate_and_run(self, job_id, recipe, rng, coverage):
         """Online generation: each step is chosen among actions whose precondition holds on the live model."""
         length = rng.randint(max(1, recipe["max_length"] // 2), recipe["max_length"])
-        sequence = []
+        sequence, pools = [], {}
         with core.Session(recipe) as session:
             try:
                 session.start()
             except core.SetupFailure as exc:
-                return sequence, {"outcome": "inconclusive", "reason": core.t("setup_prefix", detail=exc), "trace": [], "steps_run": 0}
+                return sequence, {"outcome": "inconclusive", "reason": core.t("setup_prefix", detail=exc), "trace": [], "steps_run": 0,
+                                  "pools": pools}
             previous = None
             for i in range(length):
                 self.equivalence._check(job_id)
@@ -229,7 +267,9 @@ class Stateful:
                             "picks": {}}
                     for name, var in action["pick"].items():
                         values = session.main.model.get(var)
-                        step["picks"][name] = rng.randrange(len(values)) if isinstance(values, list) and values else -1
+                        index = rng.randrange(len(values)) if isinstance(values, list) and values else -1
+                        # a value some earlier response produced is recorded by its producer, anything else by index
+                        step["picks"][name] = session.provenance(session.main, var, index) or index
                     ok = session.enabled(step)
                     coverage.considered(action["name"], ok)
                     if ok:
@@ -237,14 +277,20 @@ class Stateful:
                 if not options:
                     break
                 step = rng.choice(options)
+                step["id"] = "s%d" % (i + 1)
                 sequence.append(step)
                 record = session.execute(step, i)
                 session.trace.append(record)
                 coverage.executed(previous, record)
                 previous = step["action"]
+                for var in {v for a in recipe["actions"] for v in a["pick"].values()}:
+                    for position in range(len(session.main.model.get(var) or [])):
+                        ref = session.provenance(session.main, var, position)
+                        if ref and ref not in pools.setdefault(var, []):
+                            pools[var].append(ref)
                 if record["outcome"] != "ok":
                     result = {"outcome": record["outcome"], "trace": session.trace, "steps_run": i + 1, "at": i,
-                              "ids": session.ids}
+                              "ids": session.ids, "pools": pools}
                     if record["outcome"] == "failed":
                         result["failure"] = {"index": i, "action": record["action"], **record["violations"][0]}
                         result["violations"] = record["violations"]
@@ -253,7 +299,8 @@ class Stateful:
                         result["reason"] = record.get("detail") or core.t("oracle_error")
                         result["errors"] = record.get("errors", [])
                     return sequence, result
-            return sequence, {"outcome": "passed", "trace": session.trace, "steps_run": len(sequence), "ids": session.ids}
+            return sequence, {"outcome": "passed", "trace": session.trace, "steps_run": len(sequence), "ids": session.ids,
+                              "pools": pools}
 
     def _run(self, project_id, job_id, result, recipe):
         with core.language(result.get("lang", "en")):
@@ -322,11 +369,43 @@ class Stateful:
                 cache[key] = {k: got.get(k) for k in ("outcome", "signature", "at", "reason")}
             return cache[key]
 
-        def holds(candidate):
-            if not candidate:
+        pools = outcome.get("pools", {})
+        pick_vars = {a["name"]: a["pick"] for a in recipe["actions"]}
+        winners = {}
+
+        def variants(sub):
+            return remap(sub, pools, pick_vars)
+
+        def holds(sub):
+            if not sub:
                 return False
-            got = execute(candidate)
-            return got["outcome"] == "failed" and got["signature"] == target
+            for candidate in variants(sub):
+                got = execute(candidate)
+                if got["outcome"] == "failed" and got["signature"] == target:
+                    winners[tuple(id(x) for x in sub)] = (sub, candidate)  # keeps both alive: ids stay unique
+                    return True
+            return False
+
+        def resolved(sub):
+            won = winners.get(tuple(id(x) for x in sub))
+            return won[1] if won else sub
+
+        def drop_from_the_end(items):
+            changed_here = True
+            while changed_here:
+                changed_here = False
+                for i in range(len(items) - 1, -1, -1):
+                    if holds(items[:i] + items[i + 1:]):
+                        items, changed_here = resolved(items[:i] + items[i + 1:]), True
+                        break
+            return items
+
+        def remaps(before, after, stage):
+            old = {x.get("id"): x for x in before if x.get("id")}
+            for n, step in enumerate(after):
+                if step.get("id") in old and old[step["id"]]["picks"] != step["picks"]:
+                    trail.append({"stage": "%s: picks of step %s re-mapped" % (stage, step["id"]), "before": old[step["id"]]["picks"],
+                                  "after": step["picks"], "runs_so_far": budget["runs"]})
 
         current = sequence[:outcome["at"] + 1]
         exhausted = False
@@ -336,18 +415,31 @@ class Stateful:
             while changed:
                 changed = False
                 before = len(current)
-                current = ddmin(current, holds, None)
-                current = current[:execute(current)["at"] + 1]
+                # two routes: delta debugging from the start, and the same after dropping steps from the end first
+                # (a removal order can strand the first route in a local minimum that hides the failure)
+                first = resolved(ddmin(current, holds, None))
+                second = resolved(ddmin(drop_from_the_end(current), holds, None))
+                best = second if len(second) < len(first) else first
+                remaps(current, best, "ddmin")
+                current = best[:execute(best)["at"] + 1]
                 if len(current) < before:
                     changed = True
                     trail.append({"stage": "steps (ddmin)", "before": before, "after": len(current), "runs_so_far": budget["runs"]})
                 progress = True
                 while progress:
                     progress = False
+                    order = {x.get("id"): n for n, x in enumerate(current) if x.get("id")}
                     for i, step in enumerate(current):
                         action = by_name[step["action"]]
                         changes = [("params", k, c) for k, s in action["params"].items() for c in strategies.shrink(s, step["params"][k])]
-                        changes += [("picks", k, j) for k, v in step["picks"].items() for j in range(0, v)]
+                        for k, v in step["picks"].items():
+                            if isinstance(v, dict):  # an earlier producer of the same pool is the analogue of a lower index
+                                own = min(order.get(v["from"], i), i)
+                                changes += [("picks", k, r) for r in sorted(
+                                    (r for r in pools.get(action["pick"][k], []) if order.get(r["from"], i) < own),
+                                    key=lambda r: order[r["from"]])]
+                            else:
+                                changes += [("picks", k, j) for j in range(0, v)]
                         for field, k, value in changes:
                             candidate = current[:i] + [{**step, field: {**step[field], k: value}}] + current[i + 1:]
                             if holds(candidate):
@@ -370,7 +462,8 @@ class Stateful:
                 "budget_exhausted": exhausted, "reexecuted_and_confirmed": confirmed,
                 "failure": final.get("failure"), "violations": final.get("violations"), "trace": final.get("trace"),
                 "explanation": core.describe(final), "ids_observed": final.get("ids", []),
-                "note": core.t("reduction_note")}
+                "note": core.t("reduction_note") + (" " + core.t("reduction_note_producers") if any(
+                    isinstance(v, dict) for st in sequence for v in st["picks"].values()) else "")}
 
     # ---- replay
     def _counterexample(self, project_id, job_id):
@@ -407,6 +500,7 @@ class Stateful:
         ref = core.validate_target(reference, "reference") if reference else None
         if not isinstance(sequence, list) or any(not isinstance(s, dict) or "action" not in s for s in sequence):
             raise ValueError(core.t("err_sequence_shape"))
+        core.check_sequence(normalised, sequence)
         runs = [core.run_sequence(normalised, sequence, tgt, ref) for _ in range(attempts)]
         outcomes = [r["outcome"] for r in runs]
         replay_id = identifier()
