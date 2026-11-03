@@ -731,3 +731,20 @@ summary {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
+.inline-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.inline-fields label {
+  flex: 1 1 140px;
+}
+.badge {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.8rem;
+  border-radius: var(--hoard-radius-sm);
+  background: var(--hoard-elevated);
+  white-space: nowrap;
+}
