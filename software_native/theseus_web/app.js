@@ -89,6 +89,7 @@ const labels = {
   specification: "Especificación",
   scenarios: "Escenarios",
   reconstruction: "Reconstrucción",
+  stateful: "Secuencias",
   jobs: "Ejecuciones",
 };
 const statusLabels = {
@@ -234,6 +235,8 @@ async function load(id) {
   if (sequence !== state.sequence) return;
   if (state.data?.project.id !== data.project.id) state.cutterObservation = null;
   state.data = data;
+  try { state.statefulRecipes = (await api(`/projects/${data.project.id}/stateful/recipes`)).recipes; } catch { state.statefulRecipes = []; }
+  if (sequence !== state.sequence) return;
   if (!data.artifacts.some((row) => row.id === state.artifact)) {
     state.artifact = data.artifacts[0]?.id || "";
     state.excerpt = null;
@@ -403,6 +406,7 @@ function renderSection() {
     return `<form id="specification-form" class="reading"><label>Especificación de comportamiento<textarea class="mono specification" name="content" data-draft="specification" placeholder="Objetivo, entradas, salidas, errores, hallazgos que lo respaldan y preguntas pendientes…">${attr("specification", state.data.project.specification)}</textarea></label><p class="small">Se guarda como texto editable. Cita los identificadores de hallazgos y distingue lo observado de lo que queda por comprobar.</p><button class="primary" type="submit">Guardar especificación</button></form>`;
   if (state.view === "scenarios") return scenarios();
   if (state.view === "reconstruction") return reconstruction();
+  if (state.view === "stateful") return statefulView();
   return jobs();
 }
 
@@ -902,11 +906,92 @@ function jobs() {
           .map((job) =>
             job.result.kind === "binary_analysis"
               ? analysisJob(job)
-              : ["native_analysis","runtime_analysis"].includes(job.result.kind) ? nativeAnalysisJob(job) : job.result.kind === "binary_session" ? binarySessionJob(job) : job.result.kind === "oracle_selftest" ? oracleJob(job) : comparisonJob(job),
+              : ["native_analysis","runtime_analysis"].includes(job.result.kind) ? nativeAnalysisJob(job) : job.result.kind === "binary_session" ? binarySessionJob(job) : job.result.kind === "oracle_selftest" ? oracleJob(job) : ["stateful_run","stateful_replay"].includes(job.result.kind) ? statefulJob(job) : Array.isArray(job.result.cases) ? comparisonJob(job) : genericJob(job),
           )
           .join("")
       : '<section class="empty"><h2>Aún no hay ejecuciones</h2><p>Inicia una observación Android, prepara un escenario para comparar programas o analiza un binario desde Artefactos.</p><button data-action="tab" data-view="scenarios">Preparar escenario</button></section>'
   }${analysisBrowser(state.data.jobs.filter(row=>row.result.kind==="runtime_analysis"))}`;
+}
+
+function genericJob(job) {
+  return `<article class="record" id="job-${job.id}"><div class="job-head"><h2>${escape(job.result.kind || "Ejecución")} · ${new Date(job.created_at).toLocaleString("es")}</h2><span class="status">${statusLabels[job.state] || escape(job.state)}</span></div><details><summary>Resultado · JSON</summary><pre>${escape(json(job.result))}</pre></details></article>`;
+}
+
+/* ---- Stateful sequences against a real HTTP service ---- */
+const statefulVerdicts = {counterexample_found:"Contraejemplo encontrado", no_counterexample_found:"Sin contraejemplo en las ejecuciones realizadas", inconclusive:"Inconcluso"};
+const statefulOutcomes = {passed:"Cumple", failed:"Falla", invalid:"Precondición no válida", inconclusive:"Inconcluso", error:"Error de oráculo"};
+const evidenceLabels = {http:"HTTP", sqlite:"SQLite", files:"Archivos", model:"Modelo", reference:"Referencia", process:"Proceso"};
+const STATEFUL_TEMPLATE = {
+  name: "servicio",
+  target: {argv: ["{python}", "/ruta/al/servicio.py", "--db", "{sandbox}/app.db", "--port", "{port}"], ready: "/health"},
+  watch: {sqlite: "app.db"},
+  queries: {filas: "SELECT COUNT(*) FROM tabla"},
+  model: {item_id: null, creados: 0},
+  actions: [
+    {name: "crear", pre: "item_id == None", params: {nombre: {kind: "text", min_len: 1, max_len: 8, alphabet: "abc"}},
+     request: {method: "POST", path: "/items", body: {name: "{nombre}"}}, expect_status: 201,
+     extract: {nuevo: "body['id']"}, update: {item_id: "nuevo", creados: "creados + 1"},
+     post: [{name: "devuelve el nombre", expr: "body['name'] == nombre"}]},
+  ],
+  invariants: [{name: "una fila por alta", expr: "sql['filas'][0][0] == creados"}],
+  runs: 20, max_length: 8, seed: 1,
+};
+function statefulRequest(lane) {
+  if (!lane?.request) return "";
+  const r = lane.request;
+  return `${escape(r.method)} ${escape(r.path)}${Object.keys(r.headers||{}).length ? `<br><span class="small">${escape(Object.entries(r.headers).map(([k,v])=>k+": "+v).join(" · "))}</span>` : ""}${r.body!==null&&r.body!==undefined ? `<br><code>${escape(JSON.stringify(r.body))}</code>` : ""}`;
+}
+function statefulEffects(lane) {
+  const e = lane?.effects || {};
+  const sql = Object.entries(e.sqlite || {}).map(([table,d])=>`<span class="badge">SQLite ${escape(table)}: +${d.added} −${d.removed} ~${d.changed}</span>`);
+  const files = Object.entries(e.files || {}).map(([path,d])=>`<span class="badge">Archivo ${escape(path)}: ${escape(d.op)}</span>`);
+  return [...sql, ...files].join(" ") || '<span class="muted">sin cambios observados</span>';
+}
+function statefulViolation(v) {
+  const operands = (v.observed?.operands || []).map(part => `<li><code>${escape(part.expr)}</code> = <code>${escape(JSON.stringify(part.value ?? part.error))}</code></li>`).join("");
+  return `<div class="fail"><strong>${escape(evidenceLabels[v.evidence] || v.evidence || "")} · ${escape(v.kind)} · ${escape(v.name)}</strong>${v.expr ? ` <code>${escape(v.expr)}</code>` : ""}${v.detail ? `<p class="small">${escape(v.detail)}</p>` : ""}${v.explain ? `<p class="small">${escape(v.explain)}</p>` : ""}${operands ? `<ul class="small">${operands}</ul>` : ""}</div>`;
+}
+function statefulTrace(trace) {
+  if (!trace?.length) return '<p class="muted">Sin pasos ejecutados.</p>';
+  return `<div class="data-table"><table><thead><tr><th>#</th><th>Acción</th><th>Petición</th><th>HTTP</th><th>Efectos</th><th>Resultado</th></tr></thead><tbody>${trace.map(step => {
+    const lane = step.lanes?.target || {};
+    return `<tr><td>${step.index + 1}</td><td>${escape(step.action)}<br><span class="small mono">${escape(JSON.stringify({...step.params, ...Object.fromEntries(Object.entries(step.picks||{}).map(([k,v])=>[k+"#",v]))}))}</span></td><td class="mono small">${statefulRequest(lane)}</td><td>${lane.response ? escape(lane.response.status) : "—"}</td><td>${statefulEffects(lane)}</td><td>${step.violations?.length ? step.violations.map(statefulViolation).join("") : escape(statefulOutcomes[step.outcome==="ok"?"passed":step.outcome] || step.outcome)}</td></tr>`;
+  }).join("")}</tbody></table></div>`;
+}
+function statefulCoverage(cov) {
+  if (!cov) return "";
+  return `<details><summary>Cobertura observada</summary><p class="small">Sólo lo ejecutado en estas corridas. Una transición no observada puede ser imposible por las precondiciones; no es un defecto.</p>${table(cov.actions.map(row=>({...row, statuses: Object.entries(row.statuses).map(([k,v])=>k+"×"+v).join(", ")})), [["action","Acción"],["considered","Consideradas"],["enabled","Habilitadas"],["executed","Ejecutadas"],["statuses","Estados HTTP"],["failed","Fallos"]])}<p><strong>Nunca ejecutadas:</strong> ${escape(cov.never_executed.join(", ") || "ninguna")} · <strong>Nunca habilitadas:</strong> ${escape(cov.never_enabled.join(", ") || "ninguna")}</p><p class="small">Transiciones observadas: ${Object.keys(cov.transitions_observed).length} de ${cov.transitions_declared} pares declarados.</p><details><summary>Transiciones no observadas (${cov.transitions_not_observed.length})</summary><p class="small mono">${escape(cov.transitions_not_observed.join(" · "))}</p></details></details>`;
+}
+function statefulJob(job) {
+  const r = job.result, running = ["queued","running"].includes(job.state);
+  if (r.kind === "stateful_replay") {
+    return `<article class="record" id="job-${job.id}"><div class="job-head"><h2>Reproducción · ${new Date(job.created_at).toLocaleString("es")}</h2><span class="status ${r.result.outcome==="passed"?"pass":r.result.outcome==="failed"?"fail":"warning"}">${escape(statefulOutcomes[r.result.outcome] || r.result.outcome)}</span></div><p class="small">Destino: <code>${escape(r.target.label || r.target.base_url || (r.target.argv||[]).join(" "))}</code>${r.reproduces_original_signature===undefined?"":r.reproduces_original_signature?' · <span class="fail">reproduce la firma original</span>':' · <span class="pass">no reproduce la firma original</span>'} · ${r.attempts} intento(s)${r.stable?"":' · <span class="warning">resultados distintos entre intentos</span>'}</p><pre class="small">${escape(r.explanation)}</pre><p class="small">${escape(r.note)}</p>${statefulTrace(r.result.trace)}</article>`;
+  }
+  const s = r.summary || {}, ex = r.counterexample;
+  const exported = state.statefulExport?.job_id === job.id ? state.statefulExport : null;
+  return `<article class="record" id="job-${job.id}"><div class="job-head"><h2>Secuencias · ${escape(r.recipe?.name || "")} · ${new Date(job.created_at).toLocaleString("es")}</h2><span class="status">${statusLabels[job.state] || escape(job.state)}</span>${s.verdict ? `<span class="${s.verdict==="counterexample_found"?"fail":s.verdict==="inconclusive"?"warning":"pass"}">${escape(statefulVerdicts[s.verdict])}</span>` : ""}${running ? `<button data-action="cancel-job" data-id="${job.id}">Cancelar</button>` : ""}</div>
+  <p class="small">Semilla ${escape(r.options.seed)} · ${r.runs.length} de ${r.options.runs} corridas · longitud máxima ${r.options.max_length}${s.outcomes ? " · " + escape(Object.entries(s.outcomes).filter(([,v])=>v).map(([k,v])=>(statefulOutcomes[k]||k)+": "+v).join(", ")) : ""}</p>
+  ${s.note ? `<p class="small">${escape(s.note)}</p>` : ""}${r.error ? `<p class="fail">${escape(r.error)}</p>` : ""}
+  ${r.runs.filter(x=>x.outcome==="inconclusive").slice(0,3).map(x=>`<p class="warning small">Corrida ${x.run + 1} inconclusa: ${escape(x.reason || "")}</p>`).join("")}
+  ${ex ? `<section><h3>Contraejemplo reducido: ${ex.minimal_length} de ${ex.original_length} pasos</h3><p class="small">Firma: <code>${escape(ex.signature.join(" · "))}</code> · ${ex.reruns} reejecuciones${ex.budget_exhausted ? " · presupuesto agotado" : ""} · ${ex.reexecuted_and_confirmed ? '<span class="pass">confirmado dos veces en procesos nuevos</span>' : '<span class="warning">sin confirmar</span>'} · reproducir con semilla ${escape(ex.reproduce.seed)} y 1 corrida</p><pre class="small">${escape(ex.explanation)}</pre>${statefulTrace(ex.trace)}<details><summary>Secuencia original (${ex.original_length} pasos)</summary><pre class="small">${escape(ex.original.map((st,i)=>`${i+1}. ${st.action} ${JSON.stringify(st.params)} ${JSON.stringify(st.picks)}`).join("\n"))}</pre></details>
+    <div class="toolbar"><button data-action="stateful-replay" data-id="${job.id}">Reproducir en el mismo destino</button><button data-action="stateful-export" data-id="${job.id}">Exportar regresión pytest</button></div>
+    <form class="stateful-replay-form reading" data-job="${job.id}"><label>Otro destino (versión) · JSON<textarea name="target" class="mono" rows="3" data-draft="stateful-target-${job.id}" placeholder='{"argv": ["{python}", "/ruta/version_corregida.py", "--db", "{sandbox}/app.db", "--port", "{port}"], "ready": "/health"}'>${attr("stateful-target-" + job.id)}</textarea></label><button type="submit">Reproducir contra este destino</button><p class="small">Los identificadores se vuelven a obtener de las respuestas del nuevo destino; nunca se reutilizan los de otra ejecución.</p></form>
+    ${exported ? `<div class="record"><h4>Regresión exportada</h4><p class="small mono">${escape(exported.directory)}</p><p class="small">Ejecuta <code>${escape(exported.command)}</code> en esa carpeta. ${escape(exported.note)}</p><ul>${exported.files.map(f=>`<li><a download="${escape(f.name)}" href="data:text/plain;charset=utf-8,${encodeURIComponent(f.text)}">${escape(f.name)}</a> <span class="small mono">${escape(f.sha256.slice(0,12))}</span></li>`).join("")}</ul></div>` : ""}</section>` : ""}
+  ${statefulCoverage(r.coverage)}</article>`;
+}
+function statefulView() {
+  const jobsHere = [...state.data.jobs].filter(job=>["stateful_run","stateful_replay"].includes(job.result.kind)).reverse();
+  const recipes = state.statefulRecipes || [];
+  return `<div class="section-title"><h2>Secuencias con estado</h2></div>
+  <p class="small">Ejecuta secuencias de peticiones contra un servicio real de prueba: cada corrida arranca el destino con estado nuevo, elige acciones cuya precondición se cumple, reutiliza identificadores devueltos por respuestas anteriores y comprueba los oráculos que declares (postcondiciones, invariantes, consultas SQLite de sólo lectura, relaciones con una referencia). El primer fallo se reduce manteniendo las precondiciones y la misma firma. Los oráculos los escribes tú: nada se deduce del nombre de un endpoint, y un fallo de preparación es inconcluso, nunca un éxito.</p>
+  <form id="stateful-form" class="reading">
+    <label>Nombre de la receta<input name="name" data-draft="stateful-name" value="${attr("stateful-name")}" autocomplete="off"></label>
+    <label>Receta · JSON<textarea name="recipe" class="mono" rows="16" spellcheck="false" data-draft="stateful-recipe">${attr("stateful-recipe")}</textarea></label>
+    <div class="inline-fields"><label>Corridas<input name="runs" type="number" min="1" max="500" data-draft="stateful-runs" value="${attr("stateful-runs")}" placeholder="de la receta"></label><label>Semilla<input name="seed" type="number" data-draft="stateful-seed" value="${attr("stateful-seed")}" placeholder="de la receta"></label><label>Longitud máxima<input name="max_length" type="number" min="1" max="60" data-draft="stateful-length" value="${attr("stateful-length")}" placeholder="de la receta"></label><label>Presupuesto de reducción<input name="shrink_budget" type="number" min="1" max="2000" data-draft="stateful-budget" value="${attr("stateful-budget", "200")}"></label></div>
+    <div class="toolbar"><button class="primary" type="submit" name="intent" value="run">Ejecutar</button><button type="submit" name="intent" value="save">Guardar receta</button><button type="button" data-action="stateful-template">Insertar plantilla</button></div>
+  </form>
+  ${recipes.length ? `<h3>Recetas guardadas</h3><ul>${recipes.map(row=>`<li><button data-action="stateful-load" data-id="${escape(row.id)}">${escape(row.name)} · r${row.revision}</button> <span class="small">${escape(row.actions.join(", "))}</span></li>`).join("")}</ul>` : ""}
+  <h3>Ejecuciones y reproducciones</h3>${jobsHere.length ? jobsHere.map(statefulJob).join("") : '<p class="muted">Todavía no hay ejecuciones de secuencias en este proyecto.</p>'}`;
 }
 
 function analysisJob(job) {
@@ -1030,6 +1115,25 @@ document.addEventListener("click", (event) => {
     $("#finding-form textarea").focus();
     return;
   }
+  if (action === "stateful-template") {
+    state.drafts[projectId()] ||= {};
+    state.drafts[projectId()]["stateful-recipe"] = json(STATEFUL_TEMPLATE);
+    keepDrafts(); render(); $("#stateful-form textarea").focus(); return;
+  }
+  if (action === "stateful-load") return act(async () => {
+    const saved = await api(`/projects/${projectId()}/stateful/recipes/${id}`);
+    state.drafts[projectId()] ||= {};
+    Object.assign(state.drafts[projectId()], {"stateful-recipe": json(saved.recipe), "stateful-name": saved.name, "stateful-recipe-id": saved.id});
+    keepDrafts(); notice("Receta cargada en el editor.");
+  });
+  if (action === "stateful-replay") return act(async () => {
+    await api(`/projects/${projectId()}/stateful/replay`, {job_id: id});
+    await refresh(); notice("Secuencia reducida reproducida en un proceso nuevo.");
+  });
+  if (action === "stateful-export") return act(async () => {
+    state.statefulExport = {...await api(`/projects/${projectId()}/stateful/export`, {job_id: id}), job_id: id};
+    notice("Regresión pytest exportada. No necesita Theseus, red ni modelo para ejecutarse.");
+  });
   if (action === "new-project") return openNewProject();
   if (action === "project")
     return act(async () => {
@@ -1242,6 +1346,26 @@ document.addEventListener("submit", (event) => {
       if(!job)throw new Error('Elige una captura guardada para la perturbación.');
       await api(`/projects/${projectId()}/oracle-selftests`,{scenario_ids:[fields.scenario_id],variants:[{name:fields.name,captures:[{scenario_id:fields.scenario_id,candidate_job_id:job.id,candidate_sha256:job.result.analysis_sha256}]}]});
       await refresh();notice('Perturbación guardada enviada al oráculo. No se ha vuelto a conectar al original.');
+    }
+    if (form.id === "stateful-form") {
+      let recipe;
+      try { recipe = JSON.parse(fields.recipe || ""); } catch { throw new Error("La receta debe ser JSON válido."); }
+      if (event.submitter?.value === "save") {
+        const saved = await api(`/projects/${projectId()}/stateful/recipes`, {recipe, name: fields.name || "", recipe_id: draft("stateful-recipe-id") === "" ? "" : (draft("stateful-name") === fields.name ? draft("stateful-recipe-id") : "")});
+        state.drafts[projectId()] ||= {}; state.drafts[projectId()]["stateful-recipe-id"] = saved.id; keepDrafts();
+        await refresh(); notice(`Receta guardada (revisión ${saved.revision}).`);
+      } else {
+        const options = {recipe, shrink_budget: Number(fields.shrink_budget || 200)};
+        for (const key of ["runs", "seed", "max_length"]) if (fields[key] !== "") options[key] = Number(fields[key]);
+        await api(`/projects/${projectId()}/stateful/runs`, options);
+        await refresh(); notice("Ejecución de secuencias iniciada. El resultado aparece aquí al terminar.");
+      }
+    }
+    if (form.classList.contains("stateful-replay-form")) {
+      let target;
+      try { target = JSON.parse(fields.target || ""); } catch { throw new Error("El destino debe ser JSON válido."); }
+      await api(`/projects/${projectId()}/stateful/replay`, {job_id: form.dataset.job, target});
+      await refresh(); notice("Secuencia reproducida contra el destino indicado.");
     }
     if (form.id === "verify-form") {
       await api(`/projects/${projectId()}/reconstructions/verify`,fields);
@@ -1533,7 +1657,7 @@ setInterval(async () => {
         state.data.workflow=workflow;
       }
       if (
-        state.view === "jobs" || state.view === "analyses" || state.view === "binary" || state.view === "reconstruction" ||
+        state.view === "jobs" || state.view === "analyses" || state.view === "binary" || state.view === "reconstruction" || state.view === "stateful" ||
         (state.view === "artifacts" &&
           jobs.some(
             (job) =>

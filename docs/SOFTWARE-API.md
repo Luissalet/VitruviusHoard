@@ -120,6 +120,11 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `theseus_synthesize` | theseus |
 | `theseus_repro_create` | theseus |
 | `theseus_repro_verify` | theseus |
+| `theseus_stateful_recipe_save` | theseus |
+| `theseus_stateful_recipe_read` | theseus |
+| `theseus_stateful_run` | theseus |
+| `theseus_stateful_replay` | theseus |
+| `theseus_stateful_export` | theseus |
 | `theseus_perf_profile` | theseus |
 | `theseus_perf_compare` | theseus |
 | `theseus_evidence_export` | theseus |
