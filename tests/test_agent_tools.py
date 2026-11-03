@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 82
+    assert len(TOOLS) == 98
 
 
 def test_tool_names_are_unique():
@@ -34,11 +34,14 @@ def test_read_only_hints_correct():
                        "fonts_search", "design_lint", "design_rules_list", "theme_list", "theme_deal", "theme_check", "theme_memory", "page_kept", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
                        "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get", "motion_sound_plan", "site_audit_reports",
                        "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare", "diagram_style_list", "diagram_style_get", "protocol_check",
-                       "design_direction_brief", "design_preset_list", "design_pick_themes"}
+                       "design_direction_brief", "design_preset_list", "design_pick_themes",
+                       "design_alternatives_list", "design_alternatives_get", "design_alternatives_analyze", "instrument_list", "instrument_get", "instrument_compute", "instrument_explain"}
     write_names = {"app_project_create", "app_project_update", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render", "motion_sound_render", "site_audit",
                   "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_style_save", "diagram_style_remove", "diagram_style_apply",
-                  "design_slop_audit", "design_preset_apply", "design_figma_import"}
+                  "design_slop_audit", "design_preset_apply", "design_figma_import",
+                  "design_alternatives_create", "design_alternatives_add", "design_alternatives_evaluate", "design_alternatives_criteria", "design_alternatives_decide",
+                  "instrument_create", "instrument_update", "instrument_check", "instrument_export"}
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
