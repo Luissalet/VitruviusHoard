@@ -6,6 +6,7 @@ computation Vitruvius shows, the exported instrument and the explainer are the s
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -206,7 +207,7 @@ class Instruments:
         exported = self.projects.export(id, project["selected_revision"])
         report = {"id": id, "revision": project["selected_revision"], "export": {"path": exported["path"], "sha256": exported["sha256"]},
                   "tests": None, "examples": [], "explainer": [], "page_ok": False, "ok": False}
-        with tempfile.TemporaryDirectory(prefix="instrument-check-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="instrument-check-", ignore_cleanup_errors=True) as temporary:
             root = Path(temporary)
             with zipfile.ZipFile(exported["path"]) as bundle:
                 bundle.extractall(root)
@@ -244,7 +245,13 @@ class Instruments:
                 for name, values in cases:
                     report["explainer"].append(self._explainer_parity(spec, name, values, call))
             finally:
-                process.terminate()
+                if os.name == "nt":
+                    # A venv python.exe is a launcher: stop the whole tree or the real
+                    # interpreter keeps server.log open and the folder cannot be removed.
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], stdin=subprocess.DEVNULL,
+                                   capture_output=True, creationflags=flags)
+                else:
+                    process.terminate()
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
