@@ -26,6 +26,7 @@ from .rules import Rules
 from .properties import Properties
 from .synthesis import Synthesis
 from .repro import Repro
+from .stateful import Stateful
 from .perf import Perf
 from .evidence import Evidence
 
@@ -130,6 +131,11 @@ TOOLS = [
     tool("theseus_synthesize", "Synthesize a business rule as a safe expression from input/output examples (and outputs it must not produce) as a background job: enumerative search by size with observational-equivalence pruning over arithmetic, comparisons, conditionals, rounding functions and string operations, then a counterexample-guided loop that validates the simplest consistent expression against a reference program on generated and boundary inputs, turning every disagreement into a new example. Returns the expression, the examples used, the validation coverage and, on failure, the closest candidates with their counterexamples. save_rule stores the expression as a hypothesis in the rules bank (status changes only through theseus_rules_check). Read the job with theseus_job_read.", {**PROJECT, "examples": {"type": "array", "items": {"type": "object"}, "description": "[{input:{x:10}, output:12.1}] (or flat {x:10, output:12.1})"}, "rejected": {"type": "array", "items": {"type": "object"}, "description": "[{input:{x:10}, output:99}]: outputs the expression must not produce for that input"}, "variables": IDS, "reference": {"type": "object", "description": "{argv|callable, path, encode: text|json|json_object, decode: auto|json|text, cwd, env, timeout_seconds}"}, "domain": {"type": "object", "description": "{variable: input strategy} used to generate validation inputs"}, "max_size": {"type": "integer", "minimum": 3, "maximum": 12}, "time_budget_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 300}, "max_rounds": {"type": "integer", "minimum": 1, "maximum": 20}, "samples": {"type": "integer", "minimum": 1, "maximum": 200}, "max_reference_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "seed": {"type": "integer"}, "max_splits": {"type": "integer", "minimum": 0, "maximum": 3}, "save_rule": {"type": "object", "description": "{statement, title, rule_id, evidence, tags}"}}, ["project_id", "examples"], False),
     tool("theseus_repro_create", "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.", {**PROJECT, "report": REPRO_REPORT, "max_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "output_dir": S}, ["project_id", "report"], False),
     tool("theseus_repro_verify", "Run a repro bundle (by bundle_dir or the repro job id) against the recorded program or an override argv such as a fixed version, and report reproduces or no_longer_reproduces plus environment differences. Verificar reproduccion.", {**PROJECT, "bundle_dir": S, "repro_id": S, "argv": IDS, "attempts": {"type": "integer", "minimum": 1, "maximum": 10}, "timeout_seconds": {"type": "number", "exclusiveMinimum": 0}}, ["project_id"], False),
+    tool("theseus_stateful_recipe_save", "Save (or revise with recipe_id) a stateful HTTP sequence recipe for a real test service: target command started on a free port in a fresh sandbox per run ({python}, {sandbox}, {port} placeholders) or a base_url with a reset request; a model of named variables; actions with explicit preconditions, seeded parameter strategies, picks of identifiers bound by earlier responses (by index, re-bound on replay), request template, accepted statuses, extractors, model updates and postconditions; invariants over the model and declared read-only SQLite queries (watch.sqlite + queries); optional authorised reference target with agree relations. Oracles are written by you in the safe expression language; nothing is inferred from endpoint names. Receta de secuencias con estado.", {**PROJECT, "name": S, "recipe_id": S, "recipe": {"type": "object", "description": "{name, target:{argv,env,port_env,ready,files,db}|{base_url,reset}, reference, model:{var:init}, setup:[{request,expect_status,extract}], actions:[{name,pre,params:{p:<strategy>},pick:{name:list_var},request:{method,path,headers,body},expect_status,extract:{local:expr},update:{var:expr},post:[{name,expr,explain}],agree:[...]}], invariants:[{name,expr}], watch:{sqlite,tables,files}, queries:{name:SELECT}, server_errors_fail, runs, max_length, seed}"}}, ["project_id", "recipe"], False),
+    tool("theseus_stateful_recipe_read", "Read one stateful recipe (with revision) or list the project's recipes when recipe_id is omitted.", {**PROJECT, "recipe_id": S}, ["project_id"]),
+    tool("theseus_stateful_run", "Run a stateful recipe as a background job: each run restarts the target with fresh state, generates a seeded sequence online (only actions whose precondition holds on the live model), executes it against the real service and checks status expectations, extractors, postconditions, invariants (HTTP, SQLite and file effects are reported separately) and reference relations. The first failing sequence is reduced by delta debugging plus parameter shrinking, re-executing every candidate on a fresh process, keeping preconditions valid and the same (action, kind, oracle) signature. Setup failures are inconclusive, never passes. Returns coverage per action and transition, including what never ran. Read with theseus_job_read.", {**PROJECT, "recipe_id": S, "recipe": {"type": "object"}, "runs": {"type": "integer", "minimum": 1, "maximum": 500}, "max_length": {"type": "integer", "minimum": 1, "maximum": 60}, "seed": {"type": "integer"}, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 2000}}, ["project_id"], False),
+    tool("theseus_stateful_replay", "Replay the minimal (or original) counterexample of a stateful run, or an explicit symbolic sequence, on a fresh target; optionally against another version (target override: argv or base_url) or with a reference. Identifiers are re-bound from that target's own responses, never carried over. Reports outcome, whether the original signature reproduces, the trace with HTTP responses and SQLite/file effects, and the identifiers observed.", {**PROJECT, "job_id": S, "which": {"type": "string", "enum": ["minimal", "original"]}, "sequence": {"type": "array", "items": {"type": "object"}}, "recipe": {"type": "object"}, "target": {"type": "object"}, "reference": {"type": "object"}, "attempts": {"type": "integer", "minimum": 1, "maximum": 10}}, ["project_id"], False),
+    tool("theseus_stateful_export", "Export the reduced counterexample of a stateful run as a standalone pytest regression: test file, regression.json (recipe, symbolic sequence, signature), the executor adapter and the expression evaluator, standard library only. It starts the target, replays the sequence and asserts every oracle, so it fails on the defective version and passes on a fixed one (THESEUS_TARGET_ARGV or THESEUS_TARGET_URL select the version). Runs without Theseus, network or a language model.", {**PROJECT, "job_id": S, "which": {"type": "string", "enum": ["minimal", "original"]}, "output_dir": S}, ["project_id", "job_id"], False),
     tool("theseus_perf_profile", "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.", {**PROJECT, "command": PERF_COMMAND, "input": PERF_INPUT, **PERF_COMMON, "top": {"type": "integer", "minimum": 1, "maximum": 50}}, ["project_id", "command"], False),
     tool("theseus_perf_compare", "Before/after performance comparison of two versions (two commands, or two directories or git commits copied to temp folders) on the same input: interleaved runs, per-category and total change with a Mann-Whitney U test and a bootstrap interval, and an output check with the equivalence runner (exit code, stdout, stderr, files, SQLite; HTTP status and body). A speed-up that changes results is reported as failed. Background job; read it with theseus_job_read. Comparar rendimiento.", {**PROJECT, "before": PERF_VERSION, "after": PERF_VERSION, "input": PERF_INPUT, **PERF_COMMON, "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "check_inputs": {"type": "array", "items": PERF_INPUT}, "normalisers": {"type": "array"}}, ["project_id", "before", "after"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
@@ -317,6 +323,38 @@ class ReproCreate(Payload):
     output_dir: str = ""
 
 
+class StatefulRecipeSave(Payload):
+    recipe: dict[str, Any]
+    name: str = ""
+    recipe_id: str = ""
+
+
+class StatefulRun(Payload):
+    recipe_id: str = ""
+    recipe: dict[str, Any] | None = None
+    runs: int | None = None
+    max_length: int | None = None
+    seed: int | None = None
+    shrink: bool = True
+    shrink_budget: int = 200
+
+
+class StatefulReplay(Payload):
+    job_id: str = ""
+    which: str = "minimal"
+    sequence: list[dict[str, Any]] | None = None
+    recipe: dict[str, Any] | None = None
+    target: dict[str, Any] | None = None
+    reference: dict[str, Any] | None = None
+    attempts: int = 1
+
+
+class StatefulExport(Payload):
+    job_id: str
+    which: str = "minimal"
+    output_dir: str = ""
+
+
 class ReproVerify(Payload):
     bundle_dir: str = ""
     repro_id: str = ""
@@ -398,6 +436,7 @@ def create_app(data=None, port=5217, recover=True):
     equivalence = Equivalence(comparisons)
     rules = Rules(comparisons, equivalence)
     repro = Repro(comparisons, equivalence)
+    stateful = Stateful(comparisons, equivalence)
     properties = Properties(comparisons, equivalence)
     synthesis = Synthesis(comparisons, equivalence, rules)
     perf = Perf(comparisons, equivalence)
@@ -428,6 +467,7 @@ def create_app(data=None, port=5217, recover=True):
     app.state.equivalence = equivalence
     app.state.rules = rules
     app.state.repro = repro
+    app.state.stateful = stateful
     app.state.properties = properties
     app.state.synthesis = synthesis
     app.state.perf = perf
@@ -560,6 +600,16 @@ def create_app(data=None, port=5217, recover=True):
             return synthesis.start(**args)
         if name == "theseus_repro_create":
             return repro.start(**args)
+        if name == "theseus_stateful_recipe_save":
+            return stateful.save_recipe(**args)
+        if name == "theseus_stateful_recipe_read":
+            return stateful.read_recipe(**args)
+        if name == "theseus_stateful_run":
+            return stateful.start(**args)
+        if name == "theseus_stateful_replay":
+            return stateful.replay(**args)
+        if name == "theseus_stateful_export":
+            return stateful.export(**args)
         if name == "theseus_repro_verify":
             return repro.verify(**args)
         if name == "theseus_perf_profile":
@@ -822,6 +872,30 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/repro/verify")
     def repro_verify(project_id: str, body: ReproVerify):
         return repro.verify(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/stateful/recipes")
+    def stateful_recipe_save(project_id: str, body: StatefulRecipeSave):
+        return stateful.save_recipe(project_id, **body.model_dump())
+
+    @app.get("/api/projects/{project_id}/stateful/recipes")
+    def stateful_recipes(project_id: str):
+        return stateful.read_recipe(project_id)
+
+    @app.get("/api/projects/{project_id}/stateful/recipes/{recipe_id}")
+    def stateful_recipe_read(project_id: str, recipe_id: str):
+        return stateful.read_recipe(project_id, recipe_id)
+
+    @app.post("/api/projects/{project_id}/stateful/runs")
+    def stateful_run(project_id: str, body: StatefulRun):
+        return stateful.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/stateful/replay")
+    def stateful_replay(project_id: str, body: StatefulReplay):
+        return stateful.replay(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/stateful/export")
+    def stateful_export(project_id: str, body: StatefulExport):
+        return stateful.export(project_id, **body.model_dump())
     @app.post("/api/projects/{project_id}/perf/profile")
     def perf_profile(project_id: str, body: PerfProfile):
         return perf.profile(project_id, **body.model_dump())

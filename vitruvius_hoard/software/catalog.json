@@ -8738,6 +8738,201 @@
     "module": "theseus"
   },
   {
+    "name": "theseus_stateful_recipe_save",
+    "description": "Save (or revise with recipe_id) a stateful HTTP sequence recipe for a real test service: target command started on a free port in a fresh sandbox per run ({python}, {sandbox}, {port} placeholders) or a base_url with a reset request; a model of named variables; actions with explicit preconditions, seeded parameter strategies, picks of identifiers bound by earlier responses (by index, re-bound on replay), request template, accepted statuses, extractors, model updates and postconditions; invariants over the model and declared read-only SQLite queries (watch.sqlite + queries); optional authorised reference target with agree relations. Oracles are written by you in the safe expression language; nothing is inferred from endpoint names. Receta de secuencias con estado.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "recipe_id": {
+          "type": "string"
+        },
+        "recipe": {
+          "type": "object",
+          "description": "{name, target:{argv,env,port_env,ready,files,db}|{base_url,reset}, reference, model:{var:init}, setup:[{request,expect_status,extract}], actions:[{name,pre,params:{p:<strategy>},pick:{name:list_var},request:{method,path,headers,body},expect_status,extract:{local:expr},update:{var:expr},post:[{name,expr,explain}],agree:[...]}], invariants:[{name,expr}], watch:{sqlite,tables,files}, queries:{name:SELECT}, server_errors_fail, runs, max_length, seed}"
+        }
+      },
+      "required": [
+        "project_id",
+        "recipe"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_stateful_recipe_read",
+    "description": "Read one stateful recipe (with revision) or list the project's recipes when recipe_id is omitted.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "recipe_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_stateful_run",
+    "description": "Run a stateful recipe as a background job: each run restarts the target with fresh state, generates a seeded sequence online (only actions whose precondition holds on the live model), executes it against the real service and checks status expectations, extractors, postconditions, invariants (HTTP, SQLite and file effects are reported separately) and reference relations. The first failing sequence is reduced by delta debugging plus parameter shrinking, re-executing every candidate on a fresh process, keeping preconditions valid and the same (action, kind, oracle) signature. Setup failures are inconclusive, never passes. Returns coverage per action and transition, including what never ran. Read with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "recipe_id": {
+          "type": "string"
+        },
+        "recipe": {
+          "type": "object"
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "max_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "shrink": {
+          "type": "boolean"
+        },
+        "shrink_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_stateful_replay",
+    "description": "Replay the minimal (or original) counterexample of a stateful run, or an explicit symbolic sequence, on a fresh target; optionally against another version (target override: argv or base_url) or with a reference. Identifiers are re-bound from that target's own responses, never carried over. Reports outcome, whether the original signature reproduces, the trace with HTTP responses and SQLite/file effects, and the identifiers observed.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "which": {
+          "type": "string",
+          "enum": [
+            "minimal",
+            "original"
+          ]
+        },
+        "sequence": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "recipe": {
+          "type": "object"
+        },
+        "target": {
+          "type": "object"
+        },
+        "reference": {
+          "type": "object"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_stateful_export",
+    "description": "Export the reduced counterexample of a stateful run as a standalone pytest regression: test file, regression.json (recipe, symbolic sequence, signature), the executor adapter and the expression evaluator, standard library only. It starts the target, replays the sequence and asserts every oracle, so it fails on the defective version and passes on a fixed one (THESEUS_TARGET_ARGV or THESEUS_TARGET_URL select the version). Runs without Theseus, network or a language model.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        },
+        "which": {
+          "type": "string",
+          "enum": [
+            "minimal",
+            "original"
+          ]
+        },
+        "output_dir": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "job_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_perf_profile",
     "description": "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.",
     "inputSchema": {
