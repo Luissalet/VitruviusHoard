@@ -3401,6 +3401,202 @@
     "module": "design"
   },
   {
+    "name": "mark_audit",
+    "description": "Audit a logo or brand mark. Auditoría de logotipo.\nScores 0-100 (100 - 25 per fail, 8 per warning, 1 per note): works in one colour, contrast on light and dark grounds, legible at 32 and 16 px (favicon), number of colours, aspect ratio, margin and centring, transparent background, excess detail. Saves a test sheet PNG (sheet_path). Pass path, data (base64) or svg. Keywords: logo, marca, favicon, monocromo, invertido, identidad.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A local image file: PNG, JPG, WebP, GIF, BMP, ICO or SVG.",
+          "title": "Path"
+        },
+        "data": {
+          "anyOf": [
+            {
+              "maxLength": 22000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The image as base64 or a data: URL (what the screen uploads).",
+          "title": "Data"
+        },
+        "svg": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SVG markup, drawn at 512 px on white by the local browser.",
+          "title": "Svg"
+        },
+        "name": {
+          "default": "",
+          "description": "A label for the history (defaults to the file name).",
+          "maxLength": 120,
+          "title": "Name",
+          "type": "string"
+        },
+        "backgrounds": {
+          "description": "Extra grounds for the test sheet, #rrggbb (brand colours).",
+          "items": {
+            "pattern": "^#?[0-9a-fA-F]{6}$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Backgrounds",
+          "type": "array"
+        }
+      },
+      "title": "MarkAuditArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 90.0,
+    "module": "design"
+  },
+  {
+    "name": "mark_test_sheet",
+    "description": "Draw a logo test sheet. Hoja de prueba de logotipo.\nThe mark on light, dark and grey grounds, in one colour, inverted, at 128/64/32/16 px and magnified; add brand grounds with backgrounds. With id it redraws an audited mark. Keywords: hoja de prueba, fondos, tamaños, favicon.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "An audited mark: redraw its sheet with these grounds.",
+          "title": "Id"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "data": {
+          "anyOf": [
+            {
+              "maxLength": 22000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data"
+        },
+        "svg": {
+          "anyOf": [
+            {
+              "maxLength": 2000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Svg"
+        },
+        "backgrounds": {
+          "description": "Extra grounds, #rrggbb.",
+          "items": {
+            "pattern": "^#?[0-9a-fA-F]{6}$",
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Backgrounds",
+          "type": "array"
+        }
+      },
+      "title": "MarkSheetArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 90.0,
+    "module": "design"
+  },
+  {
+    "name": "mark_reports",
+    "description": "List or read logo audits. Auditorías de logotipo guardadas.\nWithout id: latest audits (name, score, verdict). With id: the whole report. Keywords: historial, logos, marcas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A mark audit id: the whole report. Omit to list the latest.",
+          "title": "Id"
+        },
+        "limit": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "MarkReportsArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "diagram_style_list",
     "description": "List reusable named shape styles. Estilos reutilizables.\nDoes not create a store.",
     "annotations": {
