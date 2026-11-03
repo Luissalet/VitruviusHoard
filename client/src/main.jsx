@@ -19,7 +19,8 @@ if (
 ) {
   try {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      // The worker lives under the app base (/design/ when fused with the other modules).
+      navigator.serviceWorker.register(import.meta.env.BASE_URL + "sw.js").catch(() => {});
     });
   } catch {
     // PWA install is optional; never block the app on it.
