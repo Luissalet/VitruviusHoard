@@ -268,8 +268,67 @@ def test_import_from_recorded_json_makes_a_design_project(tmp_path):
         out = call_tool(svc, "design_figma_import", {"nodes_json": FRAME, "image_base64": base64.b64encode(buf.getvalue()).decode()})
         assert out["render_id"] and out["tokens_id"] and Path(out["html_path"]).is_file() and out["counts"]["nodes"] == 14
         assert out["compare"]["diff_pct"] is not None and out["critique"]["score"] is not None
+        cmp = out["compare"]
+        assert cmp["reference_size"] == [960, 640] and cmp["scope"] in ("full", "normalized", "partial")
+        assert cmp["diff_pct"] >= cmp["overlap_diff_pct"] * cmp["coverage"] - 0.01 and 0 < cmp["coverage"] <= 1.0
         system = svc.tokens_get(out["tokens_id"])
         assert "Barlow" in system["tokens"]["typography"]["body"] and system["name"].startswith("Figma:")
         assert figma.imports(svc.config.data_dir)[0]["import_id"] == out["import_id"]
     finally:
         svc.stop()
+
+
+# ---------------------------------------------------------------- the Figma pixel diff covers the whole canvas
+
+def _png(path, size, red_from=None):
+    from PIL import Image
+    img = Image.new("RGB", size, "white")
+    if red_from is not None:
+        img.paste((255, 0, 0), (0, red_from, size[0], size[1]))
+    img.save(path)
+    return path
+
+
+def test_figma_diff_counts_the_missing_half_of_a_truncated_render(tmp_path):
+    from PIL import Image
+    ref = _png(tmp_path / "ref.png", (64, 64), red_from=32)        # white top, red bottom
+    shot = _png(tmp_path / "shot.png", (64, 32))                   # only the white top was rendered
+    out = figma._diff(ref, shot, tmp_path / "diff.png")
+    assert out["diff_pct"] == 50.0 and out["overlap_diff_pct"] == 0.0
+    assert out["scope"] == "partial" and out["coverage"] == 0.5 and out["compared_rect"] == [0, 0, 64, 32]
+    assert out["reference_size"] == [64, 64] and out["render_size"] == [64, 32] and (out["width"], out["height"]) == (64, 64)
+    assert out["missing_rows"] == 32 and out["extra_rows"] == 0 and out["render_scale"] == 1.0
+    diff = Image.open(out["diff_image"])
+    assert diff.size == (64, 64) and diff.getpixel((10, 50)) == (255, 0, 255) and diff.getpixel((10, 10)) == (0, 0, 0)
+
+
+def test_figma_diff_counts_an_extra_footer_of_the_render(tmp_path):
+    ref = _png(tmp_path / "ref.png", (64, 32))
+    shot = _png(tmp_path / "shot.png", (64, 64))                   # same top, plus a (white) footer the frame lacks
+    out = figma._diff(ref, shot, tmp_path / "diff.png")
+    assert out["diff_pct"] == 50.0 and out["overlap_diff_pct"] == 0.0 and out["scope"] == "partial"
+    assert out["extra_rows"] == 32 and out["missing_rows"] == 0 and out["coverage"] == 0.5 and out["height"] == 64
+
+
+def test_figma_diff_declares_the_width_normalisation(tmp_path):
+    ref = _png(tmp_path / "ref.png", (64, 64), red_from=32)
+    shot = _png(tmp_path / "shot.png", (128, 128), red_from=64)    # the same frame at 2x
+    out = figma._diff(ref, shot, tmp_path / "diff.png")
+    assert out["scope"] == "normalized" and out["render_scale"] == 0.5 and out["render_compared_size"] == [64, 64]
+    assert out["normalization"] and "64px" in out["normalization"] and out["coverage"] == 1.0
+    assert out["missing_rows"] == 0 and out["extra_rows"] == 0 and out["diff_pct"] < 2.0
+    short = _png(tmp_path / "short.png", (128, 64))                # 2x wide but only the white top
+    cut = figma._diff(ref, short, tmp_path / "diff2.png")
+    assert cut["scope"] == "partial" and cut["render_scale"] == 0.5 and cut["render_compared_size"] == [64, 32]
+    assert cut["diff_pct"] == 50.0 and cut["missing_rows"] == 32 and cut["coverage"] == 0.5
+
+
+def test_figma_diff_of_identical_images_is_zero_and_full(tmp_path):
+    ref = _png(tmp_path / "ref.png", (64, 64), red_from=32)
+    same = _png(tmp_path / "same.png", (64, 64), red_from=32)
+    out = figma._diff(ref, same, tmp_path / "diff.png")
+    assert out["diff_pct"] == 0.0 and out["overlap_diff_pct"] == 0.0 and out["scope"] == "full"
+    assert out["coverage"] == 1.0 and out["normalization"] is None and out["render_scale"] == 1.0
+    assert out["missing_rows"] == out["extra_rows"] == 0 and out["reference_size"] == out["render_size"] == [64, 64]
+    other = _png(tmp_path / "other.png", (64, 64))                 # same size, bottom half differs
+    assert figma._diff(ref, other, tmp_path / "diff3.png")["diff_pct"] == 50.0

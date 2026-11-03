@@ -4,6 +4,25 @@ import { api } from "../api.js";
 // "Import from Figma": a frame link (needs the token saved in Settings) or the JSON of GET /v1/files/:key/nodes pasted in.
 // The result is a design project: compact spec, HTML/CSS render, extracted design system, critique and the pixel difference
 // with Figma's own PNG.
+// The pixel difference is measured over the canvas of both images: rows only one of them has count as different, and a
+// render scaled to the frame width or of another height is labelled as such, never as a full-frame match.
+export function compareText(c, L) {
+  if (!c || c.diff_pct === undefined || c.diff_pct === null) return "";
+  let s = `${L("diferencia con Figma", "difference with Figma")} ${c.diff_pct}%`;
+  if (!c.scope) return s;
+  if (c.scope === "full") return `${s} (${L("mismo tamaño", "same size")} ${c.width}×${c.height})`;
+  const parts = [`Figma ${c.reference_size[0]}×${c.reference_size[1]}`, `render ${c.render_size[0]}×${c.render_size[1]}`];
+  if (c.render_scale !== 1) parts.push(L(`render escalado ×${c.render_scale}`, `render scaled ×${c.render_scale}`));
+  if (c.scope === "partial") {
+    parts.push(L(`cobertura ${Math.round(c.coverage * 100)}%`, `coverage ${Math.round(c.coverage * 100)}%`));
+    if (c.missing_rows) parts.push(L(`${c.missing_rows} filas de Figma sin render`, `${c.missing_rows} Figma rows not rendered`));
+    if (c.extra_rows) parts.push(L(`${c.extra_rows} filas de más en el render`, `${c.extra_rows} extra render rows`));
+    parts.push(L(`${c.overlap_diff_pct}% en la zona común`, `${c.overlap_diff_pct}% in the shared area`));
+  }
+  const label = c.scope === "partial" ? L("comparación parcial", "partial comparison") : L("normalizada", "normalized");
+  return `${s} · ${label}: ${parts.join(", ")}`;
+}
+
 export default function FigmaImport({ lang, notify, onOpenTokens }) {
   const L = (es, en) => (lang === "es" ? es : en);
   const [open, setOpen] = useState(false);
@@ -69,11 +88,16 @@ export default function FigmaImport({ lang, notify, onOpenTokens }) {
               <div className="card mt-3" data-testid="figma-result">
                 <div className="font-semibold text-[13px]">{result.name} · {result.width}×{result.height}px</div>
                 <div className="help mt-1">{result.counts.nodes} {L("nodos", "nodes")} · {result.counts.styles} {L("estilos con nombre", "named styles")} ({result.counts.style_uses} {L("usos", "uses")})
-                  {result.critique?.score !== undefined && ` · ${L("crítica", "critique")} ${result.critique.score}/10 (${result.critique.gate})`}
-                  {result.compare?.diff_pct !== undefined && result.compare?.diff_pct !== null && ` · ${L("diferencia con Figma", "difference with Figma")} ${result.compare.diff_pct}%`}</div>
+                  {result.critique?.score !== undefined && ` · ${L("crítica", "critique")} ${result.critique.score}/10 (${result.critique.gate})`}</div>
+                {compareText(result.compare, L) && (
+                  <div className="help mt-1" style={result.compare.scope === "partial" ? { color: "var(--warn)" } : undefined} data-testid="figma-compare">
+                    {compareText(result.compare, L)}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <a className="btn btn-sm" href={api.figmaFileUrl(result.import_id, "page.html")} target="_blank" rel="noreferrer">HTML</a>
                   <a className="btn btn-sm" href={api.figmaFileUrl(result.import_id, "spec.json")} target="_blank" rel="noreferrer">spec.json</a>
+                  {result.compare?.diff_image && <a className="btn btn-sm" href={api.figmaFileUrl(result.import_id, "diff.png")} target="_blank" rel="noreferrer" data-testid="figma-diff">{L("Diferencia (PNG)", "Difference (PNG)")}</a>}
                   <a className="btn btn-sm" href={`#/critique/${result.render_id}`}>{L("Ver render", "Open render")}</a>
                   {result.tokens_id && <button type="button" className="btn btn-sm" onClick={() => { setOpen(false); onOpenTokens && onOpenTokens(result.tokens_id); }}>{L("Abrir design system", "Open design system")}</button>}
                 </div>
@@ -97,7 +121,7 @@ export default function FigmaImport({ lang, notify, onOpenTokens }) {
             {!!state?.imports?.length && (
               <div className="mt-3">
                 <div className="label">{L("Importaciones recientes", "Recent imports")}</div>
-                {state.imports.map((i) => <div key={i.import_id} className="help">{i.name} · {i.import_id} {i.compare?.diff_pct !== undefined ? `· ${i.compare.diff_pct}%` : ""}</div>)}
+                {state.imports.map((i) => <div key={i.import_id} className="help">{i.name} · {i.import_id} {compareText(i.compare, L) ? `· ${compareText(i.compare, L)}` : ""}</div>)}
               </div>
             )}
           </div>

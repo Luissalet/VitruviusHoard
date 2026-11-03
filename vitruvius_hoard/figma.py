@@ -438,19 +438,46 @@ def store_dir(data_dir: Path) -> Path:
 
 
 def _diff(png_a: Path, png_b: Path, out: Path) -> dict[str, Any]:
+    """Pixel difference of the frame's PNG (a) and the render (b) over the whole canvas of both.
+
+    `diff_pct` counts the rows only one image has (a truncated render, an extra footer) as different, so a partial match
+    never reads 0 %. `scope` is full (same size), normalized (render scaled to the frame width, heights then equal) or
+    partial (heights differ); sizes, scale, compared rectangle, coverage and the in-overlap difference are reported.
+    """
     try:
         from PIL import Image, ImageChops
     except Exception:  # noqa: BLE001
         return {"diff_pct": None, "error": "Pillow not available"}
     a, b = Image.open(png_a).convert("RGB"), Image.open(png_b).convert("RGB")
-    if a.width != b.width:
-        b = b.resize((a.width, max(1, round(b.height * a.width / b.width))))
-    w, h = min(a.width, b.width), min(a.height, b.height)
-    d = ImageChops.difference(a.crop((0, 0, w, h)), b.crop((0, 0, w, h)))
-    hist = d.convert("L").histogram()
-    pct = round(100.0 * sum(hist[24:]) / (w * h), 2) if w * h else None
-    d.save(out)
-    return {"diff_pct": pct, "diff_image": str(out), "width": w, "height": h}
+    reference_size, render_size = [a.width, a.height], [b.width, b.height]
+    scale = 1.0
+    if b.width != a.width:
+        # Declared normalisation: the render is resized to the frame's width (aspect kept) before comparing.
+        scale = a.width / b.width
+        b = b.resize((a.width, max(1, round(b.height * scale))), Image.LANCZOS)
+    w, h = a.width, max(a.height, b.height)          # the canvas covers both images
+    oh = min(a.height, b.height)                     # rows present in both (widths are equal now)
+    d = ImageChops.difference(a.crop((0, 0, w, oh)), b.crop((0, 0, w, oh)))
+    differing = sum(d.convert("L").histogram()[24:])
+    unmatched = w * (h - oh)                         # rows only one image has: missing or extra content, all different
+    canvas = Image.new("RGB", (w, h), (255, 0, 255))
+    canvas.paste(d, (0, 0))
+    canvas.save(out)
+    area = w * h
+    scope = "partial" if oh < h else ("normalized" if scale != 1.0 else "full")
+    return {
+        "diff_pct": round(100.0 * (differing + unmatched) / area, 2) if area else None,
+        "overlap_diff_pct": round(100.0 * differing / (w * oh), 2) if w * oh else None,
+        "diff_image": str(out), "width": w, "height": h,
+        "reference_size": reference_size, "render_size": render_size, "render_compared_size": [b.width, b.height],
+        "render_scale": round(scale, 4),
+        "normalization": f"render resized x{scale:.4g} to the frame width {a.width}px" if scale != 1.0 else None,
+        "compared_rect": [0, 0, w, oh], "coverage": round(oh / h, 4) if h else 0.0,
+        "missing_rows": a.height - oh, "extra_rows": b.height - oh,
+        "scope": scope,
+        "note": "Pixel measure only, not semantic equivalence. Rows that only one image has count as different "
+                "(magenta in diff.png).",
+    }
 
 
 def import_frame(svc, *, link: Optional[str] = None, nodes_json: Optional[dict] = None, image_png: Optional[bytes] = None,
