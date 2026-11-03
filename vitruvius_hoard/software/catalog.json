@@ -6787,6 +6787,105 @@
     "module": "theseus"
   },
   {
+    "name": "theseus_equivalence_suite_save",
+    "description": "Save an equivalence suite: reference and candidate commands (argv, cwd, env, timeout) plus cases (stdin, args, input files for a fresh sandbox, optional SQLite seed, multi-step sequences), explicit opt-in normalisers, authorized deviations and seeded generators (integers, decimals, strings, permutations). Suite de equivalencia.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "suite": {
+          "type": "object",
+          "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"
+        },
+        "suite_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "name",
+        "suite"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_equivalence_suite_read",
+    "description": "Read one saved equivalence suite, or list the project's suites when suite_id is omitted.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "suite_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_equivalence_run",
+    "description": "Run a saved or inline equivalence suite as a background job. Both programs run on identical fresh sandboxes; exit code, stdout, stderr, file effects and SQLite state are compared per step. Reports the first disagreement per case, authorized deviations separately, a constant-candidate strength check (weak suites are flagged) and shrinks generated failing inputs by re-running both programs. Read the job with theseus_job_read. Agreement covers only the listed cases and channels; it is not whole-program equivalence. Comprobar equivalencia.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "suite_id": {
+          "type": "string"
+        },
+        "suite": {
+          "type": "object",
+          "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"
+        },
+        "strength": {
+          "type": "boolean"
+        },
+        "shrink": {
+          "type": "boolean"
+        },
+        "shrink_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_evidence_export",
     "description": "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.",
     "inputSchema": {

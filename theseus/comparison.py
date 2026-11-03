@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -155,7 +156,8 @@ class Comparisons:
                 # A command argument may be source code or a long value,
                 # rather than a valid filesystem name.
                 continue
-        process = subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE,
+        env = {**os.environ, **definition["env"]} if definition.get("env") else None
+        process = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                    text=True, encoding="utf-8", errors="replace", shell=False)
         process._theseus_preserve_adb_server = bool(definition.get("preserve_adb_server"))
