@@ -5443,6 +5443,902 @@
     "module": "design"
   },
   {
+    "name": "design_alternatives_create",
+    "description": "Compare structurally different alternatives on frozen criteria. Crear estudio de alternativas.\nBrief + criteria (each with a measurable source, direction and weight) + 2..12 pages, app projects or diagrams. Refuses colour-only variants: structural fingerprints of the DOM/outline must differ in element structure or layout. check_only reports distances without creating.\nSinónimos: alternativas, comparar diseños, opciones, variantes, criterios, decisión de diseño.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "AlternativeIn": {
+          "properties": {
+            "label": {
+              "maxLength": 80,
+              "title": "Label",
+              "type": "string"
+            },
+            "kind": {
+              "anyOf": [
+                {
+                  "pattern": "^(page|app_project|diagram_document)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Kind"
+            },
+            "html": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "page: the HTML.",
+              "title": "Html"
+            },
+            "path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "page: a local .html file or folder.",
+              "title": "Path"
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "app_project: the application project (its revision is pinned).",
+              "title": "Project Id"
+            },
+            "document_id": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "diagram_document: the editable diagram (its revision is pinned).",
+              "title": "Document Id"
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Revision"
+            },
+            "intent": {
+              "default": "",
+              "description": "What structural idea this alternative tests.",
+              "maxLength": 400,
+              "title": "Intent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "label"
+          ],
+          "title": "AlternativeIn",
+          "type": "object"
+        },
+        "CriterionIn": {
+          "properties": {
+            "name": {
+              "maxLength": 80,
+              "title": "Name",
+              "type": "string"
+            },
+            "source": {
+              "description": "critique_score, lint_score, page_check_failed, contrast_failures, contrast_min_ratio, small_tap_targets, dom_size, external_libs, render_ms, page_bytes (pages, apps); diagram_gate_failures, diagram_nodes, diagram_edges (diagrams); manual (any, needs a rationale per score).",
+              "title": "Source",
+              "type": "string"
+            },
+            "direction": {
+              "anyOf": [
+                {
+                  "pattern": "^(max|min)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Default comes from the source (critique_score max, dom_size min...).",
+              "title": "Direction"
+            },
+            "weight": {
+              "default": 1,
+              "maximum": 1000,
+              "minimum": 0,
+              "title": "Weight",
+              "type": "number"
+            },
+            "params": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "manual: {min, max} scale, default 0 to 10.",
+              "title": "Params"
+            },
+            "why": {
+              "default": "",
+              "maxLength": 400,
+              "title": "Why",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "source"
+          ],
+          "title": "CriterionIn",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "brief": {
+          "description": "What is being designed and for whom (at least a sentence).",
+          "maxLength": 2000,
+          "title": "Brief",
+          "type": "string"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/CriterionIn"
+          },
+          "maxItems": 12,
+          "title": "Criteria",
+          "type": "array"
+        },
+        "alternatives": {
+          "description": "2 to 12 alternatives.",
+          "items": {
+            "$ref": "#/$defs/AlternativeIn"
+          },
+          "maxItems": 12,
+          "title": "Alternatives",
+          "type": "array"
+        },
+        "diversity_threshold": {
+          "default": 0.2,
+          "description": "Minimum structural distance between any two alternatives.",
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Diversity Threshold",
+          "type": "number"
+        },
+        "check_only": {
+          "default": false,
+          "description": "Only report structural distances; create nothing.",
+          "title": "Check Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "brief",
+        "criteria",
+        "alternatives"
+      ],
+      "title": "StudyCreateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_list",
+    "description": "List alternatives studies with state and decision. Listar estudios de alternativas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_get",
+    "description": "Read a study: criteria, alternatives, diversity, measures, frontier and trade-offs. Leer estudio.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StudyIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_add",
+    "description": "Add an alternative that is structurally different from the others. Añadir alternativa.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "alternative": {
+          "additionalProperties": true,
+          "description": "label, kind (page|app_project|diagram_document), html | path | project_id | document_id, revision, intent.",
+          "title": "Alternative",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "alternative"
+      ],
+      "title": "StudyAddArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_evaluate",
+    "description": "Measure alternatives on the frozen criteria; record manual scores. Evaluar alternativas.\nUses render, lint, critique (heuristics), page_check and contrast measures. Manual criteria need a score and a rationale per alternative. The first measurement freezes the criteria.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "ManualScore": {
+          "properties": {
+            "alternative": {
+              "maxLength": 8,
+              "title": "Alternative",
+              "type": "string"
+            },
+            "criterion": {
+              "maxLength": 60,
+              "title": "Criterion",
+              "type": "string"
+            },
+            "score": {
+              "title": "Score",
+              "type": "number"
+            },
+            "rationale": {
+              "maxLength": 600,
+              "title": "Rationale",
+              "type": "string"
+            }
+          },
+          "required": [
+            "alternative",
+            "criterion",
+            "score",
+            "rationale"
+          ],
+          "title": "ManualScore",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "manual_scores": {
+          "items": {
+            "$ref": "#/$defs/ManualScore"
+          },
+          "title": "Manual Scores",
+          "type": "array"
+        },
+        "remeasure": {
+          "default": false,
+          "description": "Measure again values that already exist (criteria stay frozen).",
+          "title": "Remeasure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StudyEvaluateArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 300.0,
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_criteria",
+    "description": "Replace criteria before measuring, or open a new study revision after. Cambiar criterios (congelados).\nFrozen once measured: new_revision=true with a reason keeps the old revision and carries over unchanged measures.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "CriterionIn": {
+          "properties": {
+            "name": {
+              "maxLength": 80,
+              "title": "Name",
+              "type": "string"
+            },
+            "source": {
+              "description": "critique_score, lint_score, page_check_failed, contrast_failures, contrast_min_ratio, small_tap_targets, dom_size, external_libs, render_ms, page_bytes (pages, apps); diagram_gate_failures, diagram_nodes, diagram_edges (diagrams); manual (any, needs a rationale per score).",
+              "title": "Source",
+              "type": "string"
+            },
+            "direction": {
+              "anyOf": [
+                {
+                  "pattern": "^(max|min)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Default comes from the source (critique_score max, dom_size min...).",
+              "title": "Direction"
+            },
+            "weight": {
+              "default": 1,
+              "maximum": 1000,
+              "minimum": 0,
+              "title": "Weight",
+              "type": "number"
+            },
+            "params": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "manual: {min, max} scale, default 0 to 10.",
+              "title": "Params"
+            },
+            "why": {
+              "default": "",
+              "maxLength": 400,
+              "title": "Why",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "source"
+          ],
+          "title": "CriterionIn",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/CriterionIn"
+          },
+          "maxItems": 12,
+          "title": "Criteria",
+          "type": "array"
+        },
+        "new_revision": {
+          "default": false,
+          "description": "Required once anything is measured: creates a study revision, keeps the old one in history.",
+          "title": "New Revision",
+          "type": "boolean"
+        },
+        "reason": {
+          "default": "",
+          "maxLength": 400,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "criteria"
+      ],
+      "title": "StudyCriteriaArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_analyze",
+    "description": "Rank, Pareto frontier, trade-off text; try other weights without measuring again. Analizar compromisos.\nweights = what-if by criterion id (not saved); sensitivity_of = share of weight at which the leader changes.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "weights": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "What-if weights by criterion id; nothing is measured again and nothing is saved.",
+          "title": "Weights"
+        },
+        "sensitivity_of": {
+          "anyOf": [
+            {
+              "maxLength": 60,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Criterion id: at which share of the weight does the leader change?",
+          "title": "Sensitivity Of"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "StudyAnalyzeArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_alternatives_decide",
+    "description": "Record the chosen alternative with its reason and the trade-offs it accepts. Decidir alternativa.\nA dominated alternative is refused unless accept_dominated=true and the reason says what the criteria miss.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "alternative_id": {
+          "maxLength": 8,
+          "title": "Alternative Id",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 1000,
+          "title": "Reason",
+          "type": "string"
+        },
+        "weights": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weights"
+        },
+        "accept_dominated": {
+          "default": false,
+          "title": "Accept Dominated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "alternative_id",
+        "reason"
+      ],
+      "title": "StudyDecideArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_create",
+    "description": "Generate a calculator, viewer, comparator or editor from a typed spec. Crear instrumento.\nSource kept, tests generated (validation + your examples), stdlib-only standalone export, explainer page. Spec examples the formulas do not satisfy are reported.\nSinónimos: calculadora, herramienta pequeña, comparador, visor, editor, fórmula, unidades.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "spec": {
+          "additionalProperties": true,
+          "description": "name, kind (calculator|viewer|comparator|editor), inputs [{name,label,type number|integer|text|choice|boolean,unit,min,max,step,default,choices,to_base}], operations [{name,params,formula}], steps and outputs [{name,label,unit,decimals,formula | operation+args}], invariants [{name,expression}], examples [{name,inputs,expected,tolerance}], rows (viewer/editor/comparator), views. Formulas: + - * / // %, comparisons, and/or/not, x if c else y, min max abs round floor ceil sqrt pow clamp log exp, your operations. Use pow(x, n), not **.",
+          "title": "Spec",
+          "type": "object"
+        }
+      },
+      "required": [
+        "spec"
+      ],
+      "title": "InstrumentCreateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_list",
+    "description": "List instruments with their spec and example status. Listar instrumentos.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_get",
+    "description": "Read an instrument: spec, examples status and files. Leer instrumento.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "include_files": {
+          "default": false,
+          "title": "Include Files",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "InstrumentIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_update",
+    "description": "Regenerate an instrument from a changed spec as a new retained revision. Actualizar instrumento.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "spec": {
+          "additionalProperties": true,
+          "title": "Spec",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "spec"
+      ],
+      "title": "InstrumentUpdateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_compute",
+    "description": "Compute an instrument's steps and outputs for given inputs. Calcular con un instrumento.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "additionalProperties": true,
+          "title": "Inputs",
+          "type": "object"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "InstrumentComputeArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_explain",
+    "description": "Explain a result: inputs, intermediate states, outputs, formulas, invariants. Explicar resultado.\nSame computation as the instrument; the instrument serves it at /explain with editable inputs.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default: the first example of the spec.",
+          "title": "Inputs"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "InstrumentExplainArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "instrument_check",
+    "description": "Run the exported instrument and compare it with the spec and the explainer. Comprobar instrumento.\nExtracts the export, runs its tests and server, recomputes every spec example over HTTP and checks the explainer shows the same numbers.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Also compare the explainer with the exported instrument for these inputs.",
+          "title": "Inputs"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "InstrumentCheckArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 120.0,
+    "module": "design"
+  },
+  {
+    "name": "instrument_export",
+    "description": "Export an instrument as a standalone ZIP, checked by running it. Exportar instrumento.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "run_check": {
+          "default": true,
+          "title": "Run Check",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "InstrumentExportArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 120.0,
+    "module": "design"
+  },
+  {
     "name": "docs_libraries",
     "description": "List indexed libraries, exact versions and project environments (libraries, librerías, versión, entornos)\n\nWhat Babel has indexed (exact versions), the registered environments (project\ninterpreters / node_modules folders; default_for says which one answers Python or\nTypeScript when env is omitted) and recent background jobs. Use it to find an env id, or to follow a docset install / dependency\nindexing job. Installed packages that are not listed yet are indexed automatically\nthe first time api_lookup or api_check_code needs them.\n\nArgs:\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    env: environment id or project path; limits libraries to that environment.\n    limit: libraries per page (default 15, max 200). offset: for the next page.\n\nReturns: {libraries: [{id, ecosystem, name, version, env, status, entries}], total,\n    has_more, next_offset, environments: [{id, label, python, default, ...}],\n    jobs: [{id, kind, status, progress, message}]}.\nKeywords: list libraries, what is installed, which version, environments, job progress,\n    listar librerias, que hay instalado, que version tengo, entornos, progreso\n",
     "inputSchema": {
@@ -7635,6 +8531,129 @@
     },
     "annotations": {
       "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_property_run",
+    "description": "Run a property and business-sequence suite as a background job. A target program (argv command or a Python callable 'module:function' in a subprocess) is driven by seeded, composable input strategies (integers, decimals, text, lists, dicts, one_of, tuples) and checked against properties written in the safe expression language: invariants, round trips (export then import), idempotence f(f(x))==f(x), metamorphic relations and reference-model comparisons. Stateful suites execute random command sequences (with preconditions, a model updated by expressions and postconditions) against the real program in one sandbox. Failures are shrunk by re-executing every candidate and keeping the same violated property; the minimal case is returned. Oracles that only compare the program with itself are warned about. No counterexample found is evidence on the executed runs, not a proof. Read the job with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "suite": {
+          "type": "object",
+          "description": "{target:{argv|callable,path,encode,decode}, input:<strategy>, runs, seed, properties:[{kind:invariant|roundtrip|idempotent|metamorphic|model, name, when, expr, then, transform, reference, input}], stateful:[{name, program, init, files, db, commands:[{name,args,stdin,params,pre,update,post}], runs, max_length, seed}]}"
+        },
+        "shrink": {
+          "type": "boolean"
+        },
+        "shrink_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "project_id",
+        "suite"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_synthesize",
+    "description": "Synthesize a business rule as a safe expression from input/output examples (and outputs it must not produce) as a background job: enumerative search by size with observational-equivalence pruning over arithmetic, comparisons, conditionals, rounding functions and string operations, then a counterexample-guided loop that validates the simplest consistent expression against a reference program on generated and boundary inputs, turning every disagreement into a new example. Returns the expression, the examples used, the validation coverage and, on failure, the closest candidates with their counterexamples. save_rule stores the expression as a hypothesis in the rules bank (status changes only through theseus_rules_check). Read the job with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "[{input:{x:10}, output:12.1}] (or flat {x:10, output:12.1})"
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "[{input:{x:10}, output:99}]: outputs the expression must not produce for that input"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reference": {
+          "type": "object",
+          "description": "{argv|callable, path, encode: text|json|json_object, decode: auto|json|text, cwd, env, timeout_seconds}"
+        },
+        "domain": {
+          "type": "object",
+          "description": "{variable: input strategy} used to generate validation inputs"
+        },
+        "max_size": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 12
+        },
+        "time_budget_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "max_rounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "max_reference_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "max_splits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "save_rule": {
+          "type": "object",
+          "description": "{statement, title, rule_id, evidence, tags}"
+        }
+      },
+      "required": [
+        "project_id",
+        "examples"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
       "destructiveHint": false,
       "openWorldHint": false
     },
