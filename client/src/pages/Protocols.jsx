@@ -125,9 +125,15 @@ export default function Protocols() {
             </>
           )}
           {replay && (
-            <ol className="text-[12.5px] mono" data-testid="protocol-replay-result">
-              {replay.steps.map((s, i) => <li key={i}>{s.process} · {s.label}{s.kind === "crash" ? " (caída)" : ""}{s.broken.length ? ` ✗ ${s.broken.join(", ")}` : " ✓"}</li>)}
-            </ol>
+            <div data-testid="protocol-replay-result">
+              <p role="status" className="text-[12.5px]">
+                {t(replay.status === "violated" ? "pr_status_violated" : "pr_replay_completed")}
+                {replay.status === "violated" && ` · ${t("pr_step")} ${replay.at_step} · ${t(`pr_kind_${replay.kind}`)}: ${replay.property}`}
+              </p>
+              <ol className="text-[12.5px] mono">
+                {replay.steps.map((s, i) => <li key={i}>{s.process} · {s.label}{s.branch !== null && s.branch !== undefined ? ` [${s.branch + 1}]` : ""}{s.kind === "crash" ? ` (${t("pr_crash")})` : ""}{s.broken.length ? ` ✗ ${s.broken.join(", ")}` : " ✓"}</li>)}
+              </ol>
+            </div>
           )}
           <h3 className="text-[13px] font-semibold mt-2">{t("pr_assumptions")}</h3>
           <ul className="help pl-4" style={{ listStyle: "disc" }}>{result.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>

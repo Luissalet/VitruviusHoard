@@ -98,6 +98,23 @@ def _trace(spec: Spec, parents: dict, state) -> list[dict]:
     return out
 
 
+def _inspect_state(spec: Spec, state):
+    """Use the same property semantics for exploration and replay."""
+    env = _global_env(spec, state)
+    for inv in spec.invariants:
+        if not inv.check.eval(env):
+            return ("invariant", inv.name), []
+    nexts = list(successors(spec, state))
+    if all(pc == END for pc, _, _ in state[1]):
+        for prop in spec.at_end:
+            if not prop.check.eval(env):
+                return ("at_end", prop.name), nexts
+    elif spec.deadlock and not any(a["kind"] == "step" for a, _ in nexts):
+        stuck = [p.name for i, p in enumerate(spec.procs) if state[1][i][0] != END]
+        return ("deadlock", "bloqueo: " + ", ".join(stuck) + " no pueden avanzar"), nexts
+    return None, nexts
+
+
 def explore(spec: Spec, *, time_limit: float = 60.0) -> dict:
     t0 = time.monotonic()
     start = initial(spec)
@@ -110,55 +127,31 @@ def explore(spec: Spec, *, time_limit: float = 60.0) -> dict:
 
     def violated(kind, name, state):
         tr = _trace(spec, parents, state)
-        return {"kind": kind, "property": name, "trace": tr, "schedule": [[a["process"], a["label"], a["kind"]] for a in tr],
+        schedule = [[a["process"], a["label"], a["kind"]] + ([a["branch"]] if a["branch"] is not None else []) for a in tr]
+        return {"kind": kind, "property": name, "trace": tr, "schedule": schedule,
                 "final_state": _describe(spec, state), "length": len(tr)}
-
-    def check_state(state):
-        env = _global_env(spec, state)
-        for inv in spec.invariants:
-            if not inv.check.eval(env):
-                return violated("invariant", inv.name, state)
-        return None
-
-    violation = check_state(start)
     truncated = None
     while queue and violation is None:
         if time.monotonic() - t0 > time_limit:
             truncated = f"tiempo agotado ({time_limit:.0f} s)"
             break
         state = queue.popleft()
-        nexts = list(successors(spec, state))
-        moving = [x for x in nexts if x[0]["kind"] == "step"]
-        if not moving:
-            all_end = all(pc == END for pc, _, _ in state[1])
-            if all_end:
-                terminal += 1
-                env = _global_env(spec, state)
-                for prop in spec.at_end:
-                    if not prop.check.eval(env):
-                        violation = violated("at_end", prop.name, state)
-                        break
-            elif spec.deadlock:
-                stuck = [p.name for i, p in enumerate(spec.procs) if state[1][i][0] != END]
-                violation = violated("deadlock", "bloqueo: " + ", ".join(stuck) + " no pueden avanzar", state)
-            if violation:
-                break
+        failure, nexts = _inspect_state(spec, state)
+        if failure:
+            violation = violated(*failure, state)
+            break
+        if all(pc == END for pc, _, _ in state[1]):
+            terminal += 1
         for action, nxt in nexts:
             transitions += 1
             if nxt in parents:
                 continue
-            parents[nxt] = (state, action)
-            depth[nxt] = depth[state] + 1
-            v = check_state(nxt)
-            if v:
-                violation = v
-                break
             if len(parents) >= spec.max_states:
                 truncated = f"límite de {spec.max_states} estados"
-                break
+                continue
+            parents[nxt] = (state, action)
+            depth[nxt] = depth[state] + 1
             queue.append(nxt)
-        if truncated:
-            break
     if violation:
         status = "violated"
     elif truncated:
@@ -193,9 +186,25 @@ def assumptions(spec: Spec) -> list[str]:
 
 
 def replay(spec: Spec, schedule: list) -> dict:
-    """Run a schedule [[process, label, kind?], ...] step by step and check properties."""
+    """Run [[process, label, kind?, branch?], ...], including endpoint properties.
+
+    Legacy entries without a branch keep their first-enabled-branch behaviour.
+    New counterexamples always include the branch of a nondeterministic step.
+    """
     state = initial(spec)
     steps = []
+
+    def result_if_broken(at_step):
+        failure, _ = _inspect_state(spec, state)
+        if failure:
+            kind, prop = failure
+            return {"status": "violated", "at_step": at_step, "kind": kind,
+                    "property": prop, "steps": steps, "state": _describe(spec, state)}
+        return None
+
+    broken = result_if_broken(0)
+    if broken:
+        return broken
     for n, item in enumerate(schedule):
         proc, label = item[0], item[1]
         kind = item[2] if len(item) > 2 else "step"
@@ -203,13 +212,16 @@ def replay(spec: Spec, schedule: list) -> dict:
         if not options:
             raise SpecError(f"paso {n + 1}: {proc} no puede ejecutar {label!r} ({kind}) en ese estado")
         if len(item) > 3 and item[3] is not None:
-            options = [o for o in options if o[0]["branch"] == item[3]] or options
+            options = [o for o in options if o[0]["branch"] == item[3]]
+            if not options:
+                raise SpecError(f"paso {n + 1}: rama {item[3]!r} no habilitada para {proc}.{label}")
+        action = options[0][0]
         state = options[0][1]
-        env = _global_env(spec, state)
-        broken = [inv.name for inv in spec.invariants if not inv.check.eval(env)]
-        steps.append({"process": proc, "label": label, "kind": kind, "broken": broken})
+        steps.append({**action, "broken": []})
+        broken = result_if_broken(n + 1)
         if broken:
-            return {"status": "violated", "at_step": n + 1, "property": broken[0], "steps": steps, "state": _describe(spec, state)}
+            steps[-1]["broken"] = [broken["property"]]
+            return broken
     return {"status": "completed", "steps": steps, "state": _describe(spec, state)}
 
 
@@ -226,14 +238,14 @@ def counterexample_test(spec: Spec, violation: dict) -> str:
         "",
         "SCHEDULE = [",
     ]
-    for proc, label, kind in violation["schedule"]:
-        lines.append(f"    ({proc!r}, {label!r}, {kind!r}),")
+    for action in violation["schedule"]:
+        lines.append(f"    {tuple(action)!r},")
     lines += [
         "]",
         "",
         "",
-        "def run_step(process, label, kind):",
-        '    """Ejecuta en el sistema real el paso `label` del proceso `process` (kind="crash": simula su caída)."""',
+        "def run_step(process, label, kind, branch=None):",
+        '    """Ejecuta el paso real; branch es el índice desde cero de la elección y kind="crash" simula su caída."""',
         '    raise NotImplementedError(f"conecta {process}.{label} ({kind}) con el servicio")',
         "",
         "",
@@ -243,8 +255,8 @@ def counterexample_test(spec: Spec, violation: dict) -> str:
         "",
         "",
         f"def test_{slug}():",
-        "    for process, label, kind in SCHEDULE:",
-        "        run_step(process, label, kind)",
+        "    for action in SCHEDULE:",
+        "        run_step(*action)",
         "    assert check_property()",
         "",
     ]
