@@ -22,6 +22,8 @@ from .inspection import excerpt, image_png
 from .store import Store, identifier
 from .workflow import Workflow
 from .equivalence import Equivalence
+from .rules import Rules
+from .repro import Repro
 from .evidence import Evidence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +67,8 @@ RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'na
         'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
 VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
 EQUIVALENCE_SUITE = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"}
+RULE_CHECK = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, predicate, when, cases:[equivalence cases], generators:[equivalence generators]}. predicate/when use a safe expression language over stdin, args, files, exit_code, stdout, stderr, output_files, steps, value, index (comparisons, arithmetic, string and regex helpers, round_half_up/round_half_even; no attribute access, imports or arbitrary calls)."}
+REPRO_REPORT = {"type": "object", "description": "{command:{argv,cwd,env,timeout_seconds}, stdin, files:{path:text|{base64}}, env:{name:value}, description, expected_predicate (true when output is correct), signature:{exit_code|'nonzero', stderr_regex, stdout_regex, timed_out, predicate}}"}
 TOOLS = [
     tool("theseus_cutter_sessions", "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.", {}),
     tool("theseus_cutter_command", "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.", {**PROJECT, "session_id": {"type": "string", "format": "uuid"}, "expected_generation": {"type": "integer", "minimum": 0}, "command": {"type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$"}, "json": {"type": "boolean"}}, ["project_id", "session_id", "expected_generation", "command"], False, True),
@@ -109,6 +113,12 @@ TOOLS = [
     tool("theseus_equivalence_suite_save", "Save an equivalence suite: reference and candidate commands (argv, cwd, env, timeout) plus cases (stdin, args, input files for a fresh sandbox, optional SQLite seed, multi-step sequences), explicit opt-in normalisers, authorized deviations and seeded generators (integers, decimals, strings, permutations). Suite de equivalencia.", {**PROJECT, "name": S, "suite": EQUIVALENCE_SUITE, "suite_id": S}, ["project_id", "name", "suite"], False),
     tool("theseus_equivalence_suite_read", "Read one saved equivalence suite, or list the project's suites when suite_id is omitted.", {**PROJECT, "suite_id": S}, ["project_id"]),
     tool("theseus_equivalence_run", "Run a saved or inline equivalence suite as a background job. Both programs run on identical fresh sandboxes; exit code, stdout, stderr, file effects and SQLite state are compared per step. Reports the first disagreement per case, authorized deviations separately, a constant-candidate strength check (weak suites are flagged) and shrinks generated failing inputs by re-running both programs. Read the job with theseus_job_read. Agreement covers only the listed cases and channels; it is not whole-program equivalence. Comprobar equivalencia.", {**PROJECT, "suite_id": S, "suite": EQUIVALENCE_SUITE, "strength": {"type": "boolean"}, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id"], False),
+    tool("theseus_rules_save", "Save or update a business rule extracted from a legacy program: statement in the user's vocabulary, code evidence (artifact/file, lines, function), examples, counterexamples and an optional executable check (safe predicate over case input and the reference program's output, plus cases/generators). New rules are always hypotheses; only theseus_rules_check changes status. Banco de reglas.", {**PROJECT, "statement": S, "rule_id": S, "title": S, "evidence": {"type": "array", "items": {"type": "object"}}, "examples": {"type": "array", "items": {}}, "counterexamples": {"type": "array", "items": {}}, "check": RULE_CHECK, "tags": IDS}, ["project_id", "statement"], False),
+    tool("theseus_rules_read", "Read one rule with evidence, history and last check, or list the project's rules with status counts when rule_id is omitted.", {**PROJECT, "rule_id": S}, ["project_id"]),
+    tool("theseus_rules_check", "Run a rule's check as a background job: the reference program runs on generated and listed cases in fresh sandboxes and the predicate is evaluated. hypothesis becomes observed only if every applicable case holds; the first contradicting case is shrunk by re-running the program and the rule becomes contradicted. Status changes are kept in the rule history. Observed is evidence on the executed cases, not proof. Read the job with theseus_job_read.", {**PROJECT, "rule_id": S, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id", "rule_id"], False),
+    tool("theseus_rules_export", "Export the rules bank (optionally filtered by ids or statuses) as client-ready Markdown: statement, status, code evidence, examples and counterexample per rule.", {**PROJECT, "rule_ids": IDS, "statuses": {"type": "array", "items": {"type": "string", "enum": ["hypothesis", "observed", "contradicted"]}}, "title": S}, ["project_id"]),
+    tool("theseus_repro_create", "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.", {**PROJECT, "report": REPRO_REPORT, "max_runs": {"type": "integer", "minimum": 1, "maximum": 2000}, "output_dir": S}, ["project_id", "report"], False),
+    tool("theseus_repro_verify", "Run a repro bundle (by bundle_dir or the repro job id) against the recorded program or an override argv such as a fixed version, and report reproduces or no_longer_reproduces plus environment differences. Verificar reproduccion.", {**PROJECT, "bundle_dir": S, "repro_id": S, "argv": IDS, "attempts": {"type": "integer", "minimum": 1, "maximum": 10}, "timeout_seconds": {"type": "number", "exclusiveMinimum": 0}}, ["project_id"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
 ]
@@ -243,6 +253,43 @@ class EquivalenceRun(Payload):
     shrink_budget: int = 100
 
 
+class RulesSave(Payload):
+    statement: str
+    rule_id: str = ""
+    title: str = ""
+    evidence: list[dict[str, Any]] | None = None
+    examples: list[Any] | None = None
+    counterexamples: list[Any] | None = None
+    check: dict[str, Any] | None = None
+    tags: list[str] | None = None
+
+
+class RulesCheck(Payload):
+    rule_id: str
+    shrink: bool = True
+    shrink_budget: int = 100
+
+
+class RulesExport(Payload):
+    rule_ids: list[str] | None = None
+    statuses: list[str] | None = None
+    title: str = "Business rules of the legacy program"
+
+
+class ReproCreate(Payload):
+    report: dict[str, Any]
+    max_runs: int = 300
+    output_dir: str = ""
+
+
+class ReproVerify(Payload):
+    bundle_dir: str = ""
+    repro_id: str = ""
+    argv: list[str] | None = None
+    attempts: int = 1
+    timeout_seconds: float | None = None
+
+
 class ReconstructionVerify(ComparisonStart):
     handoff_id: str
 
@@ -291,6 +338,8 @@ def create_app(data=None, port=5217, recover=True):
     workflow = Workflow(comparisons)
     evidence = Evidence(workflow)
     equivalence = Equivalence(comparisons)
+    rules = Rules(comparisons, equivalence)
+    repro = Repro(comparisons, equivalence)
     sessions = binary_sessions.BinarySessions(comparisons)
     cutter = CutterBridge(store)
     # This only records uncertain historical commands; it never reconnects or
@@ -316,6 +365,8 @@ def create_app(data=None, port=5217, recover=True):
     app.state.workflow = workflow
     app.state.evidence = evidence
     app.state.equivalence = equivalence
+    app.state.rules = rules
+    app.state.repro = repro
     from vitruvius_hoard.software.cleanup import Shutdown
     app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
     install_copilot(app, "theseus", str(store.directory), app_name="Theseus's Hoard")
@@ -431,6 +482,18 @@ def create_app(data=None, port=5217, recover=True):
             return equivalence.read_suite(**args)
         if name == "theseus_equivalence_run":
             return equivalence.start(**args)
+        if name == "theseus_rules_save":
+            return rules.save(**args)
+        if name == "theseus_rules_read":
+            return rules.read(**args)
+        if name == "theseus_rules_check":
+            return rules.start(**args)
+        if name == "theseus_rules_export":
+            return rules.export(**args)
+        if name == "theseus_repro_create":
+            return repro.start(**args)
+        if name == "theseus_repro_verify":
+            return repro.verify(**args)
         if name == "theseus_evidence_export":
             return evidence.export(**args)
         if name == "theseus_evidence_import":
@@ -651,6 +714,34 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/equivalence/runs")
     def equivalence_run(project_id: str, body: EquivalenceRun):
         return equivalence.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/rules")
+    def rules_save(project_id: str, body: RulesSave):
+        return rules.save(project_id, **body.model_dump())
+
+    @app.get("/api/projects/{project_id}/rules")
+    def rules_list(project_id: str):
+        return rules.read(project_id)
+
+    @app.get("/api/projects/{project_id}/rules/{rule_id}")
+    def rules_read(project_id: str, rule_id: str):
+        return rules.read(project_id, rule_id)
+
+    @app.post("/api/projects/{project_id}/rules/checks")
+    def rules_check(project_id: str, body: RulesCheck):
+        return rules.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/rules/export")
+    def rules_export(project_id: str, body: RulesExport):
+        return rules.export(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/repro")
+    def repro_create(project_id: str, body: ReproCreate):
+        return repro.start(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/repro/verify")
+    def repro_verify(project_id: str, body: ReproVerify):
+        return repro.verify(project_id, **body.model_dump())
 
     @app.post("/api/projects/{project_id}/comparisons")
     def comparison_start(project_id: str, body: ComparisonStart):
