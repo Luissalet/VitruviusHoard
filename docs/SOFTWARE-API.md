@@ -66,6 +66,7 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `docs_search` | babel |
 | `api_lookup` | babel |
 | `api_check_code` | babel |
+| `api_upgrade_rehearsal` | babel |
 | `docs_read` | babel |
 | `docs_add_environment` | babel |
 | `docs_catalog` | babel |
@@ -111,5 +112,7 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `theseus_equivalence_suite_save` | theseus |
 | `theseus_equivalence_suite_read` | theseus |
 | `theseus_equivalence_run` | theseus |
+| `theseus_perf_profile` | theseus |
+| `theseus_perf_compare` | theseus |
 | `theseus_evidence_export` | theseus |
 | `theseus_evidence_import` | theseus |

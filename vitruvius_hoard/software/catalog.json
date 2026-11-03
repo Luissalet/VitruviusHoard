@@ -5154,6 +5154,98 @@
     "module": "babel"
   },
   {
+    "name": "api_upgrade_rehearsal",
+    "description": "Rehearse a package upgrade on a project (upgrade rehearsal, comprobar actualización)\n\nIndexes the package's current and target versions (the target is installed with pip into an\nisolated temp folder - never into the project's environment), diffs the API surface\n(removed symbols, changed signatures, moved modules), finds every use in the project and\nclassifies it: broken (removed, or the call no longer fits), at risk (default changed,\ndeprecated, behaviour change documented in the docstring/changelog) or ok. Proposes exact\nfile:line edits only where they are mechanical (renamed keyword, moved import with one\ncertain new home) and lists the rest as manual. With run_tests it applies the edits to a\nthrowaway copy and runs the test command with the old and the new version to report\nregressions. The project itself is never edited. Python projects only.\n\nArgs:\n    project_path: absolute path of the project folder.\n    package: distribution name (as in requirements).\n    target_version: version to rehearse.\n    old_version: current version if it is not installed in the project's environment.\n    old_path / new_path: use these source folders instead of the installed / pip-installed trees (offline use).\n    run_tests: run the before/after test comparison in throwaway copies (default true).\n    test_command: e.g. \"python -m pytest -q\"; default pytest when the project has test files.\n\nReturns: {summary: {verdict, broken, at_risk, ok, ...}, api_diff, uses: {broken, at_risk, ok_count},\n    plan: {mechanical_edits: [{file, line, col, old, new, reason}], manual, diff}, tests: {before, after,\n    after_edits, regressions, fixed_by_edits}, limitations}.\nKeywords: upgrade, dependency, bump version, migration plan, breaking changes, changelog, actualizar\n    dependencia, comprobar, migracion, cambios incompatibles, ensayo\n",
+    "inputSchema": {
+      "properties": {
+        "project_path": {
+          "title": "Project Path",
+          "type": "string"
+        },
+        "package": {
+          "title": "Package",
+          "type": "string"
+        },
+        "target_version": {
+          "title": "Target Version",
+          "type": "string"
+        },
+        "old_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Version"
+        },
+        "old_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Path"
+        },
+        "new_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "New Path"
+        },
+        "run_tests": {
+          "default": true,
+          "title": "Run Tests",
+          "type": "boolean"
+        },
+        "test_command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Command"
+        },
+        "language": {
+          "default": "python",
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_path",
+        "package",
+        "target_version"
+      ],
+      "title": "api_upgrade_rehearsalArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "module": "babel"
+  },
+  {
     "name": "docs_read",
     "description": "Read the full text of one doc entry by id, in chunks (read docs, leer documentación, seguir leyendo)\n\nOne entry is a docset page section, a markdown section or a long docstring. Ids come from docs_search results and from\napi_lookup (field id).\n\nArgs:\n    id: the entry id, passed back exactly.\n    offset: character offset to continue from (use next_offset).\n    max_chars: chunk size, default 4000, max 20000.\n\nReturns: {found, qualname, library, text, offset, total_chars, has_more, next_offset}.\nKeywords: read doc, full documentation, read more, continue, leer documentacion,\n    seguir leyendo, documentacion completa\n",
     "inputSchema": {
@@ -6875,6 +6967,145 @@
       },
       "required": [
         "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_perf_profile",
+    "description": "Causal performance profile of one operation (a command, or an HTTP request against a server it starts) under controlled repetitions: warm-up, N runs, identical inputs, fresh sandbox per run. Python commands run under cProfile; self time is attributed to database/SQL, serialization, rendering, network I/O, model/inference calls (functions matching model_functions patterns), waiting, CPU in user code and other, with median and p90 across runs, the dominant category named first and top hotspots with file:line. Wall-clock segments come from separate unprofiled runs. Background job; read it with theseus_job_read. Perfil de rendimiento.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "command": {
+          "type": "object",
+          "description": "{argv:[python, script.py, ...], cwd, env, timeout_seconds}. Python invocations are profiled with cProfile; use {sandbox}, {src} (copied source) and {port} placeholders."
+        },
+        "input": {
+          "type": "object",
+          "description": "One operation, identical for every run: {args, stdin, files:{relpath:text}, db:{path,seed_sql}}."
+        },
+        "warmup": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 50
+        },
+        "model_functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "user_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "http": {
+          "type": "object",
+          "description": "Measure an HTTP request against a server the command starts: {request:{method,path,headers,body}, ready_timeout_seconds, port_env}. The server gets a free port in {port} and in the port_env variable (default PORT)."
+        },
+        "top": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "required": [
+        "project_id",
+        "command"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_perf_compare",
+    "description": "Before/after performance comparison of two versions (two commands, or two directories or git commits copied to temp folders) on the same input: interleaved runs, per-category and total change with a Mann-Whitney U test and a bootstrap interval, and an output check with the equivalence runner (exit code, stdout, stderr, files, SQLite; HTTP status and body). A speed-up that changes results is reported as failed. Background job; read it with theseus_job_read. Comparar rendimiento.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "before": {
+          "type": "object",
+          "description": "{argv, cwd, env, timeout_seconds, source_dir | git:{repo,ref}}. source_dir or git (a commit/tag/branch) is copied to a temp folder and referenced as {src} in argv/cwd/env."
+        },
+        "after": {
+          "type": "object",
+          "description": "{argv, cwd, env, timeout_seconds, source_dir | git:{repo,ref}}. source_dir or git (a commit/tag/branch) is copied to a temp folder and referenced as {src} in argv/cwd/env."
+        },
+        "input": {
+          "type": "object",
+          "description": "One operation, identical for every run: {args, stdin, files:{relpath:text}, db:{path,seed_sql}}."
+        },
+        "warmup": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 50
+        },
+        "model_functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "user_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "http": {
+          "type": "object",
+          "description": "Measure an HTTP request against a server the command starts: {request:{method,path,headers,body}, ready_timeout_seconds, port_env}. The server gets a free port in {port} and in the port_env variable (default PORT)."
+        },
+        "alpha": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "check_inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One operation, identical for every run: {args, stdin, files:{relpath:text}, db:{path,seed_sql}}."
+          }
+        },
+        "normalisers": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "project_id",
+        "before",
+        "after"
       ],
       "additionalProperties": false
     },

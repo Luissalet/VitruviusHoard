@@ -87,6 +87,7 @@ class _Ctx:
     checked: int = 0
     unchecked: int = 0
     libraries: dict[str, str] = field(default_factory=dict)
+    uses: list[dict[str, Any]] | None = None  # resolved API uses, recorded for upgrade rehearsals
 
 
 def _lib_label(e: dict[str, Any]) -> str:
@@ -128,6 +129,11 @@ class _Checker(ast.NodeVisitor):
         self._types: dict[int, Value | None] = {}
 
     # ------------------------------------------------------------ helpers
+    def _use(self, node: ast.AST, kind: str, symbol: str, **extra: Any) -> None:
+        if self.ctx.uses is not None:
+            self.ctx.uses.append({"kind": kind, "symbol": symbol, "line": getattr(node, "lineno", 1),
+                                  "col": getattr(node, "col_offset", 0), "guarded": bool(self.guard), **extra})
+
     def _note_lib(self, e: dict[str, Any]) -> None:
         if e.get("lib_name"):
             self.ctx.libraries[e["lib_name"]] = e.get("lib_version") or ""
@@ -350,6 +356,7 @@ class _Checker(ast.NodeVisitor):
                 )
                 continue
             self.ctx.checked += 1
+            self._use(node, "import", member["qualname"], module=module, name=alias.name)
             if member.get("deprecated"):
                 self._report(node, "warning", "deprecated", f"{module}.{alias.name}",
                              member.get("deprecated_note") or f"'{module}.{alias.name}' is deprecated.")
@@ -639,6 +646,7 @@ class _Checker(ast.NodeVisitor):
         if not isinstance(member, Missing):
             self.ctx.checked += 1
             self._note_lib(member)
+            self._use(node, "attribute", member["qualname"], attr=node.attr)
             if member.get("deprecated"):
                 self._report(node, "warning", "deprecated", member["qualname"],
                              member.get("deprecated_note") or f"'{member['qualname']}' is deprecated.")
@@ -713,6 +721,7 @@ class _Checker(ast.NodeVisitor):
             if not meta.get("ctor") or isinstance(init, Missing):
                 self.ctx.unchecked += 1
                 return
+            self._record_call(node, init, True, cls=callee.entry["qualname"])
             self._check_arguments(node, init, drop_first=True, label=label)
             return
         if callee.kind == "instance":
@@ -732,10 +741,19 @@ class _Checker(ast.NodeVisitor):
             drop = True
         else:  # instance method
             drop = callee.receiver == "instance"
+        self._record_call(node, func, drop)
         self._check_arguments(node, func, drop_first=drop, label=label)
         if func.get("deprecated"):
             self._report(node, "warning", "deprecated", func["qualname"],
                          func.get("deprecated_note") or f"'{func['qualname']}' is deprecated.")
+
+    def _record_call(self, node: ast.Call, func: dict[str, Any], drop_first: bool, cls: str | None = None) -> None:
+        if self.ctx.uses is None:
+            return
+        keywords = [{"name": k.arg, "line": k.lineno, "col": k.col_offset} for k in node.keywords if k.arg]
+        self._use(node, "call", func["qualname"], positional=len(node.args), drop_first=drop_first,
+                  star=any(isinstance(a, ast.Starred) for a in node.args) or any(k.arg is None for k in node.keywords),
+                  keywords=keywords, **({"cls": cls} if cls else {}))
 
     def _check_arguments(self, node: ast.Call, func: dict[str, Any], *, drop_first: bool, label: str) -> None:
         meta = parse_meta(func)
@@ -849,7 +867,8 @@ def _suggest_keyword(kw: str, accepted: list[str], label: str) -> str | None:
     return close[0] if close else None
 
 
-def api_check_code(conn, code: str, *, env_row: dict[str, Any], language: str = "python") -> dict[str, Any]:
+def api_check_code(conn, code: str, *, env_row: dict[str, Any], language: str = "python",
+                   lazy: bool = True, uses: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if language == "typescript":
         return _check_typescript(conn, code, env_row)
     try:
@@ -872,7 +891,7 @@ def api_check_code(conn, code: str, *, env_row: dict[str, Any], language: str = 
             "env": env_row["id"],
             "libraries": [],
         }
-    ctx = _Ctx(symbols=SymbolIndex(conn, env_row))
+    ctx = _Ctx(symbols=SymbolIndex(conn, env_row, lazy=lazy), uses=uses)
     _Checker(ctx, code).visit(tree)
     findings = sorted(ctx.findings, key=lambda f: (f.line, f.col))
     # Same problem reported twice on one line (e.g. attribute + call) - keep one.

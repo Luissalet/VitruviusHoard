@@ -69,7 +69,7 @@ mcp = FastMCP(
 
 # First use of a package indexes it (seconds, up to a minute for very large
 # packages on a slow disk), so the lookup/check tools get a long timeout.
-_SLOW_TOOLS = {"api_lookup", "api_check_code", "docs_add_environment", "docs_index_folder", "docs_catalog"}
+_SLOW_TOOLS = {"api_lookup", "api_check_code", "api_upgrade_rehearsal", "docs_add_environment", "docs_index_folder", "docs_catalog"}
 _READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
 
@@ -218,6 +218,42 @@ def api_check_code(code: str, env: str | None = None, language: str = "python") 
         verify snippet, comprobar codigo, revisar codigo, validar, existe, alucinacion
     """
     return _post("api_check_code", {"code": code, "env": env, "language": language})
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=True))
+def api_upgrade_rehearsal(project_path: str, package: str, target_version: str, old_version: str | None = None,
+                          old_path: str | None = None, new_path: str | None = None, run_tests: bool = True,
+                          test_command: str | None = None, language: str = "python") -> dict:
+    """Rehearse a package upgrade on a project (upgrade rehearsal, comprobar actualización)
+
+    Indexes the package's current and target versions (the target is installed with pip into an
+    isolated temp folder - never into the project's environment), diffs the API surface
+    (removed symbols, changed signatures, moved modules), finds every use in the project and
+    classifies it: broken (removed, or the call no longer fits), at risk (default changed,
+    deprecated, behaviour change documented in the docstring/changelog) or ok. Proposes exact
+    file:line edits only where they are mechanical (renamed keyword, moved import with one
+    certain new home) and lists the rest as manual. With run_tests it applies the edits to a
+    throwaway copy and runs the test command with the old and the new version to report
+    regressions. The project itself is never edited. Python projects only.
+
+    Args:
+        project_path: absolute path of the project folder.
+        package: distribution name (as in requirements).
+        target_version: version to rehearse.
+        old_version: current version if it is not installed in the project's environment.
+        old_path / new_path: use these source folders instead of the installed / pip-installed trees (offline use).
+        run_tests: run the before/after test comparison in throwaway copies (default true).
+        test_command: e.g. "python -m pytest -q"; default pytest when the project has test files.
+
+    Returns: {summary: {verdict, broken, at_risk, ok, ...}, api_diff, uses: {broken, at_risk, ok_count},
+        plan: {mechanical_edits: [{file, line, col, old, new, reason}], manual, diff}, tests: {before, after,
+        after_edits, regressions, fixed_by_edits}, limitations}.
+    Keywords: upgrade, dependency, bump version, migration plan, breaking changes, changelog, actualizar
+        dependencia, comprobar, migracion, cambios incompatibles, ensayo
+    """
+    return _post("api_upgrade_rehearsal", {
+        "project_path": project_path, "package": package, "target_version": target_version, "old_version": old_version,
+        "old_path": old_path, "new_path": new_path, "run_tests": run_tests, "test_command": test_command, "language": language})
 
 
 @mcp.tool(annotations=_READ)

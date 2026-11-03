@@ -84,6 +84,7 @@ async def test_mcp_stdio_list_and_call_tools(live_app, tmp_path):
                 "docs_search",
                 "api_lookup",
                 "api_check_code",
+                "api_upgrade_rehearsal",
                 "docs_read",
                 "docs_add_environment",
                 "docs_catalog",
@@ -167,9 +168,9 @@ async def test_mcp_tool_contract_for_a_local_model(live_app, tmp_path):
                 ann = tool.annotations
                 assert ann is not None and ann.destructiveHint is False, name
             network = {n for n, t in tools.items() if t.annotations.openWorldHint}
-            assert network == {"docs_catalog", "docs_install_docset"}
+            assert network == {"docs_catalog", "docs_install_docset", "api_upgrade_rehearsal"}
             writers = {n for n, t in tools.items() if not t.annotations.readOnlyHint}
-            assert writers == {"docs_add_environment", "docs_install_docset", "docs_index_folder"}
+            assert writers == {"docs_add_environment", "docs_install_docset", "docs_index_folder", "api_upgrade_rehearsal"}
 
             await session.call_tool("docs_add_environment", {"path": sys.executable, "index_dependencies": False})
             found = json.loads((await session.call_tool("api_lookup", {"symbol": "json.dumps"})).content[0].text)
