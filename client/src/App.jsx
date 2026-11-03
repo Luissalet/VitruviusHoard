@@ -12,6 +12,7 @@ import Motion from "./pages/Motion.jsx";
 import Diagrams from "./pages/Diagrams.jsx";
 import Projects from "./pages/Projects.jsx";
 import Audit from "./pages/Audit.jsx";
+import Marks from "./pages/Marks.jsx";
 import Protocols from "./pages/Protocols.jsx";
 import Studies from "./pages/Studies.jsx";
 
@@ -20,6 +21,7 @@ const PAGES = [
   { path: "library", key: "nav_library", icon: "M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V4H6.5A2.5 2.5 0 004 6.5v13z", component: Library },
   { path: "critique", key: "nav_critique", icon: "M9 3H5a2 2 0 00-2 2v4m18 0V5a2 2 0 00-2-2h-4m0 18h4a2 2 0 002-2v-4M3 15v4a2 2 0 002 2h4", component: Critique },
   { path: "audit", key: "nav_audit", icon: "M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-4.3-4.3M8 11h6M11 8v6", component: Audit },
+  { path: "marks", key: "nav_marks", icon: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 3v18M4 7.5l8 4.5 8-4.5", component: Marks },
   { path: "protocols", key: "nav_protocols", icon: "M5 4v16M19 4v16M5 8h14M19 12H5M5 16h14", component: Protocols },
   { path: "studies", key: "nav_studies", icon: "M4 20V10M10 20V4M16 20v-7M22 20H2", component: Studies },
   { path: "tokens", key: "nav_tokens", icon: "M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.7 7.1 17.2l.9-5.5-4-3.9L9.5 7z", component: Tokens },

@@ -3,6 +3,7 @@ const DICT = {
   es: {
     nav_motion: "Movimiento",
     nav_audit: "Auditoría",
+    nav_marks: "Logotipos",
     nav_protocols: "Protocolos",
     nav_studies: "Alternativas",
     st_title: "Alternativas e instrumentos",
@@ -390,6 +391,7 @@ const DICT = {
   en: {
     nav_motion: "Motion",
     nav_audit: "Audit",
+    nav_marks: "Logos",
     nav_protocols: "Protocols",
     nav_studies: "Alternatives",
     st_title: "Alternatives and instruments",

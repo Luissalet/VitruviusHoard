@@ -170,7 +170,7 @@ def test_agent_tools_route(client):
     r = client.get("/api/agent/tools")
     assert r.status_code == 200
     body = r.json()
-    assert len(body["tools"]) == 98
+    assert len(body["tools"]) == 101
     assert body["instructions"]
 
 

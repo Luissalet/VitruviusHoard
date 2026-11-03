@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Any, Optional
+from typing import Annotated, Literal, Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -816,6 +816,61 @@ TOOLS.extend([
          SiteAuditArgs, ann(False, False, True, True), run_site_audit, timeout_s=240),
     Tool("site_audit_reports", "List or read saved site audits. Informes de auditoría SEO.\nWithout id: the latest reports (url, date, score). With id: the whole report, to compare runs. Keywords: auditoría, informe, deriva, vigilancia.",
          SiteAuditReportsArgs, ann(True), run_site_audit_reports),
+])
+
+
+# ---------------- marks (logos) ----------------
+
+_HEX = r"^#?[0-9a-fA-F]{6}$"
+
+
+class MarkAuditArgs(BaseModel):
+    path: Optional[str] = Field(None, max_length=2000, description="A local image file: PNG, JPG, WebP, GIF, BMP, ICO or SVG.")
+    data: Optional[str] = Field(None, max_length=22_000_000, description="The image as base64 or a data: URL (what the screen uploads).")
+    svg: Optional[str] = Field(None, max_length=2_000_000, description="SVG markup, drawn at 512 px on white by the local browser.")
+    name: str = Field("", max_length=120, description="A label for the history (defaults to the file name).")
+    backgrounds: list[Annotated[str, Field(pattern=_HEX)]] = Field(default_factory=list, max_length=6, description="Extra grounds for the test sheet, #rrggbb (brand colours).")
+
+
+class MarkSheetArgs(BaseModel):
+    id: Optional[str] = Field(None, pattern=r"^[0-9a-f]{12}$", description="An audited mark: redraw its sheet with these grounds.")
+    path: Optional[str] = Field(None, max_length=2000)
+    data: Optional[str] = Field(None, max_length=22_000_000)
+    svg: Optional[str] = Field(None, max_length=2_000_000)
+    backgrounds: list[Annotated[str, Field(pattern=_HEX)]] = Field(default_factory=list, max_length=6, description="Extra grounds, #rrggbb.")
+
+
+class MarkReportsArgs(BaseModel):
+    id: Optional[str] = Field(None, pattern=r"^[0-9a-f]{12}$", description="A mark audit id: the whole report. Omit to list the latest.")
+    limit: int = Field(20, ge=1, le=100)
+
+
+def run_mark_audit(services: Services, args: MarkAuditArgs):
+    from . import mark_audit
+    return mark_audit.audit(services.config.data_dir, getattr(services, "browser", None), path=args.path, data=args.data,
+                            svg=args.svg, name=args.name, backgrounds=args.backgrounds)
+
+
+def run_mark_test_sheet(services: Services, args: MarkSheetArgs):
+    from . import mark_audit
+    return mark_audit.test_sheet(services.config.data_dir, getattr(services, "browser", None), mark_id=args.id, path=args.path,
+                                 data=args.data, svg=args.svg, backgrounds=args.backgrounds)
+
+
+def run_mark_reports(services: Services, args: MarkReportsArgs):
+    from . import mark_audit
+    if args.id:
+        return mark_audit.get_report(services.config.data_dir, args.id)
+    return {"reports": mark_audit.list_reports(services.config.data_dir, args.limit)}
+
+
+TOOLS.extend([
+    Tool("mark_audit", "Audit a logo or brand mark. Auditoría de logotipo.\nScores 0-100 (100 - 25 per fail, 8 per warning, 1 per note): works in one colour, contrast on light and dark grounds, legible at 32 and 16 px (favicon), number of colours, aspect ratio, margin and centring, transparent background, excess detail. Saves a test sheet PNG (sheet_path). Pass path, data (base64) or svg. Keywords: logo, marca, favicon, monocromo, invertido, identidad.",
+         MarkAuditArgs, ann(False, False, False), run_mark_audit, timeout_s=90),
+    Tool("mark_test_sheet", "Draw a logo test sheet. Hoja de prueba de logotipo.\nThe mark on light, dark and grey grounds, in one colour, inverted, at 128/64/32/16 px and magnified; add brand grounds with backgrounds. With id it redraws an audited mark. Keywords: hoja de prueba, fondos, tamaños, favicon.",
+         MarkSheetArgs, ann(False, False, True), run_mark_test_sheet, timeout_s=90),
+    Tool("mark_reports", "List or read logo audits. Auditorías de logotipo guardadas.\nWithout id: latest audits (name, score, verdict). With id: the whole report. Keywords: historial, logos, marcas.",
+         MarkReportsArgs, ann(True), run_mark_reports),
 ])
 
 from .diagrams.tools import tools as _diagram_tools  # noqa: E402

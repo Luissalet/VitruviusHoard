@@ -12,8 +12,9 @@ from .motion import router as motion_router
 from .diagrams import router as diagrams_router
 from .rules import router as rules_router
 from .seo import router as seo_router
+from .marks import router as marks_router
 from .protocols import router as protocols_router
 from .studio import router as studio_router
 from .studies import router as studies_router
 
-ROUTERS = [app_projects_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, protocols_router, studio_router, studies_router, agent_router]
+ROUTERS = [app_projects_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, marks_router, protocols_router, studio_router, studies_router, agent_router]
