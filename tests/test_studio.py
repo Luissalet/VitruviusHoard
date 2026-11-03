@@ -332,3 +332,118 @@ def test_figma_diff_of_identical_images_is_zero_and_full(tmp_path):
     assert out["missing_rows"] == out["extra_rows"] == 0 and out["reference_size"] == out["render_size"] == [64, 64]
     other = _png(tmp_path / "other.png", (64, 64))                 # same size, bottom half differs
     assert figma._diff(ref, other, tmp_path / "diff3.png")["diff_pct"] == 50.0
+
+
+def test_figma_diff_drops_only_flat_viewport_padding(tmp_path):
+    from PIL import Image
+    ref = _png(tmp_path / "ref.png", (64, 40))
+    shot = _png(tmp_path / "shot.png", (64, 90))                   # a 40px frame captured in a 90px viewport
+    out = figma._diff(ref, shot, tmp_path / "diff.png", viewport_fill_from=40)
+    assert out["viewport_fill_rows"] == 50 and out["render_compared_size"] == [64, 40] and out["render_size"] == [64, 90]
+    assert out["scope"] == "normalized" and "viewport-padding" in out["normalization"] and out["diff_pct"] == 0.0
+    drawn = Image.new("RGB", (64, 90), "white")
+    drawn.paste((0, 0, 255), (0, 70, 64, 74))                     # something is drawn below the frame: real extra content
+    drawn.save(tmp_path / "drawn.png")
+    over = figma._diff(ref, tmp_path / "drawn.png", tmp_path / "diff2.png", viewport_fill_from=40)
+    assert over["viewport_fill_rows"] == 0 and over["extra_rows"] == 50 and over["scope"] == "partial"
+    assert over["diff_pct"] == round(100 * 50 / 90, 2)
+    assert figma._diff(ref, shot, tmp_path / "diff3.png")["extra_rows"] == 50      # without the flag nothing is dropped
+
+
+def test_figma_dialog_uploads_the_frame_png_and_shows_the_rendered_preview(tmp_path):
+    """Opt-in real browser flow: JSON + PNG through the dialog, the diff line, and a preview that is not blank."""
+    import io, os, socket, threading, time
+    from contextlib import asynccontextmanager
+    import uvicorn
+    from fastapi import FastAPI
+    from PIL import Image
+    from playwright.sync_api import expect, sync_playwright
+    from vitruvius_hoard.main import create_app
+
+    if os.environ.get("VITRUVIUS_BROWSER_TESTS") != "1":
+        pytest.skip("Set VITRUVIUS_BROWSER_TESTS=1 to run the real browser flow")
+    reference = tmp_path / "frame.png"
+    Image.new("RGB", (960, 640), (247, 248, 250)).save(reference)
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    port = listener.getsockname()[1]
+    svc = make_services(tmp_path, port=port)
+    design = create_app(svc.config, svc)
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        async with design.router.lifespan_context(design):
+            yield
+
+    owner = FastAPI(lifespan=lifespan)
+    owner.mount("/design", design)
+    server = uvicorn.Server(uvicorn.Config(owner, log_level="error"))
+    thread = threading.Thread(target=lambda: server.run(sockets=[listener]), daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 10
+        while not server.started and thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(.01)
+        assert server.started
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True, args=["--disable-gpu", "--use-angle=swiftshader"])
+            try:
+                page = browser.new_page(viewport={"width": 1400, "height": 1000})
+                errors = []
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                page.goto(f"http://127.0.0.1:{port}/design/#/tokens")
+                page.get_by_test_id("figma-open").click()
+                page.get_by_test_id("figma-json").fill(json.dumps(FRAME))
+                page.get_by_test_id("figma-png").set_input_files(str(reference))
+                expect(page.get_by_test_id("figma-dialog")).to_contain_text("frame.png")
+                with page.expect_response(lambda r: r.url.endswith("/api/figma/import"), timeout=180_000) as answer:
+                    page.get_by_test_id("figma-import").click()
+                assert json.loads(answer.value.request.post_data)["image_base64"]
+                compare = answer.value.json()["compare"]
+                assert compare["reference_size"] == [960, 640] and compare["diff_pct"] is not None
+                expect(page.get_by_test_id("figma-compare")).to_contain_text("Figma 960×640")
+                expect(page.get_by_test_id("figma-diff")).to_be_visible()
+                preview = page.get_by_test_id("figma-result").locator("figure").nth(1)
+                frame = page.frame_locator("[data-testid=figma-result] iframe")
+                expect(frame.locator("body")).to_contain_text("Shipments this week", timeout=20_000)
+                page.wait_for_timeout(500)
+                shot = Image.open(io.BytesIO(preview.locator("div").first.screenshot())).convert("L")
+                dark = sum(1 for v in shot.getdata() if v < 235) / (shot.width * shot.height)
+                assert dark > 0.2, f"the HTML/CSS preview is blank ({dark:.3f} non-white)"
+                assert not errors
+            finally:
+                browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        svc.stop()
+
+
+def test_import_drops_the_capture_viewport_padding_of_a_short_frame(tmp_path, monkeypatch):
+    """A 640px frame is captured in a 900px viewport: the flat padding goes, the frame is compared whole."""
+    import io
+    from PIL import Image
+    svc = make_services(tmp_path)
+    try:
+        shot = tmp_path / "960.png"
+        img = Image.new("RGB", (960, 900), "white")
+        img.paste((247, 248, 250), (0, 0, 960, 640))
+        img.save(shot)
+        real_render = svc.render
+
+        def render(**kw):
+            out = real_render(**kw)
+            out["files"] = [{"width": 960, "path": str(shot), "full_page": True, "w": 960, "h": 900}]
+            return out
+        monkeypatch.setattr(svc, "render", render)
+        buf = io.BytesIO()
+        Image.new("RGB", (960, 640), (247, 248, 250)).save(buf, format="PNG")
+        cmp = figma.import_frame(svc, nodes_json=FRAME, image_png=buf.getvalue(), make_tokens=False, critique=False)["compare"]
+        assert cmp["render_size"] == [960, 900] and cmp["viewport_fill_rows"] == 260 and cmp["render_compared_size"] == [960, 640]
+        assert cmp["extra_rows"] == cmp["missing_rows"] == 0 and cmp["scope"] == "normalized" and cmp["diff_pct"] == 0.0
+        img.paste((0, 0, 255), (0, 800, 960, 810))               # something drawn below the frame is never dropped
+        img.save(shot)
+        cmp = figma.import_frame(svc, nodes_json=FRAME, image_png=buf.getvalue(), make_tokens=False, critique=False)["compare"]
+        assert cmp["viewport_fill_rows"] == 0 and cmp["extra_rows"] == 260 and cmp["scope"] == "partial"
+    finally:
+        svc.stop()
