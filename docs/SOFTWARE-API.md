@@ -108,5 +108,8 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `theseus_handoff_read` | theseus |
 | `theseus_oracle_selftest` | theseus |
 | `theseus_reconstruction_verify` | theseus |
+| `theseus_equivalence_suite_save` | theseus |
+| `theseus_equivalence_suite_read` | theseus |
+| `theseus_equivalence_run` | theseus |
 | `theseus_evidence_export` | theseus |
 | `theseus_evidence_import` | theseus |

@@ -21,6 +21,7 @@ from .cutter import CutterBridge, PLUGIN
 from .inspection import excerpt, image_png
 from .store import Store, identifier
 from .workflow import Workflow
+from .equivalence import Equivalence
 from .evidence import Evidence
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,7 @@ RETAINED_VARIANT={'type':'object','additionalProperties':False,'properties':{'na
             'candidate_sha256':{'type':'string','pattern':'^[0-9a-f]{64}$'}},
         'required':['scenario_id','candidate_job_id','candidate_sha256']}}},'required':['name','captures']}
 VARIANTS={'type':'array','items':{'oneOf':[VARIANTS['items'],RETAINED_VARIANT]}}
+EQUIVALENCE_SUITE = {"type": "object", "description": "{reference:{argv,cwd,env,timeout_seconds}, candidate:{...}, cases:[{name,stdin,args,files,db:{path,seed_sql},steps:[{args,stdin,files,env}],channels,normalisers,ordered_tables}], generators:[{kind,count,seed,template,items}], channels, normalisers, ignore_paths, ordered_tables, authorized_deviations:[{case,channel,expected,reason,step,path,expected_candidate}]}"}
 TOOLS = [
     tool("theseus_cutter_sessions", "Discover live local Cutter bridges without starting an editor. Reports observed document generation and partial file identity; Windows directory ACL verification remains unknown. Install the bundled Python bridge in the chosen editor profile first.", {}),
     tool("theseus_cutter_command", "Send one explicit Rizin command line to the chosen live Cutter session and observed document generation. Commands may modify files, launch plugins or change the editor. No automatic retry: unknown completion may already have effects. JSON parsing failure retains raw output. Returns a retained observation and job_id for ordinary analysis records and evidence export.", {**PROJECT, "session_id": {"type": "string", "format": "uuid"}, "expected_generation": {"type": "integer", "minimum": 0}, "command": {"type": "string", "minLength": 1, "pattern": "^[^\\r\\n]+$"}, "json": {"type": "boolean"}}, ["project_id", "session_id", "expected_generation", "command"], False, True),
@@ -104,6 +106,9 @@ TOOLS = [
     tool("theseus_handoff_read", "Read a saved immutable handoff; builder_only returns only the behavior document, without reader findings/artifact paths.", {**PROJECT, "handoff_id": S, "builder_only": {"type": "boolean"}}, ["project_id", "handoff_id"]),
     tool("theseus_oracle_selftest", "Test deliberately wrong commands or explicitly mapped retained page/process captures, one capture per selected scenario. Reports detected, surviving and invalid observations. Retained tests never connect or replay; incomplete, changed or unaligned captures cannot certify sensitivity.", {**PROJECT, "variants": VARIANTS, "scenario_ids": IDS}, ["project_id", "variants"], False),
     tool("theseus_reconstruction_verify", "Run saved differential scenarios linked to an immutable behavior handoff. Each retry preserves the original handoff identity and complete observations; a newer specification is explicitly reported.", {**PROJECT, "handoff_id": S, "scenario_ids": IDS}, ["project_id", "handoff_id"], False),
+    tool("theseus_equivalence_suite_save", "Save an equivalence suite: reference and candidate commands (argv, cwd, env, timeout) plus cases (stdin, args, input files for a fresh sandbox, optional SQLite seed, multi-step sequences), explicit opt-in normalisers, authorized deviations and seeded generators (integers, decimals, strings, permutations). Suite de equivalencia.", {**PROJECT, "name": S, "suite": EQUIVALENCE_SUITE, "suite_id": S}, ["project_id", "name", "suite"], False),
+    tool("theseus_equivalence_suite_read", "Read one saved equivalence suite, or list the project's suites when suite_id is omitted.", {**PROJECT, "suite_id": S}, ["project_id"]),
+    tool("theseus_equivalence_run", "Run a saved or inline equivalence suite as a background job. Both programs run on identical fresh sandboxes; exit code, stdout, stderr, file effects and SQLite state are compared per step. Reports the first disagreement per case, authorized deviations separately, a constant-candidate strength check (weak suites are flagged) and shrinks generated failing inputs by re-running both programs. Read the job with theseus_job_read. Agreement covers only the listed cases and channels; it is not whole-program equivalence. Comprobar equivalencia.", {**PROJECT, "suite_id": S, "suite": EQUIVALENCE_SUITE, "strength": {"type": "boolean"}, "shrink": {"type": "boolean"}, "shrink_budget": {"type": "integer", "minimum": 1, "maximum": 1000}}, ["project_id"], False),
     tool("theseus_evidence_export", "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.", PROJECT, ["project_id"]),
     tool("theseus_evidence_import", "Validate an evidence bundle and import it as a NEW project with remapped identities. Imported receipts remain historical, never count as current verification, and no saved command or engine is started. Original paths remain references.", {"bundle": {"type": "object"}, "name": S}, ["bundle"], False),
 ]
@@ -224,6 +229,20 @@ class OracleSelftest(Payload):
     scenario_ids: list[str] | None = None
 
 
+class EquivalenceSuiteSave(Payload):
+    name: str
+    suite: dict[str, Any]
+    suite_id: str = ""
+
+
+class EquivalenceRun(Payload):
+    suite_id: str = ""
+    suite: dict[str, Any] | None = None
+    strength: bool = True
+    shrink: bool = True
+    shrink_budget: int = 100
+
+
 class ReconstructionVerify(ComparisonStart):
     handoff_id: str
 
@@ -271,6 +290,7 @@ def create_app(data=None, port=5217, recover=True):
     comparisons.frida_sessions = frida_runtime.FridaSessions(comparisons)
     workflow = Workflow(comparisons)
     evidence = Evidence(workflow)
+    equivalence = Equivalence(comparisons)
     sessions = binary_sessions.BinarySessions(comparisons)
     cutter = CutterBridge(store)
     # This only records uncertain historical commands; it never reconnects or
@@ -295,6 +315,7 @@ def create_app(data=None, port=5217, recover=True):
     app.state.cutter = cutter
     app.state.workflow = workflow
     app.state.evidence = evidence
+    app.state.equivalence = equivalence
     from vitruvius_hoard.software.cleanup import Shutdown
     app.state.shutdown = Shutdown(sessions.shutdown, comparisons.shutdown, comparisons.frida_sessions.shutdown)
     install_copilot(app, "theseus", str(store.directory), app_name="Theseus's Hoard")
@@ -404,6 +425,12 @@ def create_app(data=None, port=5217, recover=True):
             return workflow.selftest(**args)
         if name == "theseus_reconstruction_verify":
             return workflow.verify(**args)
+        if name == "theseus_equivalence_suite_save":
+            return equivalence.save_suite(**args)
+        if name == "theseus_equivalence_suite_read":
+            return equivalence.read_suite(**args)
+        if name == "theseus_equivalence_run":
+            return equivalence.start(**args)
         if name == "theseus_evidence_export":
             return evidence.export(**args)
         if name == "theseus_evidence_import":
@@ -608,6 +635,22 @@ def create_app(data=None, port=5217, recover=True):
     @app.post("/api/projects/{project_id}/reconstructions/verify")
     def reconstruction_verify(project_id: str, body: ReconstructionVerify):
         return workflow.verify(project_id, **body.model_dump())
+
+    @app.post("/api/projects/{project_id}/equivalence/suites")
+    def equivalence_suite_save(project_id: str, body: EquivalenceSuiteSave):
+        return equivalence.save_suite(project_id, **body.model_dump())
+
+    @app.get("/api/projects/{project_id}/equivalence/suites")
+    def equivalence_suites(project_id: str):
+        return equivalence.read_suite(project_id)
+
+    @app.get("/api/projects/{project_id}/equivalence/suites/{suite_id}")
+    def equivalence_suite_read(project_id: str, suite_id: str):
+        return equivalence.read_suite(project_id, suite_id)
+
+    @app.post("/api/projects/{project_id}/equivalence/runs")
+    def equivalence_run(project_id: str, body: EquivalenceRun):
+        return equivalence.start(project_id, **body.model_dump())
 
     @app.post("/api/projects/{project_id}/comparisons")
     def comparison_start(project_id: str, body: ComparisonStart):
