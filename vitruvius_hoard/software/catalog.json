@@ -6886,6 +6886,241 @@
     "module": "theseus"
   },
   {
+    "name": "theseus_rules_save",
+    "description": "Save or update a business rule extracted from a legacy program: statement in the user's vocabulary, code evidence (artifact/file, lines, function), examples, counterexamples and an optional executable check (safe predicate over case input and the reference program's output, plus cases/generators). New rules are always hypotheses; only theseus_rules_check changes status. Banco de reglas.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "statement": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {}
+        },
+        "counterexamples": {
+          "type": "array",
+          "items": {}
+        },
+        "check": {
+          "type": "object",
+          "description": "{reference:{argv,cwd,env,timeout_seconds}, predicate, when, cases:[equivalence cases], generators:[equivalence generators]}. predicate/when use a safe expression language over stdin, args, files, exit_code, stdout, stderr, output_files, steps, value, index (comparisons, arithmetic, string and regex helpers, round_half_up/round_half_even; no attribute access, imports or arbitrary calls)."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "statement"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_rules_read",
+    "description": "Read one rule with evidence, history and last check, or list the project's rules with status counts when rule_id is omitted.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_rules_check",
+    "description": "Run a rule's check as a background job: the reference program runs on generated and listed cases in fresh sandboxes and the predicate is evaluated. hypothesis becomes observed only if every applicable case holds; the first contradicting case is shrunk by re-running the program and the rule becomes contradicted. Status changes are kept in the rule history. Observed is evidence on the executed cases, not proof. Read the job with theseus_job_read.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "shrink": {
+          "type": "boolean"
+        },
+        "shrink_budget": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "project_id",
+        "rule_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_rules_export",
+    "description": "Export the rules bank (optionally filtered by ids or statuses) as client-ready Markdown: statement, status, code evidence, examples and counterexample per rule.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "rule_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "hypothesis",
+              "observed",
+              "contradicted"
+            ]
+          }
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_repro_create",
+    "description": "Reproduce a reported failure in a fresh sandbox, confirm it twice, then minimise stdin, input files and env vars by delta debugging, re-executing and keeping the same failure signature at every step (a different failure is never accepted). Writes a repro bundle directory (inputs, run.sh, run.cmd, expected signature, environment fingerprint) and returns a background job. Reproducir fallo.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "report": {
+          "type": "object",
+          "description": "{command:{argv,cwd,env,timeout_seconds}, stdin, files:{path:text|{base64}}, env:{name:value}, description, expected_predicate (true when output is correct), signature:{exit_code|'nonzero', stderr_regex, stdout_regex, timed_out, predicate}}"
+        },
+        "max_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "output_dir": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "report"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
+    "name": "theseus_repro_verify",
+    "description": "Run a repro bundle (by bundle_dir or the repro job id) against the recorded program or an override argv such as a fixed version, and report reproduces or no_longer_reproduces plus environment differences. Verificar reproduccion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "bundle_dir": {
+          "type": "string"
+        },
+        "repro_id": {
+          "type": "string"
+        },
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "module": "theseus"
+  },
+  {
     "name": "theseus_evidence_export",
     "description": "Export portable historical findings, scenarios, receipts, workflow, full analysis records and retained JSON documents with SHA-256 integrity. Original files, native Ghidra projects and live sessions are excluded.",
     "inputSchema": {

@@ -111,5 +111,11 @@ References append immutable revisions; expected_revision prevents stale edits. C
 | `theseus_equivalence_suite_save` | theseus |
 | `theseus_equivalence_suite_read` | theseus |
 | `theseus_equivalence_run` | theseus |
+| `theseus_rules_save` | theseus |
+| `theseus_rules_read` | theseus |
+| `theseus_rules_check` | theseus |
+| `theseus_rules_export` | theseus |
+| `theseus_repro_create` | theseus |
+| `theseus_repro_verify` | theseus |
 | `theseus_evidence_export` | theseus |
 | `theseus_evidence_import` | theseus |
