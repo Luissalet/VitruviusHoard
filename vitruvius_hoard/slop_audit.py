@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
+from . import i18n, i18n_es
+
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 AUDIT_WIDTHS = [320, 375, 414, 768, 1024, 1280, 1440, 1920]
 PASSES = ("spacing", "color", "icons", "copy", "type", "layout", "details", "visuals", "motion")
@@ -125,23 +127,28 @@ def _step(f: dict) -> dict[str, Any]:
 _ORDER = {"floor": 0, "reflex": 1, "finish": 2}
 
 
-def plan(findings: list[dict], mode: str) -> dict[str, Any]:
-    """The fix plan the mode asks for."""
+def plan(findings: list[dict], mode: str, lang: str = "en") -> dict[str, Any]:
+    """The fix plan the mode asks for. ``findings`` are already in ``lang`` (see ``i18n.localize_findings``); the summaries and
+    the pass titles are chosen here."""
+    spanish = lang == "es"
     if mode == "none":
         finish = [f for f in findings if f.get("tier") == "finish"][:3]
-        return {"mode": "none", "summary": "No generated-look signs worth a pass: leave the page as it is.",
+        return {"mode": "none", "summary": i18n_es.SUMMARY_NONE_ES if spanish else "No generated-look signs worth a pass: leave the page as it is.",
                 "refinements": [_step(f) for f in finish], "passes": []}
     if mode == "light":
         ranked = sorted(findings, key=lambda f: (not is_slop(f), _ORDER.get(f.get("tier"), 3)))
         steps = [_step(f) for f in ranked[:6]]
-        return {"mode": "light", "summary": f"A light polish: {len(steps)} changes, no redesign.", "steps": steps, "passes": []}
+        return {"mode": "light", "summary": i18n_es.SUMMARY_LIGHT_ES.format(n=len(steps)) if spanish else f"A light polish: {len(steps)} changes, no redesign.",
+                "steps": steps, "passes": []}
     passes = []
     for name in PASSES:
         mine = [f for f in findings if pass_of(f) == name]
         if mine:
             mine.sort(key=lambda f: (not is_slop(f), _ORDER.get(f.get("tier"), 3)))
-            passes.append({"pass": name, "title": PASS_TITLES[name], "steps": [_step(f) for f in mine]})
-    return {"mode": "heavy", "summary": f"A full unslop: {len(passes)} passes in order; render again after each one.", "passes": passes}
+            passes.append({"pass": name, "title": i18n_es.PASS_TITLES_ES[name] if spanish else PASS_TITLES[name],
+                           "steps": [_step(f) for f in mine]})
+    return {"mode": "heavy", "summary": i18n_es.SUMMARY_HEAVY_ES.format(n=len(passes)) if spanish
+            else f"A full unslop: {len(passes)} passes in order; render again after each one.", "passes": passes}
 
 
 def _store(svc) -> Path:
@@ -151,9 +158,11 @@ def _store(svc) -> Path:
 
 
 def run(svc, *, render_id: Optional[str] = None, html: Optional[str] = None, url: Optional[str] = None,
-        widths: Optional[list[int]] = None, title: str = "", rerender: Optional[bool] = None) -> dict[str, Any]:
+        widths: Optional[list[int]] = None, title: str = "", rerender: Optional[bool] = None, lang: Optional[str] = None) -> dict[str, Any]:
     """Audit a stored render (re-rendered at the eight widths when it has fewer than five and its source is at hand) or a
-    page given as HTML / URL. The result is kept under data/slop-audits/<render_id>.json."""
+    page given as HTML / URL. The result is kept (in English) under data/slop-audits/<render_id>.json and returned in ``lang``
+    ("es" default | "en")."""
+    lang = i18n.norm_lang(lang)
     from . import lint as lint_mod
     from .rules.domtree import doms
     t0 = time.monotonic()
@@ -206,14 +215,16 @@ def run(svc, *, render_id: Optional[str] = None, html: Optional[str] = None, url
         svc._emit_event("vitruvius.slop_audit.done", {"render_id": render["id"], "slop_score": s["slop_score"], "mode": s["mode"]})
     except Exception:  # noqa: BLE001
         pass
-    return out
+    return i18n.localize_audit(out, lang)
 
 
-def get(svc, render_id: str) -> Optional[dict[str, Any]]:
+def get(svc, render_id: str, lang: Optional[str] = None) -> Optional[dict[str, Any]]:
+    """The stored audit; in English as stored, or rendered in ``lang`` ("es" | "en") when one is given."""
     path = _store(svc) / f"{render_id}.json"
     if not re.fullmatch(r"[0-9a-f]{6,40}", render_id or "") or not path.is_file():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    audit = json.loads(path.read_text(encoding="utf-8"))
+    return i18n.localize_audit(audit, lang) if lang else audit
 
 
 def latest(svc, limit: int = 20) -> list[dict[str, Any]]:
@@ -241,6 +252,14 @@ Signature: one concrete detail only this product would have (a material, a typog
 Avoid: the generic moves this page must not make (comma-separated, specific).
 No marketing words, no exclamation marks, no emoji."""
 
+_BRIEF_SYSTEM_ES = """Escribes una dirección de diseño para una página web existente, a partir de su propio texto. Responde con exactamente cinco líneas y nada más, en castellano de España (nunca español latinoamericano), con estas etiquetas:
+Producto: qué es y para quién, con los sustantivos propios del producto (una frase).
+Carácter: la personalidad que debería tener la interfaz, sacada del mundo del producto y no de las tendencias web (una frase).
+Momento brillante: el o los dos lugares que merecen el color de acento o el movimiento, y por qué (una frase).
+Firma: un detalle concreto que solo tendría este producto (un material, un hábito tipográfico, una unidad, un objeto).
+Evitar: los gestos genéricos que esta página no debe hacer (separados por comas, concretos).
+Sin palabras de marketing, sin signos de exclamación, sin emojis."""
+
 
 def page_text(html: str) -> str:
     body = re.sub(r"(?is)<(script|style|noscript|template|svg)\b.*?</\1>", " ", html or "")
@@ -251,15 +270,25 @@ def page_text(html: str) -> str:
 def parse_brief(text: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for line in (text or "").splitlines():
-        m = re.match(r"^\W*(product|character|bright\s*moment|signature|avoid)\W*[:\-]\s*(.+)$", line.strip(), re.I)
+        m = re.match(r"^\W*(product|producto|character|car[aá]cter|bright\s*moment|momento\s*brillante|signature|firma|avoid|evitar)\W*[:\-]\s*(.+)$",
+                     line.strip(), re.I)
         if m:
             key = re.sub(r"\s+", "_", m.group(1).lower())
+            key = {"producto": "product", "carácter": "character", "caracter": "character", "momento_brillante": "bright_moment",
+                   "firma": "signature", "evitar": "avoid"}.get(key, key)
             out.setdefault(key, m.group(2).strip().strip("*").strip())
     return out
 
 
-def fallback_brief(text: str, avoid: list[str], theme: Optional[dict]) -> dict[str, str]:
+def fallback_brief(text: str, avoid: list[str], theme: Optional[dict], lang: str = "en") -> dict[str, str]:
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if 12 <= len(s.strip()) <= 200]
+    if lang == "es":
+        fb = i18n_es.BRIEF_FALLBACK_ES
+        return {"product": sentences[0] if sentences else (text[:140] or fb["product_empty"]),
+                "character": (f"{theme['name']}: el carácter de este tema aplicado a los objetos y cifras del producto." if theme else fb["character"]),
+                "bright_moment": fb["bright_moment"],
+                "signature": (f"Display compuesto en {theme['display']['face']}." if theme else fb["signature"]),
+                "avoid": ", ".join(avoid[:6]) or fb["avoid"]}
     product = sentences[0] if sentences else (text[:140] or "A page whose text says too little to name the product.")
     if theme:
         character = f"{theme['name']}: {theme['posture']} {theme['genre']} — {theme['material'][:160]}."
@@ -273,8 +302,9 @@ def fallback_brief(text: str, avoid: list[str], theme: Optional[dict]) -> dict[s
 
 
 def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str] = None, url: Optional[str] = None,
-                    text: Optional[str] = None, use_model: bool = True) -> dict[str, Any]:
+                    text: Optional[str] = None, use_model: bool = True, lang: Optional[str] = None) -> dict[str, Any]:
     from . import themes as themes_mod
+    lang = i18n.norm_lang(lang)
     t0 = time.monotonic()
     source = text or ""
     audit = None
@@ -284,7 +314,7 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
             raise LookupError(f"Unknown render '{render_id}'.")
         probe, src = svc._render_lint_inputs(render)
         source = page_text(src or probe.get("html_text") or "")
-        audit = get(svc, render_id)
+        audit = get(svc, render_id, lang)
     if not source and html:
         source = page_text(html)
     if not source and url:
@@ -300,9 +330,13 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
         theme = None
     brief, model, error = {}, None, None
     if use_model and getattr(svc, "link_sync", None) is not None:
-        user = f"PAGE TEXT\n{source}" + (f"\n\nSIGNS ALREADY FOUND ON THIS PAGE\n- " + "\n- ".join(avoid) if avoid else "")
+        if lang == "es":
+            user = f"TEXTO DE LA PÁGINA\n{source}" + (f"\n\nINDICIOS YA ENCONTRADOS EN ESTA PÁGINA\n- " + "\n- ".join(avoid) if avoid else "")
+        else:
+            user = f"PAGE TEXT\n{source}" + (f"\n\nSIGNS ALREADY FOUND ON THIS PAGE\n- " + "\n- ".join(avoid) if avoid else "")
         try:
-            res = svc.link_sync.chat([{"role": "system", "content": _BRIEF_SYSTEM}, {"role": "user", "content": user}], effort="low")
+            res = svc.link_sync.chat([{"role": "system", "content": _BRIEF_SYSTEM_ES if lang == "es" else _BRIEF_SYSTEM},
+                                      {"role": "user", "content": user}], effort="low")
             reply = getattr(res, "text", None) or (res.get("text") if isinstance(res, dict) else str(res))
             model = getattr(res, "model", None) or (res.get("model") if isinstance(res, dict) else None)
             brief = parse_brief(reply or "")
@@ -311,9 +345,10 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
     got = sum(1 for k in BRIEF_KEYS if brief.get(k))
     complete = got == len(BRIEF_KEYS)
     if not complete:
-        fb = fallback_brief(source, avoid, theme)
+        fb = fallback_brief(source, avoid, theme, lang)
         brief = {k: brief.get(k) or fb[k] for k in BRIEF_KEYS}
-    lines = "\n".join(f"{_LABELS[k]}: {brief[k]}" for k in BRIEF_KEYS)
-    return {**{k: brief[k] for k in BRIEF_KEYS}, "text": lines, "source": "model" if complete else ("partial" if got else "fallback"),
+    labels = i18n_es.BRIEF_LABELS_ES if lang == "es" else _LABELS
+    lines = "\n".join(f"{labels[k]}: {brief[k]}" for k in BRIEF_KEYS)
+    return {**{k: brief[k] for k in BRIEF_KEYS}, "text": lines, "lang": lang, "labels": labels, "source": "model" if complete else ("partial" if got else "fallback"),
             "model": model, "error": error, "theme": themes_mod.public(theme) if theme else None, "render_id": render_id,
             "ms": round((time.monotonic() - t0) * 1000)}

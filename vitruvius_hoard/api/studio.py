@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from .. import figma, presets, slop_audit
+from .. import figma, i18n, presets, slop_audit
 from .deps import services
 
 router = APIRouter(prefix="/api")
@@ -36,12 +36,18 @@ class AuditBody(BaseModel):
     widths: Optional[list[int]] = None
     rerender: Optional[bool] = None
     title: str = Field("", max_length=200)
+    lang: Optional[str] = Field(None, max_length=8)
+
+
+def _lang(request: Request, lang: Optional[str] = None) -> str:
+    """The language asked for: explicit ``lang``, else Accept-Language, else Spanish."""
+    return i18n.norm_lang(lang, request.headers.get("accept-language"))
 
 
 @router.post("/slop-audit")
 def slop_audit_run(request: Request, body: AuditBody):
     return _run(slop_audit.run, services(request), render_id=body.render_id, html=body.html, url=body.url, widths=body.widths,
-                rerender=body.rerender, title=body.title)
+                rerender=body.rerender, title=body.title, lang=_lang(request, body.lang))
 
 
 @router.get("/slop-audit")
@@ -50,8 +56,8 @@ def slop_audit_list(request: Request, limit: int = Query(20, ge=1, le=100)):
 
 
 @router.get("/slop-audit/{render_id}")
-def slop_audit_get(request: Request, render_id: str):
-    out = slop_audit.get(services(request), render_id)
+def slop_audit_get(request: Request, render_id: str, lang: Optional[str] = Query(None, max_length=8)):
+    out = slop_audit.get(services(request), render_id, _lang(request, lang))
     if out is None:
         raise HTTPException(404, f"No slop audit for render '{render_id}'.")
     return out
@@ -63,12 +69,13 @@ class BriefBody(BaseModel):
     url: Optional[str] = Field(None, max_length=2000)
     text: Optional[str] = Field(None, max_length=20000)
     use_model: bool = True
+    lang: Optional[str] = Field(None, max_length=8)
 
 
 @router.post("/direction-brief")
 def direction_brief(request: Request, body: BriefBody):
     return _run(slop_audit.direction_brief, services(request), render_id=body.render_id, html=body.html, url=body.url, text=body.text,
-                use_model=body.use_model)
+                use_model=body.use_model, lang=_lang(request, body.lang))
 
 
 # ---------------- presets and the registry ----------------

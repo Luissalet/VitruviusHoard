@@ -474,7 +474,7 @@ export default function Critique({ param }) {
         </div>
       </div>
       <ThemeDealer t={t} notify={notify} />
-      <RulesPanel t={t} notify={notify} />
+      <RulesPanel t={t} notify={notify} lang={lang} />
     </div>
   );
 }
