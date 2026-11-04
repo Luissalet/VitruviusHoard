@@ -138,3 +138,17 @@ def test_catalog_lists_the_mark_tools():
     for name in ("mark_audit", "mark_test_sheet", "mark_reports"):
         row = next(r for r in rows if r["name"] == name)
         assert row["module"] == "design" and row["inputSchema"] == native[name]["inputSchema"]
+
+
+def test_a_failed_audit_leaves_no_folder_behind(tmp_path):
+    """Empty, unreadable and missing sources are user errors: they must not pile up empty report folders."""
+    import pytest
+
+    blank = Image.new("RGBA", (64, 64), (255, 255, 255, 255))
+    for kwargs in ({"data": _png(blank)}, {"data": base64.b64encode(b"not an image").decode("ascii")},
+                   {"path": str(tmp_path / "missing.png")}):
+        with pytest.raises(mark_audit.MarkError):
+            mark_audit.audit(tmp_path, **kwargs)
+    assert not list(mark_audit._marks_dir(tmp_path).iterdir())
+    ok = mark_audit.audit(tmp_path, data=_png(circle()))
+    assert [p.name for p in mark_audit._marks_dir(tmp_path).iterdir()] == [ok["id"]]
