@@ -12,6 +12,7 @@ import base64
 import io
 import json
 import re
+import shutil
 import time
 import uuid
 from pathlib import Path
@@ -387,11 +388,15 @@ def audit(data_dir: Path, browser: Any = None, *, path: Optional[str] = None, da
     mark_id = uuid.uuid4().hex[:12]
     folder = _marks_dir(data_dir) / mark_id
     folder.mkdir(parents=True, exist_ok=True)
-    rgba, background, kind, source_name = _load(data_dir, browser, path=path, data=data, svg=svg, work=folder)
-    checks, metrics, mark = analyse(rgba, background, kind)
-    score, verdict, counts = score_of(checks)
-    mark.save(folder / "mark.png")
-    render_sheet(mark, backgrounds).save(folder / "sheet.png")
+    try:
+        rgba, background, kind, source_name = _load(data_dir, browser, path=path, data=data, svg=svg, work=folder)
+        checks, metrics, mark = analyse(rgba, background, kind)
+        score, verdict, counts = score_of(checks)
+        mark.save(folder / "mark.png")
+        render_sheet(mark, backgrounds).save(folder / "sheet.png")
+    except BaseException:
+        shutil.rmtree(folder, ignore_errors=True)  # a source that cannot be audited leaves no empty report folder
+        raise
     report = {"id": mark_id, "name": (name or source_name)[:120], "kind": kind, "created_at": time.time(), "score": score,
               "verdict": verdict, "counts": counts, "checks": checks, "metrics": metrics, "backgrounds": list(backgrounds or []),
               **_urls(mark_id), "sheet_path": str(folder / "sheet.png"),
