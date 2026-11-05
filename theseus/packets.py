@@ -155,7 +155,7 @@ def packet_count(metadata):
 
 def engine():
     candidates = [os.environ.get("THESEUS_TSHARK"), shutil.which("tshark"),
-        "D:/LocalAI/tools/wireshark779/portable/App/Wireshark/tshark.exe",
+        "E:/Development/Tools/wireshark779/portable/App/Wireshark/tshark.exe",
         "C:/Program Files/Wireshark/tshark.exe"]
     return next((str(Path(value).resolve()) for value in candidates if value and Path(value).is_file()), None)
 

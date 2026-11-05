@@ -52,7 +52,7 @@ def engines():
     name='theseus-firmware-scanner'+('.exe' if os.name=='nt' else '')
     built=root/'.cargo-target/release'/name
     packaged=root/'software_native/engine/firmware-scanner/bin'/name
-    return {'binwalk':discover(os.environ.get('THESEUS_BINWALK'),[str(built),str(packaged),shutil.which('binwalk'),'D:/LocalAI/tools/binwalk779/bin/binwalk.exe']),
+    return {'binwalk':discover(os.environ.get('THESEUS_BINWALK'),[str(built),str(packaged),shutil.which('binwalk'),'E:/Development/Tools/binwalk779/bin/binwalk.exe']),
         'seven_zip':discover(os.environ.get('THESEUS_7ZIP'),[str(Path.home()/'scoop/apps/7zip/current/7z.exe'),shutil.which('7z'),r'C:\Program Files\7-Zip\7z.exe'])}
 
 

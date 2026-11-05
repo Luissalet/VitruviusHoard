@@ -10,7 +10,7 @@ import subprocess
 
 def engine():
     configured = os.environ.get('THESEUS_SIGROK')
-    candidates = [configured] if configured else [shutil.which('sigrok-cli'), 'D:/LocalAI/tools/sigrok779/portable-nightly/sigrok-cli.exe']
+    candidates = [configured] if configured else [shutil.which('sigrok-cli'), 'E:/Development/Tools/sigrok779/portable-nightly/sigrok-cli.exe']
     return next((str(Path(p).resolve()) for p in candidates if p and Path(p).is_file()), None)
 
 

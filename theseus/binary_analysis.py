@@ -12,10 +12,10 @@ def engines():
     ghidra = os.getenv("THESEUS_GHIDRA_HOME", "")
     java = os.getenv("THESEUS_JAVA_HOME", "")
     if not ghidra:
-        roots = sorted(Path("D:/LocalAI/tools/ghidra").glob("ghidra_*_PUBLIC"), key=_version)
+        roots = sorted(Path("E:/Development/Tools/ghidra").glob("ghidra_*_PUBLIC"), key=_version)
         ghidra = str(roots[-1]) if roots else ""
     if not java:
-        roots = sorted(Path("D:/LocalAI/tools/jdk21").glob("jdk-*"), key=_version)
+        roots = sorted(Path("E:/Development/Tools/jdk21").glob("jdk-*"), key=_version)
         java = str(roots[-1]) if roots else os.getenv("JAVA_HOME", "")
     utility = Path(ghidra) / "Ghidra/Framework/Utility/lib/Utility.jar"
     executable = Path(java) / "bin" / ("java.exe" if os.name == "nt" else "java")

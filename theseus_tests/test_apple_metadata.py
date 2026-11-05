@@ -13,7 +13,7 @@ from test_native_analysis import wait
 from theseus.api import create_app
 from theseus.native_analysis import catalog
 
-ZIG = Path(os.environ.get('THESEUS_TEST_ZIG', 'D:/LocalAI/tools/zig779/zig-x86_64-windows-0.15.2/zig.exe'))
+ZIG = Path(os.environ.get('THESEUS_TEST_ZIG', 'E:/Development/Tools/zig779/zig-x86_64-windows-0.15.2/zig.exe'))
 
 
 @pytest.mark.skipif(not ZIG.is_file(), reason='Requires original fixture cross compiler')

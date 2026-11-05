@@ -41,7 +41,7 @@ TIMEOUT_SECONDS = 300
 
 def engine():
     candidates = [os.environ.get("THESEUS_RIZIN"), shutil.which("rizin"),
-                  "D:/LocalAI/tools/rizin-0.9.1/unpacked/rizin-win-installer-clang_cl-64/bin/rizin.exe"]
+                  "E:/Development/Tools/rizin-0.9.1/unpacked/rizin-win-installer-clang_cl-64/bin/rizin.exe"]
     return next((str(Path(value).resolve()) for value in candidates if value and Path(value).is_file()), None)
 
 
