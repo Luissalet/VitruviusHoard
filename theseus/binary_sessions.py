@@ -16,6 +16,7 @@ from .byte_oracle import compare as compare_byte_evidence
 from .inspection import digest
 from .store import identifier
 from .binary_context import OPERATIONS as CONTEXT_OPERATIONS, compose as compose_context
+from .native_inventory import OPERATIONS as INVENTORY_OPERATIONS, compose as compose_inventory
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "software_native" / "engine" / "bridge" / "ghidra"
 DOCUMENT = {"document": None}
@@ -56,13 +57,15 @@ METHODS = {
     "trace_native_values": {"procedure": "", "query": {}},
     "get_navigation_context": DOCUMENT,
     "inspect_address_context": {**DOCUMENT, "address": ""},
+    "resolve_name_references": {**DOCUMENT, "name": ""},
+    "binary_overview": {},
 }
 
 
 def catalog():
     return {"engine": engines(), "operations": [
         {"name": name, "parameters": defaults, "writes_analysis_project": name in MUTATIONS,
-         **({'source': 'product-composition', 'observation_consistency': 'sequential-provider-observations'} if name in CONTEXT_OPERATIONS else {})}
+         **({'source': 'product-composition', 'observation_consistency': 'sequential-provider-observations'} if name in CONTEXT_OPERATIONS | INVENTORY_OPERATIONS else {})}
         for name, defaults in sorted(METHODS.items())],
         "instructions": "Open an artifact or its retained analysis project first. Calls return background jobs and persist individually readable records. Addresses use 0x-prefixed hexadecimal; procedure selectors accept an exact address or name. Null document selects the session program. Annotations change the retained analysis database, never source bytes. Search byte results include cursors; limit is caller-selected, not a total coverage claim."}
 
@@ -311,11 +314,16 @@ class BinarySessions:
         try:
             with runtime.lock:
                 self._active(job_id)
+                # A queued call may follow a completed annotation. Bind its
+                # observations to the session revision held at dispatch.
+                session = self.store.job(session_id)
                 with self.manager.lock:
                     self.manager.processes[job_id] = runtime.process
                 self.store.save_job(session["project_id"], job_id, "running", result)
                 if operation in CONTEXT_OPERATIONS:
                     response = compose_context(runtime, session, operation, parameters, lambda: self._active(job_id))
+                elif operation in INVENTORY_OPERATIONS:
+                    response = compose_inventory(runtime, session, operation, parameters, lambda: self._active(job_id))
                 else:
                     response = self._compose_value_trace(runtime, session, job_id, folder, parameters) if operation == "trace_native_values" else runtime.request(operation, parameters)
                 result["engine_response"] = {key: value for key, value in response.items() if key != "result"}

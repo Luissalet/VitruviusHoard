@@ -12,6 +12,8 @@ Android package summaries link to their complete retained analysis. Read manifes
 
 Binary analysis includes a read-only command query and explicit literal command execution against the original artifact. Execution can change files or run code; saved streams share a 16 MiB raw budget and interrupted results stay unknown without replay. Existing native sessions remain open. See [binary command observations](docs/RIZIN-COMMANDS.md) for source validation and release status.
 
+Native sessions also resolve exact symbol names to numeric references and consolidate a common image base only from agreeing observations. Missing names, ambiguous addresses and provider errors stay distinct; retained inventories keep their original observations. See [native inventory compositions](docs/NATIVE-INVENTORY.md).
+
 Saved .NET member analyses, including imported evidence, can feed comparison and reconstruction without consulting the original assemblies. Document hashes and exact build/method locks remain required; reconstruction text remains an inference. See [retained managed workflows](tasks/submission1165.md) for validation and release status.
 
 Managed graphs can also project one selected observation per artifact, member and native-boundary facet from retained evidence. Missing facets and method windows stay explicit; complete within supplied inputs does not mean a complete binary inventory. Historical document bytes and graph citations remain available without the assembly. See [retained managed graphs](tasks/submission1166.md) for scope and validation status.

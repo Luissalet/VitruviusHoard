@@ -154,16 +154,42 @@ def test_browser_fields_can_share_form_member_names(tmp_path):
                 page.goto(preview["url"] + "/records")
                 for name in names:
                     page.get_by_label(name, exact=True).fill("value " + name)
-                page.get_by_role("button", name="Add record", exact=True).click()
+                with page.expect_navigation(wait_until="domcontentloaded") as created_navigation:
+                    page.get_by_role("button", name="Add record", exact=True).click()
+                assert created_navigation.value is not None and created_navigation.value.status == 200
                 expect(page.get_by_role("heading", name="value title", exact=True)).to_be_visible()
+                record_url = page.url
+                record_id = page.locator("#record-form").get_attribute("data-id")
+                assert record_id and record_url == preview["url"] + "/records/" + record_id
+                origin_responses = []
+                def observe_save(route):
+                    # Read the real origin body before the client navigates;
+                    # forward its status, headers and bytes without inventing a response.
+                    origin = route.fetch(max_redirects=0)
+                    raw = origin.body()
+                    origin_responses.append((origin.status, raw, route.request.post_data_json))
+                    route.fulfill(response=origin, body=raw)
+                page.route(preview["url"] + "/actions/update", observe_save)
                 page.get_by_label("elements", exact=True).fill("updated elements")
-                page.get_by_role("button", name="Save changes", exact=True).click()
+                with page.expect_navigation(url=record_url, wait_until="domcontentloaded") as saved_navigation:
+                    with page.expect_response(lambda response: response.url == preview["url"] + "/actions/update"
+                            and response.request.method == "POST") as saved_response:
+                        page.get_by_role("button", name="Save changes", exact=True).click()
+                expected = {"id": record_id, **{name: "value " + name for name in names}, "elements": "updated elements"}
+                assert saved_response.value.status == 200 and len(origin_responses) == 1
+                status, raw, submitted = origin_responses[0]
+                assert status == 200 and json.loads(raw) == expected
+                assert submitted == {"id": record_id, "elements": "updated elements"}
+                (tmp_path / "observed-origin-save-response.json").write_bytes(raw)
+                navigation = saved_navigation.value
+                assert navigation is not None and navigation.status == 200 and navigation.url == record_url
+                assert navigation.request.method == "GET" and navigation.request.is_navigation_request()
+                assert navigation.request.frame == page.main_frame
                 expect(page.get_by_label("elements", exact=True)).to_have_value("updated elements")
                 _, raw = request(preview["url"] + "/api/records")
                 rows = json.loads(raw)["records"]
                 assert len(rows) == 1
-                assert rows[0]["elements"] == "updated elements"
-                assert all(rows[0][name] == "value " + name for name in names if name != "elements")
+                assert rows[0] == expected
             finally:
                 browser.close()
     finally:
