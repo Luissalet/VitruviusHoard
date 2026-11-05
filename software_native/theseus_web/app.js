@@ -115,6 +115,7 @@ const sectionLabel = key => sectionLabels[key] || key;
 const binaryLabels = {
   get_navigation_context: "Contexto de navegación", inspect_address_context: "Contexto de una dirección",
   read_binary_inventory_summary: "Resumen del binario", inspect_native_load_image: "Imagen cargada y relocaciones",
+  resolve_name_references: "Referencias a un nombre exacto", binary_overview: "Inventario y base del binario",
   list_names: "Símbolos", list_procedures: "Funciones", list_segments: "Segmentos", list_strings: "Cadenas",
   address_name: "Nombre de una dirección", procedure_address: "Dirección de una función",
   resolve_containing_procedure: "Función que contiene una dirección", procedure_assembly: "Desensamblado de una función",
