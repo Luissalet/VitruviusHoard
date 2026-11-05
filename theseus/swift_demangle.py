@@ -20,7 +20,7 @@ def engine():
     local = os.environ.get('LOCALAPPDATA')
     installed = sorted(glob.glob(str(Path(local) / 'Programs/Swift/Toolchains/*/usr/bin/swift-demangle.exe'))) if local else []
     candidates = [os.environ.get('THESEUS_SWIFT_DEMANGLE'), shutil.which('swift-demangle'), *reversed(installed),
-                  'D:/LocalAI/tools/swift-6.4.1/admin/LocalApp/Programs/Swift/Toolchains/6.4.1+NoAsserts/usr/bin/swift-demangle.exe']
+                  'E:/Development/Tools/swift-6.4.1/admin/LocalApp/Programs/Swift/Toolchains/6.4.1+NoAsserts/usr/bin/swift-demangle.exe']
     return next((str(Path(value).resolve()) for value in candidates if value and Path(value).is_file()), None)
 
 

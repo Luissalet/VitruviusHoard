@@ -16,12 +16,12 @@ else:
 
 
 def engines():
-    java_home = os.environ.get('THESEUS_JAVA_HOME', os.environ.get('JAVA_HOME', 'D:/LocalAI/tools/jdk21/jdk-21.0.12.1+1'))
+    java_home = os.environ.get('THESEUS_JAVA_HOME', os.environ.get('JAVA_HOME', 'E:/Development/Tools/jdk21/jdk-21.0.12.1+1'))
     suffix = '.exe' if os.name == 'nt' else ''
     java = Path(java_home) / 'bin' / ('java'+suffix)
     javac = Path(java_home) / 'bin' / ('javac'+suffix)
-    jadx = Path(os.environ.get('THESEUS_JADX_LIB', 'D:/LocalAI/tools/jadx779/runtime/lib'))
-    apktool = Path(os.environ.get('THESEUS_APKTOOL', 'D:/LocalAI/tools/apktool779/apktool_3.0.3.jar'))
+    jadx = Path(os.environ.get('THESEUS_JADX_LIB', 'E:/Development/Tools/jadx779/runtime/lib'))
+    apktool = Path(os.environ.get('THESEUS_APKTOOL', 'E:/Development/Tools/apktool779/apktool_3.0.3.jar'))
     return {'java': str(java) if java.is_file() else shutil.which('java'),
         'javac': str(javac) if javac.is_file() else shutil.which('javac'),
         'jadx_jars': sorted(str(p) for p in jadx.glob('*.jar')),

@@ -34,7 +34,7 @@ def tool(variable, name, fallback=None):
 
 
 ZIG = tool('THESEUS_TEST_ZIG', 'zig')
-OBJDUMP = tool('THESEUS_TEST_OBJDUMP', 'objdump', 'D:/LocalAI/tools/binutils1076/ucrt64/bin/objdump.exe')
+OBJDUMP = tool('THESEUS_TEST_OBJDUMP', 'objdump', 'E:/Development/Tools/binutils1076/ucrt64/bin/objdump.exe')
 
 SOURCE = r'''#include <stdio.h>
 #define NI __attribute__((noinline))

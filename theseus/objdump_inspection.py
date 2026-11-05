@@ -28,7 +28,7 @@ OPERATIONS = [{'name': 'binary.objdump', 'title': 'Binarios · Inspección GNU',
 def engine():
     candidates = [{'path': os.environ.get('THESEUS_OBJDUMP'), 'source': 'THESEUS_OBJDUMP'},
                   {'path': shutil.which('objdump'), 'source': 'PATH'},
-                  {'path': 'D:/LocalAI/tools/binutils1076/ucrt64/bin/objdump.exe', 'source': 'bundled-default'}]
+                  {'path': 'E:/Development/Tools/binutils1076/ucrt64/bin/objdump.exe', 'source': 'bundled-default'}]
     chosen = None
     for row in candidates:
         row['exists'] = bool(row['path'] and Path(row['path']).is_file())

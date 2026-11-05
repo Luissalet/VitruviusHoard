@@ -49,15 +49,15 @@ def selection(family):
     if family == 'apktool':
         tools = android.engines()
         home_source = 'THESEUS_JAVA_HOME' if 'THESEUS_JAVA_HOME' in os.environ else 'JAVA_HOME' if 'JAVA_HOME' in os.environ else 'bundled-default'
-        home = os.environ.get('THESEUS_JAVA_HOME', os.environ.get('JAVA_HOME', 'D:/LocalAI/tools/jdk21/jdk-21.0.12.1+1'))
+        home = os.environ.get('THESEUS_JAVA_HOME', os.environ.get('JAVA_HOME', 'E:/Development/Tools/jdk21/jdk-21.0.12.1+1'))
         java_candidates = [candidate(Path(home)/'bin'/('java.exe' if os.name == 'nt' else 'java'), home_source), candidate(shutil.which('java'), 'PATH')]
-        jar = os.environ.get('THESEUS_APKTOOL', 'D:/LocalAI/tools/apktool779/apktool_3.0.3.jar')
+        jar = os.environ.get('THESEUS_APKTOOL', 'E:/Development/Tools/apktool779/apktool_3.0.3.jar')
         return [('java', selected(tools['java'], java_candidates)),
                 ('apktool', selected(tools['apktool'], [candidate(jar, 'THESEUS_APKTOOL' if 'THESEUS_APKTOOL' in os.environ else 'bundled-default')]))]
     if family == 'pcap':
         tshark = packets.engine()
         tshark_candidates = [candidate(os.environ.get('THESEUS_TSHARK'), 'THESEUS_TSHARK'), candidate(shutil.which('tshark'), 'PATH'),
-            candidate('D:/LocalAI/tools/wireshark779/portable/App/Wireshark/tshark.exe', 'bundled-default'), candidate('C:/Program Files/Wireshark/tshark.exe', 'system-default')]
+            candidate('E:/Development/Tools/wireshark779/portable/App/Wireshark/tshark.exe', 'bundled-default'), candidate('C:/Program Files/Wireshark/tshark.exe', 'system-default')]
         suffix = '.exe' if os.name == 'nt' else ''
         cap_candidates = [candidate(os.environ.get('THESEUS_CAPINFOS'), 'THESEUS_CAPINFOS'),
             candidate(Path(tshark).with_name('capinfos'+suffix) if tshark else None, 'selected-tshark-directory'),
