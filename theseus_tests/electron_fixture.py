@@ -13,7 +13,7 @@ import psutil
 
 def electron_path():
     explicit=os.environ.get('THESEUS_TEST_ELECTRON')
-    path=Path(explicit) if explicit else Path('D:/LocalAI/faustus/desktop/node_modules/electron/dist/electron.exe')
+    path=Path(explicit) if explicit else Path('E:/Development/IA/Faustus/desktop/node_modules/electron/dist/electron.exe')
     return path if path.is_file() else None
 
 
