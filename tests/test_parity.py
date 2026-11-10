@@ -220,3 +220,18 @@ def test_report_page_escapes_labels(services):
     run = services.visual_parity(PAGE_A, PAGE_A, widths=[1024], label="<script>alert(1)</script>")
     html = services.parity_file_path(run["id"], "compare.html").read_text(encoding="utf-8")
     assert "<script>alert(1)</script>" not in html and "&lt;script&gt;" in html
+
+
+def test_a_width_with_unchecked_screens_does_not_pass():
+    result = compare([page(), page()], page(), max_screens=1)
+    assert result["truncated"] and result["screens_checked"] == 1 and result["screens_total"] == 2
+    assert not result["passed"]
+
+
+def test_cut_captures_use_the_real_page_heights():
+    # Both captures were cut at the same height, but the real pages differ by 300 px.
+    result = compare([page(), page()], page(), ref_document_height=20000, cand_document_height=20300)
+    assert not result["height_pass"] and not result["passed"]
+    assert result["reference_height"] == 20000 and result["candidate_height"] == 20300
+    same = compare([page(), page()], page(), ref_document_height=20000, cand_document_height=20002)
+    assert same["height_pass"] and same["passed"]
