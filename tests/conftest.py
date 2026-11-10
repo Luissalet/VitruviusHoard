@@ -113,6 +113,39 @@ class FakeBrowser:
             result["video"] = str(video)
         return result
 
+    # `parity_hook(tag, width, load, html, url)` may return a PIL image to use instead of the synthetic page;
+    # `parity_noise` makes the second load of every page differ in a small block.
+    parity_hook = None
+    parity_noise = False
+
+    def parity_capture(self, *, html=None, url=None, widths, loads=1, out_dir, tag="page", dark=False, wait_ms=600) -> dict:
+        self.calls.append({"parity": tag, "html": html, "url": url, "widths": widths, "loads": loads})
+        if self.fail:
+            return {"error": "no browser", "hint": "python -m playwright install chromium"}
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        captures = []
+        for w in widths:
+            for load in range(1, loads + 1):
+                image = self.parity_hook(tag, w, load, html, url) if self.parity_hook else None
+                if image is None:
+                    image = _fake_parity_page(w, html or url or "", load, self.parity_noise)
+                path = out_dir / f"{tag}-{w}-{load}.png"
+                image.save(path)
+                captures.append({"width": w, "load": load, "path": str(path), "document_height": image.height})
+        return {"captures": captures, "errors": []}
+
+
+def _fake_parity_page(width: int, key: str, load: int, noise: bool):
+    """A synthetic full-page capture: colour derived from the page (same page, same picture), 300 px tall."""
+    import hashlib
+    from PIL import Image, ImageDraw
+    digest = hashlib.md5(key.encode("utf-8")).digest()
+    image = Image.new("RGB", (width, 300), (digest[0], digest[1], digest[2]))
+    if noise and load == 2:
+        ImageDraw.Draw(image).rectangle((5, 5, 30, 30), fill=(0, 0, 0))
+    return image
+
 
 @dataclass
 class FakeChatResult:

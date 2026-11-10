@@ -6535,6 +6535,177 @@
     "module": "design"
   },
   {
+    "name": "visual_parity",
+    "description": "Score how closely a page matches a reference, per screen, at desktop and mobile. Paridad visual.\nBoth pages load with the clock, random numbers, animations, transitions and videos frozen; lazy content is fired by scrolling; the reference loads twice and pixels that differ between those loads are left out as noise. Each viewport-high screen passes with 98 % of stable pixels within 10 % per channel (configurable); the page height must match within 4 px. Returns scores, pass/fail per screen and width, a global verdict, diff images (red = different, blue = noise) and a side-by-side page with a slider at report_url.\nSinónimos: paridad, igual que la referencia, comparar con la maqueta, diff visual de página, regresión visual, clonar una web.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "reference": {
+          "description": "The page to match: a URL, inline HTML or the id of a render_preview.",
+          "maxLength": 2000000,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "candidate": {
+          "description": "The page being checked: a URL, inline HTML or the id of a render_preview.",
+          "maxLength": 2000000,
+          "minLength": 1,
+          "title": "Candidate",
+          "type": "string"
+        },
+        "widths": {
+          "description": "Viewport widths in px (200..3000); 1440 is desktop (900 px screens), 390 mobile (844 px screens).",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 4,
+          "title": "Widths",
+          "type": "array"
+        },
+        "max_screens": {
+          "default": 12,
+          "description": "At most this many viewport-high screens per width are scored.",
+          "maximum": 40,
+          "minimum": 1,
+          "title": "Max Screens",
+          "type": "integer"
+        },
+        "tolerance": {
+          "default": 0.1,
+          "description": "Colour tolerance per channel as a share of 255 (0.10 = 10 %).",
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Tolerance",
+          "type": "number"
+        },
+        "pass_score": {
+          "default": 98.0,
+          "description": "A screen passes with at least this % of stable pixels within the tolerance.",
+          "maximum": 100,
+          "minimum": 50,
+          "title": "Pass Score",
+          "type": "number"
+        },
+        "height_tolerance": {
+          "default": 4,
+          "description": "Allowed difference in total page height, in px.",
+          "maximum": 500,
+          "minimum": 0,
+          "title": "Height Tolerance",
+          "type": "integer"
+        },
+        "dark": {
+          "default": false,
+          "title": "Dark",
+          "type": "boolean"
+        },
+        "wait_ms": {
+          "default": 600,
+          "maximum": 20000,
+          "minimum": 0,
+          "title": "Wait Ms",
+          "type": "integer"
+        },
+        "label": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "candidate"
+      ],
+      "title": "VisualParityArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 300.0,
+    "module": "design"
+  },
+  {
+    "name": "visual_parity_get",
+    "description": "Read a stored visual-parity run with scores, failures and image links. Leer paridad visual.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ParityIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "visual_parity_list",
+    "description": "List stored visual-parity runs, newest first. Listar comparaciones de paridad.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "ParityListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "visual_parity_delete",
+    "description": "Delete a stored visual-parity run and its images. Borrar paridad visual.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ParityIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "docs_libraries",
     "description": "List indexed libraries, exact versions and project environments (libraries, librerías, versión, entornos)\n\nWhat Babel has indexed (exact versions), the registered environments (project\ninterpreters / node_modules folders; default_for says which one answers Python or\nTypeScript when env is omitted) and recent background jobs. Use it to find an env id, or to follow a docset install / dependency\nindexing job. Installed packages that are not listed yet are indexed automatically\nthe first time api_lookup or api_check_code needs them.\n\nArgs:\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    env: environment id or project path; limits libraries to that environment.\n    limit: libraries per page (default 15, max 200). offset: for the next page.\n\nReturns: {libraries: [{id, ecosystem, name, version, env, status, entries}], total,\n    has_more, next_offset, environments: [{id, label, python, default, ...}],\n    jobs: [{id, kind, status, progress, message}]}.\nKeywords: list libraries, what is installed, which version, environments, job progress,\n    listar librerias, que hay instalado, que version tengo, entornos, progreso\n",
     "inputSchema": {
