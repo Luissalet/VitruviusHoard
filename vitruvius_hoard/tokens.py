@@ -397,6 +397,9 @@ def _css_vars_for_theme(tokens: dict[str, Any], theme: str) -> list[str]:
         lines.append(f"  --color-{k}: {v};")
     for k, v in on.items():
         lines.append(f"  --color-{k}: {v};")
+    for state, s in ((tokens["color"].get("states") or {}).get(theme) or {}).items():  # a preset's status colours (Flexoki)
+        lines.append(f"  --color-{state}-fill: {s['fill']};")
+        lines.append(f"  --color-{state}-text: {s['text']};")
     return lines
 
 
@@ -408,6 +411,9 @@ def to_css(tokens: dict[str, Any]) -> str:
     for sem_name, ramp in tokens["color"]["semantic"].items():
         for step, hex_ in ramp.items():
             lines.append(f"  --color-{sem_name}-{step}: {hex_};")
+    for hue_name, ramp in (tokens["color"].get("palette") or {}).items():  # a preset's full published palette (Flexoki)
+        for step, hex_ in ramp.items():
+            lines.append(f"  --palette-{hue_name}-{step}: {hex_};")
     lines.extend(_css_vars_for_theme(tokens, "light"))
     for name, value in tokens["spacing"].items():
         lines.append(f"  --space-{name}: {value};")

@@ -144,6 +144,7 @@ class TokensGenerateArgs(BaseModel):
     seed: Optional[str] = Field(None, max_length=200)
     reroll: Optional[int] = Field(None, ge=0, le=20)
     force_theme: Optional[bool] = None
+    preset: Optional[str] = Field(None, max_length=80, description="Build the whole system from a preset instead (design_preset_list), e.g. 'flexoki' or 'flexoki-orange'; the other fields except name are ignored.")
 
 
 class TokensGetArgs(BaseModel):
@@ -221,6 +222,17 @@ class AppCallArgs(BaseModel):
     data: Optional[dict] = None
     record_id: Optional[str] = None
     query: str = ""
+
+
+class GalleriesArgs(BaseModel):
+    query: Optional[str] = Field(None, max_length=200, description="Words in English or Spanish: footer, CTA, hero, scroll, shader, glass, 3D icons, styles... Empty lists them all.")
+    area: Optional[Literal["layout", "motion", "color", "typography", "components", "effects", "imagery", "iconography", "content"]] = None
+    limit: int = Field(8, ge=1, le=30)
+
+
+class GalleriesIngestArgs(BaseModel):
+    ids: Optional[list[str]] = Field(None, description="Gallery ids from design_galleries; omit to capture every curated gallery.")
+    video: bool = Field(False, description="Also record the 6 s scroll video of each sample (slower).")
 
 
 class CollectionImportArgs(BaseModel):
@@ -420,6 +432,18 @@ def _resolve_style(services: Services, style: Optional[str], brief: dict) -> Opt
 
 
 def run_tokens_generate(services: Services, args: TokensGenerateArgs) -> dict:
+    if args.preset:
+        from . import presets
+        applied = presets.apply(services, args.preset, title=args.name)
+        row = services.tokens_get(applied["tokens_id"])
+        out = {**row, "preset": applied["preset"]}
+        pairs = applied.get("contrast_pairs")
+        if pairs:
+            worst = min(pairs, key=lambda c: c["ratio"])
+            # a dict survives the result cap even when the pair list is shortened
+            out["contrast"] = {"pairs": len(pairs), "aa": sum(1 for c in pairs if c["level"] != "fail"), "lowest": worst}
+            out["contrast_pairs"] = pairs
+        return out
     brief = {"name": args.name, "base_color": args.base_color, "hue": args.hue, "vibe": args.vibe, "theme": args.theme, "deal": args.deal,
              "genre": args.genre, "seed": args.seed, "reroll": args.reroll, "force_theme": args.force_theme,
             "mode": args.mode, "fonts": args.fonts, "density": args.density}
@@ -572,7 +596,8 @@ TOOLS: list[Tool] = [
     Tool("tokens_generate",
         "Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. Genera design system.\n"
         "Pure-Python OKLCH ramps (50-950), fluid type scale, spacing/radius/shadow/motion tokens, four export formats.\n"
-        "Sinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme.",
+        "preset='flexoki' (or another design_preset_list name) builds the system from that preset with its exact palette and contrast report.\n"
+        "Sinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme, flexoki.",
         TokensGenerateArgs, ann(False, False, False), run_tokens_generate),
     Tool("tokens_get",
         "Get a generated design system in json, css, tailwind or w3c format. Obtener design system.\n"
@@ -634,6 +659,22 @@ TOOLS: list[Tool] = [
         "Delete a reference from the gallery (only when the user asks). Eliminar referencia.\n"
         "Sinónimos: borrar referencia, quitar de la galería.",
         ReferenceIdArgs, ann(False, True, True), run_reference_delete),
+    Tool("design_galleries",
+        "Find design galleries as references (footers, CTAs, heroes, scroll, glass...). Galerías de referencia.\n"
+        "Covers scroll templates, scroll shaders, footers, CTAs, product styles, heroes, 3D icons and glass UI. "
+        "Search by word (English or Spanish) or area (layout, motion, color, typography, components, effects, imagery, iconography, content). "
+        "Each gallery gives its URL, what it provides, when to use it, its licence note and its captured sample pages (screenshots, palette and "
+        "fragments: headings, CTA texts, footer links, glass/scroll/sticky signals) with a `[vitruvius: gallery/<id>]` cite.\n"
+        "Sinónimos: referencias de footers, ejemplos de CTA, pies de página, llamadas a la acción, botones, heros, portadas, iconos 3D, "
+        "glassmorphism, cristal, shaders, animación con scroll, estilos de producto, inspiración.",
+        GalleriesArgs, ann(True), lambda services, args: {"galleries": services.galleries(query=args.query, area=args.area, limit=args.limit)}, capped=False),
+    Tool("design_gallery_ingest",
+        "Capture each design gallery's sample page into the reference gallery. Capturar muestras de galerías.\n"
+        "Opens the sample page in Chromium (desktop and mobile), keeps screenshots, palette and fonts, and stores fragments (headings, hero text, "
+        "CTA texts, nav and footer links, an excerpt of the footer HTML, glass/scroll/sticky/WebGL signals). Capturing again replaces that "
+        "gallery's previous sample. About 10-30 s per gallery.\n"
+        "Sinónimos: ingerir galerías, capturar referencias, actualizar muestras.",
+        GalleriesIngestArgs, ann(False, False, True), lambda services, args: services.galleries_ingest(args.ids, video=args.video), capped=False, timeout_s=900),
     Tool("sources_list",
         "List every ingested design-criterion source and its status. Listar fuentes.\n"
         "Sinónimos: fuentes, repos ingeridos, estado de ingesta.",
@@ -1022,7 +1063,7 @@ def run_design_direction_brief(services: Services, args: DirectionBriefArgs) -> 
 
 class PresetListArgs(BaseModel):
     name: Optional[str] = Field(None, max_length=80, description="One preset in full (tokens light/dark, radius, fonts, spacing, motion) plus its shadcn registry item.")
-    source: Optional[Literal["vitruvius", "hallmark", "hoard"]] = None
+    source: Optional[Literal["vitruvius", "flexoki", "hallmark", "hoard"]] = None
     query: Optional[str] = Field(None, max_length=120)
     limit: int = Field(60, ge=1, le=200)
 
@@ -1096,9 +1137,10 @@ TOOLS.extend([
         DirectionBriefArgs, ann(True, False, False), run_design_direction_brief, timeout_s=180),
     Tool("design_preset_list",
         "List design presets, or read one in full. Presets de diseño.\n"
-        "112+ presets: authored ones, one per hallmark theme and the Hoard family palettes; each with light/dark colour roles (shadcn names), "
+        "120+ presets: authored ones, Flexoki (ink on paper, MIT: exact palette, one preset per accent, every text pair AA), one per hallmark theme "
+        "and the Hoard family palettes; each with light/dark colour roles (shadcn names), "
         "radius, fonts, spacing, motion and character. name=... returns the preset and its shadcn registry-item.json.\n"
-        "Sinónimos: temas, paletas, presets, registry, shadcn, estilo base.",
+        "Sinónimos: temas, paletas, presets, registry, shadcn, estilo base, flexoki, tinta sobre papel.",
         PresetListArgs, ann(True), run_design_preset_list, capped=False),
     Tool("design_pick_themes",
         "Pick three presets for a brief, one recommended. Elegir tema para un brief.\n"

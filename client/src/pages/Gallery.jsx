@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty, ConfirmButton } from "../components/ui.jsx";
+import DesignGalleries from "../components/DesignGalleries.jsx";
 import { fileRelPath } from "../format.js";
 
 function metadataText(value) {
@@ -60,7 +61,29 @@ function ReferenceCard({ ref, t, onOpen, es }) {
   );
 }
 
-function Drawer({ id, t, onClose, onDeleted }) {
+function GalleryFragments({ gallery, fragments, es, refId }) {
+  const L = (a, b) => (es ? a : b);
+  const signals = Object.entries(fragments.signals || {}).filter(([, n]) => n > 0);
+  return (
+    <div className="mb-4 text-[13px] flex flex-col gap-2" data-testid="reference-fragments">
+      <h3 className="font-semibold">{L("Muestra de", "Sample of")} {gallery.name}</h3>
+      <p className="help">[vitruvius: gallery/{gallery.id} § {refId}] · {(gallery.areas || []).join(", ")}</p>
+      {fragments.hero?.headline && <p><strong>Hero:</strong> {fragments.hero.headline}{fragments.hero.lede ? ` — ${fragments.hero.lede}` : ""}</p>}
+      {!!fragments.headings?.length && <div><strong>{L("Titulares", "Headings")}</strong>
+        <ul className="list-disc pl-5">{fragments.headings.slice(0, 10).map((h, i) => <li key={i}>h{h.level} · {h.text}</li>)}</ul></div>}
+      {!!fragments.ctas?.length && <div><strong>CTA</strong>
+        <div className="flex flex-wrap gap-1 mt-1">{fragments.ctas.map((c) => <span key={c} className="chip">{c}</span>)}</div></div>}
+      {!!fragments.nav_links?.length && <p><strong>{L("Navegación", "Navigation")}:</strong> {fragments.nav_links.join(" · ")}</p>}
+      {!!fragments.footer?.links?.length && <p><strong>{L("Pie de página", "Footer")}:</strong> {fragments.footer.links.join(" · ")}</p>}
+      {fragments.footer?.html && <details><summary className="cursor-pointer">{L("HTML del pie (extracto)", "Footer HTML (excerpt)")}</summary>
+        <pre className="text-[11px] whitespace-pre-wrap break-all mt-1" style={{ maxHeight: 200, overflow: "auto" }}>{fragments.footer.html}</pre></details>}
+      {!!signals.length && <p><strong>{L("Señales CSS", "CSS signals")}:</strong> {signals.map(([k, n]) => `${k} ${n}`).join(" · ")}</p>}
+      {gallery.license && <p className="help">{gallery.license}</p>}
+    </div>
+  );
+}
+
+function Drawer({ id, t, onClose, onDeleted, es }) {
   const [ref, setRef] = useState(null);
   useEffect(() => {
     api.reference(id).then(setRef).catch(() => setRef(null));
@@ -143,6 +166,7 @@ function Drawer({ id, t, onClose, onDeleted }) {
           {ref.analysis.collection.license && <p className="help">License: {metadataText(ref.analysis.collection.license)}</p>}
           {ref.analysis.collection.related_patterns != null && <p className="help">Patterns: {Array.isArray(ref.analysis.collection.related_patterns) ? ref.analysis.collection.related_patterns.map(metadataText).join(", ") : metadataText(ref.analysis.collection.related_patterns)}</p>}
         </div>}
+        {ref.analysis?.gallery && <GalleryFragments gallery={ref.analysis.gallery} fragments={ref.analysis.fragments || {}} es={es} refId={ref.id} />}
         {ref.note && <p className="help mb-4">{ref.note}</p>}
 
         <ConfirmButton t={t} onConfirm={() => onDeleted(ref.id)} />
@@ -249,6 +273,8 @@ export default function Gallery() {
     <div className="flex flex-col gap-6">
       <h1 className="text-[20px] font-semibold">{t("nav_gallery")}</h1>
 
+      <DesignGalleries lang={lang} notify={notify} onOpen={setOpenId} onChanged={() => load()} />
+
       <form onSubmit={addReference} className="panel flex flex-col gap-2">
         <div className="grid md:grid-cols-3 gap-2">
           <input className="field" placeholder={t("gallery_add_url")} value={addUrl} onChange={(e) => setAddUrl(e.target.value)} aria-label={t("gallery_add_url")} />
@@ -305,7 +331,7 @@ export default function Gallery() {
 
       {nextBefore && <button className="btn self-start" disabled={loading} onClick={() => load(true)}>{loading ? (es ? "Cargando…" : "Loading…") : (es ? "Ver más referencias" : "Load more references")}</button>}
 
-      {openId && <Drawer id={openId} t={t} onClose={() => setOpenId(null)} onDeleted={deleteReference} />}
+      {openId && <Drawer id={openId} t={t} es={es} onClose={() => setOpenId(null)} onDeleted={deleteReference} />}
     </div>
   );
 }

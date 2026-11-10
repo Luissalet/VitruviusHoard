@@ -18,6 +18,7 @@ from . import critique as critique_mod
 from . import library as library_mod
 from . import lint as lint_mod
 from . import references as references_mod
+from . import design_galleries as galleries_mod
 from . import reference_collections, design_patterns
 from . import tokens as tokens_mod
 from . import kept as kept_mod
@@ -229,7 +230,21 @@ class Services:
             out["theme_deal"] = self.theme_deal(prompt=prompt, n=3)
         except Exception:  # noqa: BLE001 — the brief never fails for want of a theme
             log.warning("could not deal themes for the brief", exc_info=True)
+        try:
+            # design galleries that fit the brief, with their captured samples, cited like the library
+            words = " ".join(str(kwargs.get(k) or "") for k in ("subject", "vibe", "product_type", "platform"))
+            out["galleries"] = galleries_mod.search(self.db, query=words, limit=3, require_match=True)
+            out["cites"] = sorted(set(out.get("cites", [])) | {g["cite"] for g in out["galleries"]})
+        except Exception:  # noqa: BLE001
+            log.warning("could not match design galleries for the brief", exc_info=True)
         return out
+
+    # ---------------- design galleries ----------------
+    def galleries(self, *, query: Optional[str] = None, area: Optional[str] = None, limit: int = 20) -> list[dict[str, Any]]:
+        return galleries_mod.search(self.db, query=query, area=area, limit=limit)
+
+    def galleries_ingest(self, ids: Optional[list[str]] = None, *, video: bool = False) -> dict[str, Any]:
+        return galleries_mod.ingest(self, ids, video=video)
 
     def catalog_styles(self, limit: int = 100) -> list[dict[str, Any]]:
         rows = self.db.query("SELECT * FROM styles ORDER BY id LIMIT ?", (limit,))
@@ -702,6 +717,11 @@ class Services:
              json.dumps(result["findings"]), result["summary"], result["ms"]),
         )
         self._emit_event("vitruvius.critique.done", {"render_id": render_id, "score": result["score"], "gate": result["gate"]["state"]})
+        if focus:
+            try:  # a critique focused on footers, CTAs, the hero... points at the galleries (and captured samples) to compare with
+                result["galleries"] = galleries_mod.search(self.db, query=focus, limit=3, require_match=True)
+            except Exception:  # noqa: BLE001
+                log.warning("could not match design galleries for the critique", exc_info=True)
         return result
 
     # ---------------- tokens ----------------

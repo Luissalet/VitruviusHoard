@@ -899,7 +899,7 @@
   },
   {
     "name": "tokens_generate",
-    "description": "Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. Genera design system.\nPure-Python OKLCH ramps (50-950), fluid type scale, spacing/radius/shadow/motion tokens, four export formats.\nSinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme.",
+    "description": "Generate a design system: OKLCH palettes, type scale, spacing, motion tokens. Genera design system.\nPure-Python OKLCH ramps (50-950), fluid type scale, spacing/radius/shadow/motion tokens, four export formats.\npreset='flexoki' (or another design_preset_list name) builds the system from that preset with its exact palette and contrast report.\nSinónimos: sistema de diseño, tokens, paleta OKLCH, tailwind theme, flexoki.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -1106,6 +1106,20 @@
           ],
           "default": null,
           "title": "Force Theme"
+        },
+        "preset": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Build the whole system from a preset instead (design_preset_list), e.g. 'flexoki' or 'flexoki-orange'; the other fields except name are ignored.",
+          "title": "Preset"
         }
       },
       "required": [
@@ -1915,6 +1929,107 @@
       "title": "ReferenceIdArgs",
       "type": "object"
     },
+    "module": "design"
+  },
+  {
+    "name": "design_galleries",
+    "description": "Find design galleries as references (footers, CTAs, heroes, scroll, glass...). Galerías de referencia.\nCovers scroll templates, scroll shaders, footers, CTAs, product styles, heroes, 3D icons and glass UI. Search by word (English or Spanish) or area (layout, motion, color, typography, components, effects, imagery, iconography, content). Each gallery gives its URL, what it provides, when to use it, its licence note and its captured sample pages (screenshots, palette and fragments: headings, CTA texts, footer links, glass/scroll/sticky signals) with a `[vitruvius: gallery/<id>]` cite.\nSinónimos: referencias de footers, ejemplos de CTA, pies de página, llamadas a la acción, botones, heros, portadas, iconos 3D, glassmorphism, cristal, shaders, animación con scroll, estilos de producto, inspiración.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Words in English or Spanish: footer, CTA, hero, scroll, shader, glass, 3D icons, styles... Empty lists them all.",
+          "title": "Query"
+        },
+        "area": {
+          "anyOf": [
+            {
+              "enum": [
+                "layout",
+                "motion",
+                "color",
+                "typography",
+                "components",
+                "effects",
+                "imagery",
+                "iconography",
+                "content"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "limit": {
+          "default": 8,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "GalleriesArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "design_gallery_ingest",
+    "description": "Capture each design gallery's sample page into the reference gallery. Capturar muestras de galerías.\nOpens the sample page in Chromium (desktop and mobile), keeps screenshots, palette and fonts, and stores fragments (headings, hero text, CTA texts, nav and footer links, an excerpt of the footer HTML, glass/scroll/sticky/WebGL signals). Capturing again replaces that gallery's previous sample. About 10-30 s per gallery.\nSinónimos: ingerir galerías, capturar referencias, actualizar muestras.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Gallery ids from design_galleries; omit to capture every curated gallery.",
+          "title": "Ids"
+        },
+        "video": {
+          "default": false,
+          "description": "Also record the 6 s scroll video of each sample (slower).",
+          "title": "Video",
+          "type": "boolean"
+        }
+      },
+      "title": "GalleriesIngestArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 900.0,
     "module": "design"
   },
   {
@@ -5300,7 +5415,7 @@
   },
   {
     "name": "design_preset_list",
-    "description": "List design presets, or read one in full. Presets de diseño.\n112+ presets: authored ones, one per hallmark theme and the Hoard family palettes; each with light/dark colour roles (shadcn names), radius, fonts, spacing, motion and character. name=... returns the preset and its shadcn registry-item.json.\nSinónimos: temas, paletas, presets, registry, shadcn, estilo base.",
+    "description": "List design presets, or read one in full. Presets de diseño.\n120+ presets: authored ones, Flexoki (ink on paper, MIT: exact palette, one preset per accent, every text pair AA), one per hallmark theme and the Hoard family palettes; each with light/dark colour roles (shadcn names), radius, fonts, spacing, motion and character. name=... returns the preset and its shadcn registry-item.json.\nSinónimos: temas, paletas, presets, registry, shadcn, estilo base, flexoki, tinta sobre papel.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -5328,6 +5443,7 @@
             {
               "enum": [
                 "vitruvius",
+                "flexoki",
                 "hallmark",
                 "hoard"
               ],

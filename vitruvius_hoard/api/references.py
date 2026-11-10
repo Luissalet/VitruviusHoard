@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .deps import services
-from ..agent_tools import CollectionImportArgs, DesignPatternArgs
+from ..agent_tools import CollectionImportArgs, DesignPatternArgs, GalleriesIngestArgs
 
 router = APIRouter(prefix="/api")
 
@@ -67,6 +67,20 @@ def references_file(request: Request, ref_id: str, name: str):
     if not path.is_file():
         raise HTTPException(404, "file not found")
     return FileResponse(path)
+
+
+@router.get("/galleries")
+def galleries_list(request: Request, q: Optional[str] = Query(None, max_length=200), area: Optional[str] = Query(None, max_length=40),
+                   limit: int = Query(30, ge=1, le=60)):
+    return {"galleries": services(request).galleries(query=q, area=area, limit=limit)}
+
+
+@router.post("/galleries/ingest")
+def galleries_ingest(request: Request, body: GalleriesIngestArgs):
+    try:
+        return services(request).galleries_ingest(body.ids, video=body.video)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
 
 
 @router.get("/reference-collections")
