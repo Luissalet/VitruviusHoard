@@ -401,6 +401,132 @@ class Services:
         diff.save(out_path)
         return {"diff_pct": pct, "diff_image": str(out_path), "width": w, "height": h, "changed_bbox": bbox}
 
+    # ---------------- visual parity ----------------
+    def _parity_source(self, spec: Any, role: str) -> dict[str, Any]:
+        """A page to compare: a URL, inline HTML or the id of a stored render (a dict {url | html | render_id} also works)."""
+        if isinstance(spec, dict):
+            spec = spec.get("render_id") or spec.get("url") or spec.get("html") or ""
+        text = str(spec or "").strip()
+        if not text:
+            raise ValueError(f"{role}: hace falta una URL, HTML o el id de un render")
+        if text.lower().startswith(("http://", "https://")):
+            self.check_url(text)
+            return {"kind": "url", "url": text, "html": None, "render_id": None, "label": text}
+        if "<" in text:
+            return {"kind": "html", "url": None, "html": text, "render_id": None, "label": f"HTML en línea ({len(text)} caracteres)"}
+        row = self.get_render(text)
+        if row is None:
+            raise LookupError(f"{role}: '{text[:60]}' no es una URL, HTML ni el id de un render conocido.")
+        if row["kind"] == "url" and row["url"]:
+            self.check_url(row["url"])
+            return {"kind": "render", "url": row["url"], "html": None, "render_id": text, "label": f"render {text} ({row['url']})"}
+        source = self.config.renders_dir / text / "source.html"
+        if not source.is_file():
+            raise ValueError(f"{role}: el render {text} no conserva su HTML")
+        return {"kind": "render", "url": None, "html": source.read_text(encoding="utf-8"), "render_id": text, "label": f"render {text}"}
+
+    def visual_parity(self, reference: Any, candidate: Any, *, widths: Optional[list[int]] = None, max_screens: int = 12,
+                      tolerance: float = 0.10, pass_score: float = 98.0, height_tolerance: int = 4, dark: bool = False,
+                      wait_ms: int = 600, label: str = "") -> dict[str, Any]:
+        """Compare a candidate page with a reference screen by screen (see `vitruvius_hoard.parity`) and keep the run."""
+        from PIL import Image
+        from . import parity as parity_mod
+        widths = [int(w) for w in (widths or parity_mod.DEFAULT_WIDTHS)]
+        if not widths or len(widths) > 4 or any(w < 200 or w > 3000 for w in widths):
+            raise ValueError("widths: de 1 a 4 anchuras entre 200 y 3000 px")
+        widths = list(dict.fromkeys(widths))
+        if not 1 <= max_screens <= 40:
+            raise ValueError("max_screens: entre 1 y 40")
+        if not 0 <= tolerance <= 0.5:
+            raise ValueError("tolerance: entre 0 y 0.5 (0.10 = 10 % por canal)")
+        if not 50 <= pass_score <= 100:
+            raise ValueError("pass_score: entre 50 y 100")
+        if not 0 <= height_tolerance <= 500:
+            raise ValueError("height_tolerance: entre 0 y 500 px")
+        ref = self._parity_source(reference, "referencia")
+        cand = self._parity_source(candidate, "candidata")
+        t0 = time.monotonic()
+        run_id = uuid.uuid4().hex[:12]
+        folder = parity_mod.run_dir(self.config.data_dir, run_id)
+        folder.mkdir(parents=True, exist_ok=True)
+        try:
+            shots = {}
+            for tag, src, loads in (("reference", ref, 2), ("candidate", cand, 1)):
+                out = self.browser.parity_capture(html=src["html"], url=src["url"], widths=widths, loads=loads, out_dir=folder,
+                                                  tag=tag, dark=dark, wait_ms=wait_ms)
+                if "error" in out:
+                    raise ValueError(f"{'referencia' if tag == 'reference' else 'candidata'}: {out['error']}" + (f" ({out['hint']})" if out.get("hint") else ""))
+                shots[tag] = out
+            errors = list(shots["reference"].get("errors") or []) + list(shots["candidate"].get("errors") or [])
+            got = {tag: {(c["width"], c["load"]): c for c in shots[tag]["captures"]} for tag in shots}
+            results = []
+            for w in widths:
+                if (w, 1) not in got["reference"] or (w, 2) not in got["reference"] or (w, 1) not in got["candidate"]:
+                    errors.append(f"{w} px: no se pudo capturar alguna de las cargas")
+                    continue
+                imgs = {k: Image.open(got[k[0]][(w, k[1])]["path"]) for k in (("reference", 1), ("reference", 2), ("candidate", 1))}
+                try:
+                    for img in imgs.values():
+                        img.load()
+                    vh = parity_mod.viewport_height(w)
+                    entry = parity_mod.compare_widths_images([imgs[("reference", 1)], imgs[("reference", 2)]], imgs[("candidate", 1)], width=w, vh=vh,
+                                                             max_screens=max_screens, tolerance=tolerance, pass_score=pass_score,
+                                                             height_tolerance=height_tolerance, out_dir=folder)
+                finally:
+                    for img in imgs.values():
+                        img.close()
+                for tag in ("reference", "candidate"):
+                    Path(got[tag][(w, 1)]["path"]).replace(folder / f"{tag}-{w}.png")
+                Path(got["reference"][(w, 2)]["path"]).unlink(missing_ok=True)
+                results.append(entry)
+            if not results:
+                raise ValueError("no se pudo capturar ninguna anchura: " + "; ".join(errors))
+            summary = parity_mod.summarize(results, errors)
+            run = {"id": run_id, "created_ts": time.time(), "label": label.strip()[:200], "reference": {k: v for k, v in ref.items() if k != "html"},
+                   "candidate": {k: v for k, v in cand.items() if k != "html"},
+                   "params": {"widths": widths, "max_screens": max_screens, "tolerance": tolerance, "pass_score": pass_score,
+                              "height_tolerance": height_tolerance, "dark": dark},
+                   "widths": results, "summary": summary, "passed": summary["passed"], "ms": round((time.monotonic() - t0) * 1000)}
+            parity_mod.save_run(self.config.data_dir, run)
+        except BaseException:
+            import shutil
+            shutil.rmtree(folder, ignore_errors=True)
+            raise
+        self._emit_event("vitruvius.parity.done", {"parity_id": run_id, "passed": run["passed"]})
+        return self._parity_urls(run)
+
+    @staticmethod
+    def _parity_urls(run: dict[str, Any]) -> dict[str, Any]:
+        base = f"/api/parity/{run['id']}"
+        out = dict(run)
+        out["report_url"] = f"{base}/report"
+        out["widths"] = []
+        for w in run["widths"]:
+            w = dict(w)
+            if w.get("images"):
+                w["image_urls"] = {k: f"{base}/files/{v}" for k, v in w["images"].items()}
+            w["screens"] = [dict(s, diff_url=f"{base}/files/{s['diff_image']}" if s.get("diff_image") else None) for s in w["screens"]]
+            out["widths"].append(w)
+        return out
+
+    def parity_get(self, run_id: str) -> dict[str, Any]:
+        from . import parity as parity_mod
+        return self._parity_urls(parity_mod.get_run(self.config.data_dir, run_id))
+
+    def parity_list(self, limit: int = 20) -> list[dict[str, Any]]:
+        from . import parity as parity_mod
+        return parity_mod.list_runs(self.config.data_dir, limit)
+
+    def parity_delete(self, run_id: str) -> dict[str, Any]:
+        from . import parity as parity_mod
+        parity_mod.delete_run(self.config.data_dir, run_id)
+        return {"ok": True, "id": run_id}
+
+    def parity_file_path(self, run_id: str, name: str) -> Path:
+        from . import parity as parity_mod
+        parity_mod.get_run(self.config.data_dir, run_id)  # 404 when the run is gone
+        return parity_mod.file_path(self.config.data_dir, run_id, name)
+
     def _system_tokens(self, tokens_id: Optional[str]) -> Optional[dict[str, Any]]:
         """The tokens of a stored design system, for the rules that compare a page with it (None when none is asked for)."""
         if not tokens_id:

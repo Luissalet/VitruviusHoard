@@ -32,6 +32,7 @@
     "kept-elements-check",
     "vision-critique",
     "render-diff",
+    "visual-parity",
     "design-tokens",
     "oklch-palettes",
     "tailwind-export",

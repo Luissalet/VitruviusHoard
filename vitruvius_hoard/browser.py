@@ -747,7 +747,7 @@ class BrowserWorker:
         self.start()
         job = Job(kind, payload)
         self._queue.put(job)
-        timeout = max(self.timeout_s, 300) if kind == "motion" else (max(self.timeout_s, 150) if kind == "vitals" else self.timeout_s)
+        timeout = max(self.timeout_s, 300) if kind in ("motion", "parity") else (max(self.timeout_s, 150) if kind == "vitals" else self.timeout_s)
         if not job.event.wait(timeout):
             return {"error": "timeout", "hint": f"render job exceeded {self.timeout_s}s"}
         if job.error:
@@ -766,7 +766,58 @@ class BrowserWorker:
             return export_frames(browser, Composition.model_validate(job.payload["composition"]), Path(job.payload["out_dir"]), Path(audio) if audio else None)
         if job.kind == "vitals":
             return self._vitals(browser, job.payload)
+        if job.kind == "parity":
+            return self._parity(browser, job.payload)
         return {"error": f"unknown job kind {job.kind}"}
+
+    # -- visual parity: frozen full-page captures ------------------------------
+    def _parity(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
+        """Load one page `loads` times at each width in a frozen browser (fixed clock, seeded random numbers, no transitions or
+        animations, videos on frame 0), force lazy content by scrolling to the bottom and back, and save one full-page PNG per
+        load and width as `<tag>-<width>-<load>.png`. Reports the document height seen at each capture."""
+        from . import parity
+        html: Optional[str] = payload.get("html")
+        url: Optional[str] = payload.get("url")
+        problem = self.url_problem(url) if html is None else None
+        if problem:
+            return {"error": "This URL cannot be opened.", "hint": problem}
+        out_dir = Path(payload["out_dir"])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        tag = payload.get("tag", "page")
+        wait_ms = int(payload.get("wait_ms", 600))
+        cap = int(payload.get("max_height", parity.MAX_PAGE_HEIGHT))
+        captures: list[dict[str, Any]] = []
+        errors: list[str] = []
+        for width in payload["widths"]:
+            vh = int(payload.get("viewport_heights", {}).get(str(width)) or parity.viewport_height(width))
+            for load in range(1, int(payload.get("loads", 1)) + 1):
+                context = browser.new_context(viewport={"width": int(width), "height": vh}, device_scale_factor=1,
+                                              color_scheme="dark" if payload.get("dark") else "light", reduced_motion="reduce",
+                                              locale="es-ES", timezone_id="UTC")
+                self._guard(context)
+                context.add_init_script(parity.FREEZE_JS)
+                page = context.new_page()
+                try:
+                    if html is not None:
+                        page.set_content(html, wait_until="load")
+                    else:
+                        try:
+                            page.goto(url, wait_until="networkidle", timeout=20000)
+                        except Exception:  # noqa: BLE001
+                            page.goto(url, wait_until="load", timeout=25000)
+                    page.wait_for_timeout(wait_ms)
+                    height = int(page.evaluate(parity.SETTLE_JS))
+                    path = out_dir / f"{tag}-{width}-{load}.png"
+                    shot = {"full_page": True, "animations": "disabled", "caret": "hide", "path": str(path)}
+                    if height > cap:
+                        shot["clip"] = {"x": 0, "y": 0, "width": int(width), "height": cap}
+                    page.screenshot(**shot)
+                    captures.append({"width": int(width), "load": load, "path": str(path), "document_height": height})
+                except Exception as error:  # noqa: BLE001
+                    errors.append(f"{width} px, carga {load}: {str(error).strip().splitlines()[0][:200] if str(error).strip() else type(error).__name__}")
+                finally:
+                    context.close()
+        return {"captures": captures, "errors": errors}
 
     # -- Core Web Vitals (lab) -----------------------------------------------
     def _vitals(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
@@ -969,6 +1020,12 @@ class BrowserWorker:
             "html": html, "url": url, "widths": widths or [390, 1024, 1440], "full_page": full_page,
             "dark": dark, "wait_ms": wait_ms, "record": record, "out_dir": str(out_dir),
         })
+
+    def parity_capture(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: list[int], loads: int = 1,
+                       out_dir: Path, tag: str = "page", dark: bool = False, wait_ms: int = 600) -> dict[str, Any]:
+        """Frozen full-page captures of one page for the visual-parity comparison (`vitruvius_hoard.parity`)."""
+        return self._submit("parity", {"html": html, "url": url, "widths": widths, "loads": loads, "out_dir": str(out_dir),
+                                       "tag": tag, "dark": dark, "wait_ms": wait_ms})
 
     def status(self) -> dict[str, Any]:
         ok = self._browser is not None

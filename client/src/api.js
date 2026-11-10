@@ -47,6 +47,10 @@ export const api = {
     return r.blob();
   },
   status: () => request("GET", "/design/api/status"),
+  parityList: (limit) => request("GET", "/design/api/parity", { params: { limit } }),
+  parity: (id) => request("GET", `/design/api/parity/${encodeURIComponent(id)}`),
+  parityCreate: (body) => request("POST", "/design/api/parity", { body }),
+  parityDelete: (id) => request("DELETE", `/design/api/parity/${encodeURIComponent(id)}`),
 
   librarySearch: (params) => request("GET", "/design/api/library/search", { params }),
   embeddings: () => request("GET", "/design/api/library/embeddings"),
