@@ -157,14 +157,19 @@ def diff_picture(reference: Image.Image, bad: Image.Image, noise: Image.Image) -
 def compare_widths_images(ref_loads: list[Image.Image], cand: Image.Image, *, width: int, vh: int, max_screens: int = DEFAULT_MAX_SCREENS,
                           tolerance: float = DEFAULT_TOLERANCE, pass_score: float = DEFAULT_PASS_SCORE,
                           height_tolerance: int = DEFAULT_HEIGHT_TOLERANCE, out_dir: Optional[Path] = None,
-                          save_screens: bool = True) -> dict[str, Any]:
-    """Everything for one viewport width. `ref_loads` are the full-page captures of the reference (one or two loads)."""
+                          save_screens: bool = True, ref_document_height: Optional[int] = None,
+                          cand_document_height: Optional[int] = None) -> dict[str, Any]:
+    """Everything for one viewport width. `ref_loads` are the full-page captures of the reference (one or two loads).
+    `*_document_height` are the real page heights when a capture was cut at MAX_PAGE_HEIGHT: the height check uses them."""
     ref_loads = [_rgb(i) for i in ref_loads]
     cand = _rgb(cand)
     ref = ref_loads[0]
-    h_ref, h_cand = ref.height, cand.height
+    h_ref = int(ref_document_height or ref.height)
+    h_cand = int(cand_document_height or cand.height)
     delta = h_cand - h_ref
     height_pass = abs(delta) <= height_tolerance
+    real_ref, real_cand = h_ref, h_cand
+    h_ref, h_cand = (min(h_ref, ref.height), min(h_cand, cand.height))  # what the images actually hold
     # Inside the tolerance the extra rows of the taller page are not scored (they are not a visible mismatch);
     # beyond it they count as different, so a page that grew or shrank cannot pass.
     h_cmp = min(h_ref, h_cand) if height_pass else max(h_ref, h_cand)
@@ -197,11 +202,11 @@ def compare_widths_images(ref_loads: list[Image.Image], cand: Image.Image, *, wi
     overall = round(100.0 * (stable_all - bad_all) / stable_all, 2) if stable_all else None
     failing = [s["index"] + 1 for s in screens if not s["passed"]]
     result = {
-        "width": width, "viewport_height": vh, "reference_height": h_ref, "candidate_height": h_cand, "height_delta": delta,
+        "width": width, "viewport_height": vh, "reference_height": real_ref, "candidate_height": real_cand, "height_delta": delta,
         "height_pass": height_pass, "screens_total": total_screens, "screens_checked": checked, "truncated": total_screens > checked,
         "screens": screens, "score": overall, "min_screen_score": min([s["score"] for s in screens if s["score"] is not None], default=None),
         "noise_px": noise_all, "noise_pct": round(100.0 * noise_all / max(1, stable_all + noise_all), 2),
-        "failing_screens": failing, "passed": bool(height_pass and not failing),
+        "failing_screens": failing, "passed": bool(height_pass and not failing and total_screens <= checked),
     }
     if out_dir is not None:
         full_diff.save(Path(out_dir) / f"diff-{width}.png")

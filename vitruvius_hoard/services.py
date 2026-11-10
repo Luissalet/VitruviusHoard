@@ -471,7 +471,9 @@ class Services:
                     vh = parity_mod.viewport_height(w)
                     entry = parity_mod.compare_widths_images([imgs[("reference", 1)], imgs[("reference", 2)]], imgs[("candidate", 1)], width=w, vh=vh,
                                                              max_screens=max_screens, tolerance=tolerance, pass_score=pass_score,
-                                                             height_tolerance=height_tolerance, out_dir=folder)
+                                                             height_tolerance=height_tolerance, out_dir=folder,
+                                                             ref_document_height=got["reference"][(w, 1)].get("document_height"),
+                                                             cand_document_height=got["candidate"][(w, 1)].get("document_height"))
                 finally:
                     for img in imgs.values():
                         img.close()
