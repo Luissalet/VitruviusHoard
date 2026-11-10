@@ -6822,6 +6822,328 @@
     "module": "design"
   },
   {
+    "name": "remake_start",
+    "description": "Remake a web page from a URL or screenshot until it matches it screen by screen. Rehacer una web.\nCaptures the reference frozen at desktop and mobile (layout, texts, palette, fonts, images, CSS), builds a first candidate (copy: the page's own HTML, CSS and files without trackers; rebuild: new HTML/CSS written by the family's global model), scores it with visual parity and repairs the first failing screen of each width in a loop (missing files fetched, model edits with element-by-element differences and pictures) until every screen passes or the rounds run out; a round that scores lower is undone. Runs in the background: poll remake_get. Pages behind a bot check or with sign-in/payment forms are refused.\nSinónimos: rehacer, clonar una web, copiar una landing, reconstruir una página, igualar una maqueta.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "properties": {
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The public page to remake (http/https).",
+          "title": "Url"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "maxLength": 40000000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Instead of a URL: a full-page screenshot as base64 PNG/JPEG (data: URLs accepted). Forces mode 'rebuild' and needs a vision model.",
+          "title": "Image"
+        },
+        "image_width": {
+          "default": 1440,
+          "description": "Width in CSS px the screenshot was taken at.",
+          "maximum": 3000,
+          "minimum": 200,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "copy",
+          "description": "copy: the page's own rendered HTML, CSS and files, then CSS fixes from the model; rebuild: new hand-written HTML/CSS from the model.",
+          "enum": [
+            "copy",
+            "rebuild"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "widths": {
+          "description": "Viewport widths in px (desktop and mobile by default).",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 3,
+          "title": "Widths",
+          "type": "array"
+        },
+        "max_rounds": {
+          "anyOf": [
+            {
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rounds including the first one (default 4 for copy, 6 for rebuild).",
+          "title": "Max Rounds"
+        },
+        "pass_score": {
+          "default": 98.0,
+          "description": "A screen passes with at least this % of stable pixels within the tolerance.",
+          "maximum": 100,
+          "minimum": 50,
+          "title": "Pass Score",
+          "type": "number"
+        },
+        "tolerance": {
+          "default": 0.1,
+          "description": "Colour tolerance per channel as a share of 255.",
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Tolerance",
+          "type": "number"
+        },
+        "keep_scripts": {
+          "default": false,
+          "description": "copy mode: keep the original document and its scripts instead of the static snapshot.",
+          "title": "Keep Scripts",
+          "type": "boolean"
+        },
+        "note": {
+          "default": "",
+          "description": "Extra instructions for the model in every round.",
+          "maxLength": 2000,
+          "title": "Note",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Label",
+          "type": "string"
+        },
+        "wait_s": {
+          "default": 0,
+          "description": "Wait up to this many seconds for the job before answering (0 = answer at once and poll remake_get).",
+          "maximum": 900,
+          "minimum": 0,
+          "title": "Wait S",
+          "type": "number"
+        }
+      },
+      "title": "RemakeStartArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 960.0,
+    "module": "design"
+  },
+  {
+    "name": "remake_get",
+    "description": "Read a remake: status, rounds with parity scores, best round, result files, assets and licences. Leer rehacer.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "remake_list",
+    "description": "List remakes, newest first, with status and best score. Listar rehacer.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "RemakeListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "remake_code",
+    "description": "Read the code of a remake's result (index.html or a file under assets/). Código de rehacer.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "path": {
+          "default": "index.html",
+          "description": "A file of the result (index.html or something under assets/).",
+          "maxLength": 400,
+          "title": "Path",
+          "type": "string"
+        },
+        "max_chars": {
+          "default": 60000,
+          "maximum": 400000,
+          "minimum": 1000,
+          "title": "Max Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeCodeArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "remake_continue",
+    "description": "Run more repair rounds on a remake, from its best round, optionally with new instructions. Seguir corrigiendo.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "rounds": {
+          "default": 2,
+          "description": "How many more repair rounds.",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Rounds",
+          "type": "integer"
+        },
+        "note": {
+          "default": "",
+          "description": "New instructions for the model (replaces the previous note).",
+          "maxLength": 2000,
+          "title": "Note",
+          "type": "string"
+        },
+        "wait_s": {
+          "default": 0,
+          "maximum": 900,
+          "minimum": 0,
+          "title": "Wait S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeContinueArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 960.0,
+    "module": "design"
+  },
+  {
+    "name": "remake_stop",
+    "description": "Stop a running remake after its current step; the best round stays. Parar rehacer.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "remake_delete",
+    "description": "Delete a remake with its files and its parity runs. Borrar rehacer.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "docs_libraries",
     "description": "List indexed libraries, exact versions and project environments (libraries, librerías, versión, entornos)\n\nWhat Babel has indexed (exact versions), the registered environments (project\ninterpreters / node_modules folders; default_for says which one answers Python or\nTypeScript when env is omitted) and recent background jobs. Use it to find an env id, or to follow a docset install / dependency\nindexing job. Installed packages that are not listed yet are indexed automatically\nthe first time api_lookup or api_check_code needs them.\n\nArgs:\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    env: environment id or project path; limits libraries to that environment.\n    limit: libraries per page (default 15, max 200). offset: for the next page.\n\nReturns: {libraries: [{id, ecosystem, name, version, env, status, entries}], total,\n    has_more, next_offset, environments: [{id, label, python, default, ...}],\n    jobs: [{id, kind, status, progress, message}]}.\nKeywords: list libraries, what is installed, which version, environments, job progress,\n    listar librerias, que hay instalado, que version tengo, entornos, progreso\n",
     "inputSchema": {

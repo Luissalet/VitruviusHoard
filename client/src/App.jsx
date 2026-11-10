@@ -16,6 +16,7 @@ import Marks from "./pages/Marks.jsx";
 import Protocols from "./pages/Protocols.jsx";
 import Studies from "./pages/Studies.jsx";
 import Parity from "./pages/Parity.jsx";
+import Remake from "./pages/Remake.jsx";
 
 const PAGES = [
   { path: "motion", key: "nav_motion", icon: "M4 4h16v16H4zM9 8l7 4-7 4z", component: Motion },
@@ -26,6 +27,7 @@ const PAGES = [
   { path: "protocols", key: "nav_protocols", icon: "M5 4v16M19 4v16M5 8h14M19 12H5M5 16h14", component: Protocols },
   { path: "studies", key: "nav_studies", icon: "M4 20V10M10 20V4M16 20v-7M22 20H2", component: Studies },
   { path: "parity", key: "nav_parity", icon: "M3 5h8v14H3zM13 5h8v14h-8zM11 12h2", component: Parity },
+  { path: "remake", key: "nav_remake", icon: "M4 4v6h6M20 20v-6h-6M5.6 15a7 7 0 0011.9 2.4M18.4 9A7 7 0 006.5 6.6", component: Remake },
   { path: "tokens", key: "nav_tokens", icon: "M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.7 7.1 17.2l.9-5.5-4-3.9L9.5 7z", component: Tokens },
   { path: "diagrams", key: "nav_diagrams", icon: "M3 4h6v5H3zM15 4h6v5h-6zM9 15h6v5H9zM6 9v3h12V9M12 12v3", component: Diagrams },
   { path: "gallery", key: "nav_gallery", icon: "M4 5h16v14H4zM4 15l4-4 3 3 5-5 4 4", component: Gallery },

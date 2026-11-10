@@ -51,6 +51,13 @@ export const api = {
   parity: (id) => request("GET", `/design/api/parity/${encodeURIComponent(id)}`),
   parityCreate: (body) => request("POST", "/design/api/parity", { body }),
   parityDelete: (id) => request("DELETE", `/design/api/parity/${encodeURIComponent(id)}`),
+  remakeList: (limit) => request("GET", "/design/api/remake", { params: { limit } }),
+  remake: (id) => request("GET", `/design/api/remake/${encodeURIComponent(id)}`),
+  remakeStart: (body) => request("POST", "/design/api/remake", { body }),
+  remakeContinue: (id, body) => request("POST", `/design/api/remake/${encodeURIComponent(id)}/continue`, { body: { id, ...body } }),
+  remakeStop: (id) => request("POST", `/design/api/remake/${encodeURIComponent(id)}/stop`),
+  remakeDelete: (id) => request("DELETE", `/design/api/remake/${encodeURIComponent(id)}`),
+  remakeCode: (id, path) => request("GET", `/design/api/remake/${encodeURIComponent(id)}/code`, { params: { path } }),
 
   librarySearch: (params) => request("GET", "/design/api/library/search", { params }),
   embeddings: () => request("GET", "/design/api/library/embeddings"),
