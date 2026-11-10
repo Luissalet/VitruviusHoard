@@ -118,8 +118,11 @@ class FakeBrowser:
     parity_hook = None
     parity_noise = False
 
-    def parity_capture(self, *, html=None, url=None, widths, loads=1, out_dir, tag="page", dark=False, wait_ms=600) -> dict:
-        self.calls.append({"parity": tag, "html": html, "url": url, "widths": widths, "loads": loads})
+    def parity_capture(self, *, html=None, url=None, widths, loads=1, out_dir, tag="page", dark=False, wait_ms=600, mount=None,
+                       outline=False) -> dict:
+        if mount:  # a remake candidate: the page is the index.html of the mounted folder
+            html = (Path(mount["root"]) / "index.html").read_text(encoding="utf-8")
+        self.calls.append({"parity": tag, "html": html, "url": url, "widths": widths, "loads": loads, "mount": mount})
         if self.fail:
             return {"error": "no browser", "hint": "python -m playwright install chromium"}
         out_dir = Path(out_dir)
@@ -132,8 +135,83 @@ class FakeBrowser:
                     image = _fake_parity_page(w, html or url or "", load, self.parity_noise)
                 path = out_dir / f"{tag}-{w}-{load}.png"
                 image.save(path)
+                row = {"width": w, "load": load, "path": str(path), "document_height": image.height}
+                if outline and load == 1:
+                    row["outline"] = self.remake_outline_hook(html, w) if self.remake_outline_hook else _fake_outline(w)
+                captures.append(row)
+        out = {"captures": captures, "errors": []}
+        if mount:
+            out["missing"] = list(self.remake_missing)
+            self.remake_missing = []
+        return out
+
+    # Remake ("Rehacer"): the reference capture returns `remake_snapshot` with `remake_assets` (url, type, resource type, bytes);
+    # the reference pictures are `_fake_parity_page(w, "reference", load)`, so a candidate the parity_hook draws the same way
+    # matches. `remake_extra` is merged into the result (wall, sensitive ...); `remake_missing` is what the next candidate asks
+    # for and lacks; `fetch_bodies` answers fetch_files.
+    remake_snapshot = ('<!DOCTYPE html><html lang="es"><head><title>Sitio</title><link rel="stylesheet" href="https://site.test/css/a.css">'
+                       '<script src="https://www.googletagmanager.com/gtag/js?id=G-1"></script><script>window.app=1</script></head>'
+                       '<body><h1>Hola mundo</h1><img src="https://site.test/img/x.png" alt="x"></body></html>')
+    remake_assets = [("https://site.test/css/a.css", "text/css", "stylesheet",
+                      b"@font-face{font-family:Acme;src:url(../fonts/acme.woff2) format('woff2')}body{background:url(../img/bg.png)}"),
+                     ("https://site.test/img/x.png", "image/png", "image", b"\x89PNG-x"),
+                     ("https://site.test/img/bg.png", "image/png", "image", b"\x89PNG-bg"),
+                     ("https://site.test/fonts/acme.woff2", "font/woff2", "font", b"wOF2-acme"),
+                     ("https://site.test/js/app.js", "text/javascript", "script", b"console.log(1)")]
+    remake_extra: dict = {}
+    remake_missing: list = []
+    remake_outline_hook = None
+    fetch_bodies: dict = {}
+
+    def remake_capture(self, *, url, widths, out_dir, wait_ms=800, loads=2) -> dict:
+        self.calls.append({"remake_capture": url, "widths": widths, "loads": loads})
+        if self.fail:
+            return {"error": "no browser", "hint": "python -m playwright install chromium"}
+        out_dir = Path(out_dir)
+        raw = out_dir / "raw"
+        raw.mkdir(parents=True, exist_ok=True)
+        captures = []
+        for w in widths:
+            for load in range(1, loads + 1):
+                image = _fake_parity_page(w, "reference", load, self.parity_noise)
+                path = out_dir / f"reference-{w}-{load}.png"
+                image.save(path)
                 captures.append({"width": w, "load": load, "path": str(path), "document_height": image.height})
-        return {"captures": captures, "errors": []}
+        assets = []
+        for i, (aurl, ctype, rtype, body) in enumerate(self.remake_assets):
+            file = raw / f"{i:05d}.bin"
+            file.write_bytes(body)
+            assets.append({"url": aurl, "content_type": ctype, "resource_type": rtype, "file": str(file), "bytes": len(body)})
+        out = {"captures": captures, "outlines": {str(w): _fake_outline(w) for w in widths}, "assets": assets,
+               "snapshot": {"html": self.remake_snapshot, "base": url}, "document_html": self.remake_snapshot, "final_url": url,
+               "status": 200, "sensitive": {"password": 0, "card": 0}, "errors": []}
+        out.update(self.remake_extra)
+        return out
+
+    def fetch_files(self, *, urls, out_dir) -> dict:
+        self.calls.append({"fetch": list(urls)})
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        files = []
+        for i, u in enumerate(urls):
+            if u in self.fetch_bodies:
+                ctype, body = self.fetch_bodies[u]
+                file = out_dir / f"{i:05d}.bin"
+                file.write_bytes(body)
+                files.append({"url": u, "file": str(file), "content_type": ctype, "bytes": len(body)})
+        return {"files": files, "errors": []}
+
+
+def _fake_outline(width: int) -> dict:
+    return {"width": width, "height": 300, "title": "Sitio", "lang": "es", "page_bg": "#ffffff",
+            "palette": [{"c": "#111111", "w": 50}, {"c": "#ffffff", "w": 40}], "fonts": ["Acme 400"],
+            "items": [{"t": "h1", "s": "h1", "x": 10, "y": 20, "w": width - 20, "h": 40, "d": 1, "tx": "Hola mundo", "f": "32px 700 Acme",
+                       "lh": "40px", "c": "#111111"},
+                      {"t": "img", "s": "img", "x": 10, "y": 80, "w": 200, "h": 100, "d": 1, "src": "https://site.test/img/x.png", "alt": "x",
+                       "nw": 400, "nh": 200}],
+            "links": [{"href": "https://twitter.com/site", "text": "X", "nav": False}, {"href": "https://site.test/precios", "text": "Precios", "nav": True},
+                      {"href": "mailto:hola@site.test", "text": "Correo", "nav": False}],
+            "forms": [{"action": "/contacto", "method": "post", "fields": ["email", "textarea"]}]}
 
 
 def _fake_parity_page(width: int, key: str, load: int, noise: bool):

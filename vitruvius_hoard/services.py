@@ -103,6 +103,9 @@ class Services:
         self.embedder = make_embedder(config.embed_backend, config.embed_model, default_cache_dir(config.data_dir))
         self.dense = DenseIndex(self.db, self.embedder, emit=self._emit_event)
 
+        from .remake import RemakeRunner
+        self.remake = RemakeRunner(self)  # "Rehacer": a reference page rebuilt round by round until it matches
+
     def _emit_event(self, type_: str, data: dict[str, Any]) -> None:
         if type_ == "vitruvius.source.ingested" and hasattr(self, "dense"):
             # New chunk texts: the cached matrix is stale; embed what changed when the model is at hand.
@@ -131,7 +134,7 @@ class Services:
             import asyncio
             if self._link is not None:
                 asyncio.run(self._link.aclose())
-        steps = (self.ingest_runner.stop, dense, self.app_projects.close,
+        steps = (self.remake.close, self.ingest_runner.stop, dense, self.app_projects.close,
                  self.browser.stop, app_browser, link, self.db.close)
         completed = getattr(self, '_stop_completed', 0)
         while completed < len(steps):

@@ -1252,4 +1252,8 @@ TOOLS.extend(_study_tools())
 from .parity_tools import tools as _parity_tools  # noqa: E402
 
 TOOLS.extend(_parity_tools())
+
+from .remake_tools import tools as _remake_tools  # noqa: E402
+
+TOOLS.extend(_remake_tools())
 TOOLS_BY_NAME.update({t.name: t for t in TOOLS})

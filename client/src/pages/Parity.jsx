@@ -8,7 +8,7 @@ const pic = (url) => `/design${url}`;
 const parseWidths = (text) => text.split(/[\s,;]+/).map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n));
 const when = (ts) => (ts ? new Date(ts * 1000).toLocaleString() : "");
 
-function Slider({ width, es }) {
+export function Slider({ width, es }) {
   const [pos, setPos] = useState(50);
   const [mode, setMode] = useState("slider");
   const box = useRef(null);

@@ -747,7 +747,8 @@ class BrowserWorker:
         self.start()
         job = Job(kind, payload)
         self._queue.put(job)
-        timeout = max(self.timeout_s, 300) if kind in ("motion", "parity") else (max(self.timeout_s, 150) if kind == "vitals" else self.timeout_s)
+        timeout = (max(self.timeout_s, 600) if kind == "remake_capture" else max(self.timeout_s, 300) if kind in ("motion", "parity", "fetch")
+                   else (max(self.timeout_s, 150) if kind == "vitals" else self.timeout_s))
         if not job.event.wait(timeout):
             return {"error": "timeout", "hint": f"render job exceeded {self.timeout_s}s"}
         if job.error:
@@ -768,7 +769,160 @@ class BrowserWorker:
             return self._vitals(browser, job.payload)
         if job.kind == "parity":
             return self._parity(browser, job.payload)
+        if job.kind == "remake_capture":
+            return self._remake_capture(browser, job.payload)
+        if job.kind == "fetch":
+            return self._fetch(browser, job.payload)
         return {"error": f"unknown job kind {job.kind}"}
+
+    # -- a folder served as a web site (remake candidates) ------------------------
+    @staticmethod
+    def _mount(context: Any, mount: Optional[dict[str, Any]], missing: list[str]) -> None:
+        """Answer every request to `mount["origin"]` from the files under `mount["root"]` (registered after the guard, so it
+        runs first); paths that are not there answer 404 and are listed in `missing`."""
+        if not mount:
+            return
+        import mimetypes
+        from urllib.parse import unquote, urlsplit
+        root = Path(mount["root"]).resolve()
+        origin = str(mount["origin"]).rstrip("/")
+
+        def serve(route: Any) -> None:
+            path = unquote(urlsplit(route.request.url).path).lstrip("/") or "index.html"
+            target = (root / path).resolve()
+            if (root in target.parents) and target.is_file():
+                kind = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+                if kind.startswith("text/") or kind in ("application/javascript", "image/svg+xml"):
+                    kind += "; charset=utf-8"
+                route.fulfill(path=str(target), content_type=kind, headers={"Cache-Control": "no-store"})
+                return
+            if path not in missing and len(missing) < 500:
+                missing.append(path)
+            route.fulfill(status=404, body="", content_type="text/plain")
+
+        context.route(origin + "/**", serve)
+
+    # -- remake: the reference, frozen, with its layout, snapshot and files -----------
+    def _remake_capture(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
+        """Load the reference `loads` times at each width in the frozen browser of the parity check and save one full-page
+        PNG per load (`reference-<width>-<load>.png`). The first load of each width also returns the layout (`remake.OUTLINE_JS`)
+        and saves every stylesheet, image, font, script and plain video the page loaded into `raw/`; the first load of the
+        first width also returns the static snapshot of the rendered page, the original document and the sign-in/payment check."""
+        from . import parity, remake
+        url = payload.get("url")
+        problem = self.url_problem(url)
+        if problem:
+            return {"error": "This URL cannot be opened.", "hint": problem}
+        out_dir = Path(payload["out_dir"])
+        raw_dir = out_dir / "raw"
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        wait_ms = int(payload.get("wait_ms", 800))
+        cap = parity.MAX_PAGE_HEIGHT
+        result: dict[str, Any] = {"captures": [], "outlines": {}, "assets": [], "errors": []}
+        saved: dict[str, dict[str, Any]] = {}
+        total = 0
+        keep_types = ("stylesheet", "image", "font", "media", "script", "other")
+        for index, width in enumerate(payload["widths"]):
+            vh = parity.viewport_height(int(width))
+            for load in range(1, int(payload.get("loads", 2)) + 1):
+                context = browser.new_context(viewport={"width": int(width), "height": vh}, device_scale_factor=1, color_scheme="light",
+                                              reduced_motion="reduce", locale="es-ES", timezone_id="UTC")
+                self._guard(context)
+                context.add_init_script(parity.FREEZE_JS)
+                page = context.new_page()
+                responses: list[Any] = []
+                if load == 1:
+                    page.on("response", lambda r: responses.append(r) if len(responses) < 3000 else None)
+                try:
+                    try:
+                        response = page.goto(url, wait_until="networkidle", timeout=25000)
+                    except Exception:  # noqa: BLE001
+                        response = page.goto(url, wait_until="load", timeout=30000)
+                    if index == 0 and load == 1:
+                        status = response.status if response else 0
+                        if remake.looks_like_bot_wall(status, page.content()):
+                            return {"error": "bot check", "wall": True, "hint": f"{url} answers with a bot check"}
+                        result["status"] = status
+                        result["final_url"] = page.url
+                        try:
+                            result["document_html"] = response.text() if response else ""
+                        except Exception:  # noqa: BLE001
+                            result["document_html"] = ""
+                    page.wait_for_timeout(wait_ms)
+                    height = int(page.evaluate(parity.SETTLE_JS))
+                    path = out_dir / f"reference-{width}-{load}.png"
+                    shot = {"full_page": True, "animations": "disabled", "caret": "hide", "path": str(path)}
+                    if height > cap:
+                        shot["clip"] = {"x": 0, "y": 0, "width": int(width), "height": cap}
+                    page.screenshot(**shot)
+                    result["captures"].append({"width": int(width), "load": load, "path": str(path), "document_height": height})
+                    if load != 1:
+                        continue
+                    result["outlines"][str(width)] = page.evaluate(remake.OUTLINE_JS)
+                    if index == 0:
+                        result["sensitive"] = page.evaluate(remake.SENSITIVE_JS)
+                        result["snapshot"] = page.evaluate(remake.SNAPSHOT_JS)  # changes the page: last
+                    for r in responses:
+                        try:
+                            rurl = r.url
+                            if rurl in saved or not rurl.startswith(("http://", "https://")) or not 200 <= r.status < 300 or r.status == 206:
+                                continue
+                            rtype = r.request.resource_type
+                            if rtype not in keep_types or remake.is_tracker(rurl):
+                                continue
+                            headers = r.headers
+                            ctype = (headers.get("content-type") or "").split(";")[0].strip().lower()
+                            if rtype == "other" and not ctype.startswith(("image/", "font/", "text/css", "application/font")):
+                                continue
+                            length = int(headers.get("content-length") or 0)
+                            if length > remake.MAX_ASSET_BYTES or total > remake.MAX_TOTAL_BYTES:
+                                continue
+                            body = r.body()
+                            if len(body) > remake.MAX_ASSET_BYTES:
+                                continue
+                            file = raw_dir / f"{len(saved):05d}.bin"
+                            file.write_bytes(body)
+                            total += len(body)
+                            saved[rurl] = {"url": rurl, "content_type": ctype, "resource_type": rtype, "file": str(file), "bytes": len(body)}
+                        except Exception:  # noqa: BLE001 - a response without a body (redirect, aborted) is skipped
+                            continue
+                except Exception as error:  # noqa: BLE001
+                    result["errors"].append(f"{width} px, carga {load}: {str(error).strip().splitlines()[0][:200] if str(error).strip() else type(error).__name__}")
+                finally:
+                    context.close()
+        result["assets"] = list(saved.values())
+        return result
+
+    def _fetch(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
+        """Download files one at a time (a short pause between them), each address checked like a page request."""
+        out_dir = Path(payload["out_dir"])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        context = browser.new_context()
+        files, errors = [], []
+        try:
+            for i, url in enumerate(payload.get("urls") or []):
+                problem = self.url_problem(url)
+                if problem:
+                    errors.append(f"{url}: {problem}")
+                    continue
+                try:
+                    r = context.request.get(url, timeout=20000, max_redirects=5)
+                    if not r.ok:
+                        errors.append(f"{url}: {r.status}")
+                        continue
+                    body = r.body()
+                    if len(body) > 20_000_000:
+                        continue
+                    file = out_dir / f"{i:05d}.bin"
+                    file.write_bytes(body)
+                    files.append({"url": url, "file": str(file), "content_type": (r.headers.get("content-type") or "").split(";")[0].strip().lower(),
+                                  "bytes": len(body)})
+                except Exception as error:  # noqa: BLE001
+                    errors.append(f"{url}: {str(error).strip().splitlines()[0][:160] if str(error).strip() else type(error).__name__}")
+                time.sleep(0.3)
+        finally:
+            context.close()
+        return {"files": files, "errors": errors}
 
     # -- visual parity: frozen full-page captures ------------------------------
     def _parity(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
@@ -778,7 +932,9 @@ class BrowserWorker:
         from . import parity
         html: Optional[str] = payload.get("html")
         url: Optional[str] = payload.get("url")
-        problem = self.url_problem(url) if html is None else None
+        mount = payload.get("mount")
+        served = bool(mount and url and url.startswith(str(mount["origin"]).rstrip("/") + "/"))
+        problem = self.url_problem(url) if html is None and not served else None
         if problem:
             return {"error": "This URL cannot be opened.", "hint": problem}
         out_dir = Path(payload["out_dir"])
@@ -788,6 +944,10 @@ class BrowserWorker:
         cap = int(payload.get("max_height", parity.MAX_PAGE_HEIGHT))
         captures: list[dict[str, Any]] = []
         errors: list[str] = []
+        missing: list[str] = []
+        outline_js = None
+        if payload.get("outline"):
+            from .remake import OUTLINE_JS as outline_js
         for width in payload["widths"]:
             vh = int(payload.get("viewport_heights", {}).get(str(width)) or parity.viewport_height(width))
             for load in range(1, int(payload.get("loads", 1)) + 1):
@@ -795,6 +955,7 @@ class BrowserWorker:
                                               color_scheme="dark" if payload.get("dark") else "light", reduced_motion="reduce",
                                               locale="es-ES", timezone_id="UTC")
                 self._guard(context)
+                self._mount(context, mount, missing)
                 context.add_init_script(parity.FREEZE_JS)
                 page = context.new_page()
                 try:
@@ -812,12 +973,21 @@ class BrowserWorker:
                     if height > cap:
                         shot["clip"] = {"x": 0, "y": 0, "width": int(width), "height": cap}
                     page.screenshot(**shot)
-                    captures.append({"width": int(width), "load": load, "path": str(path), "document_height": height})
+                    row = {"width": int(width), "load": load, "path": str(path), "document_height": height}
+                    if outline_js and load == 1:
+                        try:
+                            row["outline"] = page.evaluate(outline_js)
+                        except Exception:  # noqa: BLE001 - the score stands without the layout
+                            pass
+                    captures.append(row)
                 except Exception as error:  # noqa: BLE001
                     errors.append(f"{width} px, carga {load}: {str(error).strip().splitlines()[0][:200] if str(error).strip() else type(error).__name__}")
                 finally:
                     context.close()
-        return {"captures": captures, "errors": errors}
+        out = {"captures": captures, "errors": errors}
+        if mount:
+            out["missing"] = missing
+        return out
 
     # -- Core Web Vitals (lab) -----------------------------------------------
     def _vitals(self, browser, payload: dict[str, Any]) -> dict[str, Any]:
@@ -1022,10 +1192,20 @@ class BrowserWorker:
         })
 
     def parity_capture(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: list[int], loads: int = 1,
-                       out_dir: Path, tag: str = "page", dark: bool = False, wait_ms: int = 600) -> dict[str, Any]:
-        """Frozen full-page captures of one page for the visual-parity comparison (`vitruvius_hoard.parity`)."""
+                       out_dir: Path, tag: str = "page", dark: bool = False, wait_ms: int = 600, mount: Optional[dict[str, Any]] = None,
+                       outline: bool = False) -> dict[str, Any]:
+        """Frozen full-page captures of one page for the visual-parity comparison (`vitruvius_hoard.parity`). `mount`
+        ({origin, root}) serves a local folder at that origin; `outline` also returns the layout of the first load."""
         return self._submit("parity", {"html": html, "url": url, "widths": widths, "loads": loads, "out_dir": str(out_dir),
-                                       "tag": tag, "dark": dark, "wait_ms": wait_ms})
+                                       "tag": tag, "dark": dark, "wait_ms": wait_ms, "mount": mount, "outline": outline})
+
+    def remake_capture(self, *, url: str, widths: list[int], out_dir: Path, wait_ms: int = 800, loads: int = 2) -> dict[str, Any]:
+        """The reference of a remake: frozen captures, layout, snapshot and the files it loaded (`vitruvius_hoard.remake`)."""
+        return self._submit("remake_capture", {"url": url, "widths": widths, "out_dir": str(out_dir), "wait_ms": wait_ms, "loads": loads})
+
+    def fetch_files(self, *, urls: list[str], out_dir: Path) -> dict[str, Any]:
+        """Download these files one by one into `out_dir`."""
+        return self._submit("fetch", {"urls": list(urls), "out_dir": str(out_dir)})
 
     def status(self) -> dict[str, Any]:
         ok = self._browser is not None

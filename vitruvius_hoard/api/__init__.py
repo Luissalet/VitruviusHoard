@@ -17,5 +17,6 @@ from .protocols import router as protocols_router
 from .studio import router as studio_router
 from .studies import router as studies_router
 from .parity import router as parity_router
+from .remake import router as remake_router
 
-ROUTERS = [app_projects_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, marks_router, protocols_router, studio_router, studies_router, parity_router, agent_router]
+ROUTERS = [app_projects_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, marks_router, protocols_router, studio_router, studies_router, parity_router, remake_router, agent_router]
