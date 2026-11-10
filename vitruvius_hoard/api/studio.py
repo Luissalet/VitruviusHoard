@@ -81,7 +81,7 @@ def direction_brief(request: Request, body: BriefBody):
 # ---------------- presets and the registry ----------------
 
 @router.get("/presets")
-def presets_list(request: Request, source: Optional[str] = Query(None, pattern="^(vitruvius|hallmark|hoard)$"),
+def presets_list(request: Request, source: Optional[str] = Query(None, pattern="^(vitruvius|flexoki|hallmark|hoard)$"),
                  q: Optional[str] = Query(None, max_length=120), limit: int = Query(200, ge=1, le=400)):
     rows = presets.listing(source=source, query=q, limit=limit)
     return {"count": len(rows), "total": len(presets.catalogue()), "presets": rows}

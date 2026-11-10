@@ -8,7 +8,7 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .db import Database
 from .hoard_link.web.meta import page_meta
@@ -76,7 +76,9 @@ def extract_palette(image_path: str, n: int = 6) -> list[str]:
 
 def add(db: Database, browser: Any, config: Any, *, url: Optional[str] = None, html: Optional[str] = None,
        tags: Optional[list[str]] = None, note: str = "", video: bool = True, analyze: bool = True,
-       link: Any = None, source_id: Optional[str] = None) -> dict[str, Any]:
+       link: Any = None, source_id: Optional[str] = None,
+       extra_analysis: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None) -> dict[str, Any]:
+    """``extra_analysis(desktop_capture)`` may add keys to the stored analysis (the design galleries store their fragments there)."""
     if not url and not html:
         raise ValueError("reference_add needs a url or html")
     ref_id = uuid.uuid4().hex[:12]
@@ -129,6 +131,8 @@ def add(db: Database, browser: Any, config: Any, *, url: Optional[str] = None, h
             vibe = (text or "").strip().split("\n")[0][:120]
         except Exception as error:  # noqa: BLE001
             analysis = {"error": str(error)}
+    if extra_analysis is not None:
+        analysis.update(extra_analysis(desktop) or {})
 
     row = {
         "id": ref_id, "created_ts": time.time(), "url": url or "", "title": meta.get("title") or (url or "local html"),

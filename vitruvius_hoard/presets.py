@@ -182,10 +182,143 @@ def _hoard() -> list[dict]:
     return out
 
 
+# ---------------------------------------------------------------------------- Flexoki (Steph Ango, MIT)
+
+FLEXOKI_LICENSE = {
+    "name": "MIT", "holder": "Steph Ango (kepano)", "url": "https://stephango.com/flexoki", "repo": "https://github.com/kepano/flexoki",
+    "notice": "Flexoki colour values by Steph Ango, MIT License. https://stephango.com/flexoki",
+}
+# Exact values of the published palette (stephango.com/flexoki). base has paper and black at its ends.
+FLEXOKI_BASE = {"paper": "#fffcf0", "50": "#f2f0e5", "100": "#e6e4d9", "150": "#dad8ce", "200": "#cecdc3", "300": "#b7b5ac", "400": "#9f9d96",
+                "500": "#878580", "600": "#6f6e69", "700": "#575653", "800": "#403e3c", "850": "#343331", "900": "#282726", "950": "#1c1b1a",
+                "black": "#100f0f"}
+_FLEXOKI_STEPS = ("50", "100", "150", "200", "300", "400", "500", "600", "700", "800", "850", "900", "950")
+_FLEXOKI_ROWS = {
+    "red": "ffe1d5 ffcabb fdb2a2 f89a8a e8705f d14d41 c03e35 af3029 942822 6c201c 551b18 3e1715 261312",
+    "orange": "ffe7ce fed3af fcc192 f9ae77 ec8b49 da702c cb6120 bc5215 9d4310 71320d 59290d 40200d 27180e",
+    "yellow": "faeec6 f6e2a0 f1d67e eccb60 dfb431 d0a215 be9207 ad8301 8e6b01 664d01 503d02 3a2d04 241e08",
+    "green": "edeecf dde2b2 cdd597 bec97e a0af54 879a39 768d21 66800b 536907 3d4c07 313d07 252d09 1a1e0c",
+    "cyan": "ddf1e4 bfe8d9 a2dece 87d3c3 5abdac 3aa99f 2f968d 24837b 1c6c66 164f4a 143f3c 122f2c 101f1d",
+    "blue": "e1eceb c6dde8 abcfe2 92bfdb 66a0c8 4385be 3171b2 205ea6 1a4f8c 163b66 133051 12253b 101a24",
+    "purple": "f0eaec e2d9e9 d3cae6 c4b9e0 a699d0 8b7ec8 735eb5 5e409d 4f3685 3c2a62 31234e 261c39 1a1623",
+    "magenta": "fee4e5 fccfda f9b9cf f4a4c2 e47da8 ce5d97 b74583 a02f6f 87285e 641f46 4f1b39 39172b 24131d",
+}
+FLEXOKI_ACCENTS = {name: {step: f"#{hx}" for step, hx in zip(_FLEXOKI_STEPS, row.split())} for name, row in _FLEXOKI_ROWS.items()}
+# Flexoki's own theme variables: accents are 600 in light and 400 in dark.
+FLEXOKI_THEME = {
+    "light": {"bg": "paper", "bg-2": "50", "ui": "100", "ui-2": "150", "ui-3": "200", "tx-3": "300", "tx-2": "600", "tx": "black", "accent_step": "600"},
+    "dark": {"bg": "black", "bg-2": "950", "ui": "900", "ui-2": "850", "ui-3": "800", "tx-3": "700", "tx-2": "500", "tx": "200", "accent_step": "400"},
+}
+FLEXOKI_STATES = {"success": "green", "warning": "yellow", "danger": "red", "info": "cyan"}
+AA = 4.5
+
+
+def _flexoki_ink(ramp: dict[str, str], steps: tuple[str, ...], bgs: tuple[str, ...]) -> str:
+    """The first step of ``ramp`` that reads at AA as text on every one of ``bgs``."""
+    return next((ramp[s] for s in steps if all(contrast_ratio(ramp[s], bg) >= AA for bg in bgs)), ramp[steps[-1]])
+
+
+def _flexoki_fill(ramp: dict[str, str], steps: tuple[str, ...], inks: tuple[str, str]) -> tuple[str, str]:
+    """A fill step of ``ramp`` and the Flexoki ink (paper or black) that reads at AA on it."""
+    for s in steps:
+        on = best_on_color(ramp[s], inks)
+        if contrast_ratio(on, ramp[s]) >= AA:
+            return ramp[s], on
+    return ramp[steps[0]], best_on_color(ramp[steps[0]], inks)
+
+
+def flexoki_roles(accent: str = "blue") -> dict[str, dict[str, str]]:
+    """shadcn colour roles in light and dark built only from Flexoki values. Faithful to Flexoki's theme (bg, bg-2, ui, tx, accents 600/400),
+    with one rule on top: every text/background pair passes WCAG AA. So muted-foreground is base-700 in light (Flexoki's tx-2 = base-600
+    gives 4.47:1 on bg-2), and a fill whose paper/black ink stays under 4.5:1 moves one step darker (light) or lighter (dark)."""
+    b, inks = FLEXOKI_BASE, (FLEXOKI_BASE["paper"], FLEXOKI_BASE["black"])
+    ramp, red = FLEXOKI_ACCENTS[accent], FLEXOKI_ACCENTS["red"]
+    out: dict[str, dict[str, str]] = {}
+    for mode in ("light", "dark"):
+        th = {k: b[v] for k, v in FLEXOKI_THEME[mode].items() if k != "accent_step"}
+        fill_steps = ("600", "700") if mode == "light" else ("400", "300", "500")
+        primary, on_primary = _flexoki_fill(ramp, fill_steps, inks)
+        danger, on_danger = _flexoki_fill(red, fill_steps, inks)
+        muted_fg = b["700"] if mode == "light" else th["tx-2"]
+        m = {"background": th["bg"], "foreground": th["tx"], "card": th["bg"], "card-foreground": th["tx"],
+             "popover": th["bg-2"], "popover-foreground": th["tx"], "muted": th["bg-2"], "muted-foreground": muted_fg,
+             "secondary": th["ui"], "secondary-foreground": th["tx"], "accent": th["ui"], "accent-foreground": th["tx"],
+             "border": th["ui-2"], "input": th["ui-3"], "primary": primary, "primary-foreground": on_primary,
+             "destructive": danger, "destructive-foreground": on_danger, "ring": primary}
+        out[mode] = {k: v.lower() for k, v in m.items()}
+    return out
+
+
+def flexoki_states(mode: str) -> dict[str, dict[str, str]]:
+    """Status colours (success, warning, danger, info) per mode: Flexoki's step for fills, and the step that reads at AA as text on both
+    bg and bg-2 (page and cards/muted panels)."""
+    bgs = (FLEXOKI_BASE[FLEXOKI_THEME[mode]["bg"]], FLEXOKI_BASE[FLEXOKI_THEME[mode]["bg-2"]])
+    step = FLEXOKI_THEME[mode]["accent_step"]
+    text_steps = ("600", "700", "800") if mode == "light" else ("400", "300", "200")
+    return {state: {"hue": hue, "fill": FLEXOKI_ACCENTS[hue][step], "text": _flexoki_ink(FLEXOKI_ACCENTS[hue], text_steps, bgs)}
+            for state, hue in FLEXOKI_STATES.items()}
+
+
+def flexoki_contrast(roles_by_mode: dict[str, dict[str, str]]) -> list[dict[str, Any]]:
+    """Every text/background pair of the roles (and the status text on the page) with its WCAG ratio and level."""
+    from .tokens import wcag_level
+    pairs = [("foreground", "background"), ("foreground", "card"), ("foreground", "popover"), ("muted-foreground", "background"),
+             ("muted-foreground", "muted"), ("secondary-foreground", "secondary"), ("accent-foreground", "accent"),
+             ("primary-foreground", "primary"), ("destructive-foreground", "destructive")]
+    out = []
+    for mode, m in roles_by_mode.items():
+        for fg, bg in pairs:
+            r = round(contrast_ratio(m[fg], m[bg]), 2)
+            out.append({"mode": mode, "text": fg, "on": bg, "fg": m[fg], "bg": m[bg], "ratio": r, "level": wcag_level(r)})
+        for state, s in flexoki_states(mode).items():
+            for on in ("background", "muted"):
+                r = round(contrast_ratio(s["text"], m[on]), 2)
+                out.append({"mode": mode, "text": f"{state} text", "on": on, "fg": s["text"], "bg": m[on], "ratio": r, "level": wcag_level(r)})
+    return out
+
+
+def _flexoki_ramp(ramp: dict[str, str]) -> dict[str, str]:
+    """A Flexoki scale on the standard 50..950 steps of a Vitruvius ramp (Flexoki's 150 and 850 stay in the full palette)."""
+    from .tokens import RAMP_STEPS
+    return {str(s): ramp[str(s)] for s in RAMP_STEPS}
+
+
+def _flexoki() -> list[dict]:
+    out = []
+    order = ["blue"] + [a for a in FLEXOKI_ACCENTS if a != "blue"]
+    for accent in order:
+        cols = {mode: {k: {"hex": v, "oklch": _ok(*hex_to_oklch(v))["oklch"]} for k, v in m.items()} for mode, m in flexoki_roles(accent).items()}
+        name = "flexoki" if accent == "blue" else f"flexoki-{accent}"
+        _, pc, ph = hex_to_oklch(FLEXOKI_ACCENTS[accent]["600"])
+        paper_L, _, paper_h = hex_to_oklch(FLEXOKI_BASE["paper"])
+        dark_L = hex_to_oklch(FLEXOKI_BASE["black"])[0]
+        base_ramp = {k: v for k, v in FLEXOKI_BASE.items() if k not in ("paper", "black")}
+        pairs = flexoki_contrast({mode: {k: v["hex"] for k, v in m.items()} for mode, m in cols.items()})
+        extra = {
+            "license": FLEXOKI_LICENSE, "accent": accent,
+            "palette": {"base": dict(FLEXOKI_BASE), **{k: dict(v) for k, v in FLEXOKI_ACCENTS.items()}},
+            "flexoki_theme": {mode: {k: FLEXOKI_BASE[v] for k, v in th.items() if k != "accent_step"} for mode, th in FLEXOKI_THEME.items()},
+            "states": {mode: flexoki_states(mode) for mode in ("light", "dark")},
+            "ramps": {"primary": _flexoki_ramp(FLEXOKI_ACCENTS[accent]), "neutral": _flexoki_ramp(base_ramp),
+                      "semantic": {"success": _flexoki_ramp(FLEXOKI_ACCENTS["green"]), "warn": _flexoki_ramp(FLEXOKI_ACCENTS["yellow"]),
+                                   "danger": _flexoki_ramp(FLEXOKI_ACCENTS["red"]), "info": _flexoki_ramp(FLEXOKI_ACCENTS["cyan"])}},
+            "contrast_pairs": pairs, "aa": all(p["level"] != "fail" for p in pairs),
+        }
+        out.append(build(name=name, title="Flexoki" if accent == "blue" else f"Flexoki {accent}", source="flexoki", genre="editorial",
+                         character=(f"Ink on paper: Flexoki's warm paper and black base with {accent} as the accent (600 in light, 400 in dark). "
+                                    "Calm, legible, made for reading and writing. MIT, by Steph Ango."),
+                         keywords=["flexoki", accent, "ink", "paper", "warm", "reading", "writing", "notes", "editorial", "calm", "kepano",
+                                   "tinta", "papel", "cálido", "lectura", "escritura", "notas", "sobrio"],
+                         paper_hue=paper_h, paper_L=paper_L, dark_L=dark_L, accent_hue=ph, accent_chroma=pc, radius=6,
+                         heading="Source Serif 4", body="Source Sans 3", mono="IBM Plex Mono", density="comfortable", duration=180,
+                         colors=cols, extra=extra))
+    return out
+
+
 @lru_cache(maxsize=1)
 def catalogue() -> tuple[dict, ...]:
     seen, out = set(), []
-    for p in [*_authored(), *_hoard(), *_hallmark()]:
+    for p in [*_authored(), *_flexoki(), *_hoard(), *_hallmark()]:
         if p["name"] not in seen:
             seen.add(p["name"])
             out.append(p)
@@ -199,12 +332,17 @@ def get(name: str) -> Optional[dict]:
 
 def summary(p: dict) -> dict[str, Any]:
     light, dark = p["tokens"]["colors"]["light"], p["tokens"]["colors"]["dark"]
-    return {"name": p["name"], "title": p["title"], "source": p["source"], "genre": p["genre"], "character": p["character"],
-            "dark_first": p["dark_first"], "keywords": p["keywords"][:8], "fonts": p["tokens"]["fonts"]["families"],
-            "radius": p["tokens"]["radius"]["base"],
-            "swatches": {"light": [light[k] for k in ("background", "card", "muted", "primary", "foreground")],
-                         "dark": [dark[k] for k in ("background", "card", "muted", "primary", "foreground")]},
-            "contrast": p["contrast"]}
+    out = {"name": p["name"], "title": p["title"], "source": p["source"], "genre": p["genre"], "character": p["character"],
+           "dark_first": p["dark_first"], "keywords": p["keywords"][:8], "fonts": p["tokens"]["fonts"]["families"],
+           "radius": p["tokens"]["radius"]["base"],
+           "swatches": {"light": [light[k] for k in ("background", "card", "muted", "primary", "foreground")],
+                        "dark": [dark[k] for k in ("background", "card", "muted", "primary", "foreground")]},
+           "contrast": p["contrast"]}
+    if p.get("license"):
+        out["license"] = p["license"]
+    if "aa" in p:
+        out["aa"] = p["aa"]
+    return out
 
 
 def listing(*, source: Optional[str] = None, query: Optional[str] = None, limit: int = 200) -> list[dict]:
@@ -232,7 +370,8 @@ def registry_item(p: dict) -> dict[str, Any]:
             "cssVars": {"theme": {"font-sans": fonts["body"], "font-heading": fonts["heading"], "font-mono": fonts["mono"], "radius": f"{base_px / 16:g}rem"},
                         "light": dict(p["oklch"]["light"]), "dark": dict(p["oklch"]["dark"])},
             "meta": {"source": p["source"], "genre": p["genre"], "keywords": p["keywords"], "spacing": p["tokens"]["spacing"],
-                     "motion": p["tokens"]["motion"], "hex": p["tokens"]["colors"], "dark_first": p["dark_first"]}}
+                     "motion": p["tokens"]["motion"], "hex": p["tokens"]["colors"], "dark_first": p["dark_first"],
+                     **({"license": p["license"]} if p.get("license") else {})}}
 
 
 def registry_index(homepage: str = "") -> dict[str, Any]:
@@ -321,6 +460,15 @@ def apply_parts(tokens: dict[str, Any], p: dict, parts: list[str]) -> dict[str, 
         t["color"]["on"] = {mode: {"on-bg": c["foreground"], "on-surface": c["card-foreground"], "on-primary": c["primary-foreground"]}
                             for mode, c in (("light", light), ("dark", dark))}
         t["color"]["roles"] = {"light": dict(light), "dark": dict(dark)}
+        ramps = p.get("ramps")
+        if ramps:  # a preset with its own published scales (Flexoki) keeps them exactly instead of OKLCH ramps
+            t["color"]["primary"] = dict(ramps["primary"])
+            t["color"]["neutral"] = dict(ramps["neutral"])
+            t["color"]["semantic"] = {k: dict(v) for k, v in ramps["semantic"].items()}
+        if p.get("palette"):
+            t["color"]["palette"] = json.loads(json.dumps(p["palette"]))
+        if p.get("states"):
+            t["color"]["states"] = json.loads(json.dumps(p["states"]))
     if "radius" in parts:
         t["radius"] = {k: v for k, v in pt["radius"].items() if k != "base"}
     if "type" in parts:
@@ -337,6 +485,8 @@ def apply_parts(tokens: dict[str, Any], p: dict, parts: list[str]) -> dict[str, 
         t["motion"]["duration"] = {"fast": d["fast"], "base": d["base"], "slow": d["slow"], "enter": round(d["base"] * 1.2), "exit": round(d["base"] * 0.8)}
         t["motion"].setdefault("easing", {})["standard"] = pt["motion"]["easing"]
     t["preset"] = {"name": p["name"], "title": p["title"], "source": p["source"], "parts": list(parts), "ts": time.time()}
+    if p.get("license"):
+        t["preset"]["license"] = p["license"]
     return t
 
 
@@ -368,4 +518,7 @@ def apply(svc, name: str, *, tokens_id: Optional[str] = None, parts: Optional[li
     except Exception:  # noqa: BLE001
         pass
     out = svc.tokens_get(tokens_id)
-    return {"tokens_id": tokens_id, "created": created, "preset": summary(p), "parts": parts, "roles": out["roles"], "name": out["name"]}
+    res = {"tokens_id": tokens_id, "created": created, "preset": summary(p), "parts": parts, "roles": out["roles"], "name": out["name"]}
+    if p.get("contrast_pairs"):
+        res["contrast_pairs"] = p["contrast_pairs"]
+    return res

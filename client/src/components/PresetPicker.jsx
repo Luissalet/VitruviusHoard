@@ -5,7 +5,7 @@ import { api } from "../api.js";
 // and a partial apply (colours / radius / type / spacing / motion) to a design system. Each preset is also served as a
 // shadcn registry-item.json.
 const PARTS = [["colors", "Colores", "Colours"], ["radius", "Radios", "Radius"], ["type", "Tipografía", "Type"], ["spacing", "Espaciado", "Spacing"], ["motion", "Movimiento", "Motion"]];
-const SOURCES = [["", "Todos", "All"], ["vitruvius", "Propios", "Authored"], ["hoard", "Familia Hoard", "Hoard family"], ["hallmark", "Temas hallmark", "hallmark themes"]];
+const SOURCES = [["", "Todos", "All"], ["vitruvius", "Propios", "Authored"], ["flexoki", "Flexoki (tinta sobre papel)", "Flexoki (ink on paper)"], ["hoard", "Familia Hoard", "Hoard family"], ["hallmark", "Temas hallmark", "hallmark themes"]];
 
 function Swatches({ colors, mode }) {
   return (
@@ -29,6 +29,12 @@ function PresetCard({ p, L, active, onSelect, recommended }) {
       </div>
       <div className="help mt-2">{p.fonts.heading} / {p.fonts.body} · r {p.radius}</div>
       <div className="help mt-1">{p.why || p.character}</div>
+      {(p.license || p.aa !== undefined) && (
+        <div className="flex gap-1 mt-2 flex-wrap" data-testid="preset-license">
+          {p.aa && <span className="chip chip-ok">{L("Texto AA en claro y oscuro", "Text AA in light and dark")}</span>}
+          {p.license && <span className="chip" title={p.license.notice}>{p.license.name} · {p.license.holder}</span>}
+        </div>
+      )}
     </button>
   );
 }
@@ -39,6 +45,7 @@ export default function PresetPicker({ lang, notify, saved, currentId, onApplied
   const [picked, setPicked] = useState(null);
   const [busyPick, setBusyPick] = useState(false);
   const [source, setSource] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState("");
@@ -96,6 +103,11 @@ export default function PresetPicker({ lang, notify, saved, currentId, onApplied
         <button type="button" className="btn btn-primary" onClick={pick} disabled={busyPick || brief.trim().length < 3} data-testid="preset-pick">
           {busyPick ? L("Eligiendo…", "Picking…") : L("Proponer tres", "Pick three")}
         </button>
+        <button type="button" className="btn" data-testid="preset-flexoki"
+          title={L("Paleta Flexoki de Steph Ango (MIT): tinta sobre papel, claro y oscuro", "Steph Ango's Flexoki palette (MIT): ink on paper, light and dark")}
+          onClick={() => { setSelected("flexoki"); setSource("flexoki"); setQuery(""); setCatalogOpen(true); }}>
+          {L("Elegir Flexoki", "Choose Flexoki")}
+        </button>
       </div>
       {picked && (
         <div className="mt-3">
@@ -105,7 +117,7 @@ export default function PresetPicker({ lang, notify, saved, currentId, onApplied
           </div>
         </div>
       )}
-      <details className="mt-3">
+      <details className="mt-3" open={catalogOpen} onToggle={(e) => setCatalogOpen(e.currentTarget.open)}>
         <summary className="text-[13px] cursor-pointer">{L("Catálogo", "Catalogue")}</summary>
         <div className="flex gap-2 mt-2 flex-wrap">
           <select className="field" style={{ maxWidth: 200 }} value={source} onChange={(e) => setSource(e.target.value)} aria-label={L("Origen", "Source")}>
@@ -143,6 +155,23 @@ export default function PresetPicker({ lang, notify, saved, currentId, onApplied
           {selected && <a className="btn-link text-[12px]" href={api.registryItemUrl(selected)} target="_blank" rel="noreferrer">registry-item.json</a>}
           {applied && <span className="help" data-testid="preset-applied">{L("Aplicado", "Applied")}: {applied.preset.title} → {applied.name} ({applied.parts.join(", ")})</span>}
         </div>
+        {applied?.contrast_pairs && (
+          <details className="mt-2" data-testid="preset-contrast">
+            <summary className="text-[13px] cursor-pointer">
+              {L("Contraste de los pares texto/fondo", "Contrast of the text/background pairs")}: {applied.contrast_pairs.filter((c) => c.level !== "fail").length}/{applied.contrast_pairs.length} AA
+            </summary>
+            <div className="grid gap-1 mt-2 md:grid-cols-2 text-[12px]">
+              {applied.contrast_pairs.map((c, k) => (
+                <div key={k} className="flex items-center gap-2">
+                  <span style={{ background: c.bg, color: c.fg, border: "1px solid var(--line)", borderRadius: 4, padding: "0 6px" }}>Aa</span>
+                  <span>{c.mode === "light" ? L("claro", "light") : L("oscuro", "dark")} · {c.text} / {c.on}</span>
+                  <span className={`chip ${c.level === "fail" ? "" : "chip-ok"}`}>{c.ratio}:1 {c.level}</span>
+                </div>
+              ))}
+            </div>
+            {applied.preset.license && <p className="help mt-2">{applied.preset.license.notice}</p>}
+          </details>
+        )}
       </div>
     </div>
   );
