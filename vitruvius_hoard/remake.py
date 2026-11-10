@@ -1652,12 +1652,19 @@ class RemakeRunner:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
         use_images = bool(images) and project.get("vision", True)
         phase = project.get("phase") or ""
+        effort, shortened = "medium", False
         for attempt in range(9):
             if attempt:
                 self._phase(project, phase + " (reintento)")
             try:
-                result = link.chat(messages, images=images if use_images else None, effort="medium", max_tokens=MODEL_MAX_TOKENS, task="code")
+                result = link.chat(messages, images=images if use_images else None, effort=effort, max_tokens=MODEL_MAX_TOKENS, task="code")
             except Exception as error:  # noqa: BLE001
+                if not shortened and re.search(r"did not complete|length|max_tokens", str(error), re.I):
+                    # the answer ran out of room: think less and write tighter code
+                    shortened, effort = True, "low"
+                    messages = [messages[0], {"role": "user", "content": messages[1]["content"] + "\n\nYour previous answer ran out of room: "
+                                              "think briefly, write compact CSS without comments and reuse classes."}]
+                    continue
                 if use_images and re.search(r"vision|image", str(error), re.I):
                     use_images = False
                     project["vision"] = False

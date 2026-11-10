@@ -317,6 +317,23 @@ def test_an_unreachable_model_is_asked_again(make, monkeypatch):
     assert out["passed"] and len(link.chat_calls) == 2 and [r["kind"] for r in out["rounds"]] == ["copy", "model"]
 
 
+def test_an_answer_that_runs_out_of_room_is_asked_again_shorter(make):
+    class Long(Scripted):
+        def chat(self, messages, images=None, **kwargs):
+            if not self.chat_calls:
+                self.chat_calls.append((messages, images))
+                self.kwargs.append(kwargs)
+                raise ValueError("Global generation did not complete normally")
+            return super().chat(messages, images, **kwargs)
+
+    link = Long(["```html\n<html><body><p>v</p></body></html>\n```"])
+    svc = make(link)
+    svc.browser.parity_hook = lambda tag, w, load, html, url: ref(w) if tag == "candidate" else None
+    out = svc.remake.start(url="https://site.test/", mode="rebuild", wait_s=30)
+    assert out["passed"] and [k["effort"] for k in link.kwargs] == ["medium", "low"]
+    assert "ran out of room" in link.chat_calls[1][0][1]["content"]
+
+
 def test_start_validates_its_input(make):
     svc = make()
     with pytest.raises(ValueError):
