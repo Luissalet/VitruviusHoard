@@ -617,3 +617,84 @@ Uncaptured states and scoped SHIP are not promoted into universal quality or fun
 ## Software workspace extension933
 
 Operate extension: owner header, three independent module rows, visible Theseus incomplete/paused note, project/revision and source/result workspace. Preserve the existing palette, Cinzel/Source Sans3, icon and Faustus mark. All native editors remain accessible; the shared surface presents actual IDs/hashes/history. CSS supports a single-column layout below760px, 44px controls, keyboard focus, busy/error/empty states and saved source drafts per revision. API/build checks establish implementation only. Browser/CUA and visual finishing review are explicitly pending root; no new whole-surface visual certification is claimed.
+
+
+# Showcase recipe extension 2782
+
+## Overview
+
+The recipe library at `/showcase/` is an Operate surface reached through the ordinary link in `vitruvius_hoard/software/web/index.html`. Its five executable references are Experience surfaces with their own material, light and interaction. Search, source reading, recipe decisions, download and Rehacer controls surround a live iframe preview. Each reference links back to the library and its selected recipe.
+
+This extension records the implemented source in `vitruvius_hoard/showcase/`. The existing root tokens retain their application scope. Local materials, the Instrument Serif and Barlow pairing, and example project content apply to showcase routes and exported reference documents. The library retains the dark workspace palette and adds this local type pairing through its own stylesheet.
+
+## Colors
+
+The library inherits workspace ground `#13161d`, text `#e1e4ec`, field surface `#1a1d26`, border `#555b6d` and selection blue `#6a8ced`. Experience documents use warm ink `#f2ede3`, dark ground `#151613` and pale green controls `#c7e5c3` from `reference.css`. These route-local variables are declared in separate documents.
+
+| Reference | Material and light |
+| --- | --- |
+| Book | Ivory paper `#eee8db`, narrow spine gradients, downward cast shadow and segment brightness driven by each turning face |
+| Glitch | Stock portrait on a subdivided plane, near-black green shader ground and pale green luminance-based relief with local channel separation |
+| Gallery | Green-grey room, warm-toned project panels, directional spotlights, floor roughness 0.3 and visible floor joints |
+| City | Blue buildings `#3b627b`, exponential blue fog, warm emissive windows and red monument `#d94a39` |
+| Rock | Basalt `#252d2a` with roughness 0.96 and procedural grain, metal `#d5c6ae` with metalness 1 and roughness 0.22, green gemstone with clearcoat, warm key light and cool rim light |
+
+The rock reference creates a PMREM environment from luminous cards for broad reflections on the metal. Its geometry, stone texture and project data are generated locally. Source-frame links provide research provenance. Exported assets have their separate provenance and license files under `assets/`.
+
+## Typography
+
+`library.css` and `reference.css` load local `InstrumentSerif.ttf` as `Instrument` and local `Barlow.ttf` as `Barlow`. Instrument carries library headings, book headings, project detail headings and the city/product display voice. Barlow carries body text, controls and the glitch display heading. Gallery panel textures draw their text after `document.fonts.ready`.
+
+The reference display defaults to `clamp(48px,7vw,96px)` with 0.98 line height. Book headings use `clamp(32px,4.6vw,65px)` and body text uses `clamp(13px,1.4vw,19px)`. The glitch heading uses `clamp(38px,5.5vw,80px)`. Mobile rules set distinct sizes per reference to preserve room for the object and its controls. These styles remain scoped to the library and reference documents.
+
+## Layout
+
+The library inherits the workspace's 1400px maximum main width and 32px horizontal padding. Search and recipe links precede the selected title, open/download links and full-width iframe. The preview is 620px high. Decisions and reproduction controls form `1.15fr 1fr` columns with a 64px gap. At 760px and below, the workspace insets become 16px, the recipe heading and search stack, the preview becomes 640px high and the text columns become one column with a 36px gap.
+
+References fill the viewport with a canvas and HTML overlays. An absolute header leaves the scene visible, while fixed controls wrap at the bottom. Project details sit above those controls. At 700px and below, header and control insets reduce to 18px, copy moves above the central scene and detail panels use the available width. WebGL camera composition changes below 700px. The book keeps two simultaneous pages, growing from 86vw to 94vw on mobile with a 51vh height. The rock document spans 280svh around a sticky 100svh scene.
+
+## Elevation & Depth
+
+Book depth comes from HTML faces in CSS perspective, a spine, page gradients and a drop shadow. Each turning sheet has twenty segments, hidden back faces and an inert, accessibility-hidden duplicate face layer. WebGL references use real scene geometry, lights, occlusion and camera movement. The pale project detail panel uses `0 12px 50px #0007` over the scene. These treatments belong to the specific reference worlds.
+
+## Shapes
+
+The library retains the workspace's 6px field/control radius. Reference buttons and project links use straight bordered rectangles with a 44px minimum height. The book spread has `2px 6px 6px 2px` corners. Its sculptural rings, city blocks and monument, gallery panels, and product meshes are authored example geometry. Their silhouettes carry their own reference identity.
+
+## Components
+
+### Recipe library and Rehacer
+
+`library.html`, `library.js` and `library.css` implement search, selected-recipe buttons with `aria-current`, loading/error status, empty results and source/skill disclosures. Recipe selection populates the iframe and uses a version counter to reject stale source responses. Copy instruction has a selectable-text fallback if clipboard access fails. Downloads include all five linked reference entry documents, shared source, local assets and licenses, plus the selected recipe and skill.
+
+The native `Abrir Rehacer` link leads to `/design/#/remake`. The adjacent actions explicitly enable Design and start `showcase_remake`. Copy mode requests one stable composition round at 1440px and 390px through the existing Rehacer workflow. Rebuild uses the configured global model. Running work shows retained run identity, phase, reported composition score, errors and report/result links when returned. Recipe checkpoints list additional interaction states separately from that stable entry comparison.
+
+### Reference worlds and motion
+
+| Reference | Implemented interaction and reduced-motion state |
+| --- | --- |
+| Book | Three spreads, previous/next buttons, left/right arrows and captured reversible drag. A spring with stiffness 100 and damping 18 settles a release or cancellation. Reduced motion changes spreads directly |
+| Glitch | Pointer-local shader deformation, amplitude slider and centering action. Reduced motion and the presence of `still` center the shader pointer and suppress portrait rotation |
+| Gallery | Bounded camera travel from 0 to 10 through buttons, wheel, W/S, vertical arrows and touch drag. Raycasting and HTML project links open detail. Reduced motion and `still` resolve travel and lateral destination without interpolation |
+| City | Deterministic instanced buildings/windows, zoom from 0.55 to 1.6, 45-degree rotation steps, selectable plinths and red monument, plus HTML destination links. HTML destination selection changes the camera target and opens detail. Reduced motion and `still` resolve that target directly |
+| Rock | Scroll controls camera distance, ring rotation and key-light intensity. Start/detail buttons move to document endpoints. Reduced motion removes scroll smoothing and camera interpolation. `still` holds the initial composition |
+
+The common WebGL loop draws finite batches after input or resize and suspends while hidden. Gallery and city retain pointer-based camera offsets in the source, including reduced-motion mode. Reduced-motion CSS disables transitions and smooth scrolling. `still` is a capture query flag with reference-specific behavior.
+
+### Access, fallbacks and source ownership
+
+Reference controls expose native buttons, links and labelled ranges with visible focus. Project links offer HTML access to the gallery/city details. Failure to initialize WebGL produces a text, stock-image and project-link fallback. Context loss reports a reload instruction. The book uses CSS 3D and does not initialize WebGL. Scene cleanup runs on page exit.
+
+`page.html` supplies the shared reference structure. `book.js` owns the segmented book and `scene.js` owns the four WebGL references. `recipes.json` and `skills/<id>/SKILL.md` record reproduction guidance. `library.py` serves source and builds standalone ZIPs, `routes.py` exposes the library/reference routes and `tools.py` connects discovery and remake actions. The software host mounts these routes through the native workspace.
+
+This record is based on source inspection. The documenter did not execute browser, export, parity, functional or material checks. It records no approval, installed-package acceptance or whole-app quality verdict.
+
+## Do's and Don'ts
+
+- Do keep each reference's material, light, composition and interaction together when extending its example.
+- Do scope showcase fonts, colors and scene geometry to the showcase routes and exported reference documents.
+- Do preserve visible project links, reference controls, reduced-motion branches and WebGL fallback access.
+- Do inspect the recipe's named interaction states alongside a stable entry comparison.
+- Do retain source and asset provenance in downloads.
+- Don't promote a reference's palette, mesh geometry or type pairing into the shared workbench identity.
+- Don't infer interactive parity or whole-app certification from a stable composition score.
