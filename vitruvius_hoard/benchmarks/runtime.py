@@ -9,7 +9,7 @@ import time
 from urllib.request import urlopen
 import uuid
 
-from .references import Cancelled
+from .references import Cancelled, verify_entry
 
 ROOT = Path(__file__).parent
 
@@ -135,6 +135,7 @@ def running(source, state, log_path, cancel):
                 cancel.wait(0.25)
             else:
                 raise ValueError("Reference runtime health check timed out")
+            verify_entry(url)
             yield url
         finally:
             subprocess.run(

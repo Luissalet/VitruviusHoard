@@ -8,6 +8,8 @@ Enable the Design module and open Rehacer. Enter the version being measured, cho
 
 The first evaluation prepares a Linux reference runtime using the installed container engine. Its base images have fixed digests. The runtime caches the dependency wheel versions declared by the corpus and each reference installs its original hash-locked requirements offline. It downloads reference fixtures from the pinned dataset revision, verifies every file against its published Git blob or large-file checksum, and retains that manifest. Each case starts an unchanged reference with fresh local state. The reference closes after the ordinary `remake_start` job finishes. Reconstruction uses the existing browser and, in rebuild or repair rounds, the configured global model.
 
+Identical files share a checksum-verified download cache. Remote rate-limit responses honour `Retry-After` or the published reset time before retrying. The entry route must respond successfully before it is captured, so a backend error page cannot become a successful reference measurement.
+
 The container engine must be running. Copy measurements need the existing browser dependencies (`pip install -e '.[render]'`). Explicit `runtime_kind="native"` uses the current interpreter and installed reference dependencies (`.[benchmark]`). Several reference backends require Linux libc. The default container runtime supplies that environment on Windows.
 
 ## Retained evidence

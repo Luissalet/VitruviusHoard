@@ -173,6 +173,82 @@ def test_hash_checks_and_reference_entry(svc, tmp_path):
     assert references.command(tmp_path)[-1] == str(tmp_path / "harbor_entry.py")
 
 
+def test_download_deduplicates_original_bytes(tmp_path, monkeypatch):
+    import hashlib
+
+    payload = b"reference"
+    oid = hashlib.sha1(b"blob 9\0" + payload).hexdigest()
+    downloads = []
+
+    def fetch(url, cancel, client=None):
+        if "/api/datasets/" in url:
+            task = "medium" if "/medium/" in url else "33"
+            return (
+                json.dumps(
+                    [
+                        {
+                            "type": "file",
+                            "oid": oid,
+                            "size": 9,
+                            "path": f"tasks/{task}/environment/reference/a.txt",
+                        }
+                    ]
+                ).encode(),
+                {},
+            )
+        downloads.append(url)
+        return payload, {}
+
+    monkeypatch.setattr(references, "fetch", fetch)
+    for task in ["medium", "33"]:
+        source, receipt = references.prepare(
+            tmp_path, corpus.catalog(), task, threading.Event()
+        )
+        assert (source / "a.txt").read_bytes() == payload and receipt["files"] == 1
+    assert len(downloads) == 1
+    assert (tmp_path / "blobs" / oid).read_bytes() == payload
+
+
+def test_rate_limit_retries_obey_remote_reset(monkeypatch):
+    import httpx
+
+    clock = [0.0]
+    monkeypatch.setattr(references, "_cooldown_until", 0)
+    monkeypatch.setattr(references.time, "monotonic", lambda: clock[0])
+
+    class Cancel:
+        def is_set(self):
+            return False
+
+        def wait(self, seconds):
+            clock[0] += seconds
+            return False
+
+    responses = iter(
+        [
+            httpx.Response(
+                429,
+                headers={"RateLimit": '"resolvers";r=0;t=15'},
+                request=httpx.Request("GET", "https://example.test"),
+            ),
+            httpx.Response(
+                200,
+                content=b"original",
+                request=httpx.Request("GET", "https://example.test"),
+            ),
+        ]
+    )
+
+    class Client:
+        def get(self, url):
+            return next(responses)
+
+    result, _ = references.fetch("https://example.test", Cancel(), Client())
+    assert result == b"original" and clock[0] == 15
+    assert references.retry_pause({"Retry-After": "123"}) == 123
+    assert references.retry_pause({}) == 60
+
+
 def test_tools_and_rest_share_manager(svc):
     from fastapi.testclient import TestClient
     from vitruvius_hoard.main import create_app

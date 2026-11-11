@@ -54,7 +54,7 @@ export default function Benchmark({ es, notify, openRemake }) {
   return (
     <section className="panel flex flex-col gap-3" aria-labelledby="benchmark-title" data-testid="benchmark">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 id="benchmark-title" className="text-[17px] font-semibold">{es ? "Banco de pruebas" : "Reconstruction benchmark"}</h2>
+        <h2 id="benchmark-title" className="text-[14px] font-semibold">{es ? "Banco de pruebas" : "Reconstruction benchmark"}</h2>
         <button type="button" className="btn btn-sm" onClick={refresh}>{es ? "Actualizar" : "Refresh"}</button>
       </div>
       <p className="help m-0" style={{ maxWidth: "72ch" }}>{es
