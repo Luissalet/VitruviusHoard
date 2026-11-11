@@ -633,11 +633,11 @@ The library inherits workspace ground `#13161d`, text `#e1e4ec`, field surface `
 
 | Reference | Material and light |
 | --- | --- |
-| Book | Ivory paper `#eee8db`, narrow spine gradients, downward cast shadow and segment brightness driven by each turning face |
-| Glitch | Stock portrait on a subdivided plane, near-black green shader ground and pale green luminance-based relief with local channel separation |
-| Gallery | Green-grey room, warm-toned project panels, directional spotlights, floor roughness 0.3 and visible floor joints |
-| City | Blue buildings `#3b627b`, exponential blue fog, warm emissive windows and red monument `#d94a39` |
-| Rock | Basalt `#252d2a` with roughness 0.96 and procedural grain, metal `#d5c6ae` with metalness 1 and roughness 0.22, green gemstone with clearcoat, warm key light and cool rim light |
+| Book | Dark editorial spreads with full-bleed photographs, deterministic grain, a nine-pixel page edge, spine contact shadow and angle-dependent face brightness |
+| Glitch | Local alpha cutout derived from the stock portrait, pale green low-relief shader, curved background grid and velocity-driven RGB bands that settle after input |
+| Gallery | Eight photographic exhibits with thick frames, granular walls and floor, physical spot falloff, subtle additive beams and soft projected reflections |
+| City | Dense instanced bodies, facade ribs, ledges and crowns; variable four-sided windows; blue fog, reflective asphalt, light trails, emissive red monument and red point light |
+| Rock | Multiscale displaced basalt with normal map, roughness 0.87 and metalness 0.04; two metallic rings, green and blue gemstones, warm key and cool rim lights, colored gem-light projections and dust |
 
 The rock reference creates a PMREM environment from luminous cards for broad reflections on the metal. Its geometry, stone texture and project data are generated locally. Source-frame links provide research provenance. Exported assets have their separate provenance and license files under `assets/`.
 
@@ -674,12 +674,12 @@ The native `Abrir Rehacer` link leads to `/design/#/remake`. The adjacent action
 | Reference | Implemented interaction and reduced-motion state |
 | --- | --- |
 | Book | Three spreads, previous/next buttons, left/right arrows and captured reversible drag. A spring with stiffness 100 and damping 18 settles a release or cancellation. Reduced motion changes spreads directly |
-| Glitch | Pointer-local shader deformation, amplitude slider and centering action. Reduced motion and the presence of `still` center the shader pointer and suppress portrait rotation |
+| Glitch | Pointer speed produces transient RGB separation, horizontal bands and datamosh blocks. Position curves the background grid. Intensity and centering remain available; reduced motion and `still` suppress the impulse |
 | Gallery | Bounded camera travel from 0 to 10 through buttons, wheel, W/S, vertical arrows and touch drag. Raycasting and HTML project links open detail. Reduced motion and `still` resolve travel and lateral destination without interpolation |
-| City | Deterministic instanced buildings/windows, zoom from 0.55 to 1.6, 45-degree rotation steps, selectable plinths and red monument, plus HTML destination links. HTML destination selection changes the camera target and opens detail. Reduced motion and `still` resolve that target directly |
-| Rock | Scroll controls camera distance, ring rotation and key-light intensity. Start/detail buttons move to document endpoints. Reduced motion removes scroll smoothing and camera interpolation. `still` holds the initial composition |
+| City | Deterministic geometry, zoom from 0.55 to 1.6, 45-degree rotation, slow idle orbit and destination travelling through raycast or HTML links. Reduced motion and `still` disable orbit, moving trails and pointer parallax |
+| Rock | Scroll follows three eased camera/target keyframes from the green ring to the blue ring, with accompanying text. Start/detail buttons remain. Reduced motion resolves progress directly. `still` holds the initial composition |
 
-The common WebGL loop draws finite batches after input or resize and suspends while hidden. Gallery and city retain pointer-based camera offsets in the source, including reduced-motion mode. Reduced-motion CSS disables transitions and smooth scrolling. `still` is a capture query flag with reference-specific behavior.
+The common WebGL loop draws finite batches after input or resize; the city also runs its slow orbit while motion is permitted. All scenes suspend while hidden. Reduced motion suppresses gallery/city pointer parallax, idle orbit, moving trails and glitch, and disables CSS entry animation, transitions and smooth scrolling. `still` is a capture query flag with reference-specific behavior. The depth-aware screen pass applies a filmic curve, restrained bloom and mild defocus. Beams, exhibit reflections, trail reflections and gem-light projections are lightweight approximations; they do not claim full volumetric transport, ray-traced reflections or refractive caustics.
 
 ### Access, fallbacks and source ownership
 

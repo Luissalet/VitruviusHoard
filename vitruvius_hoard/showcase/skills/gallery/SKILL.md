@@ -1,37 +1,44 @@
 ---
 name: showcase-gallery
-description: Una sala real en WebGL con suelo, luces, paneles seleccionables y desplazamiento de cámara. Use when reproducing the gallery showcase reference.
-version: 1.0.0
+description: Reproduce the gallery showcase with explicit material, light and motion decisions.
+version: 2.0.0
 ---
 
 # Sala-galería 3D
 
 ## Procedure
 
-Construye una sala-galería WebGL ejecutable con tres paneles de proyectos, suelo con juntas, focos dirigidos, sombras y profundidad real. Permite caminar con rueda, W/S, flechas, controles y gesto táctil dentro de límites. Cada panel se selecciona por raycasting y muestra un detalle con enlace funcional. Usa también enlaces HTML equivalentes. Sigue posiciones, luz, tipografía local y encuadres de la receta gallery. Verifica entrada, cámara avanzada y selección.
+Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos.
 
 ### light
 
-Sala gris verdosa con focos cálidos dirigidos a cada panel y luz hemisférica suave. Suelo con rugosidad 0,3 y juntas oscuras que hacen legible la profundidad.
+Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos.
 
 ### rhythm
 
-Tres obras visibles al entrar, un paso de dos unidades por botón y un recorrido máximo de diez. El acercamiento conserva la continuidad espacial.
+Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.
 
 ### typography
 
-Los títulos y subtítulos viven dentro de las texturas de los paneles. Instrument Serif y Barlow se cargan antes de dibujarlos. El rótulo de sala deja libre la zona central.
+Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras.
 
 ### interaction
 
-Perspectiva real, cámara que camina con rueda, botones, W/S y flechas verticales. Deslizamiento táctil. Raycaster selecciona un panel y enlaces HTML ofrecen los mismos proyectos.
+Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero.
 
 ### why
 
-Los marcos y sus sombras pertenecen al espacio. La cámara se mueve entre ellos y permite reconocer distancias, mientras los enlaces conservan acceso directo a cada pieza.
+Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes.
+
+## Implementation
+
+- Ocho paneles reutilizan tres proyectos de demostración; no son ocho proyectos reales. Fotografías locales con licencia y procedencia en assets/provenance.json.
+- Los reflejos son texturas propias de las obras, desenfocadas a 400×280, invertidas y desvanecidas. Mantén su opacidad baja para que no parezcan pósteres en el suelo.
+- El hover levanta 0,12 unidades y la selección fija el travelling en cuatro unidades. Conserva los límites para no atravesar los paneles.
 
 ## Verification
 
 - Entrar y observar los tres paneles, sus sombras y las juntas del suelo.
 - Avanzar con botón, rueda, W y gesto táctil. Retroceder y volver a la entrada.
 - Seleccionar un panel mediante raycast y por enlace, cerrar detalle y abrir su proyecto.
+- Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto.

@@ -1,7 +1,7 @@
 ---
 name: showcase-recipes
 description: Build reproducible showcase websites from five working references. Use when a request calls for a book, glitch portrait, 3D gallery, city map or cinematic product page.
-version: 1.0.0
+version: 2.0.0
 category: engineering
 tags: [web, design, 3d, motion]
 apps: [vitruvius]
@@ -20,6 +20,17 @@ Choose a concrete working reference when the brief asks for a cinematic or spati
 3. Serve the exported folder with `python -m http.server 8080`, then open its id/index.html entry. Fonts, portrait and rendering engine ship locally.
 4. Use `showcase_remake` after explicitly enabling Design to create a retained Rehacer run. Its default copy round measures the stable opening composition at 1440 and 390 px. Use rebuild for a model-authored reconstruction through the configured global model.
 5. Read the retained run with `remake_get`. Inspect each named interaction state separately and repeat visual parity with the same camera, scroll, pointer and selected project.
+6. Open the cited Links `video_frame` and your own desktop/mobile captures side by side. Judge light falloff, material scale, silhouette, depth, editorial pacing and the space left for the artifact. A high composition score does not establish studio-level visual quality.
+
+## Material and motion decisions
+
+- Book: full-bleed photographic spreads, deterministic paper grain, page-stack thickness, contact shadow and printed reverse. Preserve editorial pause as well as the spring.
+- Portrait: use a real subject alpha contour, mild face relief and velocity-driven RGB bands that settle. Keep the grid response separate from facial geometry.
+- Gallery: use photographic content, thick frames, exhibits in depth, material roughness and soft reflected images. Eight exhibits here reuse three demonstration projects.
+- City: density, varied silhouettes, four-sided window occupancy, depth fog, restrained bloom and a red emissive landmark with an actual neighboring light. Keep the idle orbit off in reduced motion.
+- Product: large-scale rock silhouette, medium fractures and fine normals have different jobs. Use at least two product planes, color-light projection and eased camera keyframes with the text.
+
+The shipped beams, reflected images, trail reflections and gemstone light projections are lightweight authored approximations. Retain that distinction when describing them. The cutout derived with ImageGen ships locally with its method and prompt in provenance.json.
 
 ## Pitfalls
 

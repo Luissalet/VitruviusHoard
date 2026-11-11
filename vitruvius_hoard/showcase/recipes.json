@@ -25,28 +25,29 @@
       }
     ],
     "decisions": {
-      "light": "Papel marfil sobre mesa oscura. Gradiente estrecho en el lomo y sombra proyectada hacia abajo para mostrar espesor. La luz baja durante el giro según la normal de cada segmento.",
-      "rhythm": "Cada pliego es una pieza y permanece hasta una acción. Muelle con rigidez 100 y amortiguación 18, paso de tiempo acotado a 32 ms. El arrastre puede abandonarse antes de la mitad y vuelve a su origen.",
-      "typography": "Instrument Serif para titulares de 32 a 65 px y Barlow para textos de 13 a 19 px. Las líneas cortas mantienen el margen útil de cada media página.",
-      "interaction": "Veinte segmentos por hoja recorren una curva continua en X/Z con curvatura sinusoidal. Hay reverso, oclusión, botones en ambos sentidos, flechas, arrastre capturado y cancelación. En movimiento reducido el pliego cambia directamente.",
-      "why": "La doble página y el lomo estable permiten reconocer el objeto. La resistencia, la curvatura y el retorno explican el peso de la hoja sin un vídeo pregrabado."
+      "light": "Pliegos oscuros con fotografía a sangre, sombra de contacto en el lomo y canto de hojas de 9 px. El grano se genera de forma determinista en un lienzo de 128 px. El giro modula el brillo de cada segmento entre 0,58 y 1 según su normal.",
+      "rhythm": "Tres pliegos, cada uno con una imagen dominante y una pausa editorial. El muelle conserva rigidez 100 y amortiguación 18. El contenido del reverso es el pliego siguiente, no una cara vacía. Un arrastre corto vuelve a su origen.",
+      "typography": "Instrument Serif de 30 a 64 px sobre imágenes a sangre y Barlow para lectura y folios. La fotografía ocupa la página entera; el texto se ancla a los márgenes y al pie, sin una tarjeta dentro del papel.",
+      "interaction": "Hoja de veinte segmentos con caras HTML impresas, curvatura y sombreado angular; arrastre reversible, cancelación, botones y flechas. Rail de navegación discreto de 44 px de altura interactiva. Movimiento reducido cambia directamente de pliego.",
+      "why": "La materia se reconoce por el canto, el grano y las sombras de contacto. La imagen a sangre y el contraste entre pliego fotográfico y pausa tipográfica producen ritmo editorial sin aumentar los controles."
     },
     "implementation": [
-      "book.js contiene los tres pliegos y el muelle. Sustituye el contenido de spreads manteniendo sus dos caras.",
-      "La hoja se construye con caras HTML recortadas, transform-style preserve-3d y backface-visibility hidden.",
-      "Los enlaces de cada estudio funcionan. Los controles se desactivan en los extremos."
+      "Cada cara se compone con .editorial; su contexto de apilamiento mantiene la imagen por encima del fondo y debajo del texto. Conserva ese contexto también en las caras segmentadas.",
+      "Las fotografías locales de costa, cerámica y retrato tienen procedencia y hashes en assets/provenance.json. Sustituye imágenes y pies juntos.",
+      "El grano y el canto representan papel real: no los extiendas al shell de Vitruvius. Verifica sombras, reverso impreso y lectura a 390 px."
     ],
     "checkpoints": [
       "Abrir en 1440×900 y 390×844. Leer las dos páginas sin desbordamiento.",
       "Pasar adelante y atrás con botón y teclado. Arrastrar menos y más de media página y cancelar un gesto.",
-      "Durante el giro comprobar curvatura, reverso y sombra. Con movimiento reducido verificar el cambio inmediato."
+      "Durante el giro comprobar curvatura, reverso y sombra. Con movimiento reducido verificar el cambio inmediato.",
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
     ],
     "parity_states": [
       "Entrada, pliego 1",
       "Pliego 2 después de un giro",
       "Giro a mitad de recorrido para comprobación manual de geometría"
     ],
-    "prompt": "Construye una web-libro ejecutable. Conserva dos páginas visibles a 1440 y 390 px, papel marfil y lomo fijo sobre mesa oscura. Cada pliego contiene una sola pieza. Usa caras HTML y una hoja de veinte segmentos que se curva en perspectiva con un muelle amortiguado, arrastre reversible, reverso, botones y flechas. Mantén el texto legible al girar. Carga Instrument Serif y Barlow desde recursos locales. Reproduce las decisiones de la receta book y verifica también el pliego 2 y el giro a mitad de recorrido."
+    "prompt": "Construye la referencia ejecutable Libro a doble página con sus recursos locales. Pliegos oscuros con fotografía a sangre, sombra de contacto en el lomo y canto de hojas de 9 px. El grano se genera de forma determinista en un lienzo de 128 px. El giro modula el brillo de cada segmento entre 0,58 y 1 según su normal. Tres pliegos, cada uno con una imagen dominante y una pausa editorial. El muelle conserva rigidez 100 y amortiguación 18. El contenido del reverso es el pliego siguiente, no una cara vacía. Un arrastre corto vuelve a su origen. Instrument Serif de 30 a 64 px sobre imágenes a sangre y Barlow para lectura y folios. La fotografía ocupa la página entera; el texto se ancla a los márgenes y al pie, sin una tarjeta dentro del papel. Hoja de veinte segmentos con caras HTML impresas, curvatura y sombreado angular; arrastre reversible, cancelación, botones y flechas. Rail de navegación discreto de 44 px de altura interactiva. Movimiento reducido cambia directamente de pliego. La materia se reconoce por el canto, el grano y las sombras de contacto. La imagen a sangre y el contraste entre pliego fotográfico y pausa tipográfica producen ritmo editorial sin aumentar los controles. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
   },
   {
     "id": "glitch",
@@ -75,28 +76,29 @@
       }
     ],
     "decisions": {
-      "light": "El valor de luminancia de la fotografía da relieve. Verde pálido sobre un fondo verde casi negro concentra la máxima luz en el rostro.",
-      "rhythm": "La imagen aparece completa. El desplazamiento se limita a la región cercana al puntero y termina al reposar. No hay parpadeos automáticos.",
-      "typography": "Barlow de 38 a 80 px, a la izquierda del retrato en escritorio y encima en móvil. La nota de interacción ocupa veinte caracteres de medida aproximada.",
-      "interaction": "Vertex shader con relieve por luminancia y empuje gaussiano. Fragment shader con rejilla de 100×74 celdas, bandas horizontales desplazadas y separación cromática local. Un control regula la amplitud y otro centra.",
-      "why": "La densidad de líneas convierte una imagen reconocible en un objeto digital. Mantener la deformación localizada permite explorar la técnica y conservar el rostro."
+      "light": "Silueta fotográfica verde pálida sobre rejilla verde oscura. La máscara alfa local portrait-cutout.png sigue pelo y hombros; se obtuvo mediante extracción de fondo con ImageGen a partir de la foto de stock. El relieve de luminancia se limita a 0,12 unidades para conservar el rostro.",
+      "rhythm": "La velocidad del puntero crea un impulso acotado que decae exponencialmente con exp(-9·dt). Las franjas horizontales, separación RGB y bloques de datamosh duran mientras el gesto se asienta. El reposo conserva la cara reconocible y sin parpadeo automático.",
+      "typography": "Barlow para el título, nota de interacción y datos de señal. Los rótulos SEÑAL / RGB están en HTML y rodean la silueta; no tapan el centro del rostro. En móvil el título permanece sobre el retrato.",
+      "interaction": "El vertex shader de la rejilla curva la superficie cerca del puntero. El fragment shader del retrato aplica RGB y bandas según el impulso, sin deformación facial amplia. Intensidad y centrado siguen disponibles. Movimiento reducido y still anulan el impulso.",
+      "why": "La máscara elimina el rectángulo de fotografía y hace que la figura emerja de la rejilla. Separar la velocidad de la posición permite que el glitch tenga un inicio y un asentamiento, en vez de romper la cara permanentemente."
     },
     "implementation": [
-      "La fotografía de stock, su origen y su licencia están en assets/provenance.json. Es una persona distinta a la referencia.",
-      "La malla es PlaneGeometry con 160×150 subdivisiones. Cambia portrait.jpg y conserva su encuadre vertical.",
-      "El bucle sólo dibuja durante la entrada o la respuesta al puntero. Movimiento reducido y still=1 desactivan la respuesta al puntero."
+      "portrait-cutout.png es una extracción alfa derivada de portrait.jpg mediante ImageGen; origen, método, prompt y hash acompañan la exportación. Para otra fotografía entrega una máscara alfa que siga su contorno; no uses un óvalo para sustituir la silueta.",
+      "Los colores RGB se comparan contra el canal original, de modo que la separación cromática vale cero al reposar.",
+      "Comprueba showcaseState.impulse durante un gesto y después de 600 ms; debe asentarse. El shader sigue dibujando lotes finitos después del input."
     ],
     "checkpoints": [
       "Comprobar fotografía cargada, rejilla y volumen en escritorio y móvil.",
       "Mover el puntero y comparar showcaseState.deformation. Cambiar Deformación y centrar.",
-      "Verificar navegación y texto accesibles con WebGL desactivado."
+      "Verificar navegación y texto accesibles con WebGL desactivado.",
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
     ],
     "parity_states": [
       "Entrada centrada con still=1",
       "Puntero al 75% de anchura y 40% de altura",
       "Deformación a cero"
     ],
-    "prompt": "Construye una entrada con retrato fotográfico sobre rejilla verde pálida y fondo casi negro. Implementa shaders de vértice y fragmento con relieve por luminancia, bandas horizontales, separación cromática y deformación localizada al puntero. Usa una malla subdividida y conserva la fotografía reconocible. Incluye amplitud regulable y centrado, tipografía Barlow local y adaptación móvil. Reproduce la receta glitch. Verifica entrada estable y una posición fija del puntero."
+    "prompt": "Construye la referencia ejecutable Retrato sobre rejilla con sus recursos locales. Silueta fotográfica verde pálida sobre rejilla verde oscura. La máscara alfa local portrait-cutout.png sigue pelo y hombros; se obtuvo mediante extracción de fondo con ImageGen a partir de la foto de stock. El relieve de luminancia se limita a 0,12 unidades para conservar el rostro. La velocidad del puntero crea un impulso acotado que decae exponencialmente con exp(-9·dt). Las franjas horizontales, separación RGB y bloques de datamosh duran mientras el gesto se asienta. El reposo conserva la cara reconocible y sin parpadeo automático. Barlow para el título, nota de interacción y datos de señal. Los rótulos SEÑAL / RGB están en HTML y rodean la silueta; no tapan el centro del rostro. En móvil el título permanece sobre el retrato. El vertex shader de la rejilla curva la superficie cerca del puntero. El fragment shader del retrato aplica RGB y bandas según el impulso, sin deformación facial amplia. Intensidad y centrado siguen disponibles. Movimiento reducido y still anulan el impulso. La máscara elimina el rectángulo de fotografía y hace que la figura emerja de la rejilla. Separar la velocidad de la posición permite que el glitch tenga un inicio y un asentamiento, en vez de romper la cara permanentemente. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
   },
   {
     "id": "gallery",
@@ -125,28 +127,29 @@
       }
     ],
     "decisions": {
-      "light": "Sala gris verdosa con focos cálidos dirigidos a cada panel y luz hemisférica suave. Suelo con rugosidad 0,3 y juntas oscuras que hacen legible la profundidad.",
-      "rhythm": "Tres obras visibles al entrar, un paso de dos unidades por botón y un recorrido máximo de diez. El acercamiento conserva la continuidad espacial.",
-      "typography": "Los títulos y subtítulos viven dentro de las texturas de los paneles. Instrument Serif y Barlow se cargan antes de dibujarlos. El rótulo de sala deja libre la zona central.",
-      "interaction": "Perspectiva real, cámara que camina con rueda, botones, W/S y flechas verticales. Deslizamiento táctil. Raycaster selecciona un panel y enlaces HTML ofrecen los mismos proyectos.",
-      "why": "Los marcos y sus sombras pertenecen al espacio. La cámara se mueve entre ellos y permite reconocer distancias, mientras los enlaces conservan acceso directo a cada pieza."
+      "light": "Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos.",
+      "rhythm": "Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.",
+      "typography": "Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras.",
+      "interaction": "Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero.",
+      "why": "Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes."
     },
     "implementation": [
-      "Paneles en x -5,4 / 0 / 5,4 y z -10 / -12 / -10. Cámara inicial z 12 y altura 3,1.",
-      "Las texturas se dibujan localmente con datos de demostración. Sustituye projects y su composición gráfica por trabajos reales.",
-      "Mantén un único grupo de controles y raycasting sobre los paneles. El recorrido tiene límites para impedir atravesar paredes."
+      "Ocho paneles reutilizan tres proyectos de demostración; no son ocho proyectos reales. Fotografías locales con licencia y procedencia en assets/provenance.json.",
+      "Los reflejos son texturas propias de las obras, desenfocadas a 400×280, invertidas y desvanecidas. Mantén su opacidad baja para que no parezcan pósteres en el suelo.",
+      "El hover levanta 0,12 unidades y la selección fija el travelling en cuatro unidades. Conserva los límites para no atravesar los paneles."
     ],
     "checkpoints": [
       "Entrar y observar los tres paneles, sus sombras y las juntas del suelo.",
       "Avanzar con botón, rueda, W y gesto táctil. Retroceder y volver a la entrada.",
-      "Seleccionar un panel mediante raycast y por enlace, cerrar detalle y abrir su proyecto."
+      "Seleccionar un panel mediante raycast y por enlace, cerrar detalle y abrir su proyecto.",
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
     ],
     "parity_states": [
       "Entrada con still=1",
       "Cámara a cuatro unidades de la entrada",
       "Detalle de Arco abierto"
     ],
-    "prompt": "Construye una sala-galería WebGL ejecutable con tres paneles de proyectos, suelo con juntas, focos dirigidos, sombras y profundidad real. Permite caminar con rueda, W/S, flechas, controles y gesto táctil dentro de límites. Cada panel se selecciona por raycasting y muestra un detalle con enlace funcional. Usa también enlaces HTML equivalentes. Sigue posiciones, luz, tipografía local y encuadres de la receta gallery. Verifica entrada, cámara avanzada y selección."
+    "prompt": "Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
   },
   {
     "id": "city",
@@ -175,28 +178,29 @@
       }
     ],
     "decisions": {
-      "light": "Luz azul fría, niebla exponencial de densidad 0,013 y ventanas cálidas. La pieza roja tiene el contraste cromático máximo. Una luz direccional proyecta las sombras.",
-      "rhythm": "Vista cenital oblicua al entrar. Acercar y girar son acciones expresas. Elegir un destino desplaza el punto de mira con continuidad y abre su ficha.",
-      "typography": "Instrument Serif para el nombre del atlas y Barlow para destinos y controles. Los nombres permanecen en HTML, legibles sobre la ciudad.",
-      "interaction": "Edificios y ventanas usan InstancedMesh. Rueda y botones regulan zoom entre 0,55 y 1,6. Girar añade 45 grados. Tres plintos y la pieza roja responden a raycast, y los destinos HTML dirigen cámara y detalle.",
-      "why": "La ciudad funciona como orientación espacial. Las ventanas dan escala y la anomalía roja convierte un proyecto en destino reconocible sin introducir muchos colores."
+      "light": "Noche azul con niebla exponencial 0,024, luz direccional fría y ventanas emisivas variables en cuatro fachadas. La pieza roja emite y tiene una luz puntual roja con caída física que tiñe edificios cercanos. Suelo rugoso con respuesta especular y estelas con reflejo aproximado.",
+      "rhythm": "Órbita lenta de 0,009 rad/s cuando hay movimiento permitido. Zoom y giro amortiguados con exp(-4·dt); travelling a los destinos con exp(-8·dt). La niebla separa las alturas y el postproceso añade bloom contenido y desenfoque leve según profundidad.",
+      "typography": "Instrument Serif de 38 a 54 px para el atlas, Barlow pequeño para destinos y rail. Texto en HTML con una zona superior despejada; el rojo sigue siendo la anomalía visual principal.",
+      "interaction": "Edificios, cornisas, pilares, coronas y ventanas instanciados. Alturas, siluetas y ventanas deterministas con variación. Zoom entre 0,55 y 1,6, giro de 45 grados, raycast y enlaces a destinos con travelling. Sin órbita, estelas móviles ni paralaje con movimiento reducido o still.",
+      "why": "La escala nace de la densidad de fachadas, de la luz en calles profundas y de ventanas con ocupación desigual. La emisión roja debe iluminar su entorno, no limitarse a un color pintado. Las líneas de rejilla sobre edificios se han eliminado."
     },
     "implementation": [
-      "La altura de los edificios se deriva de sus coordenadas mediante seno, por lo que cada carga conserva la misma ciudad.",
-      "Instancia edificios y ventanas para mantener bajo el número de llamadas de dibujo.",
-      "Sustituye destinations y projects juntos para que posición, ficha y enlace se correspondan."
+      "La ciudad ocupa una malla de coordenadas -8…8 con avenidas reservadas. InstancedMesh agrupa cuerpos y detalles de fachada, y otro grupo agrupa ventanas. Las juntas y la variación del hormigón se sombrean en el material por posición de fachada, sin una rejilla superpuesta al mundo.",
+      "El postproceso usa un render target con textura de profundidad: curva fílmica, bloom de doce muestras y desenfoque suave. Es una aproximación ligera, no profundidad de campo óptica ni un compositor de cine completo.",
+      "Las estelas se dibujan sobre el asfalto, con proyecciones tenues en el suelo. El rojo usa material emisivo más PointLight; comprueba el tinte en fachadas vecinas."
     ],
     "checkpoints": [
       "Abrir dos veces y comprobar la misma disposición urbana.",
       "Acercar, alejar, girar y elegir los tres destinos. Verificar zoom y destination en showcaseState.",
-      "Seleccionar la pieza roja y abrir Materia. Revisar móvil y movimiento reducido."
+      "Seleccionar la pieza roja y abrir Materia. Revisar móvil y movimiento reducido.",
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
     ],
     "parity_states": [
       "Mapa inicial con still=1",
       "Mapa girado 45 grados",
       "Destino Materia seleccionado"
     ],
-    "prompt": "Construye una ciudad 3D azul vista desde arriba como mapa navegable, con edificios de altura determinista, ventanas cálidas, calles y una pieza escultórica roja destacada. Usa geometría instanciada, niebla y sombras. Incluye zoom, giro y tres destinos con posición, ficha y enlace reales. La selección mueve la cámara y se ofrece por raycast y HTML. Sigue la receta city y comprueba mapa inicial, giro de 45 grados y destino rojo."
+    "prompt": "Construye la referencia ejecutable Ciudad como mapa con sus recursos locales. Noche azul con niebla exponencial 0,024, luz direccional fría y ventanas emisivas variables en cuatro fachadas. La pieza roja emite y tiene una luz puntual roja con caída física que tiñe edificios cercanos. Suelo rugoso con respuesta especular y estelas con reflejo aproximado. Órbita lenta de 0,009 rad/s cuando hay movimiento permitido. Zoom y giro amortiguados con exp(-4·dt); travelling a los destinos con exp(-8·dt). La niebla separa las alturas y el postproceso añade bloom contenido y desenfoque leve según profundidad. Instrument Serif de 38 a 54 px para el atlas, Barlow pequeño para destinos y rail. Texto en HTML con una zona superior despejada; el rojo sigue siendo la anomalía visual principal. Edificios, cornisas, pilares, coronas y ventanas instanciados. Alturas, siluetas y ventanas deterministas con variación. Zoom entre 0,55 y 1,6, giro de 45 grados, raycast y enlaces a destinos con travelling. Sin órbita, estelas móviles ni paralaje con movimiento reducido o still. La escala nace de la densidad de fachadas, de la luz en calles profundas y de ventanas con ocupación desigual. La emisión roja debe iluminar su entorno, no limitarse a un color pintado. Las líneas de rejilla sobre edificios se han eliminado. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
   },
   {
     "id": "rock",
@@ -244,27 +248,28 @@
       }
     ],
     "decisions": {
-      "light": "Un foco cálido alto a la izquierda y un recorte frío detrás. Tarjetas luminosas en un entorno PMREM producen reflejos amplios sobre el metal. El basalto usa rugosidad 0,96, grano y normales continuas.",
-      "rhythm": "Recorrido de 280 svh con escena sticky. El producto es visible desde la entrada. El scroll acerca la cámara, rota ligeramente el anillo y aumenta la intensidad del foco. Una segunda nota aparece durante el detalle.",
-      "typography": "Instrument Serif de 64 a 96 px para el nombre de producto y Barlow de 15 a 18 px para material y controles. El texto vive fuera del centro del objeto.",
-      "interaction": "Basalto deformado determinísticamente, aro toroidal, engaste y gema con materiales físicos. Scroll reversible, botones de inicio y detalle. Con movimiento reducido la cámara sigue directamente la posición sin amortiguación.",
-      "why": "La rugosidad de la roca y el brillo del metal responden de forma distinta a una misma luz. El acercamiento descubre el engaste y convierte el scroll en un examen del objeto."
+      "light": "Foco cálido lateral y recortes fríos. Tarjetas PMREM dan reflejos amplios al metal. El basalto oscuro tiene rugosidad 0,87, normal map multiescala y metalicidad 0,04. Focos verdes y azules proyectan un brillo de gema artístico sobre la piedra; no simulan cáusticas refractivas. Motas y haces sutiles dan aire.",
+      "rhythm": "Dos anillos y dos plintos de roca en distintos planos, con un fondo de basalto fracturado. El scroll de 280 svh interpola tres fotogramas clave de cámara y objetivo mediante smoothstep. El segundo tramo viaja hasta la pieza azul y el texto entra con el encuadre.",
+      "typography": "Instrument Serif de 42 a 80 px y Barlow de 12 a 16 px. La nota de material aparece sobre una zona oscura con contraste estable, junto al segundo plano. El título deja libre el objeto principal.",
+      "interaction": "Bloque subdividido desplazado por ruido continuo de tres escalas y crestas, normal map derivado de diferencias del ruido, aro y gema editables. Scroll reversible, inicio y detalle, progreso directo en movimiento reducido y entrada inmóvil con still.",
+      "why": "El relieve grande decide la silueta, el ruido medio rompe los planos y las normales pequeñas describen las aristas húmedas. Controlar esos tamaños por separado evita la masa blanda y el brillo metálico uniforme sobre roca."
     },
     "implementation": [
-      "La roca procede de una esfera subdividida con relieve continuo y perfil vertical comprimido. El anillo y la gema siguen siendo mallas editables.",
-      "La duración la determina la altura del documento, no un temporizador. La cámara interpola entre encuadre general y detalle.",
-      "No hay precios, certificaciones ni compra simulada. El producto se identifica como pieza de demostración."
+      "Mantén el ruido geométrico continuo: se evalúa por posición, sin valores aleatorios por vértice que abran costuras. El bloque conserva una silueta de losa; promedia las normales de posiciones coincidentes para unir las costuras entre caras sin convertir la piedra en una esfera.",
+      "La segunda pieza debe apoyar sobre su plinto sin quedar enterrada. Revisa inicio, mitad y final tanto en escritorio como en móvil.",
+      "El brillo de gema se construye con focos de color localizados. Polvo, haces y desenfoque son aproximaciones ligeras declaradas; no se atribuye una simulación física completa."
     ],
     "checkpoints": [
       "Ver anillo completo, roca irregular, sombra y reflejo desde la entrada.",
       "Desplazar hasta el final y volver. Comparar showcaseState.scrollProgress y el encuadre.",
-      "Usar Ver detalle y Volver al inicio. Comprobar móvil, movimiento reducido y fallback sin WebGL."
+      "Usar Ver detalle y Volver al inicio. Comprobar móvil, movimiento reducido y fallback sin WebGL.",
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
     ],
     "parity_states": [
       "Entrada con still=1",
       "Scroll al 50%",
       "Detalle al final del recorrido"
     ],
-    "prompt": "Construye un escaparate cinematográfico ejecutable de un anillo sobre basalto irregular. Modela roca, aro, engaste y gema en 3D con materiales físicos. Usa luz cálida lateral, recorte frío, reflejos de tarjetas luminosas y sombra real. Mantén la escena sticky durante 280 svh, liga cámara, pequeño giro y luz al scroll reversible. Conserva visible el producto desde la entrada y permite saltar a inicio y detalle. Sigue la receta rock y verifica entrada, mitad y final del recorrido."
+    "prompt": "Construye la referencia ejecutable Producto sobre roca con sus recursos locales. Foco cálido lateral y recortes fríos. Tarjetas PMREM dan reflejos amplios al metal. El basalto oscuro tiene rugosidad 0,87, normal map multiescala y metalicidad 0,04. Focos verdes y azules proyectan un brillo de gema artístico sobre la piedra; no simulan cáusticas refractivas. Motas y haces sutiles dan aire. Dos anillos y dos plintos de roca en distintos planos, con un fondo de basalto fracturado. El scroll de 280 svh interpola tres fotogramas clave de cámara y objetivo mediante smoothstep. El segundo tramo viaja hasta la pieza azul y el texto entra con el encuadre. Instrument Serif de 42 a 80 px y Barlow de 12 a 16 px. La nota de material aparece sobre una zona oscura con contraste estable, junto al segundo plano. El título deja libre el objeto principal. Bloque subdividido desplazado por ruido continuo de tres escalas y crestas, normal map derivado de diferencias del ruido, aro y gema editables. Scroll reversible, inicio y detalle, progreso directo en movimiento reducido y entrada inmóvil con still. El relieve grande decide la silueta, el ruido medio rompe los planos y las normales pequeñas describen las aristas húmedas. Controlar esos tamaños por separado evita la masa blanda y el brillo metálico uniforme sobre roca. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
   }
 ]

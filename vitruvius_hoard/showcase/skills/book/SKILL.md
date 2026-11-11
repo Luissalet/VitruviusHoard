@@ -1,37 +1,44 @@
 ---
 name: showcase-book
-description: Tres pliegos con una hoja segmentada en perspectiva, arrastre y retorno por muelle amortiguado. Use when reproducing the book showcase reference.
-version: 1.0.0
+description: Reproduce the book showcase with explicit material, light and motion decisions.
+version: 2.0.0
 ---
 
 # Libro a doble página
 
 ## Procedure
 
-Construye una web-libro ejecutable. Conserva dos páginas visibles a 1440 y 390 px, papel marfil y lomo fijo sobre mesa oscura. Cada pliego contiene una sola pieza. Usa caras HTML y una hoja de veinte segmentos que se curva en perspectiva con un muelle amortiguado, arrastre reversible, reverso, botones y flechas. Mantén el texto legible al girar. Carga Instrument Serif y Barlow desde recursos locales. Reproduce las decisiones de la receta book y verifica también el pliego 2 y el giro a mitad de recorrido.
+Construye la referencia ejecutable Libro a doble página con sus recursos locales. Pliegos oscuros con fotografía a sangre, sombra de contacto en el lomo y canto de hojas de 9 px. El grano se genera de forma determinista en un lienzo de 128 px. El giro modula el brillo de cada segmento entre 0,58 y 1 según su normal. Tres pliegos, cada uno con una imagen dominante y una pausa editorial. El muelle conserva rigidez 100 y amortiguación 18. El contenido del reverso es el pliego siguiente, no una cara vacía. Un arrastre corto vuelve a su origen. Instrument Serif de 30 a 64 px sobre imágenes a sangre y Barlow para lectura y folios. La fotografía ocupa la página entera; el texto se ancla a los márgenes y al pie, sin una tarjeta dentro del papel. Hoja de veinte segmentos con caras HTML impresas, curvatura y sombreado angular; arrastre reversible, cancelación, botones y flechas. Rail de navegación discreto de 44 px de altura interactiva. Movimiento reducido cambia directamente de pliego. La materia se reconoce por el canto, el grano y las sombras de contacto. La imagen a sangre y el contraste entre pliego fotográfico y pausa tipográfica producen ritmo editorial sin aumentar los controles. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos.
 
 ### light
 
-Papel marfil sobre mesa oscura. Gradiente estrecho en el lomo y sombra proyectada hacia abajo para mostrar espesor. La luz baja durante el giro según la normal de cada segmento.
+Pliegos oscuros con fotografía a sangre, sombra de contacto en el lomo y canto de hojas de 9 px. El grano se genera de forma determinista en un lienzo de 128 px. El giro modula el brillo de cada segmento entre 0,58 y 1 según su normal.
 
 ### rhythm
 
-Cada pliego es una pieza y permanece hasta una acción. Muelle con rigidez 100 y amortiguación 18, paso de tiempo acotado a 32 ms. El arrastre puede abandonarse antes de la mitad y vuelve a su origen.
+Tres pliegos, cada uno con una imagen dominante y una pausa editorial. El muelle conserva rigidez 100 y amortiguación 18. El contenido del reverso es el pliego siguiente, no una cara vacía. Un arrastre corto vuelve a su origen.
 
 ### typography
 
-Instrument Serif para titulares de 32 a 65 px y Barlow para textos de 13 a 19 px. Las líneas cortas mantienen el margen útil de cada media página.
+Instrument Serif de 30 a 64 px sobre imágenes a sangre y Barlow para lectura y folios. La fotografía ocupa la página entera; el texto se ancla a los márgenes y al pie, sin una tarjeta dentro del papel.
 
 ### interaction
 
-Veinte segmentos por hoja recorren una curva continua en X/Z con curvatura sinusoidal. Hay reverso, oclusión, botones en ambos sentidos, flechas, arrastre capturado y cancelación. En movimiento reducido el pliego cambia directamente.
+Hoja de veinte segmentos con caras HTML impresas, curvatura y sombreado angular; arrastre reversible, cancelación, botones y flechas. Rail de navegación discreto de 44 px de altura interactiva. Movimiento reducido cambia directamente de pliego.
 
 ### why
 
-La doble página y el lomo estable permiten reconocer el objeto. La resistencia, la curvatura y el retorno explican el peso de la hoja sin un vídeo pregrabado.
+La materia se reconoce por el canto, el grano y las sombras de contacto. La imagen a sangre y el contraste entre pliego fotográfico y pausa tipográfica producen ritmo editorial sin aumentar los controles.
+
+## Implementation
+
+- Cada cara se compone con .editorial; su contexto de apilamiento mantiene la imagen por encima del fondo y debajo del texto. Conserva ese contexto también en las caras segmentadas.
+- Las fotografías locales de costa, cerámica y retrato tienen procedencia y hashes en assets/provenance.json. Sustituye imágenes y pies juntos.
+- El grano y el canto representan papel real: no los extiendas al shell de Vitruvius. Verifica sombras, reverso impreso y lectura a 390 px.
 
 ## Verification
 
 - Abrir en 1440×900 y 390×844. Leer las dos páginas sin desbordamiento.
 - Pasar adelante y atrás con botón y teclado. Arrastrar menos y más de media página y cancelar un gesto.
 - Durante el giro comprobar curvatura, reverso y sombra. Con movimiento reducido verificar el cambio inmediato.
+- Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto.
