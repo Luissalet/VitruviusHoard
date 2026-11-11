@@ -1,14 +1,14 @@
 ---
 name: showcase-gallery
 description: Reproduce the gallery showcase with explicit material, light and motion decisions.
-version: 2.0.0
+version: 2.0.1
 ---
 
 # Sala-galería 3D
 
 ## Procedure
 
-Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos.
+Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,5 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos.
 
 ### light
 
@@ -16,7 +16,7 @@ Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. 
 
 ### rhythm
 
-Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.
+Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,5 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.
 
 ### typography
 
@@ -35,6 +35,8 @@ Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan 
 - Ocho paneles reutilizan tres proyectos de demostración; no son ocho proyectos reales. Fotografías locales con licencia y procedencia en assets/provenance.json.
 - Los reflejos son texturas propias de las obras, desenfocadas a 400×280, invertidas y desvanecidas. Mantén su opacidad baja para que no parezcan pósteres en el suelo.
 - El hover levanta 0,12 unidades y la selección fija el travelling en cuatro unidades. Conserva los límites para no atravesar los paneles.
+
+- Marcos de 0,5 unidades orientados hacia el recorrido, c?mara de entrada desplazada 1,25 unidades y pilastras laterales con luz rasante separan las paredes del fondo. La profundidad se conserva tambi?n sin paralaje.
 
 ## Verification
 

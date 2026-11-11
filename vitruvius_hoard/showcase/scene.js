@@ -429,6 +429,16 @@ async function start() {
         bumpScale: 0.045,
         roughness: 0.92,
       });
+      // Shallow wall bays and a low grazing light reveal the lateral volume.
+      for (let z = 2; z > -37; z -= 7) {
+        const pier = box(0.38, 7.8, 0.55, "#4b554e", x * 0.97, 3.9, z);
+        pier.material.bumpMap = plaster;
+        pier.material.bumpScale = 0.025;
+      }
+      const skirting = box(0.08, 0.1, 59, "#59685a", x * 0.97, 0.16, -15);
+      skirting.material.emissive.set("#26382a");
+      skirting.material.emissiveIntensity = 0.25;
+      spot("#d8e4ce", 35, x * 0.89, 0.35, -6, x * 0.98, 4, -9, 0.5);
     }
     box(20, 9, 0.4, "#343e37", 0, 4.4, -40);
     box(20, 0.2, 60, "#181e1b", 0, 8, -15);
@@ -446,8 +456,8 @@ async function start() {
     }
     let travel = 0,
       desiredTravel = 0,
-      desiredX = 0,
-      cameraX = 0;
+      desiredX = -1.25,
+      cameraX = -1.25;
     const look = new THREE.Vector3(0, 2.7, -10);
     const images = await Promise.all(
       ["ceramic.jpg", "portrait.jpg", "coast.jpg"].map((name) =>
@@ -461,7 +471,9 @@ async function start() {
       const x = i < 3 ? (i - 1) * 5.5 : i % 2 ? -6.3 : 6.3;
       const z =
         i < 3 ? (i === 1 ? -8 : -5.5) : -14 - Math.floor((i - 3) / 2) * 7;
-      const panel = box(4.85, 3.5, 0.34, "#101713", x, 3, z);
+      const yaw = -Math.sign(x) * (i < 3 ? 0.16 : 0.3);
+      const panel = box(4.85, 3.5, 0.5, "#101713", x, 3, z);
+      panel.rotation.y = yaw;
       panel.castShadow = true;
       const surface = document.createElement("canvas");
       surface.width = 1200;
@@ -499,10 +511,11 @@ async function start() {
       const artwork = mesh(
         new THREE.PlaneGeometry(4.55, 3.2),
         new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }),
-        x,
+        x + Math.sin(yaw) * 0.26,
         3,
-        z + 0.18,
+        z + Math.cos(yaw) * 0.26,
       );
+      artwork.rotation.y = yaw;
       artwork.userData.project = project;
       targets.push(artwork);
       exhibits.push({ artwork, panel, baseY: 3 });
@@ -568,7 +581,7 @@ async function start() {
     controls.querySelector("#backward").onclick = () => move(-2);
     controls.querySelector("#home").onclick = () => {
       desiredTravel = 0;
-      desiredX = 0;
+      desiredX = -1.25;
       invalidate(65);
     };
     controls
@@ -631,7 +644,7 @@ async function start() {
         mobile ? 3.4 : 3.1,
         12 - travel,
       );
-      look.x = cameraX + (reduced.matches || still ? 0 : smoothPointer.x) * 2;
+      look.x = cameraX * 0.55 + (reduced.matches || still ? 0 : smoothPointer.x) * 2;
       camera.lookAt(look);
       for (const exhibit of exhibits) {
         const lift =
@@ -1080,10 +1093,12 @@ async function start() {
         geometry,
         stoneMaterial,
         (i - 3) * 3.4,
-        1.2,
+        2.8,
         -8 - (i % 2),
       );
-      cliff.scale.set(0.9, 3.8, 1.1);
+      // Keep the cliff crowns outside the shot: a lit top face read as a
+      // detached white fragment above the rings rather than a continuous wall.
+      cliff.scale.set(0.9, 7, 1.1);
       cliff.rotation.set(0.1, i * 0.8, 0.1 * (i % 3));
     }
     const floor = box(100, 0.1, 100, "#0b100e", 0, -3.2, 0);
@@ -1104,27 +1119,64 @@ async function start() {
     ring.add(band);
     band.castShadow = true;
     band.receiveShadow = true;
-    const setting = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.42, 0.36, 0.25, 12),
-      metal,
-    );
-    setting.rotation.x = Math.PI / 2;
-    setting.position.set(0, 0.84, 0);
+    const setting = new THREE.Group();
+    const basket = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.035, 10, 64), metal);
+    basket.position.set(0, 0.89, -0.06);
+    basket.scale.y = 0.85;
+    setting.add(basket);
+    const girdle = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.024, 10, 64), metal);
+    girdle.position.set(0, 0.89, 0.23);
+    girdle.scale.y = 0.85;
+    setting.add(girdle);
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.PI / 6 + i * Math.PI / 3;
+      const point = (radius, z) => new THREE.Vector3(
+        Math.cos(angle) * radius, 0.89 + Math.sin(angle) * radius * 0.85, z,
+      );
+      const tip = point(0.385, 0.4);
+      const claw = new THREE.Mesh(new THREE.TubeGeometry(
+        new THREE.QuadraticBezierCurve3(point(0.31, -0.06), point(0.51, 0.25), tip),
+        16, 0.027, 8, false,
+      ), metal);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), metal);
+      cap.position.copy(tip);
+      setting.add(claw, cap);
+    }
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(new THREE.TubeGeometry(
+        new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(side * 0.6, 0.58, 0),
+          new THREE.Vector3(side * 0.48, 0.88, 0.06),
+          new THREE.Vector3(side * 0.3, 0.89, 0.16),
+        ), 16, 0.045, 10, false,
+      ), metal);
+      setting.add(shoulder);
+    }
     ring.add(setting);
+    // Table, crown, girdle and pavilion keep distinct planes under the lights.
+    const gemGeometry = new THREE.LatheGeometry([
+      new THREE.Vector2(0, -0.26), new THREE.Vector2(0.32, -0.03),
+      new THREE.Vector2(0.45, 0.02), new THREE.Vector2(0.45, 0.07),
+      new THREE.Vector2(0.29, 0.28), new THREE.Vector2(0, 0.28),
+    ], 10);
+    gemGeometry.rotateX(Math.PI / 2);
     const gem = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.45, 1),
+      gemGeometry,
       new THREE.MeshPhysicalMaterial({
         color: "#4d9a91",
         metalness: 0.3,
         roughness: 0.12,
         clearcoat: 1,
         clearcoatRoughness: 0.08,
+        flatShading: true,
       }),
     );
     gem.position.set(0, 0.89, 0.21);
-    gem.scale.set(1, 0.85, 0.65);
+    gem.scale.set(1, 0.85, 1);
     ring.add(gem);
-    gem.castShadow = true;
+    ring.traverse((part) => {
+      if (part.isMesh) part.castShadow = part.receiveShadow = true;
+    });
     const secondRing = ring.clone();
     secondRing.position.set(-3.8, 1.85, -4.3);
     secondRing.rotation.set(0.1, 0.5, 0.18);

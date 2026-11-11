@@ -635,9 +635,9 @@ The library inherits workspace ground `#13161d`, text `#e1e4ec`, field surface `
 | --- | --- |
 | Book | Dark editorial spreads with full-bleed photographs, deterministic grain, a nine-pixel page edge, spine contact shadow and angle-dependent face brightness |
 | Glitch | Local alpha cutout derived from the stock portrait, pale green low-relief shader, curved background grid and velocity-driven RGB bands that settle after input |
-| Gallery | Eight photographic exhibits with thick frames, granular walls and floor, physical spot falloff, subtle additive beams and soft projected reflections |
+| Gallery | Eight photographic exhibits with angled 0.5-unit frames, an offset entry camera, lateral wall bays and grazing lights, granular walls and floor, physical spot falloff, subtle additive beams and soft projected reflections |
 | City | Dense instanced bodies, facade ribs, ledges and crowns; variable four-sided windows; blue fog, reflective asphalt, light trails, emissive red monument and red point light |
-| Rock | Multiscale displaced basalt with normal map, roughness 0.87 and metalness 0.04; two metallic rings, green and blue gemstones, warm key and cool rim lights, colored gem-light projections and dust |
+| Rock | Multiscale displaced basalt with normal map, roughness 0.87 and metalness 0.04; two metallic rings with six-claw open baskets and faceted green and blue gemstones, warm key and cool rim lights, colored gem-light projections and dust |
 
 The rock reference creates a PMREM environment from luminous cards for broad reflections on the metal. Its geometry, stone texture and project data are generated locally. Source-frame links provide research provenance. Exported assets have their separate provenance and license files under `assets/`.
 
