@@ -7144,6 +7144,252 @@
     "module": "design"
   },
   {
+    "name": "benchmark_catalog",
+    "description": "Read all 70 pinned reconstruction references, provenance, case counts and scoring scope. No downloads or reference processes start. Banco de pruebas de Rehacer.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_start",
+    "description": "Evaluate Rehacer against frozen corpus entry pages and retain scores by version. Downloads requested reference fixtures once, starts each locally with fresh state, runs normal Rehacer and closes it. Copy defaults to one round. Rebuild uses the global model. Metric is Vitruvius stable-pixel parity at each width. Official functional/SSIM reward remains unmeasured. Poll benchmark_get.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "properties": {
+        "runtime_kind": {
+          "default": "container",
+          "description": "Linux container for all reference fixtures. Native uses the current interpreter and installed reference dependencies.",
+          "enum": [
+            "container",
+            "native"
+          ],
+          "title": "Runtime Kind",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version being measured, e.g. a release or commit.",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "cases": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 70,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Corpus ids. Omit to run all 70 frozen references.",
+          "title": "Cases"
+        },
+        "mode": {
+          "default": "copy",
+          "enum": [
+            "copy",
+            "rebuild"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "max_rounds": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        },
+        "widths": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Widths",
+          "type": "array"
+        },
+        "pass_score": {
+          "default": 98,
+          "maximum": 100,
+          "minimum": 50,
+          "title": "Pass Score",
+          "type": "number"
+        },
+        "tolerance": {
+          "default": 0.1,
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Tolerance",
+          "type": "number"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "Start",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_get",
+    "description": "Read a retained versioned evaluation with coverage, failures, configuration, source hashes, per-round scores and evidence links.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[a-f0-9]{12}$",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Id",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_list",
+    "description": "List versioned reconstruction evaluations and measured coverage.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 50,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "ListArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_compare",
+    "description": "Compare paired measured cases only when the corpus, selection, settings and reference hashes match. Returns coverage and score deltas.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "before": {
+          "pattern": "^[a-f0-9]{12}$",
+          "title": "Before",
+          "type": "string"
+        },
+        "after": {
+          "pattern": "^[a-f0-9]{12}$",
+          "title": "After",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "title": "Compare",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_stop",
+    "description": "Stop a corpus evaluation and its current remake, retaining completed case scores.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[a-f0-9]{12}$",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Id",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "benchmark_resume",
+    "description": "Resume pending/interrupted corpus cases with the same implementation. Measured and failed results stay retained. Start a new version after code changes or to repeat failures.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "pattern": "^[a-f0-9]{12}$",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Id",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "docs_libraries",
     "description": "List indexed libraries, exact versions and project environments (libraries, librerías, versión, entornos)\n\nWhat Babel has indexed (exact versions), the registered environments (project\ninterpreters / node_modules folders; default_for says which one answers Python or\nTypeScript when env is omitted) and recent background jobs. Use it to find an env id, or to follow a docset install / dependency\nindexing job. Installed packages that are not listed yet are indexed automatically\nthe first time api_lookup or api_check_code needs them.\n\nArgs:\n    ecosystem: \"python\", \"js\", \"docset\" or \"markdown\".\n    env: environment id or project path; limits libraries to that environment.\n    limit: libraries per page (default 15, max 200). offset: for the next page.\n\nReturns: {libraries: [{id, ecosystem, name, version, env, status, entries}], total,\n    has_more, next_offset, environments: [{id, label, python, default, ...}],\n    jobs: [{id, kind, status, progress, message}]}.\nKeywords: list libraries, what is installed, which version, environments, job progress,\n    listar librerias, que hay instalado, que version tengo, entornos, progreso\n",
     "inputSchema": {

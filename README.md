@@ -1,5 +1,7 @@
 # Vitruvius's Hoard
 
+Rehacer includes a [versioned reconstruction benchmark](docs/BENCHMARKS.md) over 70 pinned reference entry pages. It retains visual parity by version, runtime and source hashes, coverage, failures, round scores and screenshot evidence through the screen, REST and seven MCP tools. Reference fixtures run locally with fresh state in an owned Linux runtime. The official functional/normalized-SSIM reward remains unmeasured.
+
 A local software workbench with design/source projects, version-exact API documentation and existing reverse-engineering capabilities. Design, APIs and Reverse Engineering are independent native modules; all modules and automatic work start OFF.
 
 [Castellano](README.es.md) · [Workspace guide](docs/SOFTWARE-WORKSPACE.md) · [API/MCP](docs/SOFTWARE-API.md) · [Migration inventory](docs/MIGRATION933.json)

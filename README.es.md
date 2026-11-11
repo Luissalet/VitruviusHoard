@@ -1,5 +1,7 @@
 # Vitruvius's Hoard
 
+Rehacer incluye un [banco de pruebas por versión](docs/BENCHMARKS.md) con las páginas de entrada de 70 referencias congeladas. Conserva paridad visual, hashes de código y referencias, entorno, cobertura, errores, rondas y capturas desde la pantalla, REST y siete herramientas MCP. Las referencias se ejecutan localmente con datos nuevos en un runtime Linux propio. La puntuación oficial funcional y de SSIM normalizado queda sin medir.
+
 Taller local de software con diseño y proyectos de fuentes, documentación de APIs por versión y capacidades existentes de ingeniería inversa. Diseño, APIs e Ingeniería inversa son módulos nativos independientes; todos los módulos y automatismos empiezan apagados.
 
 [English](README.md) · [Guía del espacio](docs/SOFTWARE-WORKSPACE.es.md) · [API/MCP](docs/SOFTWARE-API.md) · [Inventario de migración](docs/MIGRATION933.json)

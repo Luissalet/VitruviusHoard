@@ -1,0 +1,363 @@
+{
+  "id": "reconstruction-v1",
+  "version": "v1",
+  "source": "https://github.com/TIGER-AI-Lab/WebsiteBench",
+  "catalog_source": "https://github.com/reacher-z/Awesome-REA",
+  "dataset": "TIGER-Lab/WebsiteBench",
+  "revision": "d7fcb4c06fee6563e88675fb7ed21135cb26e693",
+  "scope": "Frozen reference entry pages, desktop and mobile. Vitruvius stable-pixel parity. Official functional and normalized-SSIM cases are unmeasured.",
+  "official_cases": 46916,
+  "license": "Apache-2.0 for benchmark code. Reference content belongs to its owners, non-commercial research only.",
+  "cases": [
+    {
+      "id": "1password-web",
+      "official_cases": 679,
+      "task_content_sha256": "683a2b1447e9dfa3c446f513512d26018a4aaab9b8f274db799e731cb8607363"
+    },
+    {
+      "id": "33",
+      "official_cases": 765,
+      "task_content_sha256": "7daf918b936c7e0ac2c0182c425596f9b03f37e4d06088a9bf5b7a9a188b6688"
+    },
+    {
+      "id": "ace-hardware",
+      "official_cases": 433,
+      "task_content_sha256": "25d91c000eddad0e7a094580b69b93723acc18a0c5b70c6191fd7dbeca7a7f5f"
+    },
+    {
+      "id": "airtable",
+      "official_cases": 589,
+      "task_content_sha256": "5ed43a726a8f37264d259f68ff56392ba37b2125241d393628a6b228432e409a"
+    },
+    {
+      "id": "amazon",
+      "official_cases": 1025,
+      "task_content_sha256": "640985b097bc19d4cb9c315b3fefa4105d12f0fb76b60c51398f5620f8f3f70d"
+    },
+    {
+      "id": "amazon-home-services",
+      "official_cases": 799,
+      "task_content_sha256": "7b0297970218a3f513f31416ce6a978896898cc26a3c7422a93c50621d5e0584"
+    },
+    {
+      "id": "amc-theatres",
+      "official_cases": 369,
+      "task_content_sha256": "7208602c902a74944c2ce8812402254680f3e0f9010af8dd488fc96131975c39"
+    },
+    {
+      "id": "angi",
+      "official_cases": 1000,
+      "task_content_sha256": "c92517204ad15be64181b6939fce75853c9d0059946a40b44ead26617e50e42c"
+    },
+    {
+      "id": "apple",
+      "official_cases": 700,
+      "task_content_sha256": "7b816e1ddc08ebdd3ba92695603c75bed1dfe6873a95cd408c5436e27a1ab545"
+    },
+    {
+      "id": "article",
+      "official_cases": 1759,
+      "task_content_sha256": "0e0b1ea6de7685a12a5dc91fe500698ffdf0a1956a74c6e644c8e96958223e26"
+    },
+    {
+      "id": "asana",
+      "official_cases": 346,
+      "task_content_sha256": "439695514c6e8d2fe6afbf83021be46037a9dde96abcc8ee1b4f9d75b08bb7d8"
+    },
+    {
+      "id": "aspca-pet-insurance",
+      "official_cases": 1019,
+      "task_content_sha256": "181080881c9ac17b0504ea7e47a8daa21ddcde89ad927eccd2fd76c16f6625f1"
+    },
+    {
+      "id": "autoslash",
+      "official_cases": 353,
+      "task_content_sha256": "85d823228399cae95d4574504ddc23f6e4805c8ffb2edd3b4df939054400e271"
+    },
+    {
+      "id": "autotrader",
+      "official_cases": 487,
+      "task_content_sha256": "1d0dc1cf3c5417bde99479310bf7b0d706532b2cac46f07acc913c035d1eb62b"
+    },
+    {
+      "id": "backcountry",
+      "official_cases": 1317,
+      "task_content_sha256": "eb9d958c8caa21cd717e6ed0e9693349d64907d3191981aa99f1874af3e4fde2"
+    },
+    {
+      "id": "bean-box",
+      "official_cases": 987,
+      "task_content_sha256": "4aab561ce29681c82cbd053526290a7c18fe6cc9885ebe1336580e36fd96cfcc"
+    },
+    {
+      "id": "beeradvocate",
+      "official_cases": 446,
+      "task_content_sha256": "ff5b5ce9210595041836847135eab3b1cd70482b6303e7d2056fe4a3c21770db"
+    },
+    {
+      "id": "blinkist",
+      "official_cases": 437,
+      "task_content_sha256": "ba3a2feb46838c14526e99e8c8df0647f57a62e40a637f2a79eaaabad6a7814d"
+    },
+    {
+      "id": "blueapron",
+      "official_cases": 410,
+      "task_content_sha256": "29411ca0d6ad7357de8ff38ace79ed15e56082ca201da27a11483b3f9f050b98"
+    },
+    {
+      "id": "bluemercury",
+      "official_cases": 694,
+      "task_content_sha256": "120bbed52fe86763d2c7b6da54e79db5492458f1026e6067b10bc47aeeb582eb"
+    },
+    {
+      "id": "boardgamegeek",
+      "official_cases": 1020,
+      "task_content_sha256": "02529b220dbbe2f0e26eb3d20dad1e607d5c8fd01743d6bea3c0d9de4a22f2d9"
+    },
+    {
+      "id": "bookshop",
+      "official_cases": 632,
+      "task_content_sha256": "04d6021959cda4c9f16324f2d1bbfb3ed495887b72f7f901437de0f9db8f713f"
+    },
+    {
+      "id": "breakoutgames-2",
+      "official_cases": 387,
+      "task_content_sha256": "423b470ca6930a57e138ee4e8ccf7711e63244364ccfe1ecaddc9e4498e9494d"
+    },
+    {
+      "id": "brooklinen",
+      "official_cases": 736,
+      "task_content_sha256": "4981f2f2ba5d152ac3864cebb37db43f41029a9c55f64b87822314238f741870"
+    },
+    {
+      "id": "capterra",
+      "official_cases": 632,
+      "task_content_sha256": "d4ab086eb3e88020abcb01d5a8cdbef92c8ba3b65e135014e4a40e09b9cbdfe8"
+    },
+    {
+      "id": "change",
+      "official_cases": 420,
+      "task_content_sha256": "33f4049c1bd22dcdce5117d7c54c610b240c19edf047379a897d6fd896d37bc5"
+    },
+    {
+      "id": "columbia",
+      "official_cases": 338,
+      "task_content_sha256": "50f3131b9307460bea39fb522fea61a957a63eca8ad1f8dcae2e0398cdc85623"
+    },
+    {
+      "id": "crumbl-cookies",
+      "official_cases": 531,
+      "task_content_sha256": "f131d979fc3eda12f1566849df9ddd26c312d0b2f55cdd77f5ad81a2d221f62f"
+    },
+    {
+      "id": "crunchyroll",
+      "official_cases": 681,
+      "task_content_sha256": "d2c151411db4a34b186e4a220e8ef5bf1318d1ee1b8e88885e3d0e6b890608ed"
+    },
+    {
+      "id": "curology",
+      "official_cases": 539,
+      "task_content_sha256": "37fbdd17d0a2f36700da7f0dbf8cce60a3317092b2cc3b6a6acce384918e2fb6"
+    },
+    {
+      "id": "dooney-bourke",
+      "official_cases": 754,
+      "task_content_sha256": "2444dcd7767708bd3092fa7b9947e4d9bab0aa836f29ab7397f90830700d7655"
+    },
+    {
+      "id": "eatthismuch",
+      "official_cases": 668,
+      "task_content_sha256": "0648e40c7687d30930719270e38b8a95fca8c9722be05a1dfd7b78ffd476d66b"
+    },
+    {
+      "id": "etsy",
+      "official_cases": 347,
+      "task_content_sha256": "b66d808569b50b081bbc1ae9c7e0e5dd8d7044feb98e69a37d73164473687174"
+    },
+    {
+      "id": "eventbrite",
+      "official_cases": 1655,
+      "task_content_sha256": "534ee3196887ac295217ce94097672b059a153efb64ef4855531ec302d955288"
+    },
+    {
+      "id": "everydollar",
+      "official_cases": 394,
+      "task_content_sha256": "237f57408091b66f66c54a8906d2150be9ce8df6cd5dfae1341b881f7c2777da"
+    },
+    {
+      "id": "everyplate",
+      "official_cases": 2016,
+      "task_content_sha256": "3164d7713b636b55af0be60a9a87ee7845c6d57f70b2ead52004b389081d3ace"
+    },
+    {
+      "id": "fandango",
+      "official_cases": 387,
+      "task_content_sha256": "d44f7e2ce0322632fea18ec0ab6ddba70bddf3c1148d434056a6729697005425"
+    },
+    {
+      "id": "freshdirect",
+      "official_cases": 990,
+      "task_content_sha256": "4a89f813630baff59c69947a083fc0eafd43b68d0c8e1f725125b93acb997a5c"
+    },
+    {
+      "id": "hipcamp",
+      "official_cases": 302,
+      "task_content_sha256": "d4d820dd81a78814d3c733f2b186533298d1a53b3a4a85bc23a1b84b453b9870"
+    },
+    {
+      "id": "hmart",
+      "official_cases": 714,
+      "task_content_sha256": "2000a6172fdfe213fa62ca56a26110c4872c0d4f6ad8d2ff0907d42f7f46d480"
+    },
+    {
+      "id": "imdb",
+      "official_cases": 509,
+      "task_content_sha256": "0be2d761bfaeeb9294a149bb6a883571f89e91d5cb3d8a9ff74cc0232330f02d"
+    },
+    {
+      "id": "insureon",
+      "official_cases": 522,
+      "task_content_sha256": "6e3d4ad9180ee8cc8f2e549c4245db8cf3e70297f6cc49c9e3bdcaef615aa592"
+    },
+    {
+      "id": "insurify",
+      "official_cases": 350,
+      "task_content_sha256": "d93ac66f5412a8c4180f3431c123d279f4f6b255e38e218e4488b42fd3c49735"
+    },
+    {
+      "id": "ioby",
+      "official_cases": 380,
+      "task_content_sha256": "812f2cab319ebf7d7f9b9b6ccef8fc426ed3b09925042ca30851c95e89f2235d"
+    },
+    {
+      "id": "kanetix-ca",
+      "official_cases": 809,
+      "task_content_sha256": "e96529b78f6763fb176e761d725c9d5059dbe89592015efa161de41938d89517"
+    },
+    {
+      "id": "leetcode",
+      "official_cases": 326,
+      "task_content_sha256": "9a35f3ded768522f28ebb7f0548a85f4ce308f32f9976626e9d346c1158d6f14"
+    },
+    {
+      "id": "legalnature",
+      "official_cases": 389,
+      "task_content_sha256": "d006a1d60b8f3dc08ae2a7f293fb61451ca61191c972c5d021b2e679167dd388"
+    },
+    {
+      "id": "linkedin",
+      "official_cases": 565,
+      "task_content_sha256": "82259f49d730c4763b245e505dda8aacbb3a533dfe623426d4d0ad2cd7e6a18a"
+    },
+    {
+      "id": "llbean",
+      "official_cases": 423,
+      "task_content_sha256": "92808669066f7fddea9b160929f8a16a6e1459fa8599e6abe6f0cb82a9b5f987"
+    },
+    {
+      "id": "lowes",
+      "official_cases": 494,
+      "task_content_sha256": "648ace58d13f1a2d674fa5511d50b1a46bc1fd8525ae29e95cec60f7dd98d9f8"
+    },
+    {
+      "id": "medium",
+      "official_cases": 650,
+      "task_content_sha256": "52b1f7aca5ffdc83092b006ba653cda3ce964bd686742dc661c95d2d27c21755"
+    },
+    {
+      "id": "meetup",
+      "official_cases": 347,
+      "task_content_sha256": "7d27184d758255b8edb506c131f3f195cd7090a4422bbc47d19f239e7893c56a"
+    },
+    {
+      "id": "notion",
+      "official_cases": 393,
+      "task_content_sha256": "8f279b5cbc47a9ddb8c6de22e5f261853ade089169d772cf91b6ff9c310399a0"
+    },
+    {
+      "id": "ollie",
+      "official_cases": 394,
+      "task_content_sha256": "d233b72d7104c268da2ab8428c7feeb126926c032c0e91376c7efdff4df6222d"
+    },
+    {
+      "id": "ontario-parks",
+      "official_cases": 313,
+      "task_content_sha256": "31e58c7ec4cee6475b77b63fa3176b1bba37c41c866dad648977dcbd6dc42d00"
+    },
+    {
+      "id": "opentable",
+      "official_cases": 512,
+      "task_content_sha256": "1463bea9af16e431c00f7416e15ebdabc6cbbc68a3a84d46921f33cfabe2bf44"
+    },
+    {
+      "id": "petco",
+      "official_cases": 609,
+      "task_content_sha256": "ef9ca75d3c1852771622e68c1903821799eea8a240282c008afeb0c14786ddb2"
+    },
+    {
+      "id": "petfinder",
+      "official_cases": 1783,
+      "task_content_sha256": "104f7d4fe5ab3358e81117f6447c320ea72e74c86e99aec2348ac0de2b93bd33"
+    },
+    {
+      "id": "petsmart",
+      "official_cases": 837,
+      "task_content_sha256": "2d4d1ded6f94e5016bde10f5643bd3af1cc621611520171b8b387410f3c583bc"
+    },
+    {
+      "id": "ratemyprofessors",
+      "official_cases": 721,
+      "task_content_sha256": "e934ccab744d3676125a72f5a8d503cab7e280b4109312b5e7e002450eba6c5c"
+    },
+    {
+      "id": "resy",
+      "official_cases": 519,
+      "task_content_sha256": "912fd96d944bed3f6061d9d80bad5def632ba8bcbf2729e1d6691a3db6b85fb4"
+    },
+    {
+      "id": "simplify-jobs",
+      "official_cases": 752,
+      "task_content_sha256": "f30590e23c400de13288ba76ea11c8fd8c9044043226175c61172695d13b216a"
+    },
+    {
+      "id": "target",
+      "official_cases": 537,
+      "task_content_sha256": "a27ee3d307811ef5b9b39e815a50db55b4ceb829cefad7f9c3be378a973ac83e"
+    },
+    {
+      "id": "taskrabbit",
+      "official_cases": 871,
+      "task_content_sha256": "2a81b3df20da97cdf4b1bf3322c0a817d871da5c189be1ebc2ef9c56a25d3352"
+    },
+    {
+      "id": "tripadvisor",
+      "official_cases": 625,
+      "task_content_sha256": "74403e7fa0962167afa886e6956307d3ede5cef2f52d766a59330b5924bf5f36"
+    },
+    {
+      "id": "tripit",
+      "official_cases": 478,
+      "task_content_sha256": "4903b334ea0838aa159ddfdd2e191240a988da74b6e29a466a5ce9f1342a948d"
+    },
+    {
+      "id": "ubereats",
+      "official_cases": 338,
+      "task_content_sha256": "404b76a4df65d43016075102ee85dba510b7045d367c2014806d35706c147739"
+    },
+    {
+      "id": "warbyparker",
+      "official_cases": 992,
+      "task_content_sha256": "a0b3a6c0174476b59887b3329b90e44322bd7c6ffe77e9af3eb49f536fc1bb9d"
+    },
+    {
+      "id": "wayfair",
+      "official_cases": 1163,
+      "task_content_sha256": "da95aebbd8f0381854bb80e58d303f69246c5c26c54849e1816fa28cd3d1cf27"
+    },
+    {
+      "id": "zennioptical",
+      "official_cases": 558,
+      "task_content_sha256": "b1ba13102b1922acbbcd412dbf01f8a571183b3f016d1305f807177050eade8d"
+    }
+  ]
+}
