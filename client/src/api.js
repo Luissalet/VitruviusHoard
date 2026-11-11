@@ -58,6 +58,13 @@ export const api = {
   remakeStop: (id) => request("POST", `/design/api/remake/${encodeURIComponent(id)}/stop`),
   remakeDelete: (id) => request("DELETE", `/design/api/remake/${encodeURIComponent(id)}`),
   remakeCode: (id, path) => request("GET", `/design/api/remake/${encodeURIComponent(id)}/code`, { params: { path } }),
+  benchmarkCatalog: () => request("GET", "/api/benchmarks/catalog"),
+  benchmarkList: () => request("GET", "/api/benchmarks/runs"),
+  benchmarkGet: (id) => request("GET", `/api/benchmarks/runs/${encodeURIComponent(id)}`),
+  benchmarkStart: (body) => request("POST", "/api/benchmarks/runs", { body }),
+  benchmarkStop: (id) => request("POST", `/api/benchmarks/runs/${encodeURIComponent(id)}/stop`),
+  benchmarkResume: (id) => request("POST", `/api/benchmarks/runs/${encodeURIComponent(id)}/resume`),
+  benchmarkCompare: (before, after) => request("POST", "/api/benchmarks/compare", { body: { before, after } }),
 
   librarySearch: (params) => request("GET", "/design/api/library/search", { params }),
   embeddings: () => request("GET", "/design/api/library/embeddings"),

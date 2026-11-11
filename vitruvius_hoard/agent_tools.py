@@ -1256,4 +1256,7 @@ TOOLS.extend(_parity_tools())
 from .remake_tools import tools as _remake_tools  # noqa: E402
 
 TOOLS.extend(_remake_tools())
+from .benchmarks.tools import tools as _benchmark_tools  # noqa: E402
+
+TOOLS.extend(_benchmark_tools())
 TOOLS_BY_NAME.update({t.name: t for t in TOOLS})

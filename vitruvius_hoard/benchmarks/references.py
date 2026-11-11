@@ -1,0 +1,219 @@
+"""Materialize immutable benchmark stimuli and own their temporary local processes.
+
+Only reference content is downloaded. Neither solutions nor hidden tests enter the
+reconstruction input. Vitruvius runs and scores the candidate through RemakeRunner.
+"""
+
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tarfile
+import time
+import httpx
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+from string import Template
+
+from ..hoard_link.atomic import write_json_atomic
+
+
+class Cancelled(Exception):
+    pass
+
+
+def fetch(url, cancel, client=None):
+    for attempt in range(3):
+        if cancel.is_set():
+            raise Cancelled()
+        try:
+            if client is not None:
+                response = client.get(url)
+                response.raise_for_status()
+                return response.content, response.headers
+            with urlopen(
+                Request(url, headers={"User-Agent": "Vitruvius-evaluation/1"}),
+                timeout=60,
+            ) as response:
+                return response.read(), response.headers
+        except (OSError, httpx.HTTPError):
+            if attempt == 2:
+                raise
+            if cancel.wait(attempt + 1):
+                raise Cancelled()
+
+
+def file_hash(path, row):
+    if row.get("lfs"):
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return digest == row["lfs"]["oid"]
+    data = path.read_bytes()
+    return (
+        hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        == row["oid"]
+    )
+
+
+def prepare(base, corpus, task_id, cancel):
+    """Keep downloaded bytes and their original hashes beside a pinned revision."""
+    root = Path(base) / "references" / corpus["revision"] / task_id
+    root.mkdir(parents=True, exist_ok=True)
+    manifest = root / "files.json"
+    prefix = f"tasks/{task_id}/environment/reference/"
+    if manifest.is_file():
+        rows = json.loads(manifest.read_text(encoding="utf8"))
+    else:
+        url = (
+            f"https://huggingface.co/api/datasets/{corpus['dataset']}/tree/"
+            f"{corpus['revision']}/{prefix.rstrip('/')}?recursive=true&limit=1000"
+        )
+        rows = []
+        while url:
+            data, headers = fetch(url, cancel)
+            rows.extend(row for row in json.loads(data) if row["type"] == "file")
+            match = re.search(r'<([^>]+)>; rel="next"', headers.get("Link", ""))
+            url = match[1] if match else None
+        if not rows:
+            raise ValueError("Reference download contained no files")
+        write_json_atomic(manifest, rows)
+
+    def download(row):
+        relative = row["path"].removeprefix(prefix)
+        path = (root / "source" / relative).resolve()
+        if not path.is_relative_to((root / "source").resolve()):
+            raise ValueError("Invalid reference member path")
+        if (
+            path.is_file()
+            and path.stat().st_size == row["size"]
+            and file_hash(path, row)
+        ):
+            return
+        url = (
+            f"https://huggingface.co/datasets/{corpus['dataset']}/resolve/"
+            f"{corpus['revision']}/{quote(row['path'], safe='/')}"
+        )
+        data, _ = fetch(url, cancel, client)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(path.name + ".part")
+        temporary.write_bytes(data)
+        if len(data) != row["size"] or not file_hash(temporary, row):
+            temporary.unlink()
+            raise ValueError(f"Reference checksum mismatch for {relative}")
+        temporary.replace(path)
+
+    with httpx.Client(timeout=60, follow_redirects=True, trust_env=False) as client:
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            list(pool.map(download, rows))
+    digest = hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
+    source = root / "source"
+    # A few large reference directories are distributed as tar files.
+    for archive in ([] if os.name == "nt" else source.rglob("*.tar")):
+        marker = archive.with_suffix(".unpacked")
+        if not marker.exists():
+            target = archive.with_suffix("")
+            target.mkdir(exist_ok=True)
+            with tarfile.open(archive) as package:
+                package.extractall(target, filter="data")
+            marker.touch()
+    return source, {
+        "sha256": digest,
+        "files": len(rows),
+        "bytes": sum(r["size"] for r in rows),
+    }
+
+
+def command(source):
+    """Use the corpus's source entry directly, without its orchestration CLI."""
+    entry = source / "harbor_entry.py"
+    if entry.is_file():
+        return [sys.executable, str(entry)]
+    entry = source / "clone" / "harbor_entry.py"
+    if entry.is_file():
+        return [sys.executable, str(entry)]
+    server = source / "standalone" / "server.js"
+    bootstrap = source / "runtime-support" / "websitebench-bootstrap.mjs"
+    if server.is_file() and bootstrap.is_file():
+        args = [shutil.which("node") or "node", "--import", bootstrap.as_uri()]
+        migrate = source / "runtime-support" / "websitebench-migrate.mjs"
+        if migrate.is_file():
+            args.extend(["--import", migrate.as_uri()])
+        return args + [str(server)]
+    raise ValueError("Reference has no supported native entry point")
+
+
+@contextmanager
+def running(source, state, log_path, cancel):
+    """Fresh state per run, loopback only, always stop the owned reference."""
+    state.mkdir(parents=True, exist_ok=True)
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    env = {
+        **os.environ,
+        "HOST": "127.0.0.1",
+        "PORT": str(port),
+        "DATA_DIR": str(state.resolve()),
+        "SEED": "0",
+        "TZ": "UTC",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+        "WEBSITEBENCH_DATA_DIR": str(state.resolve()),
+        "WEBSITEBENCH_LOCAL_HTTP_COOKIE": "1",
+        "WEBSITEBENCH_PAYMENT_PROFILE": "local-sandbox",
+        "WEBSITEBENCH_SITE_BACKEND_DATABASE": str(state.resolve() / "site.sqlite3"),
+        "WEBSITEBENCH_SITE_BACKEND_RUNTIME": str(source / "backend" / "runtime.json"),
+        "PYTHONPATH": os.pathsep.join([str(source / "vendor"), str(source / "clone")]),
+    }
+    # Read the stimulus's literal environment declarations. This does not run a
+    # shell or interpret commands from its launcher.
+    launcher = source / "run.sh"
+    if launcher.is_file():
+        values = {**env, "root": str(source), "DATA_DIR": str(state.resolve())}
+        for key, value in re.findall(
+            r"^export ([A-Z_]+)=(.+)$", launcher.read_text(encoding="utf8"), re.M
+        ):
+            env[key] = Template(value.strip().strip("\"'")).safe_substitute(values)
+    with log_path.open("wb") as log:
+        process = subprocess.Popen(
+            command(source),
+            cwd=source,
+            env=env,
+            stdout=log,
+            stderr=log,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        try:
+            url = f"http://127.0.0.1:{port}"
+            for _ in range(120):
+                if cancel.is_set():
+                    raise Cancelled()
+                if process.poll() is not None:
+                    raise ValueError(
+                        "Reference exited. "
+                        + log_path.read_text(encoding="utf8", errors="replace")[-2500:]
+                    )
+                try:
+                    with urlopen(url + "/healthz", timeout=1) as response:
+                        if response.status == 200:
+                            break
+                except OSError:
+                    pass
+                cancel.wait(0.25)
+            else:
+                raise ValueError("Reference health check timed out")
+            yield url
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()

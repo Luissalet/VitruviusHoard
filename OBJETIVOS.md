@@ -1,5 +1,9 @@
 # Objetivos del verificador de protocolos
 
+## Medición de Rehacer por versión, tarea 2789
+
+Implementado el corpus completo de 70 referencias congeladas para medir sus páginas de entrada con el comparador visual de Rehacer, conservar resultados y comparar versiones por UI/API/MCP. Se conserva el alcance real de cada ejecución y su cobertura. La evaluación funcional y de SSIM normalizado de los 46.916 casos del corpus continúa fuera de esta medida. Detalle en `docs/BENCHMARKS.md`.
+
 ## Recetas de escaparate, tarea 2782
 
 Segunda pasada de luz, materia y ritmo implementada y comparada con fotogramas de Links en escritorio y móvil para responder a la revisión de Claude. Entrega de la rama #2782 pendiente de su veredicto antes de integrar en main; no se considera aprobado por superar las pruebas funcionales.

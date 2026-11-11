@@ -4,6 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import { Slider } from "./Parity.jsx";
+import Benchmark from "./Benchmark.jsx";
 
 const at = (url) => (url && url.startsWith("/api/") ? `/design${url}` : url);
 const parseWidths = (text) => text.split(/[\s,;]+/).map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n));
@@ -276,6 +277,8 @@ export default function Remake({ param }) {
         </div>
         <div><button type="submit" className="btn btn-primary" data-testid="remake-run" disabled={busy}>{busy ? (es ? "Empezando…" : "Starting…") : (es ? "Rehacer" : "Remake")}</button></div>
       </form>
+
+      <Benchmark es={es} notify={notify} openRemake={open} />
 
       {project && (
         <div className="flex flex-col gap-3" data-testid="remake-project" data-status={project.status} data-passed={project.passed ? "true" : "false"}>
