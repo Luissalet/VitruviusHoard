@@ -1,0 +1,2 @@
+# Keep vendored asset hashes identical across checkout platforms.
+vitruvius_hoard/showcase/assets/* -text
