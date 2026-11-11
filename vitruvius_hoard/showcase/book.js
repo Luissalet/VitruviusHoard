@@ -2,18 +2,29 @@
 export function createBook(content, controls, reduced, state) {
   const spreads = [
     [
-      '<h1>Cuaderno de formas</h1><div class="book-rule"></div><p>Tres estudios de volumen, material y composición.</p><small>Contenido de demostración · Pliego 1 / 3</small>',
-      '<h2>Arco</h2><div class="book-sculpture"><div></div></div><p>Una pieza de cerámica. La sombra describe su espesor.</p><a href="#arco">Leer estudio</a>',
+      '<div class="editorial"><img class="book-plate" src="../assets/coast.jpg" alt="Costa iluminada y superficie del agua"><div class="plate-shade"></div><h1>Cuaderno<br>de formas</h1><p>Volumen, materia<br>y luz natural.</p><small>ESTUDIOS DE DEMOSTRACIÓN / 2026</small></div>',
+      '<div class="editorial"><img class="book-plate ceramic-plate" src="../assets/ceramic.jpg" alt="Estudio fotográfico de cerámica"><div class="plate-shade"></div><h2>Arco</h2><p>La curva.<br>La sombra.<br>El espesor.</p><a href="#arco">Leer estudio</a><small>CERÁMICA / PLIEGO 1 DE 3</small></div>',
     ],
     [
-      '<h2>Retrato</h2><img src="../assets/portrait.jpg" alt="Retrato fotográfico en claroscuro"><small>Pliego 2 / 3</small>',
-      '<h2>Luz lateral</h2><div class="book-rule"></div><p>Un solo foco organiza el rostro. El margen ancho conserva la pausa entre imagen y texto.</p><a href="#retrato">Leer estudio</a>',
+      '<div class="editorial"><img class="book-plate portrait-plate" src="../assets/portrait.jpg" alt="Retrato fotográfico en claroscuro"><div class="plate-shade"></div><h2>Retrato</h2><small>FOTOGRAFÍA / PLIEGO 2 DE 3</small></div>',
+      '<div class="editorial quiet-page"><h2>Una luz<br>lateral.</h2><div class="book-rule"></div><p>Un solo foco organiza el rostro. El margen conserva la pausa entre imagen y texto.</p><a href="#retrato">Leer estudio</a><small>LUZ / SOMBRA / SUPERFICIE</small><div class="editorial-orbit"></div></div>',
     ],
     [
-      '<h2>Materia</h2><div class="book-sculpture amber"><div></div></div><small>Pliego 3 / 3</small>',
-      '<h2>Tierra cocida</h2><div class="book-rule"></div><p>Una superficie mate recibe una luz amplia. El color permanece concentrado en la pieza.</p><a href="#materia">Leer estudio</a>',
+      '<div class="editorial"><img class="book-plate" src="../assets/ceramic.jpg" alt="Materia cerámica y superficie"><div class="plate-shade"></div><h2>Materia</h2><small>VOLUMEN / PLIEGO 3 DE 3</small></div>',
+      '<div class="editorial quiet-page ochre-page"><h2>Tierra<br>cocida</h2><div class="book-rule"></div><p>Una superficie mate recibe una luz amplia. El color permanece concentrado en la pieza.</p><a href="#materia">Leer estudio</a><small>ESTUDIO DE SUPERFICIE / 2026</small></div>',
     ],
   ];
+  const paper = document.createElement("canvas");
+  paper.width = paper.height = 128;
+  const context = paper.getContext("2d"),
+    grain = context.createImageData(128, 128);
+  for (let i = 0; i < grain.data.length; i += 4) {
+    const n = Math.sin(i * 12.9898) * 43758.5453;
+    grain.data[i] = grain.data[i + 1] = grain.data[i + 2] = 180;
+    grain.data[i + 3] = (n - Math.floor(n)) * 26;
+  }
+  context.putImageData(grain, 0, 0);
+  document.body.style.setProperty("--paper-grain", `url(${paper.toDataURL()})`);
   content.innerHTML =
     '<div class="book-stage"><div class="book"><div class="spread"></div><div class="book-spine"></div></div></div>';
   const book = content.querySelector(".book");
@@ -62,7 +73,7 @@ export function createBook(content, controls, reduced, state) {
       const angle = -Math.PI * progress + curl;
       segment.style.width = `${step + 0.7}px`;
       segment.style.transform = `translate3d(${x}px,0,${z + 3}px) rotateY(${angle}rad)`;
-      segment.style.filter = `brightness(${0.84 + 0.16 * Math.abs(Math.cos(angle))})`;
+      segment.style.filter = `brightness(${0.58 + 0.42 * Math.abs(Math.cos(angle))})`;
       const [front, back] = segment.children;
       front.firstElementChild.style.width = `${width}px`;
       front.firstElementChild.style.padding = `${width * 0.08}px`;
