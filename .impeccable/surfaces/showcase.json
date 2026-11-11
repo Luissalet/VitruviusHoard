@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T20:43:49.753245Z",
+  "title": "Vitruvius showcase recipes surface record",
+  "extensions": {
+    "surface": {
+      "mode": "Operate",
+      "referenceMode": "Experience",
+      "primaryTarget": "vitruvius_hoard/showcase/library.html",
+      "relatedTargets": [
+        "vitruvius_hoard/showcase/library.js",
+        "vitruvius_hoard/showcase/library.css",
+        "vitruvius_hoard/showcase/page.html",
+        "vitruvius_hoard/showcase/reference.css",
+        "vitruvius_hoard/showcase/book.js",
+        "vitruvius_hoard/showcase/scene.js",
+        "vitruvius_hoard/showcase/recipes.json",
+        "vitruvius_hoard/showcase/library.py",
+        "vitruvius_hoard/showcase/routes.py",
+        "vitruvius_hoard/showcase/tools.py",
+        "vitruvius_hoard/software/web/index.html",
+        "vitruvius_hoard/software/web/workspace.css"
+      ],
+      "authorities": [
+        "PRODUCT.md",
+        "DESIGN.md"
+      ],
+      "scope": "Showcase library, five reference documents and their exports. Route-local fonts and materials. Root shell tokens retain their existing scope.",
+      "routes": [
+        "/showcase/",
+        "/showcase/book/index.html",
+        "/showcase/glitch/index.html",
+        "/showcase/gallery/index.html",
+        "/showcase/city/index.html",
+        "/showcase/rock/index.html"
+      ],
+      "remakeLink": "/design/#/remake"
+    },
+    "typographyScope": {
+      "source": [
+        "vitruvius_hoard/showcase/library.css",
+        "vitruvius_hoard/showcase/reference.css"
+      ],
+      "localFaces": [
+        "assets/InstrumentSerif.ttf",
+        "assets/Barlow.ttf"
+      ],
+      "application": "Instrument headings and Barlow body/controls within showcase documents. Glitch display uses Barlow. Gallery textures wait for document.fonts.ready."
+    },
+    "shadows": [
+      {
+        "name": "book-cast",
+        "value": "drop-shadow(0 32px 32px #0008)",
+        "purpose": "Book reference object only"
+      },
+      {
+        "name": "project-detail",
+        "value": "0 12px 50px #0007",
+        "purpose": "HTML detail panel over reference scene"
+      }
+    ],
+    "motion": [
+      {
+        "name": "book-spring",
+        "value": "stiffness 100, damping 18, time step 0.008 to 0.032 seconds",
+        "purpose": "Twenty-segment sheet release and cancellation"
+      },
+      {
+        "name": "gallery-camera",
+        "value": "1 - exp(-7 * dt)",
+        "purpose": "Travel and lateral destination interpolation"
+      },
+      {
+        "name": "city-destination",
+        "value": "1 - exp(-8 * dt)",
+        "purpose": "HTML destination camera targeting"
+      },
+      {
+        "name": "rock-scroll",
+        "value": "1 - exp(-8 * dt)",
+        "purpose": "Scroll-linked camera, ring and key-light progress"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "library-single-column",
+        "value": "760px"
+      },
+      {
+        "name": "reference-mobile-css",
+        "value": "700px"
+      },
+      {
+        "name": "reference-mobile-camera",
+        "value": "innerWidth < 700"
+      }
+    ],
+    "layout": {
+      "libraryColumns": "1.15fr 1fr",
+      "libraryGap": "64px",
+      "previewHeight": "620px",
+      "mobilePreviewHeight": "640px",
+      "bookMobile": "94vw by 51vh with two simultaneous pages",
+      "rockTrack": "280svh document with sticky 100svh scene"
+    },
+    "referenceWorlds": [
+      {
+        "id": "book",
+        "material": "Ivory HTML pages, spine gradients, cast shadow and angle-based face brightness",
+        "interaction": "Three spreads, buttons, arrows, captured reversible drag and spring return",
+        "reducedMotion": "Direct spread change",
+        "source": "book.js"
+      },
+      {
+        "id": "glitch",
+        "material": "Stock portrait, green shader grid, luminance relief and local channel separation",
+        "interaction": "Pointer deformation, strength range and center action",
+        "reducedMotion": "Centered shader pointer and no portrait rotation",
+        "source": "scene.js"
+      },
+      {
+        "id": "gallery",
+        "material": "Green-grey room, project panels, spotlights and jointed floor with roughness 0.3",
+        "interaction": "Bounded travel, wheel, W/S, arrows, touch drag, raycast and HTML detail access",
+        "reducedMotion": "Travel and lateral target resolve directly. Pointer camera offsets remain",
+        "source": "scene.js"
+      },
+      {
+        "id": "city",
+        "material": "Blue instanced buildings, emissive warm windows, fog and red monument",
+        "interaction": "Zoom, 45-degree rotation, raycast detail and HTML destination targeting",
+        "reducedMotion": "Destination resolves directly. Pointer camera offsets remain",
+        "source": "scene.js"
+      },
+      {
+        "id": "rock",
+        "material": "Procedural basalt, metallic ring, clearcoat gemstone and PMREM luminous-card reflections",
+        "interaction": "Reversible scroll-linked camera, ring and light, with endpoint buttons",
+        "reducedMotion": "Direct scroll progress and endpoint movement",
+        "source": "scene.js"
+      }
+    ],
+    "states": {
+      "library": [
+        "loading",
+        "empty search",
+        "request error",
+        "selected recipe",
+        "clipboard fallback",
+        "busy enable/remake",
+        "run status and returned links"
+      ],
+      "references": [
+        "entry",
+        "interaction checkpoints in recipes.json",
+        "project detail",
+        "disabled book endpoints",
+        "reduced motion",
+        "WebGL initialization fallback",
+        "context-loss message"
+      ],
+      "stillQuery": "Presence of still centers glitch input, resolves gallery/city interpolation directly and holds rock at entry. Book continues to follow its reduced-motion preference.",
+      "loop": "Finite invalidation batches after input or resize, suspended while hidden",
+      "focus": "Visible outlines on native links, buttons, ranges and canvas"
+    },
+    "provenance": {
+      "sourceFrames": "Recipe metadata links observed Darwin/Links frames. Reel frames are excluded from reference exports.",
+      "assets": "vitruvius_hoard/showcase/assets/provenance.json",
+      "licenses": [
+        "assets/LICENSE-three.txt",
+        "assets/OFL-InstrumentSerif.txt",
+        "assets/OFL-Barlow.txt"
+      ],
+      "portraitLicense": "Recorded Unsplash license link in assets/provenance.json",
+      "export": "Five linked reference entry documents, shared source and local assets, plus selected recipe and skill"
+    },
+    "evidence": {
+      "method": "Source inspection by documenter",
+      "browserExecutedByDocumenter": false,
+      "functionalExecutedByDocumenter": false,
+      "capturesOpenedByDocumenter": false,
+      "scope": "No approval or whole-app quality claim. Composition scores describe the retained Rehacer result and require separate interaction review."
+    }
+  },
+  "components": [
+    {
+      "name": "Selected library recipe",
+      "kind": "button",
+      "description": "Illustrative selected recipe using the workspace palette and showcase-local body face",
+      "html": "<button class=\"ds-recipe\" aria-current=\"true\">Libro a doble página</button>",
+      "css": ".ds-recipe{font:16px Barlow,sans-serif;background:#6a8ced;color:#12151c;border:1px solid #6a8ced;border-radius:6px;padding:10px;min-height:44px;cursor:pointer}.ds-recipe:hover{background:#6a8ced;color:#12151c}.ds-recipe:focus-visible{outline:3px solid #6a8ced;outline-offset:3px}"
+    },
+    {
+      "name": "Reference control",
+      "kind": "button",
+      "description": "Straight bordered reference-world action",
+      "html": "<button class=\"ds-control\">Avanzar</button>",
+      "css": ".ds-control{font:16px Barlow,sans-serif;color:#f2ede3;background:#1b221d;border:1px solid #809385;padding:11px 16px;min-height:44px;cursor:pointer}.ds-control:hover{background:#314036}.ds-control:focus-visible{outline:3px solid #c7e5c3;outline-offset:5px}.ds-control:disabled{opacity:.4;cursor:default}"
+    },
+    {
+      "name": "Project detail panel",
+      "kind": "card",
+      "description": "HTML project detail over an Experience scene. Preview omits runtime navigation",
+      "html": "<article class=\"ds-detail\"><h2>Materia</h2><p>Metal y piedra</p><a href=\"#materia\">Abrir proyecto</a></article>",
+      "css": ".ds-detail{width:min(390px,100%);background:#eee8db;color:#18251f;padding:24px;box-shadow:0 12px 50px #0007}.ds-detail h2{font:36px Instrument,serif;margin:0 0 12px}.ds-detail p{font:16px/1.5 Barlow,sans-serif;margin:0}.ds-detail a{display:inline-block;font:16px Barlow,sans-serif;color:inherit;padding:15px 0;text-underline-offset:5px}.ds-detail a:focus-visible{outline:3px solid #c7e5c3;outline-offset:5px}"
+    },
+    {
+      "name": "Reference project link",
+      "kind": "nav",
+      "description": "HTML access to project details shared by gallery and city",
+      "html": "<nav class=\"ds-projects\" aria-label=\"Proyectos\"><a href=\"#arco\" aria-current=\"true\">Arco</a><a href=\"#materia\">Materia</a></nav>",
+      "css": ".ds-projects{display:flex;gap:10px;flex-wrap:wrap}.ds-projects a{font:16px Barlow,sans-serif;color:#f2ede3;padding:11px 15px;background:#141b18e8;border:1px solid #75857b;min-height:44px;text-decoration:none}.ds-projects a[aria-current=true]{background:#c7e5c3;color:#14201a}.ds-projects a:focus-visible{outline:3px solid #c7e5c3;outline-offset:5px}"
+    },
+    {
+      "name": "Book spread material",
+      "kind": "custom",
+      "description": "Static material preview of the two-page object. Segmented motion lives in book.js",
+      "html": "<div class=\"ds-spread\"><article><h2>Cuaderno</h2><p>Estudios de volumen y material.</p></article><article><h2>Arco</h2><p>Luz lateral y acabado mate.</p></article></div>",
+      "css": ".ds-spread{display:grid;grid-template-columns:1fr 1fr;background:#e9e2d2;border-radius:2px 6px 6px 2px;overflow:hidden}.ds-spread article{padding:8%;color:#28302a;background:#eee8db}.ds-spread article:first-child{background:linear-gradient(90deg,#eee8db 93%,#bfb9aa);border-right:1px solid #a49d8b}.ds-spread article:last-child{background:linear-gradient(90deg,#d2caba,#eee8db 7%)}.ds-spread h2{font:32px/1 Instrument,serif;margin:0;max-width:9ch}.ds-spread p{font:13px/1.5 Barlow,sans-serif;margin:22px 0 0;max-width:32ch}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Executable material studies within the Hoard workbench",
+    "overview": "An Operate library pairs five Experience references with their source, material decisions, reproduction guidance and native Rehacer actions. Local typography and scene materials belong to these showcase documents.",
+    "keyCharacteristics": [
+      "A live reference beside explicit reproduction guidance",
+      "Five distinct material and interaction worlds",
+      "Local assets and editable source in standalone exports",
+      "HTML control access around WebGL scenes"
+    ],
+    "rules": [
+      {
+        "name": "Showcase scope",
+        "body": "Keep local fonts, materials and meshes scoped to showcase routes and exports.",
+        "section": "typography"
+      },
+      {
+        "name": "Interaction checkpoints",
+        "body": "Inspect named interaction states alongside the stable composition comparison.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do retain visible project links and native controls.",
+      "Do preserve reduced-motion branches and WebGL fallback access.",
+      "Do retain asset and source provenance."
+    ],
+    "donts": [
+      "Don't promote example palettes or type into shared shell tokens.",
+      "Don't infer interactive parity or whole-app certification from a stable composition score."
+    ]
+  }
+}
