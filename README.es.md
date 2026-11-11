@@ -4,6 +4,8 @@ Taller local de software con diseño y proyectos de fuentes, documentación de A
 
 [English](README.md) · [Guía del espacio](docs/SOFTWARE-WORKSPACE.es.md) · [API/MCP](docs/SOFTWARE-API.md) · [Inventario de migración](docs/MIGRATION933.json)
 
+La biblioteca `/showcase/` reúne cinco referencias ejecutables con prompt de construcción y skill específica. Incluye libro a doble página, retrato con shader, sala-galería 3D, ciudad navegable y producto sobre roca ligado al scroll. Sus herramientas de búsqueda y fuente funcionan con los módulos apagados. Rehacer conserva las puntuaciones de composición y sus informes. La descarga lleva código editable y recursos locales. Consulta las [recetas de escaparate](docs/SHOWCASE-RECIPES.md).
+
 **El desarrollo de Theseus está incompleto y en curso; Luis lo reanudó el 20 de octubre de 2026.** Esta integración conserva las funciones disponibles, incluidas las comparaciones de mensajes WebSocket guardados y los recibos inmutables de cobertura, y no completa el alcance pendiente. Consulta la [sincronización de fuentes](docs/THESEUS-SYNC.md) y el [ledger conservado](software_native/theseus-limits.md).
 
 Inspección permite descubrir un editor local ya abierto y enviar órdenes explícitas mediante el puente Python incluido. Las órdenes pueden cambiar archivos o el editor; una finalización desconocida nunca se reintenta automáticamente. Sus observaciones guardadas siguen legibles y transferibles después de cerrarlo. Consulta las [sesiones de editor](docs/LIVE-EDITOR.md).

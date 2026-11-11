@@ -4,6 +4,8 @@ A local software workbench with design/source projects, version-exact API docume
 
 [Castellano](README.es.md) · [Workspace guide](docs/SOFTWARE-WORKSPACE.md) · [API/MCP](docs/SOFTWARE-API.md) · [Migration inventory](docs/MIGRATION933.json)
 
+The showcase recipe library at `/showcase/` contains five working reference pages, reproduction prompts and individual agent skills. It covers a double-spread book, a shader portrait, a walkable 3D gallery, a navigable city and a scroll-driven product on rock. Search and source tools work with modules OFF. Explicit Rehacer runs retain composition scores and reports. Downloads include local assets and editable code. See [showcase recipes](docs/SHOWCASE-RECIPES.md).
+
 **Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026.** This incorporation retains its existing functions, including retained WebSocket stream comparisons and immutable coverage progress receipts, and does not complete the pending reverse-engineering programme. See the [source synchronization](docs/THESEUS-SYNC.md). See the [retained coverage ledger](software_native/theseus-limits.md).
 
 Inspection can discover an already open local editor and send explicit commands through the bundled Python bridge. Commands may change files or the editor; uncertain completion is never retried automatically. Their retained observations remain readable and transferable after it closes. See [live editor sessions](docs/LIVE-EDITOR.md).

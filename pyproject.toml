@@ -53,6 +53,7 @@ exclude = ["theseus_tests*", "babel_tests*"]
 namespaces = false
 
 [tool.setuptools.package-data]
+"vitruvius_hoard.showcase" = ["*.json", "*.html", "*.css", "*.js", "*.md", "assets/*", "skills/*/*.md"]
 "vitruvius_hoard.software" = ["catalog.json", "web/*"]
 "babels_hoard" = ["probes/*", "LICENSE"]
 "theseus" = ["LICENSE", "process_shim.cs"]

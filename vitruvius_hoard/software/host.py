@@ -36,7 +36,8 @@ CONTROLS=[
 
 
 def catalog():
-    return [{k:v for k,v in row.items() if k!='module'} for row in json.loads((HERE/'catalog.json').read_text(encoding='utf8'))]+CONTROLS
+    from ..showcase.tools import catalog as showcase_catalog
+    return [{k:v for k,v in row.items() if k!='module'} for row in json.loads((HERE/'catalog.json').read_text(encoding='utf8'))]+CONTROLS+showcase_catalog(control)
 
 
 def create_app(runtime=None):
@@ -53,6 +54,8 @@ def create_app(runtime=None):
     from ..compat_mcp import install
     install(app)
     app.state.runtime=runtime
+    from ..showcase.routes import router as showcase_router
+    app.include_router(showcase_router)
     from hoard_link.guard import install_guard
     from .native import port
     install_guard(app,port_getter=port,allowed_env='VITRUVIUS_ALLOWED_HOSTS')
@@ -62,6 +65,9 @@ def create_app(runtime=None):
         if not entry:
             raise ValueError('Unknown tool')
         validate(args,entry['inputSchema'])
+        if name.startswith('showcase_'):
+            from ..showcase.tools import execute as showcase_execute
+            return await showcase_execute(runtime,name,args)
         if name=='software_modules':
             return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed by Luis on 20 October 2026.'}
         if name=='software_module_set':

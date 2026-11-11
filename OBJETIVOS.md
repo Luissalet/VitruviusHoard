@@ -1,5 +1,9 @@
 # Objetivos del verificador de protocolos
 
+## Recetas de escaparate, tarea 2782
+
+Implementadas cinco referencias ejecutables y su biblioteca consultable por API/MCP, con recetas, skills, descarga y enlace al flujo Rehacer. El comparador conserva la puntuación de cada ronda y cada receta define los estados interactivos que comprobar. En encargos posteriores, ampliar las recetas a partir de las diferencias observadas y registrar las medidas de las reconstrucciones realizadas. Consulta `docs/SHOWCASE-RECIPES.md`.
+
 Corrección 2007 integrada y revisada: replay fiel de ramas y propiedades, contraejemplo mínimo entre tipos de propiedad, tipos de estado distintos y resultado visible en el paso inicial. Las capacidades restantes de Vitruvius y el estado de Theseus siguen descritos en FAUSTUS y sus documentos propios.
 
 Los modelos de protocolos son declarativos y acotados. Antes de conectar el test generado con un servicio real, definir qué llamada representa cada paso atómico y cómo se controla la rama indicada. Ampliar el lenguaje solo con semántica y casos verificables; un resultado del modelo no acredita automáticamente el código del servicio.

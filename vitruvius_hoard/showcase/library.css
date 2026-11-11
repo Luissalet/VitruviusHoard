@@ -1,0 +1,179 @@
+@font-face {
+  font-family: Barlow;
+  src: url("./assets/Barlow.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: Instrument;
+  src: url("./assets/InstrumentSerif.ttf") format("truetype");
+  font-display: swap;
+}
+:root {
+  font-family: Barlow, sans-serif;
+}
+header h1,
+h2 {
+  font-family: Instrument, serif;
+  font-weight: 400;
+}
+header h1 {
+  font-size: 34px;
+}
+#search {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+#search label {
+  flex: 1;
+}
+#recipes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+#recipes button[aria-current="true"] {
+  background: #6a8ced;
+  color: #12151c;
+  border-color: #6a8ced;
+}
+.recipe-heading {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+.recipe-heading > div {
+  flex: 1;
+}
+.recipe-heading h2 {
+  font-size: 36px;
+  margin: 0 0 8px;
+}
+.recipe-heading p {
+  max-width: 65ch;
+  color: #b4b7be;
+  line-height: 1.5;
+}
+.recipe-heading a {
+  max-width: 22ch;
+}
+#preview {
+  display: block;
+  width: 100%;
+  height: 620px;
+  border: 1px solid #555b6d;
+  background: #111814;
+  margin-bottom: 36px;
+}
+.recipe-columns {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 64px;
+}
+.recipe-columns h2 {
+  font-size: 30px;
+}
+.recipe-columns h3 {
+  font-size: 19px;
+  margin: 28px 0 12px;
+}
+.recipe-columns p,
+.recipe-columns li {
+  line-height: 1.65;
+  max-width: 70ch;
+  color: #cdd2dc;
+}
+.recipe-columns li {
+  margin-bottom: 10px;
+}
+.recipe-columns textarea {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.recipe-columns label {
+  margin-top: 20px;
+}
+details {
+  margin: 20px 0;
+}
+summary {
+  padding: 12px 0;
+  cursor: pointer;
+  color: #a9beff;
+}
+details pre {
+  max-height: 360px;
+}
+#run {
+  line-height: 1.6;
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+#run a {
+  display: block;
+}
+.source {
+  margin-bottom: 20px;
+}
+.source a {
+  display: block;
+  padding: 3px 0;
+}
+.source p {
+  font-size: 14px;
+  color: #b4b7be;
+}
+.source small {
+  display: block;
+  margin-top: 6px;
+  color: #b4b7be;
+}
+#empty {
+  padding: 30px 0;
+}
+#status {
+  overflow-wrap: anywhere;
+}
+#implementation,
+#checkpoints {
+  padding-left: 22px;
+}
+#prompt {
+  font-family: Barlow, sans-serif;
+}
+@media (max-width: 760px) {
+  header h1 {
+    font-size: 30px;
+  }
+  #search {
+    display: block;
+  }
+  #recipes {
+    gap: 4px;
+  }
+  #recipes button {
+    font-size: 14px;
+  }
+  .recipe-heading {
+    display: block;
+  }
+  .recipe-heading a {
+    margin-right: 24px;
+  }
+  #preview {
+    height: 640px;
+  }
+  .recipe-columns {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .recipe-heading h2 {
+    font-size: 32px;
+  }
+}

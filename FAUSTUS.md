@@ -1,5 +1,9 @@
 # Vitruvius software workspace
 
+## Recetas de escaparate, tarea 2782
+
+Biblioteca `/showcase/` con cinco páginas funcionales, decisiones de luz/ritmo/tipografía/interacción, prompt, fuentes de Darwin/Links con instante, skill específica y descarga autónoma. Libro con hoja segmentada y muelle, retrato con shaders, sala-galería con cámara y selección, ciudad instanciada con destinos y producto sobre roca con recorrido de scroll. `showcase_recipes`, `showcase_recipe` y `showcase_source` se consultan con módulos apagados. `showcase_remake` enlaza con el Rehacer existente después de activar Diseño y conserva rondas, puntuaciones e informes. La captura de composición se comprueba por anchura, y cada receta identifica estados interactivos adicionales. Detalles, procedencia y límites en `docs/SHOWCASE-RECIPES.md`.
+
 Protocolos, corrección Hangar2007: integrado en Main14eb782 sobre a1eb9ab, con revisión independiente 2007r1 aprobada. Conserva la rama elegida en schedule y hook exportado; replay comprueba invariantes, condiciones finales y bloqueos, incluido el estado inicial con secuencia vacía. La pantalla muestra el resultado incluso enpaso0. BFS comprueba todos los tipos de propiedad al extraer estados de su cola, y diccionarios/secuencias son estados distintos.27pruebas deprotocolos y11delcatálogo positivas; build, MCPstdio y navegador reales con casos inventados. No se modifica ni desarrollaTheseus.
 
 Three independent native modules start OFF/automaticOFF: design/source applications, incorporated version-exact Babel documentation/checker and existing Theseus reverse engineering. Cold discovery110 (52+10+38+10 controls) imports no factories/stores/recovery/workers. The owner project and source revision persistently associate explicit environments, source files/trees, native artifacts/jobs, complete checked analysis documents and provenance. Historical results remain readable OFF and retain their original revision after source edits.

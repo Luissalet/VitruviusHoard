@@ -828,6 +828,8 @@ class BrowserWorker:
                 context = browser.new_context(viewport={"width": int(width), "height": vh}, device_scale_factor=1, color_scheme="light",
                                               reduced_motion="reduce", locale="es-ES", timezone_id="UTC")
                 self._guard(context)
+                from .showcase.library import mount as mount_showcase
+                mount_showcase(context, url)
                 context.add_init_script(parity.FREEZE_JS)
                 page = context.new_page()
                 responses: list[Any] = []
@@ -956,6 +958,8 @@ class BrowserWorker:
                                               locale="es-ES", timezone_id="UTC")
                 self._guard(context)
                 self._mount(context, mount, missing)
+                from .showcase.library import mount as mount_showcase
+                mount_showcase(context, url)
                 context.add_init_script(parity.FREEZE_JS)
                 page = context.new_page()
                 try:

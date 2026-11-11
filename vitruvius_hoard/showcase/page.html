@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Referencia ejecutable de Vitruvius con contenido de demostración."
+    />
+    <title>__TITLE__ · Vitruvius</title>
+    <link rel="stylesheet" href="../reference.css" />
+    <script type="module" src="../scene.js"></script>
+  </head>
+  <body data-recipe="__ID__">
+    <header class="reference-header">
+      <a class="back" href="/showcase/">Vitruvius</a>
+      <span>__TITLE__</span>
+      <a class="recipe-link" href="/showcase/?recipe=__ID__">Ver receta</a>
+    </header>
+    <main id="experience" aria-label="__TITLE__">
+      <canvas
+        id="scene"
+        tabindex="0"
+        aria-label="Escena interactiva. Usa los controles y los enlaces de proyectos."
+      ></canvas>
+      <div id="content"></div>
+    </main>
+    <aside id="controls" aria-label="Controles de la referencia"></aside>
+    <p id="feedback" role="status" aria-live="polite"></p>
+    <noscript
+      >Esta referencia necesita JavaScript. Su receta y su código están
+      disponibles en la biblioteca.</noscript
+    >
+  </body>
+</html>
