@@ -62,5 +62,12 @@ async def main():
         await server.run(reader, writer, server.create_initialization_options())
 
 
+try:  # the skills this app carries, for the agent that connects
+    from vitruvius_hoard.hoard_link import skills as _family_skills
+    _family_skills.attach(server, 'vitruvius', root=__file__)
+except Exception:  # noqa: BLE001 - the bridge works without them
+    pass
+
+
 if __name__ == '__main__':
     asyncio.run(main())
