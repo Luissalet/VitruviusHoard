@@ -63,5 +63,6 @@
       "repository": "https://github.com/Luissalet/VitruviusHoard"
     }
   },
-  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner."
+  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner.",
+  "skills": {"slugs": ["documentation-lookup", "code-impact-analysis", "learn-this-repo"], "limit": 3}
 }

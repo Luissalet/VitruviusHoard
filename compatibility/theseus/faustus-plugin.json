@@ -119,5 +119,6 @@
       "repository": "https://github.com/Luissalet/VitruviusHoard"
     }
   },
-  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner."
+  "notes": "Capabilities and native data belong to Vitruvius's Hoard. Modules are enabled explicitly in the owner.",
+  "skills": {"slugs": ["reverse-engineering-workflow", "code-impact-analysis", "legacy-web-app-onboarding"], "limit": 3}
 }
