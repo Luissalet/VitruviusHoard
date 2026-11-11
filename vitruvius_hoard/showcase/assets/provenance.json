@@ -41,6 +41,29 @@
       "origin": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=960&q=90",
       "sha256": "f590ff2638e76844bc01c94e6ffff6095c2019b8aa455c0935398c7782d1c231",
       "bytes": 249861
+    },
+    {
+      "file": "ceramic.jpg",
+      "origin": "https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&w=1200&q=85",
+      "license": "https://unsplash.com/license",
+      "sha256": "0da9abd152d7f68235900fd4ad4997f6c3a6bad1a53c1eeb96a366711bff971d",
+      "bytes": 114818
+    },
+    {
+      "file": "coast.jpg",
+      "origin": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1200&q=85",
+      "license": "https://unsplash.com/license",
+      "sha256": "911eea30f84a213314261c8347053a19825e11c4077d38fc8ab77b45f48af1c3",
+      "bytes": 98199
+    },
+    {
+      "file": "portrait-cutout.png",
+      "origin": "ImageGen background extraction derived from portrait.jpg",
+      "source": "portrait.jpg",
+      "sha256": "704d697a93269d83b53ac15f57d8d7a6ffc870eb7ce4ea06a22d393d36534dad",
+      "bytes": 2581427,
+      "method": "Built-in ImageGen, transparent_background=true",
+      "prompt": "Use case: background-extraction. Edit target: the supplied stock photograph. Create a precise transparent-background cutout of this exact man. Remove ONLY the blue-grey studio backdrop. Preserve the exact face, hairstyle, expression, grey knitted sweater, blue shirt collar, pose, original photographic lighting and original portrait framing. Keep every part of his clothing opaque, with clean organic edges around the hair and shoulders. Output real alpha transparency. No new objects, no text, no checkerboard drawn into the image. Save the generated image as a local PNG and return its saved path for use as a project asset."
     }
   ],
   "portrait": {
