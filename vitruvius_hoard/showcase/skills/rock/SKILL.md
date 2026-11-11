@@ -1,7 +1,7 @@
 ---
 name: showcase-rock
 description: Reproduce the rock showcase with explicit material, light and motion decisions.
-version: 2.0.0
+version: 2.0.1
 ---
 
 # Producto sobre roca
@@ -35,6 +35,8 @@ El relieve grande decide la silueta, el ruido medio rompe los planos y las norma
 - Mantén el ruido geométrico continuo: se evalúa por posición, sin valores aleatorios por vértice que abran costuras. El bloque conserva una silueta de losa; promedia las normales de posiciones coincidentes para unir las costuras entre caras sin convertir la piedra en una esfera.
 - La segunda pieza debe apoyar sobre su plinto sin quedar enterrada. Revisa inicio, mitad y final tanto en escritorio como en móvil.
 - El brillo de gema se construye con focos de color localizados. Polvo, haces y desenfoque son aproximaciones ligeras declaradas; no se atribuye una simulación física completa.
+
+- El engaste combina seis garras curvas, cesta abierta, cintura y hombros unidos al aro. La gema tiene tabla, corona, cintura y pabell?n facetados. Prolonga los acantilados fuera del encuadre para evitar coronas iluminadas que parezcan restos blancos flotantes.
 
 ## Verification
 

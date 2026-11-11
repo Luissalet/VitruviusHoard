@@ -128,7 +128,7 @@
     ],
     "decisions": {
       "light": "Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos.",
-      "rhythm": "Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.",
+      "rhythm": "Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,5 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle.",
       "typography": "Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras.",
       "interaction": "Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero.",
       "why": "Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes."
@@ -136,20 +136,22 @@
     "implementation": [
       "Ocho paneles reutilizan tres proyectos de demostración; no son ocho proyectos reales. Fotografías locales con licencia y procedencia en assets/provenance.json.",
       "Los reflejos son texturas propias de las obras, desenfocadas a 400×280, invertidas y desvanecidas. Mantén su opacidad baja para que no parezcan pósteres en el suelo.",
-      "El hover levanta 0,12 unidades y la selección fija el travelling en cuatro unidades. Conserva los límites para no atravesar los paneles."
+      "El hover levanta 0,12 unidades y la selección fija el travelling en cuatro unidades. Conserva los límites para no atravesar los paneles.",
+      "Marcos de 0,5 unidades orientados hacia el recorrido, c?mara de entrada desplazada 1,25 unidades y pilastras laterales con luz rasante separan las paredes del fondo. La profundidad se conserva tambi?n sin paralaje."
     ],
     "checkpoints": [
       "Entrar y observar los tres paneles, sus sombras y las juntas del suelo.",
       "Avanzar con botón, rueda, W y gesto táctil. Retroceder y volver a la entrada.",
       "Seleccionar un panel mediante raycast y por enlace, cerrar detalle y abrir su proyecto.",
-      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto.",
+      "Revisar la profundidad lateral y los cantos de marcos desde la entrada y durante el desplazamiento."
     ],
     "parity_states": [
       "Entrada con still=1",
       "Cámara a cuatro unidades de la entrada",
       "Detalle de Arco abierto"
     ],
-    "prompt": "Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,34 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
+    "prompt": "Construye la referencia ejecutable Sala-galería 3D con sus recursos locales. Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos. Ocho obras de demostración en fuga: tres al frente y cinco en profundidad. Marcos de 0,5 unidades con frente de imagen. El movimiento del puntero introduce paralaje; el hover eleva suavemente la obra. Seleccionar desplaza cámara y abre detalle. Títulos de Instrument Serif y pies de Barlow impresos sobre fotografías reales con un degradado de lectura. El nombre de la sala es pequeño y queda en la esquina superior, por fuera de las obras. Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero. Los marcos gruesos, la repetición en fuga, los haces y los reflejos relacionan cada imagen con el espacio. La sala se percibe como un recorrido continuo, mientras el rail discreto conserva los accesos equivalentes. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos. Marcos de 0,5 unidades orientados hacia el recorrido, c?mara de entrada desplazada 1,25 unidades y pilastras laterales con luz rasante separan las paredes del fondo. La profundidad se conserva tambi?n sin paralaje."
   },
   {
     "id": "city",
@@ -257,19 +259,21 @@
     "implementation": [
       "Mantén el ruido geométrico continuo: se evalúa por posición, sin valores aleatorios por vértice que abran costuras. El bloque conserva una silueta de losa; promedia las normales de posiciones coincidentes para unir las costuras entre caras sin convertir la piedra en una esfera.",
       "La segunda pieza debe apoyar sobre su plinto sin quedar enterrada. Revisa inicio, mitad y final tanto en escritorio como en móvil.",
-      "El brillo de gema se construye con focos de color localizados. Polvo, haces y desenfoque son aproximaciones ligeras declaradas; no se atribuye una simulación física completa."
+      "El brillo de gema se construye con focos de color localizados. Polvo, haces y desenfoque son aproximaciones ligeras declaradas; no se atribuye una simulación física completa.",
+      "El engaste combina seis garras curvas, cesta abierta, cintura y hombros unidos al aro. La gema tiene tabla, corona, cintura y pabell?n facetados. Prolonga los acantilados fuera del encuadre para evitar coronas iluminadas que parezcan restos blancos flotantes."
     ],
     "checkpoints": [
       "Ver anillo completo, roca irregular, sombra y reflejo desde la entrada.",
       "Desplazar hasta el final y volver. Comparar showcaseState.scrollProgress y el encuadre.",
       "Usar Ver detalle y Volver al inicio. Comprobar móvil, movimiento reducido y fallback sin WebGL.",
-      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto."
+      "Comparar lado a lado el fotograma citado y las capturas propias de 1440 y 390 px. Comprobar materia, sombra, ritmo, contraste y espacio dedicado al artefacto.",
+      "Revisar garras, cesta y facetas de ambos anillos al inicio, a mitad del scroll y al final; sin restos blancos sobre el fondo."
     ],
     "parity_states": [
       "Entrada con still=1",
       "Scroll al 50%",
       "Detalle al final del recorrido"
     ],
-    "prompt": "Construye la referencia ejecutable Producto sobre roca con sus recursos locales. Foco cálido lateral y recortes fríos. Tarjetas PMREM dan reflejos amplios al metal. El basalto oscuro tiene rugosidad 0,87, normal map multiescala y metalicidad 0,04. Focos verdes y azules proyectan un brillo de gema artístico sobre la piedra; no simulan cáusticas refractivas. Motas y haces sutiles dan aire. Dos anillos y dos plintos de roca en distintos planos, con un fondo de basalto fracturado. El scroll de 280 svh interpola tres fotogramas clave de cámara y objetivo mediante smoothstep. El segundo tramo viaja hasta la pieza azul y el texto entra con el encuadre. Instrument Serif de 42 a 80 px y Barlow de 12 a 16 px. La nota de material aparece sobre una zona oscura con contraste estable, junto al segundo plano. El título deja libre el objeto principal. Bloque subdividido desplazado por ruido continuo de tres escalas y crestas, normal map derivado de diferencias del ruido, aro y gema editables. Scroll reversible, inicio y detalle, progreso directo en movimiento reducido y entrada inmóvil con still. El relieve grande decide la silueta, el ruido medio rompe los planos y las normales pequeñas describen las aristas húmedas. Controlar esos tamaños por separado evita la masa blanda y el brillo metálico uniforme sobre roca. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos."
+    "prompt": "Construye la referencia ejecutable Producto sobre roca con sus recursos locales. Foco cálido lateral y recortes fríos. Tarjetas PMREM dan reflejos amplios al metal. El basalto oscuro tiene rugosidad 0,87, normal map multiescala y metalicidad 0,04. Focos verdes y azules proyectan un brillo de gema artístico sobre la piedra; no simulan cáusticas refractivas. Motas y haces sutiles dan aire. Dos anillos y dos plintos de roca en distintos planos, con un fondo de basalto fracturado. El scroll de 280 svh interpola tres fotogramas clave de cámara y objetivo mediante smoothstep. El segundo tramo viaja hasta la pieza azul y el texto entra con el encuadre. Instrument Serif de 42 a 80 px y Barlow de 12 a 16 px. La nota de material aparece sobre una zona oscura con contraste estable, junto al segundo plano. El título deja libre el objeto principal. Bloque subdividido desplazado por ruido continuo de tres escalas y crestas, normal map derivado de diferencias del ruido, aro y gema editables. Scroll reversible, inicio y detalle, progreso directo en movimiento reducido y entrada inmóvil con still. El relieve grande decide la silueta, el ruido medio rompe los planos y las normales pequeñas describen las aristas húmedas. Controlar esos tamaños por separado evita la masa blanda y el brillo metálico uniforme sobre roca. Conserva móvil, teclado, táctil, enlaces HTML, exportación y fallback. Compara el fotograma citado y tus capturas lado a lado, incluyendo sus estados interactivos. El engaste combina seis garras curvas, cesta abierta, cintura y hombros unidos al aro. La gema tiene tabla, corona, cintura y pabell?n facetados. Prolonga los acantilados fuera del encuadre para evitar coronas iluminadas que parezcan restos blancos flotantes."
   }
 ]
