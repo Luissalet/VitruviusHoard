@@ -1,0 +1,52 @@
+{
+  "assets": [
+    {
+      "file": "three.module.js",
+      "origin": "https://unpkg.com/three@0.160.1/build/three.module.js",
+      "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495",
+      "bytes": 1272972
+    },
+    {
+      "file": "LICENSE-three.txt",
+      "origin": "https://unpkg.com/three@0.160.1/LICENSE",
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",
+      "bytes": 1081
+    },
+    {
+      "file": "InstrumentSerif.ttf",
+      "origin": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentserif/InstrumentSerif-Regular.ttf",
+      "sha256": "498efd461f6ddfcb7a111bf9a565709d2085d48201d501ead960d93e84ffbb88",
+      "bytes": 70012
+    },
+    {
+      "file": "OFL-InstrumentSerif.txt",
+      "origin": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentserif/OFL.txt",
+      "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521",
+      "bytes": 4405
+    },
+    {
+      "file": "Barlow.ttf",
+      "origin": "https://raw.githubusercontent.com/google/fonts/main/ofl/barlow/Barlow-Regular.ttf",
+      "sha256": "95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea",
+      "bytes": 104068
+    },
+    {
+      "file": "OFL-Barlow.txt",
+      "origin": "https://raw.githubusercontent.com/google/fonts/main/ofl/barlow/OFL.txt",
+      "sha256": "186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f",
+      "bytes": 4377
+    },
+    {
+      "file": "portrait.jpg",
+      "origin": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=960&q=90",
+      "sha256": "f590ff2638e76844bc01c94e6ffff6095c2019b8aa455c0935398c7782d1c231",
+      "bytes": 249861
+    }
+  ],
+  "portrait": {
+    "origin": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=960&q=90",
+    "license": "https://unsplash.com/license",
+    "role": "Stock portrait used as the shader texture, unrelated to the reel subject"
+  },
+  "geometry": "Original deterministic geometry and shaders in scene.js and book.js. Example project data is synthetic."
+}

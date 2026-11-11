@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Recetas de escaparate · Vitruvius</title>
+    <link rel="stylesheet" href="/workbench/workspace.css" />
+    <link rel="stylesheet" href="/showcase/library.css" />
+    <script type="module" src="/showcase/library.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Recetas de escaparate</h1>
+      <a href="/">Volver a Vitruvius</a>
+    </header>
+    <main>
+      <form id="search">
+        <label for="query"
+          >Buscar por efecto, material o interacción<input
+            id="query"
+            type="search"
+            placeholder="Cinematográfico, libro, ciudad…" /></label
+        ><button>Buscar</button>
+      </form>
+      <nav id="recipes" aria-label="Referencias"></nav>
+      <p id="empty" hidden>
+        No se encuentran recetas. Prueba con libro, retrato, galería, ciudad o
+        producto.
+      </p>
+      <section id="selected" hidden>
+        <div class="recipe-heading">
+          <div>
+            <h2 id="title"></h2>
+            <p id="summary"></p>
+          </div>
+          <a id="open" target="_blank" rel="noopener">Abrir referencia</a
+          ><a id="download">Descargar página y receta</a>
+        </div>
+        <iframe
+          id="preview"
+          title="Referencia ejecutable"
+          loading="lazy"
+        ></iframe>
+        <div class="recipe-columns">
+          <article>
+            <h2>Decisiones de la receta</h2>
+            <div id="decisions"></div>
+            <h3>Construcción</h3>
+            <ul id="implementation"></ul>
+            <h3>Comprobaciones</h3>
+            <ul id="checkpoints"></ul>
+            <h3>Fuentes observadas</h3>
+            <div id="sources"></div>
+          </article>
+          <article>
+            <h2>Reproducir</h2>
+            <p>
+              Contenido de demostración. La descarga incluye código editable,
+              fuentes, imagen y motor 3D locales con su procedencia.
+            </p>
+            <label for="prompt"
+              >Instrucción de construcción<textarea
+                id="prompt"
+                rows="9"
+                readonly
+              ></textarea></label
+            ><button id="copy">Copiar instrucción</button>
+            <details>
+              <summary>Skill específica para agentes</summary>
+              <pre id="skill"></pre>
+            </details>
+            <details>
+              <summary>Código de entrada</summary>
+              <pre id="source"></pre>
+            </details>
+            <h3>Rehacer y medir paridad</h3>
+            <p>
+              La primera comparación usa la entrada estable a 1440 y 390 px.
+              Comprueba también los estados de interacción indicados en la
+              receta.
+            </p>
+            <label for="mode"
+              >Método<select id="mode">
+                <option value="copy">
+                  Copiar composición estable · una ronda
+                </option>
+                <option value="rebuild">
+                  Reconstruir con el modelo global
+                </option>
+              </select></label
+            ><button id="enable">Activar Diseño</button
+            ><button id="remake">Rehacer esta referencia</button
+            ><a href="/design/#/remake" id="history">Abrir Rehacer</a>
+            <div id="run" role="status" aria-live="polite"></div>
+          </article>
+        </div>
+      </section>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+  </body>
+</html>
