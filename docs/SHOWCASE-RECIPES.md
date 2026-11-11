@@ -10,7 +10,15 @@ La biblioteca se abre desde la portada de Vitruvius o en `/showcase/`. Incluye c
 | Ciudad como mapa | Edificios y ventanas instanciados con alturas deterministas | Zoom, giro, destinos y pieza roja seleccionable |
 | Producto sobre roca | Anillo, gema y basalto con geometría, grano y materiales físicos | Escena fija con cámara y luz ligadas al scroll reversible |
 
-Los ejemplos usan contenido de demostración. Instrument Serif y Barlow, el retrato de stock y el motor de representación se sirven desde el paquete. Sus orígenes, hashes y licencias acompañan las descargas en `assets/provenance.json` y sus avisos. Los fotogramas de los reels se consultan mediante Links. Los vídeos conservan los derechos de sus autores.
+Los ejemplos usan contenido de demostración. Instrument Serif y Barlow, las fotografías de stock y el motor de representación se sirven desde el paquete. La máscara `portrait-cutout.png` deriva del retrato mediante extracción de fondo con ImageGen; método, prompt y hash constan en `assets/provenance.json`. Los orígenes, hashes y licencias acompañan las descargas. Los fotogramas de los reels se consultan mediante Links y conservan los derechos de sus autores.
+
+## Materia, luz y ritmo de las referencias
+
+La segunda pasada de #2782 incorpora pliegos oscuros con fotografía a sangre, grano y canto de papel; una silueta alfa sobre rejilla curvada con glitch que responde a la velocidad y se asienta; ocho obras fotográficas en fuga con marcos gruesos, haces y reflejos suaves; una ciudad densa con detalles de fachada, ventanas variables en cuatro caras, luz roja que tiñe el entorno, niebla y órbita lenta; y dos anillos sobre basalto fracturado con normal map, polvo y tres fotogramas clave ligados al scroll. Las cinco páginas tienen entrada animada y navegación discreta con objetivos interactivos de 44 px.
+
+El postproceso de WebGL usa curva fílmica, bloom contenido y desenfoque leve según la profundidad de la escena. Los reflejos de paneles y estelas son proyecciones gráficas aproximadas; los haces son conos aditivos; el brillo de gema se proyecta mediante focos de color. Estas decisiones se documentan en las recetas y sus skills: no se atribuyen reflexión por trazado de rayos, dispersión volumétrica ni cáusticas refractivas completas. Los ocho paneles reutilizan tres proyectos de demostración.
+
+Con movimiento reducido no hay órbita, estelas móviles, glitch ni paralaje del puntero. Se conservan los desplazamientos de cámara que la persona solicita explícitamente con los controles o el scroll. `still=1` fija la composición de entrada para Rehacer. Todas las escenas suspenden el render al ocultarse; la ciudad mantiene un bucle de órbita mientras esté visible y el movimiento esté permitido.
 
 ## API y herramientas
 

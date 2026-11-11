@@ -100,43 +100,43 @@
       "libraryGap": "64px",
       "previewHeight": "620px",
       "mobilePreviewHeight": "640px",
-      "bookMobile": "94vw by 51vh with two simultaneous pages",
+      "bookMobile": "94vw by 48vh with two simultaneous full-bleed pages",
       "rockTrack": "280svh document with sticky 100svh scene"
     },
     "referenceWorlds": [
       {
         "id": "book",
-        "material": "Ivory HTML pages, spine gradients, cast shadow and angle-based face brightness",
-        "interaction": "Three spreads, buttons, arrows, captured reversible drag and spring return",
-        "reducedMotion": "Direct spread change",
+        "material": "Pliegos oscuros con fotografía a sangre, sombra de contacto en el lomo y canto de hojas de 9 px. El grano se genera de forma determinista en un lienzo de 128 px. El giro modula el brillo de cada segmento entre 0,58 y 1 según su normal.",
+        "interaction": "Hoja de veinte segmentos con caras HTML impresas, curvatura y sombreado angular; arrastre reversible, cancelación, botones y flechas. Rail de navegación discreto de 44 px de altura interactiva. Movimiento reducido cambia directamente de pliego.",
+        "reducedMotion": "No idle orbit, moving trails or pointer parallax; direct user-controlled camera progress and spread changes.",
         "source": "book.js"
       },
       {
         "id": "glitch",
-        "material": "Stock portrait, green shader grid, luminance relief and local channel separation",
-        "interaction": "Pointer deformation, strength range and center action",
-        "reducedMotion": "Centered shader pointer and no portrait rotation",
+        "material": "Silueta fotográfica verde pálida sobre rejilla verde oscura. La máscara alfa local portrait-cutout.png sigue pelo y hombros; se obtuvo mediante extracción de fondo con ImageGen a partir de la foto de stock. El relieve de luminancia se limita a 0,12 unidades para conservar el rostro.",
+        "interaction": "El vertex shader de la rejilla curva la superficie cerca del puntero. El fragment shader del retrato aplica RGB y bandas según el impulso, sin deformación facial amplia. Intensidad y centrado siguen disponibles. Movimiento reducido y still anulan el impulso.",
+        "reducedMotion": "No idle orbit, moving trails or pointer parallax; direct user-controlled camera progress and spread changes.",
         "source": "scene.js"
       },
       {
         "id": "gallery",
-        "material": "Green-grey room, project panels, spotlights and jointed floor with roughness 0.3",
-        "interaction": "Bounded travel, wheel, W/S, arrows, touch drag, raycast and HTML detail access",
-        "reducedMotion": "Travel and lateral target resolve directly. Pointer camera offsets remain",
+        "material": "Sala gris verdosa con focos de caída por distancia, penumbra y sombras reales. Paredes y suelo usan grano de material. Haces aditivos de opacidad baja sugieren polvo en el aire. Reflejos de las obras desenfocados y desvanecidos sobre el suelo: proyección gráfica aproximada, no reflexión por trazado de rayos.",
+        "interaction": "Rueda, W/S, flechas, botones y gesto táctil recorren diez unidades. Raycast y enlaces HTML comparten el travelling al proyecto. Movimiento reducido resuelve destinos y hover sin interpolación y desactiva el paralaje de puntero.",
+        "reducedMotion": "No idle orbit, moving trails or pointer parallax; direct user-controlled camera progress and spread changes.",
         "source": "scene.js"
       },
       {
         "id": "city",
-        "material": "Blue instanced buildings, emissive warm windows, fog and red monument",
-        "interaction": "Zoom, 45-degree rotation, raycast detail and HTML destination targeting",
-        "reducedMotion": "Destination resolves directly. Pointer camera offsets remain",
+        "material": "Noche azul con niebla exponencial 0,024, luz direccional fría y ventanas emisivas variables en cuatro fachadas. La pieza roja emite y tiene una luz puntual roja con caída física que tiñe edificios cercanos. Suelo rugoso con respuesta especular y estelas con reflejo aproximado.",
+        "interaction": "Edificios, cornisas, pilares, coronas y ventanas instanciados. Alturas, siluetas y ventanas deterministas con variación. Zoom entre 0,55 y 1,6, giro de 45 grados, raycast y enlaces a destinos con travelling. Sin órbita, estelas móviles ni paralaje con movimiento reducido o still.",
+        "reducedMotion": "No idle orbit, moving trails or pointer parallax; direct user-controlled camera progress and spread changes.",
         "source": "scene.js"
       },
       {
         "id": "rock",
-        "material": "Procedural basalt, metallic ring, clearcoat gemstone and PMREM luminous-card reflections",
-        "interaction": "Reversible scroll-linked camera, ring and light, with endpoint buttons",
-        "reducedMotion": "Direct scroll progress and endpoint movement",
+        "material": "Foco cálido lateral y recortes fríos. Tarjetas PMREM dan reflejos amplios al metal. El basalto oscuro tiene rugosidad 0,87, normal map multiescala y metalicidad 0,04. Focos verdes y azules proyectan un brillo de gema artístico sobre la piedra; no simulan cáusticas refractivas. Motas y haces sutiles dan aire.",
+        "interaction": "Bloque subdividido desplazado por ruido continuo de tres escalas y crestas, normal map derivado de diferencias del ruido, aro y gema editables. Scroll reversible, inicio y detalle, progreso directo en movimiento reducido y entrada inmóvil con still.",
+        "reducedMotion": "No idle orbit, moving trails or pointer parallax; direct user-controlled camera progress and spread changes.",
         "source": "scene.js"
       }
     ],
@@ -160,7 +160,7 @@
         "context-loss message"
       ],
       "stillQuery": "Presence of still centers glitch input, resolves gallery/city interpolation directly and holds rock at entry. Book continues to follow its reduced-motion preference.",
-      "loop": "Finite invalidation batches after input or resize, suspended while hidden",
+      "loop": "Finite invalidation batches after input; city has idle orbit while motion is allowed. All scenes suspend while hidden.",
       "focus": "Visible outlines on native links, buttons, ranges and canvas"
     },
     "provenance": {
@@ -180,6 +180,13 @@
       "functionalExecutedByDocumenter": false,
       "capturesOpenedByDocumenter": false,
       "scope": "No approval or whole-app quality claim. Composition scores describe the retained Rehacer result and require separate interaction review."
+    },
+    "secondPass": {
+      "task": 2782,
+      "identity": "codex-recetas-b",
+      "parent": "codex",
+      "evidence": "Research/vitruvius-recetas2782/browser-r2.json and comparison-*.jpg",
+      "scope": "Visual quality review remains with Claude; no approval claimed."
     }
   },
   "components": [

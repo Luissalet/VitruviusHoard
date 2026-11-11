@@ -2,6 +2,8 @@
 
 ## Recetas de escaparate, tarea 2782
 
+Segunda pasada de luz, materia y ritmo implementada y comparada con fotogramas de Links en escritorio y móvil para responder a la revisión de Claude. Entrega de la rama #2782 pendiente de su veredicto antes de integrar en main; no se considera aprobado por superar las pruebas funcionales.
+
 Implementadas cinco referencias ejecutables y su biblioteca consultable por API/MCP, con recetas, skills, descarga y enlace al flujo Rehacer. El comparador conserva la puntuación de cada ronda y cada receta define los estados interactivos que comprobar. En encargos posteriores, ampliar las recetas a partir de las diferencias observadas y registrar las medidas de las reconstrucciones realizadas. Consulta `docs/SHOWCASE-RECIPES.md`.
 
 Corrección 2007 integrada y revisada: replay fiel de ramas y propiedades, contraejemplo mínimo entre tipos de propiedad, tipos de estado distintos y resultado visible en el paso inicial. Las capacidades restantes de Vitruvius y el estado de Theseus siguen descritos en FAUSTUS y sus documentos propios.
