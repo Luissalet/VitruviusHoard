@@ -33,6 +33,8 @@
     "vision-critique",
     "render-diff",
     "visual-parity",
+    "versioned-reconstruction-benchmark",
+    "frozen-reference-evaluation",
     "design-tokens",
     "oklch-palettes",
     "tailwind-export",

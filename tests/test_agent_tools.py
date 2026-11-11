@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 114
+    assert len(TOOLS) == 121
 
 
 def test_tool_names_are_unique():
@@ -45,6 +45,8 @@ def test_read_only_hints_correct():
                   "instrument_create", "instrument_update", "instrument_check", "instrument_export",
                   "visual_parity", "visual_parity_delete", "design_gallery_ingest",
                   "remake_start", "remake_continue", "remake_stop", "remake_delete"}
+    read_only_names.update({"benchmark_catalog", "benchmark_get", "benchmark_list", "benchmark_compare"})
+    write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
@@ -102,6 +104,10 @@ def test_every_arg_model_validates_empty_or_minimal(services):
             args['colors'] = {'accent': '#123456'}
         if t.name in ('motion_get','motion_render'):
             args['id'] = 'a' * 32
+        if t.name.startswith('benchmark_'):
+            for field in ('id', 'before', 'after'):
+                if field in required:
+                    args[field] = 'a' * 12
         try:
             t.input_model.model_validate(args)
         except Exception as error:  # noqa: BLE001

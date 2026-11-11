@@ -18,6 +18,9 @@ import sys
 import tarfile
 import time
 import httpx
+import threading
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from string import Template
@@ -29,8 +32,36 @@ class Cancelled(Exception):
     pass
 
 
+_cooldown_lock = threading.Lock()
+_cooldown_until = 0.0
+_blob_locks = {}
+
+
+def retry_pause(headers):
+    value = headers.get("Retry-After", "")
+    if value.isdigit():
+        return float(value)
+    if value:
+        try:
+            return max(
+                0,
+                (
+                    parsedate_to_datetime(value) - datetime.now(timezone.utc)
+                ).total_seconds(),
+            )
+        except (ValueError, TypeError):
+            pass
+    reset = re.search(r"(?:^|;)\s*t=(\d+)", headers.get("RateLimit", ""))
+    return float(reset[1]) if reset else 60
+
+
 def fetch(url, cancel, client=None):
+    global _cooldown_until
     for attempt in range(3):
+        with _cooldown_lock:
+            delay = max(0, _cooldown_until - time.monotonic())
+        if delay and cancel.wait(delay):
+            raise Cancelled()
         if cancel.is_set():
             raise Cancelled()
         try:
@@ -43,9 +74,16 @@ def fetch(url, cancel, client=None):
                 timeout=60,
             ) as response:
                 return response.read(), response.headers
-        except (OSError, httpx.HTTPError):
+        except (OSError, httpx.HTTPError) as error:
             if attempt == 2:
                 raise
+            response = getattr(error, "response", error)
+            status = getattr(response, "status_code", getattr(response, "code", None))
+            if status == 429:
+                pause = retry_pause(response.headers)
+                with _cooldown_lock:
+                    _cooldown_until = max(_cooldown_until, time.monotonic() + pause)
+                continue
             if cancel.wait(attempt + 1):
                 raise Cancelled()
 
@@ -89,24 +127,35 @@ def prepare(base, corpus, task_id, cancel):
         path = (root / "source" / relative).resolve()
         if not path.is_relative_to((root / "source").resolve()):
             raise ValueError("Invalid reference member path")
-        if (
-            path.is_file()
-            and path.stat().st_size == row["size"]
-            and file_hash(path, row)
-        ):
-            return
-        url = (
-            f"https://huggingface.co/datasets/{corpus['dataset']}/resolve/"
-            f"{corpus['revision']}/{quote(row['path'], safe='/')}"
-        )
-        data, _ = fetch(url, cancel, client)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_name(path.name + ".part")
-        temporary.write_bytes(data)
-        if len(data) != row["size"] or not file_hash(temporary, row):
-            temporary.unlink()
-            raise ValueError(f"Reference checksum mismatch for {relative}")
-        temporary.replace(path)
+        oid = (row.get("lfs") or {}).get("oid") or row["oid"]
+        blob = Path(base) / "blobs" / oid
+        with _blob_locks.setdefault(str(blob), threading.Lock()):
+            valid = (
+                path.is_file()
+                and path.stat().st_size == row["size"]
+                and file_hash(path, row)
+            )
+            if not blob.is_file() or not file_hash(blob, row):
+                blob.parent.mkdir(parents=True, exist_ok=True)
+                temporary = blob.with_suffix(".part")
+                if valid:
+                    shutil.copyfile(path, temporary)
+                else:
+                    url = (
+                        f"https://huggingface.co/datasets/{corpus['dataset']}/resolve/"
+                        f"{corpus['revision']}/{quote(row['path'], safe='/')}"
+                    )
+                    data, _ = fetch(url, cancel, client)
+                    temporary.write_bytes(data)
+                if temporary.stat().st_size != row["size"] or not file_hash(
+                    temporary, row
+                ):
+                    temporary.unlink()
+                    raise ValueError(f"Reference checksum mismatch for {relative}")
+                temporary.replace(blob)
+            if not valid:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(blob, path)
 
     with httpx.Client(timeout=60, follow_redirects=True, trust_env=False) as client:
         with ThreadPoolExecutor(max_workers=12) as pool:
@@ -146,6 +195,14 @@ def command(source):
             args.extend(["--import", migrate.as_uri()])
         return args + [str(server)]
     raise ValueError("Reference has no supported native entry point")
+
+
+def verify_entry(url):
+    # A healthy backend can still have a broken entry route. An HTTP error page
+    # must never become the benchmark's reference composition.
+    with urlopen(url + "/", timeout=15) as response:
+        if response.status != 200:
+            raise ValueError(f"Reference entry returned HTTP {response.status}")
 
 
 @contextmanager
@@ -208,6 +265,7 @@ def running(source, state, log_path, cancel):
                 cancel.wait(0.25)
             else:
                 raise ValueError("Reference health check timed out")
+            verify_entry(url)
             yield url
         finally:
             if process.poll() is None:
