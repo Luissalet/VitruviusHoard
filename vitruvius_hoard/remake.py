@@ -1283,6 +1283,7 @@ class RemakeRunner:
         first = outlines.get(str(widths[0])) or {}
         project["reference"] = {
             "url": final_url, "title": first.get("title", ""), "lang": first.get("lang", ""), "heights": heights,
+            "browser": out.get("browser"),
             "palette": first.get("palette") or [], "page_bg": first.get("page_bg"), "fonts": first.get("fonts") or [],
             "assets": sum(1 for r in ledger if r.get("local")), "bytes": sum(r.get("bytes") or 0 for r in ledger),
             "errors": (out.get("errors") or [])[:10], "loads": 2, "truncated_layout": bool(first.get("truncated")),

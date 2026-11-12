@@ -10,6 +10,8 @@ The first evaluation prepares a Linux reference runtime using the installed cont
 
 Identical files share a checksum-verified download cache. Remote rate-limit responses honour `Retry-After` or the published reset time before retrying. The entry route must respond successfully before it is captured, so a backend error page cannot become a successful reference measurement.
 
+The reference filesystem is reconstructed inside Linux directly from verified blobs and the original member manifest. This preserves case-sensitive names on Windows. Original fixture archives are restored with their relative paths, then their own compilation script runs. Node references install their original package lock with `npm ci` and run their own build script before starting the resulting standalone server. This initial build requires registry access. Each batch pins the prepared runtime image ID. Implementation and runtime source fingerprints use UTF-8 text with normalized line endings.
+
 The container engine must be running. Copy measurements need the existing browser dependencies (`pip install -e '.[render]'`). Explicit `runtime_kind="native"` uses the current interpreter and installed reference dependencies (`.[benchmark]`). Several reference backends require Linux libc. The default container runtime supplies that environment on Windows.
 
 ## Retained evidence
@@ -18,7 +20,7 @@ Each invocation creates a new evaluation under `data/design/benchmarks/runs/<id>
 
 The measured mean uses cases with a measured round. Coverage, errors, passes and the selected denominator are reported separately. A completed batch can contain failed cases. A case without a score stays unmeasured. Stop preserves completed results. Resume processes pending or interrupted cases with the same implementation. A new invocation repeats failures and records a new version without overwriting an earlier result.
 
-Version comparison requires identical corpus, selection, runtime environment, reference hashes and measurement settings. It reports the delta over paired measured cases with its own denominator. Different settings or reference bytes return explicit comparison differences. Stored result snapshots remain readable when a remake is subsequently edited or deleted. Their original report files are owned by Rehacer and follow its normal deletion behaviour.
+Version comparison requires identical corpus, selection, runtime environment, reference hashes, observed browser and measurement settings. Each measured case retains its browser version and launcher. Comparison reports the delta over paired measured cases with its own denominator. Different settings, browser observations or reference bytes return explicit comparison differences. Stored result snapshots remain readable when a remake is subsequently edited or deleted. Their original report files are owned by Rehacer and follow its normal deletion behaviour.
 
 ## Measurement scope
 

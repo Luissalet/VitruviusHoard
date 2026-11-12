@@ -25,6 +25,16 @@ def compare(ref_loads, cand, **kw):
 
 # ---------------------------------------------------------------------------------------------- scoring
 
+
+@pytest.mark.parametrize("reference_height,candidate_height", [(100, 2000), (2000, 100)])
+def test_whole_screens_beyond_the_shorter_page_are_scored(reference_height, candidate_height):
+    reference = Image.new("RGB", (200, reference_height), (255, 255, 255))
+    candidate = Image.new("RGB", (200, candidate_height), (255, 255, 255))
+    result = parity.compare_widths_images([reference, reference.copy()], candidate, width=200, vh=900)
+    assert not result["passed"] and not result["height_pass"]
+    assert result["screens_checked"] == 3
+    assert result["failing_screens"] and result["score"] < 100
+
 def test_identical_pages_score_100_and_pass():
     result = compare([page(), page()], page())
     assert result["passed"] and result["height_pass"]
