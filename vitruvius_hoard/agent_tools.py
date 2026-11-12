@@ -1174,7 +1174,8 @@ def tool_catalog() -> list[dict]:
 # Results that are the payload itself (a stylesheet, a page, image bytes) and must never be cut to the shared 20 KB cap.
 UNCAPPED_TOOLS = frozenset({"tokens_get", "tokens_preview", "motion_get", "diagram_render", "diagram_get",
                             "diagram_document_get", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_document_compare",
-                            "site_audit", "site_audit_reports"})
+                            "site_audit", "site_audit_reports", "benchmark_catalog", "benchmark_start", "benchmark_get",
+                            "benchmark_list", "benchmark_compare", "benchmark_stop", "benchmark_resume"})
 
 
 def call_tool(services: Services, name: str, arguments: dict | None, *, cap: bool = True) -> Any:

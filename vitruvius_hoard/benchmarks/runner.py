@@ -6,6 +6,7 @@ from pathlib import Path
 import threading
 import time
 import uuid
+from functools import partial
 
 from ..hoard_link.atomic import write_json_atomic
 from . import corpus, references, runtime
@@ -212,6 +213,8 @@ class Benchmarks:
             if row["status"] == previous.get("status") == "measured":
                 if row["reference"]["sha256"] != previous["reference"]["sha256"]:
                     reasons.append("reference:" + row["id"])
+                if row.get("browser") != previous.get("browser"):
+                    reasons.append("browser:" + row["id"])
                 pairs.append(
                     {
                         "id": row["id"],
@@ -261,14 +264,23 @@ class Benchmarks:
                     row.update(status="preparing", error=None)
                     self._save(run)
                     source, row["reference"] = references.prepare(
-                        self.root, run["corpus"], row["id"], self.cancel
+                        self.root,
+                        run["corpus"],
+                        row["id"],
+                        self.cancel,
+                        materialize=run["runtime_kind"] == "native",
                     )
                     folder = self._path(run_id).parent / row["id"]
                     folder.mkdir(exist_ok=True)
                     # New state per attempt makes a resumed reference deterministic.
-                    attempt = len(row["attempts"])
+                    attempt = uuid.uuid4().hex[:12]
+                    row.setdefault("reference_attempts", []).append(attempt)
+                    self._save(run)
                     reference_runner = (
-                        runtime.running
+                        partial(
+                            runtime.running,
+                            image=run["environment"]["runtime"]["image_id"],
+                        )
                         if run["runtime_kind"] == "container"
                         else references.running
                     )
@@ -313,6 +325,7 @@ class Benchmarks:
     def _retain(self, row, project):
         row.update(
             remake_status=project["status"],
+            browser=project.get("reference", {}).get("browser"),
             rounds=project["rounds"],
             model=project.get("model"),
             report_url=project["report_url"],

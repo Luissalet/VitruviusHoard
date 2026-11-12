@@ -10,7 +10,7 @@ ROOT = Path(__file__).parent
 
 
 def catalog():
-    raw = (ROOT / "corpus.json").read_bytes()
+    raw = (ROOT / "corpus.json").read_text(encoding="utf8").encode("utf8")
     return {**json.loads(raw), "manifest_sha256": hashlib.sha256(raw).hexdigest()}
 
 
@@ -25,7 +25,9 @@ def implementation():
     digest = hashlib.sha256()
     for path in paths:
         digest.update(
-            path.relative_to(root).as_posix().encode() + b"\0" + path.read_bytes()
+            path.relative_to(root).as_posix().encode()
+            + b"\0"
+            + path.read_text(encoding="utf8").encode("utf8")
         )
     return digest.hexdigest()
 

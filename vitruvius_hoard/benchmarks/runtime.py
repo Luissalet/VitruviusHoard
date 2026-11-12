@@ -17,7 +17,7 @@ ROOT = Path(__file__).parent
 def image_tag():
     digest = hashlib.sha256(
         b"".join(
-            (ROOT / name).read_bytes()
+            (ROOT / name).read_text(encoding="utf8").encode("utf8")
             for name in (
                 "Reference.Dockerfile",
                 "container_entry.py",
@@ -82,7 +82,7 @@ def prepare(cancel, folder, kind):
 
 
 @contextmanager
-def running(source, state, log_path, cancel):
+def running(source, state, log_path, cancel, *, image=None):
     name = "vitruvius-reference-" + uuid.uuid4().hex[:12]
     state.mkdir(parents=True, exist_ok=True)
     command = [
@@ -94,10 +94,12 @@ def running(source, state, log_path, cancel):
         "--publish",
         "127.0.0.1::8080",
         "--mount",
-        f"type=bind,source={source.resolve()},target=/reference,readonly",
+        f"type=bind,source={source.parent.resolve()},target=/reference,readonly",
+        "--mount",
+        f"type=bind,source={(source.parents[3] / 'blobs').resolve()},target=/blobs,readonly",
         "--mount",
         f"type=bind,source={state.resolve()},target=/state",
-        image_tag(),
+        image or image_tag(),
     ]
     with log_path.open("wb") as log:
         process = subprocess.Popen(
@@ -108,7 +110,8 @@ def running(source, state, log_path, cancel):
         )
         try:
             url = None
-            for _ in range(240):
+            deadline = time.monotonic() + 1200
+            while time.monotonic() < deadline:
                 if cancel.is_set():
                     raise Cancelled()
                 if process.poll() is not None:

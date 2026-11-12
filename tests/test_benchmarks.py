@@ -18,16 +18,19 @@ def svc(tmp_path, monkeypatch):
     monkeypatch.setattr(
         references,
         "prepare",
-        lambda *a: (tmp_path, {"sha256": "fixture", "files": 1, "bytes": 4}),
+        lambda *a, **kwargs: (tmp_path, {"sha256": "fixture", "files": 1, "bytes": 4}),
     )
 
     @contextmanager
-    def running(*a):
+    def running(*a, **kwargs):
+        assert kwargs.get("image") == "fixture-image"
         yield "https://example.com/"
 
     monkeypatch.setattr(references, "running", running)
     monkeypatch.setattr(runtime, "running", running)
-    monkeypatch.setattr(runtime, "prepare", lambda *args: {"kind": "test"})
+    monkeypatch.setattr(
+        runtime, "prepare", lambda *args: {"kind": "test", "image_id": "fixture-image"}
+    )
     yield s
     s.stop()
 
@@ -45,6 +48,29 @@ def test_catalog_is_pinned_and_complete():
     assert len(m["manifest_sha256"]) == 64
     assert len(corpus.implementation()) == 64
     assert len(set(r["id"] for r in m["cases"])) == 70
+
+
+def test_source_fingerprints_survive_checkout_line_endings(tmp_path, monkeypatch):
+    root = tmp_path / "benchmarks"
+    root.mkdir()
+    for name in ["remake.py", "parity.py", "browser.py"]:
+        (tmp_path / name).write_bytes(b"# source\n")
+    for name in [
+        "container_entry.py",
+        "build_runtime.py",
+        "Reference.Dockerfile",
+        "reference-dependencies.json",
+        "corpus.json",
+    ]:
+        (root / name).write_bytes(b"source\n")
+    monkeypatch.setattr(corpus, "ROOT", root)
+    monkeypatch.setattr(runtime, "ROOT", root)
+    implementation, image = corpus.implementation(), runtime.image_tag()
+    for path in tmp_path.rglob("*"):
+        if path.is_file():
+            path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    assert corpus.implementation() == implementation
+    assert runtime.image_tag() == image
 
 
 def test_normal_remake_retains_version_scores_and_evidence(svc):
@@ -81,10 +107,10 @@ def test_inputs_fail_before_start(svc, kw):
 def test_failed_case_does_not_inflate_mean_or_coverage(svc, monkeypatch):
     original = references.prepare
 
-    def prepare(base, catalog, case, cancel):
+    def prepare(base, catalog, case, cancel, **kwargs):
         if case == "33":
             raise OSError("download unavailable")
-        return original(base, catalog, case, cancel)
+        return original(base, catalog, case, cancel, **kwargs)
 
     monkeypatch.setattr(references, "prepare", prepare)
     r = finish(svc, svc.benchmarks.start(version="v1", cases=["medium", "33"]))
@@ -118,6 +144,10 @@ def test_comparison_requires_same_settings_and_reference(svc):
     b["cases"][0]["reference"]["sha256"] = "changed"
     svc.benchmarks._save(b)
     assert not svc.benchmarks.compare(a["id"], b["id"])["comparable"]
+    b["cases"][0]["reference"]["sha256"] = a["cases"][0]["reference"]["sha256"]
+    b["cases"][0]["browser"] = {"version": "different"}
+    svc.benchmarks._save(b)
+    assert "browser:medium" in svc.benchmarks.compare(a["id"], b["id"])["differences"]
 
 
 def test_restart_resume_and_implementation_change(svc, monkeypatch):
@@ -138,7 +168,7 @@ def test_stop_joins_reference_and_preserves_pending(svc, monkeypatch):
     closed = threading.Event()
 
     @contextmanager
-    def running(source, state, log, cancel):
+    def running(source, state, log, cancel, **kwargs):
         entered.set()
         try:
             cancel.wait(10)
@@ -171,6 +201,33 @@ def test_hash_checks_and_reference_entry(svc, tmp_path):
     assert not references.file_hash(p, row)
     (tmp_path / "harbor_entry.py").write_text("print(1)")
     assert references.command(tmp_path)[-1] == str(tmp_path / "harbor_entry.py")
+
+
+def test_resume_after_reference_startup_uses_fresh_state(svc, monkeypatch):
+    started = threading.Event()
+    states = []
+    @contextmanager
+    def starting(source, state, log, cancel, **kwargs):
+        states.append(state)
+        started.set()
+        cancel.wait(10)
+        raise references.Cancelled()
+        yield
+    monkeypatch.setattr(runtime, "running", starting)
+    run = svc.benchmarks.start(version="restart-startup", cases=["medium"])
+    assert started.wait(5)
+    svc.benchmarks.stop(run["id"])
+    stopped = finish(svc, run)
+    assert stopped["cases"][0]["attempts"] == []
+    @contextmanager
+    def ready(source, state, log, cancel, **kwargs):
+        states.append(state)
+        yield "https://example.com/"
+    monkeypatch.setattr(runtime, "running", ready)
+    resumed = finish(svc, svc.benchmarks.resume(run["id"]))
+    assert states[0] != states[1]
+    assert len(resumed["cases"][0]["reference_attempts"]) == 2
+    assert resumed["summary"]["measured"] == 1
 
 
 def test_download_deduplicates_original_bytes(tmp_path, monkeypatch):
@@ -249,6 +306,37 @@ def test_rate_limit_retries_obey_remote_reset(monkeypatch):
     assert references.retry_pause({}) == 60
 
 
+def test_container_fixtures_keep_case_sensitive_members_as_blobs(tmp_path, monkeypatch):
+    import hashlib
+
+    bodies = {"A.txt": b"UPPER", "a.txt": b"lower"}
+    rows = [
+        {
+            "type": "file",
+            "path": f"tasks/medium/environment/reference/{name}",
+            "size": len(data),
+            "oid": hashlib.sha1(b"blob 5\0" + data).hexdigest(),
+        }
+        for name, data in bodies.items()
+    ]
+
+    def fetch(url, cancel, client=None):
+        if "/api/datasets/" in url:
+            return json.dumps(rows).encode(), {}
+        return bodies[url.rsplit("/", 1)[1]], {}
+
+    monkeypatch.setattr(references, "fetch", fetch)
+    source, receipt = references.prepare(
+        tmp_path, corpus.catalog(), "medium", threading.Event(), materialize=False
+    )
+    assert not source.exists() and receipt["files"] == 2
+    assert json.loads((source.parent / "files.json").read_text()) == rows
+    for row in rows:
+        assert (tmp_path / "blobs" / row["oid"]).read_bytes() == bodies[
+            row["path"].rsplit("/", 1)[1]
+        ]
+
+
 def test_tools_and_rest_share_manager(svc):
     from fastapi.testclient import TestClient
     from vitruvius_hoard.main import create_app
@@ -270,3 +358,24 @@ def test_tools_and_rest_share_manager(svc):
         out = c.get("/api/benchmarks/runs/" + r["id"] + "/export")
         assert out.json()["cases"] == r["cases"]
         assert c.get("/api/benchmarks/runs/../../secret").status_code != 200
+
+
+def test_complete_corpus_results_survive_the_agent_response_cap(svc, monkeypatch):
+    from vitruvius_hoard.agent_tools import call_tool
+
+    monkeypatch.setattr(svc.benchmarks, "_launch", lambda _: None)
+    run = svc.benchmarks.start(version="full-envelope")
+    for row in run["cases"]:
+        row.update(
+            status="measured",
+            score=100,
+            passed=True,
+            artifacts=[
+                {"path": f"evidence-{i}.png", "sha256": "a" * 64} for i in range(40)
+            ],
+        )
+    svc.benchmarks._save(run)
+    result = call_tool(svc, "benchmark_get", {"id": run["id"]})
+    assert len(result["cases"]) == 70 and result["summary"]["measured"] == 70
+    assert len(result["cases"][-1]["artifacts"]) == 40
+    assert not result.get("truncated")

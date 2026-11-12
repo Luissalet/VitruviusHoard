@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T23:45:16Z",
+  "title": "Vitruvius reconstruction benchmark surface record",
+  "extensions": {
+    "surface": {
+      "mode": "Operate",
+      "primaryTarget": "client/src/pages/Benchmark.jsx",
+      "relatedTargets": [
+        "client/src/pages/Remake.jsx",
+        "client/src/api.js",
+        "client/src/index.css"
+      ],
+      "authorities": [
+        "PRODUCT.md",
+        "DESIGN.md",
+        ".impeccable/design.json"
+      ],
+      "routes": [
+        "/design/#/remake"
+      ],
+      "scope": "Versioned measurements embedded between the existing Rehacer form and its selected project."
+    },
+    "directionContract": {
+      "thesis": "Make versioned reconstruction measurements readable and actionable in Rehacer.",
+      "ownWorld": "Inherit the dark workbench palette, shared panels, fields, buttons and compact table.",
+      "story": "Configure a version, run references, inspect coverage and errors, open evidence, export and compare.",
+      "firstViewport": "Show scope, configuration and access to an active batch while inspecting history.",
+      "form": "Incumbent Operate extension using the established form and table grammar."
+    },
+    "typography": {
+      "title": "14px semibold",
+      "body": "Shared 14px body and inherited control/help steps",
+      "results": "Right-aligned scores with tabular numerals"
+    },
+    "layout": {
+      "configuration": "Wrapping flex rows with version, references, method, round budget and primary action.",
+      "mobile": "Stack flexible controls at390px. Keep method and rounds together when space allows. Contain table overflow locally.",
+      "status": "Group measured/selected coverage, errors and the measured-only mean. Wrap long version labels.",
+      "history": "Keep the inspected result selected while exposing the active batch above configuration."
+    },
+    "behavior": {
+      "activeBatch": "Identify the running version and provide its opening control while it occupies the evaluator.",
+      "evidence": "Open the existing Rehacer project or download its retained JSON results.",
+      "comparison": "Show paired measured coverage and explicit incompatible configuration fields."
+    },
+    "verification": {
+      "viewports": [
+        1440,
+        390
+      ],
+      "states": [
+        "Completed historical evaluation",
+        "Another batch active",
+        "Incompatible comparison",
+        "Project opened",
+        "JSON exported"
+      ],
+      "visualReview": "The finish reviewer scored the active-batch access fix resolved."
+    }
+  }
+}

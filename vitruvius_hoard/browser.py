@@ -818,7 +818,8 @@ class BrowserWorker:
         raw_dir.mkdir(parents=True, exist_ok=True)
         wait_ms = int(payload.get("wait_ms", 800))
         cap = parity.MAX_PAGE_HEIGHT
-        result: dict[str, Any] = {"captures": [], "outlines": {}, "assets": [], "errors": []}
+        result: dict[str, Any] = {"captures": [], "outlines": {}, "assets": [], "errors": [],
+                                  "browser": {"version": browser.version, "launcher": self.launched_with}}
         saved: dict[str, dict[str, Any]] = {}
         total = 0
         keep_types = ("stylesheet", "image", "font", "media", "script", "other")

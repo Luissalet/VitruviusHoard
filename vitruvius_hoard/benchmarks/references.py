@@ -9,7 +9,7 @@ from contextlib import contextmanager
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
 import socket
@@ -99,7 +99,7 @@ def file_hash(path, row):
     )
 
 
-def prepare(base, corpus, task_id, cancel):
+def prepare(base, corpus, task_id, cancel, *, materialize=True):
     """Keep downloaded bytes and their original hashes beside a pinned revision."""
     root = Path(base) / "references" / corpus["revision"] / task_id
     root.mkdir(parents=True, exist_ok=True)
@@ -124,9 +124,16 @@ def prepare(base, corpus, task_id, cancel):
 
     def download(row):
         relative = row["path"].removeprefix(prefix)
-        path = (root / "source" / relative).resolve()
-        if not path.is_relative_to((root / "source").resolve()):
+        member = PurePosixPath(relative)
+        if (
+            not row["path"].startswith(prefix)
+            or member.is_absolute()
+            or ".." in member.parts
+            or "\\" in relative
+            or PureWindowsPath(relative).drive
+        ):
             raise ValueError("Invalid reference member path")
+        path = root / "source" / relative
         oid = (row.get("lfs") or {}).get("oid") or row["oid"]
         blob = Path(base) / "blobs" / oid
         with _blob_locks.setdefault(str(blob), threading.Lock()):
@@ -153,7 +160,7 @@ def prepare(base, corpus, task_id, cancel):
                     temporary.unlink()
                     raise ValueError(f"Reference checksum mismatch for {relative}")
                 temporary.replace(blob)
-            if not valid:
+            if not valid and materialize:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(blob, path)
 
@@ -162,14 +169,18 @@ def prepare(base, corpus, task_id, cancel):
             list(pool.map(download, rows))
     digest = hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
     source = root / "source"
-    # A few large reference directories are distributed as tar files.
-    for archive in ([] if os.name == "nt" else source.rglob("*.tar")):
-        marker = archive.with_suffix(".unpacked")
+    # Original fixture archives retain their own relative root paths.
+    for archive in (
+        [] if os.name == "nt" or not materialize else list(source.rglob("*"))
+    ):
+        if not archive.name.endswith(
+            (".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz")
+        ):
+            continue
+        marker = archive.with_name(archive.name + ".unpacked")
         if not marker.exists():
-            target = archive.with_suffix("")
-            target.mkdir(exist_ok=True)
             with tarfile.open(archive) as package:
-                package.extractall(target, filter="data")
+                package.extractall(archive.parent, filter="data")
             marker.touch()
     return source, {
         "sha256": digest,

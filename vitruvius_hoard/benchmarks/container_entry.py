@@ -6,15 +6,22 @@ import shutil
 import tarfile
 import subprocess
 import sys
+import json
 
 source = Path("/reference")
 runtime = Path("/runtime")
-shutil.copytree(source, runtime)
-for archive in runtime.rglob("*.tar"):
-    target = archive.with_suffix("")
-    target.mkdir(exist_ok=True)
+runtime.mkdir()
+for row in json.loads((source / "files.json").read_text()):
+    relative = row["path"].split("/environment/reference/", 1)[1]
+    target = runtime / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    oid = (row.get("lfs") or {}).get("oid") or row["oid"]
+    shutil.copyfile(Path("/blobs") / oid, target)
+for archive in list(runtime.rglob("*")):
+    if not archive.name.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz")):
+        continue
     with tarfile.open(archive) as package:
-        package.extractall(target, filter="data")
+        package.extractall(archive.parent, filter="data")
 for path in runtime.rglob("*.sh"):
     path.chmod(0o755)
 lock = runtime / "vendor.requirements.lock"
@@ -38,4 +45,14 @@ if lock.is_file():
         check=True,
     )
 os.chdir(runtime)
+clone = runtime / "clone"
+if (clone / "package-lock.json").is_file() and not (
+    runtime / "standalone/server.js"
+).is_file():
+    subprocess.run(["npm", "ci", "--no-audit", "--no-fund"], cwd=clone, check=True)
+    subprocess.run(["npm", "run", "build"], cwd=clone, check=True)
+    shutil.copytree(clone / "dist/standalone", runtime / "standalone")
+compile_script = runtime / "compile.sh"
+if compile_script.is_file():
+    subprocess.run(["/bin/bash", str(compile_script)], check=True)
 os.execv("/bin/bash", ["bash", str(runtime / "run.sh")])

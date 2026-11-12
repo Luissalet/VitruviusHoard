@@ -105,6 +105,8 @@ def _rgb(image: Image.Image) -> Image.Image:
 def _screen(image: Image.Image, width: int, y0: int, height: int, fill: tuple[int, int, int]) -> Image.Image:
     """Rows y0..y0+height of `image`, `width` px wide; whatever lies outside the image is `fill`."""
     out = Image.new("RGB", (width, height), fill)
+    if y0 >= image.height:
+        return out
     box = image.crop((0, y0, min(image.width, width), min(image.height, y0 + height)))
     if box.width > 0 and box.height > 0:
         out.paste(box, (0, 0))
