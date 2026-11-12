@@ -38,6 +38,14 @@ MCP tools are `benchmark_catalog`, `benchmark_start`, `benchmark_get`, `benchmar
 
 REST provides `GET /design/api/benchmarks/catalog`, `GET|POST /design/api/benchmarks/runs`, `GET /design/api/benchmarks/runs/<id>`, `POST /design/api/benchmarks/runs/<id>/stop`, `POST /design/api/benchmarks/runs/<id>/resume`, `GET /design/api/benchmarks/runs/<id>/export` and `POST /design/api/benchmarks/compare` with `before` and `after` IDs.
 
+## Recorded baseline
+
+Version `c508db8-entry-copy-1` processed all 70 selected references with the default settings. Evaluation `fcee8381ed26` measured 68 references, passed 56, and retained two errors. Measured mean parity is 98.325/100 with 97.14% measured coverage. One reference exhausted the normal capture timeout and another triggered Rehacer's existing sign-in-form refusal. The [retained per-reference results](benchmark-results/c508db8-entry-copy-1.json) include configuration, browser, runtime, source hashes, round details and the full export checksum.
+
+Viewed reference and candidate images expose responsive footer expansion, changed tile backgrounds and desktop content retained at mobile width. These differences remain in the score. This first copy baseline uses the entry-page metric described above.
+
+The [supplemental runs](benchmark-results/c508db8-repeats.json) repeat both error cases. The timed-out reference measures 100/100 on repetition, and the sign-in refusal persists. Two further identical two-reference selections measure 98.41 and 98.38/100. Their compatible paired comparison reports a mean delta of -0.03 over 2/2 pairs. Those repetitions use the same implementation and demonstrate the comparison operation with its selected denominator.
+
 ## Provenance
 
 The corpus was located through [the research catalogue](https://github.com/reacher-z/Awesome-REA). Its [source repository](https://github.com/TIGER-AI-Lab/WebsiteBench), [task list](https://github.com/TIGER-AI-Lab/WebsiteBench/blob/main/docs/tasks.md) and [dataset](https://huggingface.co/datasets/TIGER-Lab/WebsiteBench/tree/d7fcb4c06fee6563e88675fb7ed21135cb26e693) define the pinned references. Benchmark code and task definitions carry Apache-2.0. Reference website content belongs to its respective owners and is distributed for non-commercial research. Downloaded fixtures retain their original bytes and notices in the local evaluation cache.

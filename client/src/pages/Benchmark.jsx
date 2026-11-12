@@ -286,7 +286,14 @@ export default function Benchmark({ es, notify, openRemake }) {
           </div>
           <p className="help m-0">
             {run.settings.mode} · {run.settings.max_rounds}{" "}
-            {es ? "rondas" : "rounds"} · {run.settings.widths.join(" / ")} px ·{" "}
+            {run.settings.max_rounds === 1
+              ? es
+                ? "ronda"
+                : "round"
+              : es
+                ? "rondas"
+                : "rounds"}{" "}
+            · {run.settings.widths.join(" / ")} px ·{" "}
             {es ? "umbral" : "threshold"} {run.settings.pass_score} %
           </p>
           <details className="help">
