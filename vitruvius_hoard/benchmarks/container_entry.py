@@ -51,7 +51,15 @@ if (clone / "package-lock.json").is_file() and not (
 ).is_file():
     subprocess.run(["npm", "ci", "--no-audit", "--no-fund"], cwd=clone, check=True)
     subprocess.run(["npm", "run", "build"], cwd=clone, check=True)
-    shutil.copytree(clone / "dist/standalone", runtime / "standalone")
+    standalone = clone / "dist/standalone"
+    if not standalone.is_dir():
+        standalone = clone / ".next/standalone"
+    shutil.copytree(standalone, runtime / "standalone")
+    for relative in ("public", ".next/static"):
+        if (clone / relative).is_dir():
+            shutil.copytree(
+                clone / relative, runtime / "standalone" / relative, dirs_exist_ok=True
+            )
 compile_script = runtime / "compile.sh"
 if compile_script.is_file():
     subprocess.run(["/bin/bash", str(compile_script)], check=True)
