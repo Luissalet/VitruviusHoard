@@ -8,4 +8,5 @@ COPY build_runtime.py /build_runtime.py
 RUN python /build_runtime.py
 COPY container_entry.py /entry.py
 ENV HOST=0.0.0.0 PORT=8080 DATA_DIR=/state SEED=0 TZ=UTC PYTHONDONTWRITEBYTECODE=1
+ENV NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false
 ENTRYPOINT ["python", "/entry.py"]
