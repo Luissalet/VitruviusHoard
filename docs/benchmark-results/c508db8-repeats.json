@@ -1,0 +1,257 @@
+{
+  "code_commit": "c508db8c4c2ab3b83809b94d668114e816cd5eee",
+  "scope": "supplemental repeat selections",
+  "comparison": {
+    "before": "f915a7b6b6ff",
+    "after": "017daf87e6f0",
+    "comparable": true,
+    "differences": [],
+    "paired_measured": 2,
+    "selected": 2,
+    "mean_delta": -0.03,
+    "cases": [
+      {
+        "id": "angi",
+        "before": 96.85,
+        "after": 96.79,
+        "delta": -0.06
+      },
+      {
+        "id": "medium",
+        "before": 99.97,
+        "after": 99.97,
+        "delta": 0.0
+      }
+    ],
+    "before_summary": {
+      "selected": 2,
+      "measured": 2,
+      "failed": 0,
+      "passed": 1,
+      "coverage_percent": 100.0,
+      "mean_score": 98.41,
+      "complete": true
+    },
+    "after_summary": {
+      "selected": 2,
+      "measured": 2,
+      "failed": 0,
+      "passed": 1,
+      "coverage_percent": 100.0,
+      "mean_score": 98.38,
+      "complete": true
+    }
+  },
+  "runs": [
+    {
+      "id": "b73ed0cd82d3",
+      "version": "c508db8-capture-repeat",
+      "implementation_sha256": "e8f5f7c6124b4b04724d4204b93e0c3f58f8ab7e220881dc1e83f096e9f961e3",
+      "settings": {
+        "mode": "copy",
+        "max_rounds": 1,
+        "widths": [
+          1440,
+          390
+        ],
+        "pass_score": 98,
+        "tolerance": 0.1,
+        "note": ""
+      },
+      "environment": {
+        "python": "3.13.7",
+        "system": "Windows",
+        "packages": {
+          "playwright": "1.65.0",
+          "pillow": "13.0.0",
+          "fastapi": "0.162.5",
+          "starlette": "1.10.0",
+          "pydantic": "2.14.3",
+          "uvicorn": "0.54.0",
+          "jinja2": "3.1.6",
+          "tzdata": "2026.6"
+        },
+        "runtime": {
+          "kind": "container",
+          "image": "vitruvius-reference:3681abcd451c8ae8",
+          "image_id": "sha256:0f8f5ec57caf74f7a4e01de325b0634e90ab2b8cfb3ffd022c7f93bbfc8f91c0"
+        }
+      },
+      "summary": {
+        "selected": 2,
+        "measured": 1,
+        "failed": 1,
+        "passed": 1,
+        "coverage_percent": 50.0,
+        "mean_score": 100.0,
+        "complete": false
+      },
+      "status": "done",
+      "cases": [
+        {
+          "id": "boardgamegeek",
+          "status": "measured",
+          "score": 100.0,
+          "passed": true,
+          "error": null,
+          "browser": {
+            "version": "157.0.4341.46",
+            "launcher": "msedge"
+          },
+          "remake_id": "ba320593a69e"
+        },
+        {
+          "id": "legalnature",
+          "status": "failed",
+          "score": null,
+          "passed": null,
+          "error": "La página muestra un formulario de inicio de sesión: no se rehace, porque una copia así sirve para suplantarla. Elige una página pública de contenido.",
+          "browser": null,
+          "remake_id": "d1b766d774fd"
+        }
+      ]
+    },
+    {
+      "id": "f915a7b6b6ff",
+      "version": "c508db8-repeat-a",
+      "implementation_sha256": "e8f5f7c6124b4b04724d4204b93e0c3f58f8ab7e220881dc1e83f096e9f961e3",
+      "settings": {
+        "mode": "copy",
+        "max_rounds": 1,
+        "widths": [
+          1440,
+          390
+        ],
+        "pass_score": 98,
+        "tolerance": 0.1,
+        "note": ""
+      },
+      "environment": {
+        "python": "3.13.7",
+        "system": "Windows",
+        "packages": {
+          "playwright": "1.65.0",
+          "pillow": "13.0.0",
+          "fastapi": "0.162.5",
+          "starlette": "1.10.0",
+          "pydantic": "2.14.3",
+          "uvicorn": "0.54.0",
+          "jinja2": "3.1.6",
+          "tzdata": "2026.6"
+        },
+        "runtime": {
+          "kind": "container",
+          "image": "vitruvius-reference:3681abcd451c8ae8",
+          "image_id": "sha256:0f8f5ec57caf74f7a4e01de325b0634e90ab2b8cfb3ffd022c7f93bbfc8f91c0"
+        }
+      },
+      "summary": {
+        "selected": 2,
+        "measured": 2,
+        "failed": 0,
+        "passed": 1,
+        "coverage_percent": 100.0,
+        "mean_score": 98.41,
+        "complete": true
+      },
+      "status": "done",
+      "cases": [
+        {
+          "id": "angi",
+          "status": "measured",
+          "score": 96.85,
+          "passed": false,
+          "error": null,
+          "browser": {
+            "version": "157.0.4341.46",
+            "launcher": "msedge"
+          },
+          "remake_id": "c3210d0c5ae6"
+        },
+        {
+          "id": "medium",
+          "status": "measured",
+          "score": 99.97,
+          "passed": true,
+          "error": null,
+          "browser": {
+            "version": "157.0.4341.46",
+            "launcher": "msedge"
+          },
+          "remake_id": "49b603774a71"
+        }
+      ]
+    },
+    {
+      "id": "017daf87e6f0",
+      "version": "c508db8-repeat-b",
+      "implementation_sha256": "e8f5f7c6124b4b04724d4204b93e0c3f58f8ab7e220881dc1e83f096e9f961e3",
+      "settings": {
+        "mode": "copy",
+        "max_rounds": 1,
+        "widths": [
+          1440,
+          390
+        ],
+        "pass_score": 98,
+        "tolerance": 0.1,
+        "note": ""
+      },
+      "environment": {
+        "python": "3.13.7",
+        "system": "Windows",
+        "packages": {
+          "playwright": "1.65.0",
+          "pillow": "13.0.0",
+          "fastapi": "0.162.5",
+          "starlette": "1.10.0",
+          "pydantic": "2.14.3",
+          "uvicorn": "0.54.0",
+          "jinja2": "3.1.6",
+          "tzdata": "2026.6"
+        },
+        "runtime": {
+          "kind": "container",
+          "image": "vitruvius-reference:3681abcd451c8ae8",
+          "image_id": "sha256:0f8f5ec57caf74f7a4e01de325b0634e90ab2b8cfb3ffd022c7f93bbfc8f91c0"
+        }
+      },
+      "summary": {
+        "selected": 2,
+        "measured": 2,
+        "failed": 0,
+        "passed": 1,
+        "coverage_percent": 100.0,
+        "mean_score": 98.38,
+        "complete": true
+      },
+      "status": "done",
+      "cases": [
+        {
+          "id": "angi",
+          "status": "measured",
+          "score": 96.79,
+          "passed": false,
+          "error": null,
+          "browser": {
+            "version": "157.0.4341.46",
+            "launcher": "msedge"
+          },
+          "remake_id": "09e0ab7ed3ec"
+        },
+        {
+          "id": "medium",
+          "status": "measured",
+          "score": 99.97,
+          "passed": true,
+          "error": null,
+          "browser": {
+            "version": "157.0.4341.46",
+            "launcher": "msedge"
+          },
+          "remake_id": "fc6cdb61830d"
+        }
+      ]
+    }
+  ]
+}

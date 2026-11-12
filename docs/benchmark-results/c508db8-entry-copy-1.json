@@ -1,0 +1,3925 @@
+{
+  "id": "fcee8381ed26",
+  "version": "c508db8-entry-copy-1",
+  "implementation_sha256": "e8f5f7c6124b4b04724d4204b93e0c3f58f8ab7e220881dc1e83f096e9f961e3",
+  "metric": "vitruvius-stable-pixels/1",
+  "scope": "frozen-reference-entry-page",
+  "official_reward": null,
+  "settings": {
+    "mode": "copy",
+    "max_rounds": 1,
+    "widths": [
+      1440,
+      390
+    ],
+    "pass_score": 98,
+    "tolerance": 0.1,
+    "note": ""
+  },
+  "environment": {
+    "python": "3.13.7",
+    "system": "Windows",
+    "packages": {
+      "playwright": "1.65.0",
+      "pillow": "13.0.0",
+      "fastapi": "0.162.5",
+      "starlette": "1.10.0",
+      "pydantic": "2.14.3",
+      "uvicorn": "0.54.0",
+      "jinja2": "3.1.6",
+      "tzdata": "2026.6"
+    },
+    "runtime": {
+      "kind": "container",
+      "image": "vitruvius-reference:3681abcd451c8ae8",
+      "image_id": "sha256:0f8f5ec57caf74f7a4e01de325b0634e90ab2b8cfb3ffd022c7f93bbfc8f91c0"
+    }
+  },
+  "status": "done",
+  "summary": {
+    "selected": 70,
+    "measured": 68,
+    "failed": 2,
+    "passed": 56,
+    "coverage_percent": 97.14,
+    "mean_score": 98.325,
+    "complete": false
+  },
+  "code_commit": "c508db8c4c2ab3b83809b94d668114e816cd5eee",
+  "corpus": {
+    "dataset": "TIGER-Lab/WebsiteBench",
+    "revision": "d7fcb4c06fee6563e88675fb7ed21135cb26e693",
+    "manifest_sha256": "2cdfe3a25a380fc41dd2258f0245d5a28497596f355d39515249393e3fa42b4d"
+  },
+  "export_sha256": "33d54cdab62de639acd7fefe41a54db2d8d7feb499698ce08d0e1fccbaac55f9",
+  "cases": [
+    {
+      "id": "1password-web",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "2c080e789aa6",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "9676da55e68b",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5030,
+              "candidate_height": 5030,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6201,
+              "candidate_height": 6201,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7222,
+          "ts": 1794443522.4368,
+          "kept": true,
+          "parity_report_url": "/api/parity/9676da55e68b/report"
+        }
+      ],
+      "reference_sha256": "3310ddb18e7c2a8f46b0dbbdf1f3740c74d477840884bd3b768f73358c9903a3",
+      "artifact_count": 24,
+      "artifacts_manifest_sha256": "3b24094098c14d0cfebf8c912abcfdc5768dca61564571fa58e0de3ecbd55c44"
+    },
+    {
+      "id": "33",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "cbdee0b8df26",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1f2fc3a4b079",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5819,
+              "candidate_height": 5819,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 10,
+              "reference_height": 7984,
+              "candidate_height": 7984,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7889,
+          "ts": 1794443552.331243,
+          "kept": true,
+          "parity_report_url": "/api/parity/1f2fc3a4b079/report"
+        }
+      ],
+      "reference_sha256": "13a874a08e2025cf91597356d2a510720a1d8586da3933ebf869816c19a9d052",
+      "artifact_count": 62,
+      "artifacts_manifest_sha256": "bbb13254252d82a9b1f88b1b3a01751907ebea6f1e50ac8cee5c6ef20f2bc29f"
+    },
+    {
+      "id": "ace-hardware",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "ad5fe2ad3193",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "dd734b7f18af",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5330,
+              "candidate_height": 5330,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6458,
+              "candidate_height": 6458,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 13060,
+          "ts": 1794443601.5860915,
+          "kept": true,
+          "parity_report_url": "/api/parity/dd734b7f18af/report"
+        }
+      ],
+      "reference_sha256": "41268621e8557f80614f052b1e5e1be21905458b1c0e2d4b174ed4be4bbe406f",
+      "artifact_count": 38,
+      "artifacts_manifest_sha256": "46956bb34677a48bec8d88e9de02fc9d1ace7e8f3fd150e24430ec78f0345bff"
+    },
+    {
+      "id": "airtable",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "ce986982a132",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "b60d576d6d24",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4253,
+              "candidate_height": 4253,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5569,
+              "candidate_height": 5569,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6115,
+          "ts": 1794443624.6518366,
+          "kept": true,
+          "parity_report_url": "/api/parity/b60d576d6d24/report"
+        }
+      ],
+      "reference_sha256": "fb39765b935cc2901439ca7770080b48af8a3e3ff22f8c7c041e712949169d55",
+      "artifact_count": 23,
+      "artifacts_manifest_sha256": "d22cc12f6f57f92b1d0e1e2e9d045bfb84eeaad3f221213af575fc8d3c5ab9e5"
+    },
+    {
+      "id": "amazon",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "e7a1949b42aa",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "be9c2a677070",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5544,
+              "candidate_height": 5544,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6403,
+              "candidate_height": 6403,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 9151,
+          "ts": 1794443663.36416,
+          "kept": true,
+          "parity_report_url": "/api/parity/be9c2a677070/report"
+        }
+      ],
+      "reference_sha256": "0eb4324f2f7294f8aa0e18d007d0e6257ed6020f8f3b4bf3299fb49847180cb4",
+      "artifact_count": 26,
+      "artifacts_manifest_sha256": "36ffbda4ffc96cbec825bb4c24e9d71f132db010ec0040b26e3c9e9fdd3be6d5"
+    },
+    {
+      "id": "amazon-home-services",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "df1b460b3c9b",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "fa8d075e7a55",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1722,
+              "candidate_height": 1722,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2177,
+              "candidate_height": 2177,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 4590,
+          "ts": 1794443681.9615092,
+          "kept": true,
+          "parity_report_url": "/api/parity/fa8d075e7a55/report"
+        }
+      ],
+      "reference_sha256": "997cf8fa1b931e3b8f37990047bedabc2cb80446e473bc416d95ef0328e11b1a",
+      "artifact_count": 24,
+      "artifacts_manifest_sha256": "27546cb64d0c0f419a89b4b32549aee74442ae4820c08a29c0ea4044f69c3a27"
+    },
+    {
+      "id": "amc-theatres",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "ed4a462b4230",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "b73a3b10ea3d",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6400,
+              "candidate_height": 6400,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6624,
+              "candidate_height": 6624,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8729,
+          "ts": 1794443732.3579254,
+          "kept": true,
+          "parity_report_url": "/api/parity/b73a3b10ea3d/report"
+        }
+      ],
+      "reference_sha256": "125cf63b6bb253ce7c00ad386a86bd493d036520a2d2bdd44b7dca7568086f85",
+      "artifact_count": 28,
+      "artifacts_manifest_sha256": "ad47a19d99a36faa8992541e0f64fd553147e335842ff1d8e983b22c922aae7d"
+    },
+    {
+      "id": "angi",
+      "status": "measured",
+      "score": 96.82,
+      "passed": false,
+      "error": null,
+      "remake_id": "316f0bff32e3",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "fcdd21cef515",
+          "score": 96.82,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4682,
+              "candidate_height": 4682,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 93.64,
+              "min_screen": 0.0,
+              "passed": false,
+              "failing": [
+                10,
+                11
+              ],
+              "screens": 11,
+              "reference_height": 8054,
+              "candidate_height": 8517,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere +463 px (referencia 8054 px, candidata 8517 px)",
+            "390 px: pantalla 10 (desde 7596 px) con 49.57 % de coincidencia",
+            "390 px: pantalla 11 (desde 8440 px) con 0.0 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 15995,
+          "ts": 1794443772.5627153,
+          "kept": true,
+          "parity_report_url": "/api/parity/fcdd21cef515/report"
+        }
+      ],
+      "reference_sha256": "1e62fdcf774fab07da5fe9c352064185edd799dcaddf784609ea47233087172a",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "c08c5f2a08044b5c5cd566c7ec39aac33ecc7f2332f6042febe3d05345df9d9e"
+    },
+    {
+      "id": "apple",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "23f8a51b5d95",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "10be894726cd",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4959,
+              "candidate_height": 4959,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 6917,
+              "candidate_height": 6917,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8180,
+          "ts": 1794443862.654367,
+          "kept": true,
+          "parity_report_url": "/api/parity/10be894726cd/report"
+        }
+      ],
+      "reference_sha256": "267a7b1c169b7f3fcf2d5b4675b1a1a7fc8f3aa0716c785c27e5e782cf9c5234",
+      "artifact_count": 28,
+      "artifacts_manifest_sha256": "49dc8525992c8740829789b3a7a2fc09ff8da9b24ea5a5ab3936313d83d999cf"
+    },
+    {
+      "id": "article",
+      "status": "measured",
+      "score": 96.72,
+      "passed": false,
+      "error": null,
+      "remake_id": "0aad521cc973",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "63fbcb54469b",
+          "score": 96.72,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 94.46,
+              "min_screen": 76.23,
+              "passed": false,
+              "failing": [
+                1
+              ],
+              "screens": 5,
+              "reference_height": 4031,
+              "candidate_height": 4031,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 98.97,
+              "min_screen": 97.76,
+              "passed": false,
+              "failing": [
+                4
+              ],
+              "screens": 6,
+              "reference_height": 4280,
+              "candidate_height": 4280,
+              "height_pass": true
+            }
+          ],
+          "failures": [
+            "1440 px: pantalla 1 (desde 0 px) con 76.23 % de coincidencia",
+            "390 px: pantalla 4 (desde 2532 px) con 97.76 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 8128,
+          "ts": 1794443894.2874725,
+          "kept": true,
+          "parity_report_url": "/api/parity/63fbcb54469b/report"
+        }
+      ],
+      "reference_sha256": "6388e30c8d1fb5a24ed7e28e746279ac58ef573a08f5abe0d8be5f7be1c3a925",
+      "artifact_count": 21,
+      "artifacts_manifest_sha256": "fecb6d272a87ef0d36f5777f69432f0c8bd905726adeedc711a1897de2ee8681"
+    },
+    {
+      "id": "asana",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "13f2c328ba8f",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "ec2cd607b46f",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7577,
+              "candidate_height": 7577,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 9215,
+              "candidate_height": 9215,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7333,
+          "ts": 1794443925.2383673,
+          "kept": true,
+          "parity_report_url": "/api/parity/ec2cd607b46f/report"
+        }
+      ],
+      "reference_sha256": "e8d5905a0e393b8ac1c5aeb64618808a9882d333a0a4409d82ebab14c0331afc",
+      "artifact_count": 32,
+      "artifacts_manifest_sha256": "06cf2483e8089533adce62ed793d8bbb5151ce54937f426b4d4ebb13dd490594"
+    },
+    {
+      "id": "aspca-pet-insurance",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "ebd7d8fdad1c",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "e6c650e2e8a1",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7943,
+              "candidate_height": 7943,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 9519,
+              "candidate_height": 9519,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8826,
+          "ts": 1794443953.3539774,
+          "kept": true,
+          "parity_report_url": "/api/parity/e6c650e2e8a1/report"
+        }
+      ],
+      "reference_sha256": "f5e57803c3922acb7d70cead9533c67bcd12da69de9953a74b60f6779e2a45fe",
+      "artifact_count": 33,
+      "artifacts_manifest_sha256": "7c5a9231d7e1d80e890deea3be48b9c1f4cd66170073e260b264722d37eb6ac7"
+    },
+    {
+      "id": "autoslash",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "3ef2296cd555",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "024f9e62dc5b",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2058,
+              "candidate_height": 2058,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2903,
+              "candidate_height": 2903,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5795,
+          "ts": 1794443975.2875042,
+          "kept": true,
+          "parity_report_url": "/api/parity/024f9e62dc5b/report"
+        }
+      ],
+      "reference_sha256": "d2af22f3b039786a2543e52dc603f16efc49b4489eaab809dda93d2e867401b1",
+      "artifact_count": 17,
+      "artifacts_manifest_sha256": "e2110bde6c0b49a1b5db21cc070eb22c3550b3615dacbc7481d496fb71216e80"
+    },
+    {
+      "id": "autotrader",
+      "status": "measured",
+      "score": 91.5,
+      "passed": false,
+      "error": null,
+      "remake_id": "ead342359ca7",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "0702cd83e137",
+          "score": 91.5,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.88,
+              "min_screen": 99.36,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5399,
+              "candidate_height": 5399,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 83.13,
+              "min_screen": 65.82,
+              "passed": false,
+              "failing": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+              ],
+              "screens": 7,
+              "reference_height": 5791,
+              "candidate_height": 5659,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere -132 px (referencia 5791 px, candidata 5659 px)",
+            "390 px: pantalla 1 (desde 0 px) con 86.69 % de coincidencia",
+            "390 px: pantalla 2 (desde 844 px) con 86.6 % de coincidencia",
+            "390 px: pantalla 3 (desde 1688 px) con 72.76 % de coincidencia",
+            "390 px: pantalla 4 (desde 2532 px) con 82.48 % de coincidencia",
+            "390 px: pantalla 5 (desde 3376 px) con 93.41 % de coincidencia",
+            "390 px: pantalla 6 (desde 4220 px) con 91.75 % de coincidencia",
+            "390 px: pantalla 7 (desde 5064 px) con 65.82 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 8495,
+          "ts": 1794444003.277114,
+          "kept": true,
+          "parity_report_url": "/api/parity/0702cd83e137/report"
+        }
+      ],
+      "reference_sha256": "c3e6d232413f306012c5de0a49019d3d9397daa4bd40a61aec00b2b689a3f13c",
+      "artifact_count": 23,
+      "artifacts_manifest_sha256": "a25dd1a256971fde4d938347f070f2caec78740e19e6d88b33e8b26e3bbead9d"
+    },
+    {
+      "id": "backcountry",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "f327307d9bbd",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "ca35fe59b20e",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7274,
+              "candidate_height": 7274,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7364,
+              "candidate_height": 7364,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 12698,
+          "ts": 1794444044.333194,
+          "kept": true,
+          "parity_report_url": "/api/parity/ca35fe59b20e/report"
+        }
+      ],
+      "reference_sha256": "92b33d5d7513a7a8882c5ac448c5b0b82d4959194d04cea6119220e2eccea0eb",
+      "artifact_count": 29,
+      "artifacts_manifest_sha256": "110e9c53b833433ecac5a430180dfa1eed42b396b0c6cd1db11b4cf784a0e37e"
+    },
+    {
+      "id": "bean-box",
+      "status": "measured",
+      "score": 99.97,
+      "passed": true,
+      "error": null,
+      "remake_id": "043a31726b45",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "220ec1a58e96",
+          "score": 99.97,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.98,
+              "min_screen": 99.87,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5738,
+              "candidate_height": 5738,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 99.95,
+              "min_screen": 99.49,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 8521,
+              "candidate_height": 8521,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6991,
+          "ts": 1794444068.6650975,
+          "kept": true,
+          "parity_report_url": "/api/parity/220ec1a58e96/report"
+        }
+      ],
+      "reference_sha256": "ccf8ab5d2c6f89f6ac831ca4cf654733a2014493e7bb3f7a2ab97e6b69d997b5",
+      "artifact_count": 28,
+      "artifacts_manifest_sha256": "40c9c21a264711f9869b9775d533d03493c7b6a076252ebc6acc7fe2fea73173"
+    },
+    {
+      "id": "beeradvocate",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "be9f883fcb5f",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "8a31c5d991bf",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3237,
+              "candidate_height": 3237,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 6911,
+              "candidate_height": 6911,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6095,
+          "ts": 1794444092.3182633,
+          "kept": true,
+          "parity_report_url": "/api/parity/8a31c5d991bf/report"
+        }
+      ],
+      "reference_sha256": "183a13199e79d06716172fa290c4c8ac9a3998eb507cd07456214ff039dc8b6b",
+      "artifact_count": 25,
+      "artifacts_manifest_sha256": "c9bb5756db9946fdeba641ad06290da4ab4932041e26bae286dc3f3267eb6004"
+    },
+    {
+      "id": "blinkist",
+      "status": "measured",
+      "score": 79.81,
+      "passed": false,
+      "error": null,
+      "remake_id": "de96dfc14b4e",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "cc52d3eeb59b",
+          "score": 79.81,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 81.54,
+              "min_screen": 61.42,
+              "passed": false,
+              "failing": [
+                2
+              ],
+              "screens": 3,
+              "reference_height": 1881,
+              "candidate_height": 1881,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 78.09,
+              "min_screen": 66.28,
+              "passed": false,
+              "failing": [
+                2,
+                3
+              ],
+              "screens": 3,
+              "reference_height": 2494,
+              "candidate_height": 2494,
+              "height_pass": true
+            }
+          ],
+          "failures": [
+            "1440 px: pantalla 2 (desde 900 px) con 61.42 % de coincidencia",
+            "390 px: pantalla 2 (desde 844 px) con 67.46 % de coincidencia",
+            "390 px: pantalla 3 (desde 1688 px) con 66.28 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 4684,
+          "ts": 1794444110.7806423,
+          "kept": true,
+          "parity_report_url": "/api/parity/cc52d3eeb59b/report"
+        }
+      ],
+      "reference_sha256": "af6afd516b94f3ca62d5cb321d4eb481b74632542014b5e04f4dac18c3ce5349",
+      "artifact_count": 16,
+      "artifacts_manifest_sha256": "27800d6e4ebb920032cc07800c60059f442740d876795fd6a2cb9991ff0f8122"
+    },
+    {
+      "id": "blueapron",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "aaf5557350f9",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "d9e5e0309e39",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2027,
+              "candidate_height": 2027,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4495,
+              "candidate_height": 4495,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5996,
+          "ts": 1794444135.6738262,
+          "kept": true,
+          "parity_report_url": "/api/parity/d9e5e0309e39/report"
+        }
+      ],
+      "reference_sha256": "26bb3d0757813617f1bbf555908992531217931fe2455e9e2ce89c660add0321",
+      "artifact_count": 20,
+      "artifacts_manifest_sha256": "4ebf37380e3cd2f29399852c46cb176fddc25bfb79254396d4e4f3c48ccf8b58"
+    },
+    {
+      "id": "bluemercury",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "34368559ab55",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "5434487e75c8",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3426,
+              "candidate_height": 3426,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5463,
+              "candidate_height": 5463,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5829,
+          "ts": 1794444165.222682,
+          "kept": true,
+          "parity_report_url": "/api/parity/5434487e75c8/report"
+        }
+      ],
+      "reference_sha256": "4eac575946b6adf4a6b2fcb992a73ef091c5929b9acb8957637351a5e7d2046c",
+      "artifact_count": 21,
+      "artifacts_manifest_sha256": "65614e03db3ac5f81aa79fd048568b94f6ba3252d94b932b1c74de413138ec65"
+    },
+    {
+      "id": "boardgamegeek",
+      "status": "failed",
+      "score": null,
+      "passed": null,
+      "error": "No se pudo capturar la referencia a 1440 px: 1440 px, carga 1: Page.goto: Timeout 30000ms exceeded.",
+      "remake_id": "60d6011a64c7",
+      "browser": null,
+      "rounds": [],
+      "reference_sha256": "d05eaf0f8623be465e6bb6b0d02abf78f428a8595acd72da8490983bb9eb71cd",
+      "artifact_count": 0,
+      "artifacts_manifest_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "bookshop",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "61523de74bf7",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "bb78d3707c64",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 99.97,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 9002,
+              "candidate_height": 9002,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 9010,
+              "candidate_height": 9010,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 12724,
+          "ts": 1794444307.407902,
+          "kept": true,
+          "parity_report_url": "/api/parity/bb78d3707c64/report"
+        }
+      ],
+      "reference_sha256": "32e3fb6cc54222a18b6a77ea4f33279203fa9559345ba897d3469e448434e4cf",
+      "artifact_count": 46,
+      "artifacts_manifest_sha256": "21208b98d91484fb34c2fbf0bdcca0babb7afe11be8c010c4f8719a8f9539328"
+    },
+    {
+      "id": "breakoutgames-2",
+      "status": "measured",
+      "score": 86.59,
+      "passed": false,
+      "error": null,
+      "remake_id": "a38600c81f85",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "cdad54cc1daf",
+          "score": 86.59,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 86.02,
+              "min_screen": 48.36,
+              "passed": false,
+              "failing": [
+                1
+              ],
+              "screens": 4,
+              "reference_height": 3325,
+              "candidate_height": 3325,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 87.16,
+              "min_screen": 48.26,
+              "passed": false,
+              "failing": [
+                1
+              ],
+              "screens": 5,
+              "reference_height": 3400,
+              "candidate_height": 3400,
+              "height_pass": true
+            }
+          ],
+          "failures": [
+            "1440 px: pantalla 1 (desde 0 px) con 48.36 % de coincidencia",
+            "390 px: pantalla 1 (desde 0 px) con 48.26 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 6419,
+          "ts": 1794444358.3395898,
+          "kept": true,
+          "parity_report_url": "/api/parity/cdad54cc1daf/report"
+        }
+      ],
+      "reference_sha256": "1e3e178aaca47933533f74e753914abf414a5f189964598fad3cd7b48e9403b8",
+      "artifact_count": 19,
+      "artifacts_manifest_sha256": "e2a33ac7f7e4898962c1dac4e50c164a621bf4cea6ab27e501f91085e01d880e"
+    },
+    {
+      "id": "brooklinen",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "c5e41e59ab74",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1e617390bfae",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6873,
+              "candidate_height": 6873,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6487,
+              "candidate_height": 6487,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 9497,
+          "ts": 1794444394.7818668,
+          "kept": true,
+          "parity_report_url": "/api/parity/1e617390bfae/report"
+        }
+      ],
+      "reference_sha256": "d5686fb8517bb4eade97a61e19e9a789c7266a02ce4206e04c629c82751b91eb",
+      "artifact_count": 32,
+      "artifacts_manifest_sha256": "74da65a5c9d14c114cca3e47680b20b0567bc982cfefc9080967cd7e44cceef7"
+    },
+    {
+      "id": "capterra",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "1ad15d79d499",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "17c88397f890",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6681,
+              "candidate_height": 6681,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 8823,
+              "candidate_height": 8823,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7764,
+          "ts": 1794444427.4830737,
+          "kept": true,
+          "parity_report_url": "/api/parity/17c88397f890/report"
+        }
+      ],
+      "reference_sha256": "a40102625c53ed8f2ea5efb23d382bbeabc16aba9a9d119ff0948b5934622505",
+      "artifact_count": 45,
+      "artifacts_manifest_sha256": "02157948e4d5116ccd314257b9a228736f04308273d5d4c216c8a0cf7a0b52b4"
+    },
+    {
+      "id": "change",
+      "status": "measured",
+      "score": 99.91,
+      "passed": true,
+      "error": null,
+      "remake_id": "f3c38e010989",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "212e90f7f7f2",
+          "score": 99.91,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3353,
+              "candidate_height": 3353,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 99.83,
+              "min_screen": 98.81,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6008,
+              "candidate_height": 6008,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8570,
+          "ts": 1794444459.5812633,
+          "kept": true,
+          "parity_report_url": "/api/parity/212e90f7f7f2/report"
+        }
+      ],
+      "reference_sha256": "46e6d1a428c44764d31a300954f8144a3151278d7fae97a3b207b72f3cdf0578",
+      "artifact_count": 23,
+      "artifacts_manifest_sha256": "93071c159300ca5eab30bd079828a50478e6385183ecc0687a531824a93d85a0"
+    },
+    {
+      "id": "columbia",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "c5e352c7d00d",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "7a46f472542e",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5675,
+              "candidate_height": 5675,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6461,
+              "candidate_height": 6461,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 10434,
+          "ts": 1794444500.8785105,
+          "kept": true,
+          "parity_report_url": "/api/parity/7a46f472542e/report"
+        }
+      ],
+      "reference_sha256": "3b90964dfab5d68ff5c4f95fe999b76c5d851c40ceba6b4e59b9560d78bbc7a0",
+      "artifact_count": 25,
+      "artifacts_manifest_sha256": "9e4bbe9804de16b215e7be34dcbf43d0dc1085b9a05ffaff6d5860f098aba478"
+    },
+    {
+      "id": "crumbl-cookies",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "c898591ced96",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "20fce7bf77ce",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7858,
+              "candidate_height": 7858,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6551,
+              "candidate_height": 6551,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 10273,
+          "ts": 1794444536.2830093,
+          "kept": true,
+          "parity_report_url": "/api/parity/20fce7bf77ce/report"
+        }
+      ],
+      "reference_sha256": "8980eaa1a5ded7778bc031c176fc1e5c1b93189182d229b3da8fe186698efe98",
+      "artifact_count": 39,
+      "artifacts_manifest_sha256": "ceedb81e70a7640168a1ba0552c62b5907ebf168bf4377eb03de2a21c110a6bc"
+    },
+    {
+      "id": "crunchyroll",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "b6435e195cfb",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "4bdbf853be21",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2264,
+              "candidate_height": 2264,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2445,
+              "candidate_height": 2445,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5738,
+          "ts": 1794444557.0075955,
+          "kept": true,
+          "parity_report_url": "/api/parity/4bdbf853be21/report"
+        }
+      ],
+      "reference_sha256": "0c6e3a4edde5931cc99ffa6fff6ddfc2cb93807c349fd5cf2349a2020e79d77c",
+      "artifact_count": 17,
+      "artifacts_manifest_sha256": "8862691958160393febeb773f2916b1dcc98de706bceec3ec930c0e864259334"
+    },
+    {
+      "id": "curology",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "6c6e66462807",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "3dc341b14106",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2384,
+              "candidate_height": 2384,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4474,
+              "candidate_height": 4474,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5639,
+          "ts": 1794444577.5254111,
+          "kept": true,
+          "parity_report_url": "/api/parity/3dc341b14106/report"
+        }
+      ],
+      "reference_sha256": "efcd6eeb544112eda7e696e5bd035f4c963045a267a0c45db9b4289b527c46c2",
+      "artifact_count": 20,
+      "artifacts_manifest_sha256": "35223505f00c99a8f3380933104b1d8685b98b286e6205b9fe719a3f63668bf7"
+    },
+    {
+      "id": "dooney-bourke",
+      "status": "measured",
+      "score": 99.97,
+      "passed": true,
+      "error": null,
+      "remake_id": "d4eef9bf1b3b",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "bd9cdde41734",
+          "score": 99.97,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.95,
+              "min_screen": 99.88,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2205,
+              "candidate_height": 2205,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2816,
+              "candidate_height": 2816,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 4838,
+          "ts": 1794444596.5235045,
+          "kept": true,
+          "parity_report_url": "/api/parity/bd9cdde41734/report"
+        }
+      ],
+      "reference_sha256": "dd66231aafb16d6890ecb3c3530497d74ee9d9cf2568b74baa2abfc1f3a2ec48",
+      "artifact_count": 17,
+      "artifacts_manifest_sha256": "65d08f91daa7f54f518db3294c91b4b2cc45595c777acc18c633e63638c08825"
+    },
+    {
+      "id": "eatthismuch",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "c29eb6c14092",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "8d671fd5e1bf",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4221,
+              "candidate_height": 4221,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6599,
+              "candidate_height": 6599,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6238,
+          "ts": 1794444629.2457314,
+          "kept": true,
+          "parity_report_url": "/api/parity/8d671fd5e1bf/report"
+        }
+      ],
+      "reference_sha256": "46f1ad8c7a32e2b108ce7155a3d3785bf6266fb1fbff57cb87ea06ab3edb5938",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "3884142ebd1eee94d3c80d30cbbe4492a05783b915fe5ac7d4c42d17d23e44d5"
+    },
+    {
+      "id": "etsy",
+      "status": "measured",
+      "score": 99.99,
+      "passed": true,
+      "error": null,
+      "remake_id": "e0be038582e1",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "bfd260dacdd2",
+          "score": 99.99,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.99,
+              "min_screen": 99.98,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4119,
+              "candidate_height": 4119,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 99.99,
+              "min_screen": 99.91,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 6815,
+              "candidate_height": 6815,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7207,
+          "ts": 1794444657.5099142,
+          "kept": true,
+          "parity_report_url": "/api/parity/bfd260dacdd2/report"
+        }
+      ],
+      "reference_sha256": "e864c8de90fda37842eb0f5739bf7ab9795307067018b81075e0fce0c3debe0c",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "33ca641ad2fcbd46d8b46ab649a8db7aa942132fc160b1adc2d17785e2f8c14c"
+    },
+    {
+      "id": "eventbrite",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "9ff18c6b6e25",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "735a09c91e1c",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4038,
+              "candidate_height": 4038,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 99.97,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 9486,
+              "candidate_height": 9486,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 13858,
+          "ts": 1794444709.207292,
+          "kept": true,
+          "parity_report_url": "/api/parity/735a09c91e1c/report"
+        }
+      ],
+      "reference_sha256": "99721a47c6088d9527fa0484ff6e04b8b70490ad46b72d398a70ec083c7459c5",
+      "artifact_count": 34,
+      "artifacts_manifest_sha256": "67623c29c9578a770e4db45473a8afa4073cd62182a52454af03e7e5dda5d42e"
+    },
+    {
+      "id": "everydollar",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "db25c0cf26d8",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "85308caba940",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7667,
+              "candidate_height": 7667,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 13,
+              "reference_height": 10522,
+              "candidate_height": 10522,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8107,
+          "ts": 1794444750.7986302,
+          "kept": true,
+          "parity_report_url": "/api/parity/85308caba940/report"
+        }
+      ],
+      "reference_sha256": "cae1ce92dd72de563334f6f9ffd22f484f05f7e0b67698f96cc7f886b2f57588",
+      "artifact_count": 50,
+      "artifacts_manifest_sha256": "3bf81aea2ed36097a8b38c6fdc0d39c650cf3b272a93fc675a35e3b0e690b9b9"
+    },
+    {
+      "id": "everyplate",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "3a655065971a",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "860718c7932b",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7487,
+              "candidate_height": 7487,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 10,
+              "reference_height": 7617,
+              "candidate_height": 7617,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 9463,
+          "ts": 1794444780.4684618,
+          "kept": true,
+          "parity_report_url": "/api/parity/860718c7932b/report"
+        }
+      ],
+      "reference_sha256": "806556fcd31499f4233c779b2d1923dc81f7fb32f524ea35f6d919a1bf7c4a1d",
+      "artifact_count": 40,
+      "artifacts_manifest_sha256": "0e80487945985f3e79fca579e4d975970a0f3835c6a0e57378911d2807938bb6"
+    },
+    {
+      "id": "fandango",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "2a68700a0e3d",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "88dba2df9c0b",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4000,
+              "candidate_height": 4000,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5053,
+              "candidate_height": 5053,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8876,
+          "ts": 1794444813.2908485,
+          "kept": true,
+          "parity_report_url": "/api/parity/88dba2df9c0b/report"
+        }
+      ],
+      "reference_sha256": "a2f3a8121074e902fb5744fcea3b301063d4db67ff2137dbf43abfeaf7fb4747",
+      "artifact_count": 29,
+      "artifacts_manifest_sha256": "52250f36b2452cc70a1bb8bd5d5f5f381d069b12955aa38699b2d73a4efdf496"
+    },
+    {
+      "id": "freshdirect",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "5062b62f4260",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "f947faf14d4d",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3063,
+              "candidate_height": 3063,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2820,
+              "candidate_height": 2820,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5433,
+          "ts": 1794444847.9722161,
+          "kept": true,
+          "parity_report_url": "/api/parity/f947faf14d4d/report"
+        }
+      ],
+      "reference_sha256": "7042d735cc73c09ebbd24152ad475fe092f577b2d8a587652043808c8407e4e5",
+      "artifact_count": 29,
+      "artifacts_manifest_sha256": "6378b512c0bdca321ce492bc27578a73576d76d860ff450d34bd4b7fb77a16e5"
+    },
+    {
+      "id": "hipcamp",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "8884af5b74df",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "e1de43398e75",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 99.99,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6553,
+              "candidate_height": 6553,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 99.98,
+              "passed": true,
+              "failing": [],
+              "screens": 14,
+              "reference_height": 11472,
+              "candidate_height": 11472,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8816,
+          "ts": 1794444901.5221462,
+          "kept": true,
+          "parity_report_url": "/api/parity/e1de43398e75/report"
+        }
+      ],
+      "reference_sha256": "68249455cae823dc5d178f5abc7d24d458d12131af1e30d5a984aa2bde9d3f07",
+      "artifact_count": 32,
+      "artifacts_manifest_sha256": "e50c8fa309c35ac6d193579d5c19a814e7c2b351760f849954fd5dea399e094f"
+    },
+    {
+      "id": "hmart",
+      "status": "measured",
+      "score": 99.72,
+      "passed": false,
+      "error": null,
+      "remake_id": "f110cd54c619",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "3d7c4c662c7e",
+          "score": 99.72,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4393,
+              "candidate_height": 4393,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 99.44,
+              "min_screen": 95.56,
+              "passed": false,
+              "failing": [
+                1
+              ],
+              "screens": 8,
+              "reference_height": 6663,
+              "candidate_height": 6663,
+              "height_pass": true
+            }
+          ],
+          "failures": [
+            "390 px: pantalla 1 (desde 0 px) con 95.56 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 9579,
+          "ts": 1794444935.430034,
+          "kept": true,
+          "parity_report_url": "/api/parity/3d7c4c662c7e/report"
+        }
+      ],
+      "reference_sha256": "c342f99c55345a787ed83dfa2911dca48480c213d5b53e92ce9318aae69bddeb",
+      "artifact_count": 52,
+      "artifacts_manifest_sha256": "c7421e0eb6f5fc4e8acb379d4e19cb4ac062ae1ecf586fff303aea59c0f5e398"
+    },
+    {
+      "id": "imdb",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "cb07b70e2e4a",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "9a711634d8a7",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4831,
+              "candidate_height": 4831,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 5934,
+              "candidate_height": 5934,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 10927,
+          "ts": 1794444989.1848426,
+          "kept": true,
+          "parity_report_url": "/api/parity/9a711634d8a7/report"
+        }
+      ],
+      "reference_sha256": "6c221da6f845e08a7f7b1fdfd2ec91143a15f138831c7dbe4fac98b5640e2193",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "b56d348848b9ee489b1ae5b4e00877dce21ab5a043a94740b434f208c4fb57da"
+    },
+    {
+      "id": "insureon",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "d232815ecb57",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "c8a28066c9ca",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7511,
+              "candidate_height": 7511,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 15,
+              "reference_height": 11944,
+              "candidate_height": 11944,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7613,
+          "ts": 1794445020.839034,
+          "kept": true,
+          "parity_report_url": "/api/parity/c8a28066c9ca/report"
+        }
+      ],
+      "reference_sha256": "de51625ca9a489ed7b9424019fdc28be8a22f342a3193783b7910be76ab5819a",
+      "artifact_count": 50,
+      "artifacts_manifest_sha256": "29ca50212864cb3e743c00a5cce67bac51b8df146ab19f99b576fa2d2d952a63"
+    },
+    {
+      "id": "insurify",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "d08a7311d988",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1420081ada15",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5169,
+              "candidate_height": 5169,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 10,
+              "reference_height": 7727,
+              "candidate_height": 7727,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6553,
+          "ts": 1794445044.6621528,
+          "kept": true,
+          "parity_report_url": "/api/parity/1420081ada15/report"
+        }
+      ],
+      "reference_sha256": "468f54071923eaff895cfa0af9e0881a9860d2a4d83c649ab4ef7a6a800289af",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "0e829c1ebc374c0b0c3acfc51c01a84bd2e1ce71b72ae48f5f16ac89b78674f0"
+    },
+    {
+      "id": "ioby",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "5d8cbf1f9e74",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "969af6ad14b9",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2162,
+              "candidate_height": 2162,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 3579,
+              "candidate_height": 3579,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 13714,
+          "ts": 1794445091.3191283,
+          "kept": true,
+          "parity_report_url": "/api/parity/969af6ad14b9/report"
+        }
+      ],
+      "reference_sha256": "7512689d3773064ce8dd86192e150c74f40bdd0456669d51ed6f26facbc39434",
+      "artifact_count": 18,
+      "artifacts_manifest_sha256": "32a2ce9327743e3e7c9618702120794b3f1d9bd5fa6e564e772bae51167fe190"
+    },
+    {
+      "id": "kanetix-ca",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "3585ca2647a8",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "e279de8d4f8b",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7828,
+              "candidate_height": 7828,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 10003,
+              "candidate_height": 10003,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7945,
+          "ts": 1794445116.3975995,
+          "kept": true,
+          "parity_report_url": "/api/parity/e279de8d4f8b/report"
+        }
+      ],
+      "reference_sha256": "67a434c5b3c6cdd95e2eb6b314cda0a9a6cf02006c69c4ce239f093fe2fa4e20",
+      "artifact_count": 42,
+      "artifacts_manifest_sha256": "8c032cd90bc16e57c01131e7d7596a2216c6b9c861c755c3ad4ff7cdff369c2a"
+    },
+    {
+      "id": "leetcode",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "c7f6bc0afc8c",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "59ea104e1af0",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2735,
+              "candidate_height": 2735,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 3719,
+              "candidate_height": 3719,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5832,
+          "ts": 1794445139.39022,
+          "kept": true,
+          "parity_report_url": "/api/parity/59ea104e1af0/report"
+        }
+      ],
+      "reference_sha256": "f1e788f1d18adc9a79261c33c204cc54335f2b1c24cc5b912938959b6f989dbb",
+      "artifact_count": 19,
+      "artifacts_manifest_sha256": "009d7bbb13f285f4a8ca20b70b7279d9eb9d2e1ed9ea0262e01ba0cb6e9534c1"
+    },
+    {
+      "id": "legalnature",
+      "status": "failed",
+      "score": null,
+      "passed": null,
+      "error": "La página muestra un formulario de inicio de sesión: no se rehace, porque una copia así sirve para suplantarla. Elige una página pública de contenido.",
+      "remake_id": "70cf7b83015d",
+      "browser": null,
+      "rounds": [],
+      "reference_sha256": "36b2677d2b556bb6365f914984007f69264e4cccfce11e59b0330bab64065419",
+      "artifact_count": 0,
+      "artifacts_manifest_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "linkedin",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "0d2447d64730",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "15019673c506",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2617,
+              "candidate_height": 2617,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4120,
+              "candidate_height": 4120,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 4914,
+          "ts": 1794445200.4951077,
+          "kept": true,
+          "parity_report_url": "/api/parity/15019673c506/report"
+        }
+      ],
+      "reference_sha256": "a1e3834fd554f01fea47b1453c1f87424edbcdcee07da8d8822c1cf97f6ce937",
+      "artifact_count": 18,
+      "artifacts_manifest_sha256": "879cef45709698098e24927bebf749365dd2f2741597b74f3b897d500f069a2d"
+    },
+    {
+      "id": "llbean",
+      "status": "measured",
+      "score": 99.98,
+      "passed": true,
+      "error": null,
+      "remake_id": "575a37253986",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "f6517fb7e5a5",
+          "score": 99.98,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.96,
+              "min_screen": 99.81,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4520,
+              "candidate_height": 4520,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4520,
+              "candidate_height": 4520,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7758,
+          "ts": 1794445238.8315458,
+          "kept": true,
+          "parity_report_url": "/api/parity/f6517fb7e5a5/report"
+        }
+      ],
+      "reference_sha256": "668b55ebdee47c57f4ce273e4887279cfd50b6a26fca5f99aadd55000b758e7d",
+      "artifact_count": 25,
+      "artifacts_manifest_sha256": "4f5d90ce685d71fd3e5044ab4242502aead29f38747a33bdae173a4f502a029d"
+    },
+    {
+      "id": "lowes",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "ddf4fbd804a1",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "14a594a480b4",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 1872,
+              "candidate_height": 1872,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4500,
+              "candidate_height": 4500,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6067,
+          "ts": 1794445259.387932,
+          "kept": true,
+          "parity_report_url": "/api/parity/14a594a480b4/report"
+        }
+      ],
+      "reference_sha256": "19bac02551c06685b870c23c6e805c05b4b26452ce179757dfa94668ce40dbb6",
+      "artifact_count": 19,
+      "artifacts_manifest_sha256": "8405035b4de832f5ded88dd777a789add8f5d11f35470e8815b7fc3e3aef4e39"
+    },
+    {
+      "id": "medium",
+      "status": "measured",
+      "score": 99.97,
+      "passed": true,
+      "error": null,
+      "remake_id": "bd826c93fd8d",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "b8100281d4ac",
+          "score": 99.97,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 1,
+              "reference_height": 900,
+              "candidate_height": 900,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 99.95,
+              "min_screen": 99.15,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 900,
+              "candidate_height": 900,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 3972,
+          "ts": 1794445275.2476258,
+          "kept": true,
+          "parity_report_url": "/api/parity/b8100281d4ac/report"
+        }
+      ],
+      "reference_sha256": "c26e9c15ae79d4c66cde3c5b7044dd26dbe289e4a92b1265fc2a693adbc1065c",
+      "artifact_count": 14,
+      "artifacts_manifest_sha256": "0485e0c26b7136c1993003baa194476db95c70b27855f728e3dc6b98ccf85a42"
+    },
+    {
+      "id": "meetup",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "e674b2807177",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "5fd2b96793c5",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5508,
+              "candidate_height": 5508,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 13,
+              "reference_height": 10185,
+              "candidate_height": 10185,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7654,
+          "ts": 1794445304.1370404,
+          "kept": true,
+          "parity_report_url": "/api/parity/5fd2b96793c5/report"
+        }
+      ],
+      "reference_sha256": "b80f3355a565c0b7e6339a4d36f73b4466578149f04d2b6004cff5e0bf921023",
+      "artifact_count": 36,
+      "artifacts_manifest_sha256": "191464d93d634ef36580b523f4e598f2fe673c3e9daa64ac469cb4d195bbd20b"
+    },
+    {
+      "id": "notion",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "7ec0f2cceab4",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "9d18aee29a9a",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4406,
+              "candidate_height": 4406,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 8,
+              "reference_height": 6105,
+              "candidate_height": 6105,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6436,
+          "ts": 1794445346.8000302,
+          "kept": true,
+          "parity_report_url": "/api/parity/9d18aee29a9a/report"
+        }
+      ],
+      "reference_sha256": "fe89cda1a2012baa572617f5ce375f051df41bf5086ae8dd40613b6326c4c973",
+      "artifact_count": 23,
+      "artifacts_manifest_sha256": "3cd1dfc693cb8c3f025281e909795d744bb12ac039e49a0a560649b17afc6d91"
+    },
+    {
+      "id": "ollie",
+      "status": "measured",
+      "score": 91.49,
+      "passed": false,
+      "error": null,
+      "remake_id": "b52cab74210a",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "65e6ee4aaf05",
+          "score": 91.49,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 5,
+              "reference_height": 4416,
+              "candidate_height": 4416,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 82.98,
+              "min_screen": 0.0,
+              "passed": false,
+              "failing": [
+                7,
+                8,
+                9
+              ],
+              "screens": 9,
+              "reference_height": 5837,
+              "candidate_height": 6904,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere +1067 px (referencia 5837 px, candidata 6904 px)",
+            "390 px: pantalla 7 (desde 5064 px) con 83.45 % de coincidencia",
+            "390 px: pantalla 8 (desde 5908 px) con 0.0 % de coincidencia",
+            "390 px: pantalla 9 (desde 6752 px) con 0.0 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 6633,
+          "ts": 1794445373.9313564,
+          "kept": true,
+          "parity_report_url": "/api/parity/65e6ee4aaf05/report"
+        }
+      ],
+      "reference_sha256": "660b46db7d8349dec691bbe6afdf085c9ca06c19dd9cbe8c3631353c2f80ad16",
+      "artifact_count": 24,
+      "artifacts_manifest_sha256": "35aa942c70c04e467ceb62d84b7e1babe5166c104adc2c163582c6b3ac832bda"
+    },
+    {
+      "id": "ontario-parks",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "f020134d67c0",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "d745fcd278b1",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1016,
+              "candidate_height": 1016,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1074,
+              "candidate_height": 1074,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 3776,
+          "ts": 1794445389.2173445,
+          "kept": true,
+          "parity_report_url": "/api/parity/d745fcd278b1/report"
+        }
+      ],
+      "reference_sha256": "4f183142174642e86b53579ff1819db2f31b9e05144496fef9fa619db5c0e00d",
+      "artifact_count": 14,
+      "artifacts_manifest_sha256": "b00120d61385f06cafab16567833adcb2f215d4970b86dc275c5b12a619fa98d"
+    },
+    {
+      "id": "opentable",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "30905367d330",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "f9567a1ed456",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5308,
+              "candidate_height": 5308,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 11,
+              "reference_height": 9037,
+              "candidate_height": 9037,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7199,
+          "ts": 1794445417.396517,
+          "kept": true,
+          "parity_report_url": "/api/parity/f9567a1ed456/report"
+        }
+      ],
+      "reference_sha256": "21b7bba5d9b6b603515323dcaea5b923ed5c2b163f0fdf014c43822a76f836c7",
+      "artifact_count": 27,
+      "artifacts_manifest_sha256": "6877003f7bd1d7f48ecba6d10d8e9b087cb92a90a49e3ce53c2e0dc7c8fad32e"
+    },
+    {
+      "id": "petco",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "7ff6877848d7",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1f9543cd3d81",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5870,
+              "candidate_height": 5870,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5807,
+              "candidate_height": 5807,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 7231,
+          "ts": 1794445440.661896,
+          "kept": true,
+          "parity_report_url": "/api/parity/1f9543cd3d81/report"
+        }
+      ],
+      "reference_sha256": "8f27d4b7f45b60c71888e42308dfe806de59fd6c2680b2a143943233ff9deb9c",
+      "artifact_count": 39,
+      "artifacts_manifest_sha256": "210f52ff54369f5c9686952e61bcc40ad8e64873e4305715dcbf39d31f1c170a"
+    },
+    {
+      "id": "petfinder",
+      "status": "measured",
+      "score": 93.02,
+      "passed": false,
+      "error": null,
+      "remake_id": "9db1ebdf1af1",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "38306c031e8e",
+          "score": 93.02,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.98,
+              "min_screen": 99.88,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2980,
+              "candidate_height": 2980,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 86.05,
+              "min_screen": 0.0,
+              "passed": false,
+              "failing": [
+                5,
+                6
+              ],
+              "screens": 6,
+              "reference_height": 3872,
+              "candidate_height": 4268,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere +396 px (referencia 3872 px, candidata 4268 px)",
+            "390 px: pantalla 5 (desde 3376 px) con 39.09 % de coincidencia",
+            "390 px: pantalla 6 (desde 4220 px) con 0.0 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 5927,
+          "ts": 1794445466.2972975,
+          "kept": true,
+          "parity_report_url": "/api/parity/38306c031e8e/report"
+        }
+      ],
+      "reference_sha256": "ab0624ad9593d621870bc7cd8c01cdd27aa267cabbf654e8e239f60afa65918c",
+      "artifact_count": 22,
+      "artifacts_manifest_sha256": "a6c4f6f184065e0a731e86b196c5ae6e6f1608e2933ffc3a74506b00e969b8e7"
+    },
+    {
+      "id": "petsmart",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "542583225714",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "4d3b88c85d1a",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3004,
+              "candidate_height": 3004,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4227,
+              "candidate_height": 4227,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5643,
+          "ts": 1794445487.34429,
+          "kept": true,
+          "parity_report_url": "/api/parity/4d3b88c85d1a/report"
+        }
+      ],
+      "reference_sha256": "a9df358db908a5574af4f8447c35209f5804beb45acf89815573f6777818a6c1",
+      "artifact_count": 21,
+      "artifacts_manifest_sha256": "dd2785e5b9d70d21cebf7481dafd239e4d75ee5f10585b13f7666ff532504f75"
+    },
+    {
+      "id": "ratemyprofessors",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "68ddfd892934",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "2282c0e7252f",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1012,
+              "candidate_height": 1012,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1416,
+              "candidate_height": 1416,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 4494,
+          "ts": 1794445504.2275398,
+          "kept": true,
+          "parity_report_url": "/api/parity/2282c0e7252f/report"
+        }
+      ],
+      "reference_sha256": "17a655e0a354d3ff89650e8e5ee52e4b251f59af09ec996550bdde50b4794d21",
+      "artifact_count": 14,
+      "artifacts_manifest_sha256": "bc164dd6bc7afcc2a8a56bb34546269d8148cc90a946d897645c99cf26f16405"
+    },
+    {
+      "id": "resy",
+      "status": "measured",
+      "score": 69.56,
+      "passed": false,
+      "error": null,
+      "remake_id": "e8dec548639a",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1e31d2c1ba4a",
+          "score": 69.56,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2204,
+              "candidate_height": 2204,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 39.11,
+              "min_screen": 28.29,
+              "passed": false,
+              "failing": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "screens": 4,
+              "reference_height": 2731,
+              "candidate_height": 3153,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere +422 px (referencia 2731 px, candidata 3153 px)",
+            "390 px: pantalla 1 (desde 0 px) con 46.59 % de coincidencia",
+            "390 px: pantalla 2 (desde 844 px) con 39.1 % de coincidencia",
+            "390 px: pantalla 3 (desde 1688 px) con 39.61 % de coincidencia",
+            "390 px: pantalla 4 (desde 2532 px) con 28.29 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 5136,
+          "ts": 1794445524.6109786,
+          "kept": true,
+          "parity_report_url": "/api/parity/1e31d2c1ba4a/report"
+        }
+      ],
+      "reference_sha256": "136ddd563333c9800c429b9ec08b8e2cc3dabff4d5e46c025f97439ccbb0b514",
+      "artifact_count": 18,
+      "artifacts_manifest_sha256": "82b506e134db360527eb3d8f3eddddfe33bb10d6e91fffc526028d853609e208"
+    },
+    {
+      "id": "simplify-jobs",
+      "status": "measured",
+      "score": 98.94,
+      "passed": false,
+      "error": null,
+      "remake_id": "c5b0b116f076",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "7082fd8f319b",
+          "score": 98.94,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 99.05,
+              "min_screen": 98.43,
+              "passed": true,
+              "failing": [],
+              "screens": 2,
+              "reference_height": 1466,
+              "candidate_height": 1466,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 98.83,
+              "min_screen": 97.97,
+              "passed": false,
+              "failing": [
+                1
+              ],
+              "screens": 2,
+              "reference_height": 1466,
+              "candidate_height": 1466,
+              "height_pass": true
+            }
+          ],
+          "failures": [
+            "390 px: pantalla 1 (desde 0 px) con 97.97 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 10696,
+          "ts": 1794445554.4914088,
+          "kept": true,
+          "parity_report_url": "/api/parity/7082fd8f319b/report"
+        }
+      ],
+      "reference_sha256": "954a830aed807db7e9ecc741e9a44a4699d25b3ebdc44453e3712b4cd27ccdc8",
+      "artifact_count": 14,
+      "artifacts_manifest_sha256": "a6cd3e852ec8ae49dc2faa9d826f6f366eaead46caad9aaa42cd81a06c439cf7"
+    },
+    {
+      "id": "target",
+      "status": "measured",
+      "score": 83.14,
+      "passed": false,
+      "error": null,
+      "remake_id": "6aae1e950807",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "a7b27b0d3b7b",
+          "score": 83.14,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 5313,
+              "candidate_height": 5313,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 66.28,
+              "min_screen": 0.0,
+              "passed": false,
+              "failing": [
+                4,
+                5,
+                6,
+                7
+              ],
+              "screens": 7,
+              "reference_height": 5296,
+              "candidate_height": 4386,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "390 px: la altura de la página difiere -910 px (referencia 5296 px, candidata 4386 px)",
+            "390 px: pantalla 4 (desde 2532 px) con 70.25 % de coincidencia",
+            "390 px: pantalla 5 (desde 3376 px) con 44.48 % de coincidencia",
+            "390 px: pantalla 6 (desde 4220 px) con 0.65 % de coincidencia",
+            "390 px: pantalla 7 (desde 5064 px) con 0.0 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 6700,
+          "ts": 1794445586.5966966,
+          "kept": true,
+          "parity_report_url": "/api/parity/a7b27b0d3b7b/report"
+        }
+      ],
+      "reference_sha256": "feeae24e75dedfd90ef44506cca679c3909d21d293b602b9392e3e85eea172c8",
+      "artifact_count": 23,
+      "artifacts_manifest_sha256": "c6fcf9a986afab618053041764e7707bd394455152b46eb88c35760069c7af6b"
+    },
+    {
+      "id": "taskrabbit",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "97d92172c544",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "b01bb793c783",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5551,
+              "candidate_height": 5551,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5848,
+              "candidate_height": 5848,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 6794,
+          "ts": 1794445614.5327218,
+          "kept": true,
+          "parity_report_url": "/api/parity/b01bb793c783/report"
+        }
+      ],
+      "reference_sha256": "1003b7a9aa1c53d48260f92284a639ed7f4a781c5046475aaf3a13133351f454",
+      "artifact_count": 30,
+      "artifacts_manifest_sha256": "a75af7f7522628f4d7800e9ec8e7910392e0bf1a98bd0dbe6cc1bd44d5ab6d44"
+    },
+    {
+      "id": "tripadvisor",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "86e59643d9e3",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "115fe5f9547f",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 6,
+              "reference_height": 4643,
+              "candidate_height": 4643,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 7,
+              "reference_height": 5596,
+              "candidate_height": 5596,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 8000,
+          "ts": 1794445638.0026927,
+          "kept": true,
+          "parity_report_url": "/api/parity/115fe5f9547f/report"
+        }
+      ],
+      "reference_sha256": "4d727c58e556616f495fb0a2010b7eaee7e991a52144099a8622351460e6f6d2",
+      "artifact_count": 24,
+      "artifacts_manifest_sha256": "2c146dcfcadeac21c2ab9182e20298cdd59409479cf9891d92b50561449faa22"
+    },
+    {
+      "id": "tripit",
+      "status": "measured",
+      "score": 99.0,
+      "passed": false,
+      "error": null,
+      "remake_id": "88bdcd043213",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "1fb73b91cc9c",
+          "score": 99.0,
+          "passed": false,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 98.89,
+              "min_screen": 90.62,
+              "passed": false,
+              "failing": [
+                6
+              ],
+              "screens": 6,
+              "reference_height": 5054,
+              "candidate_height": 5106,
+              "height_pass": false
+            },
+            {
+              "width": 390,
+              "score": 99.1,
+              "min_screen": 81.15,
+              "passed": false,
+              "failing": [
+                8
+              ],
+              "screens": 8,
+              "reference_height": 6152,
+              "candidate_height": 6204,
+              "height_pass": false
+            }
+          ],
+          "failures": [
+            "1440 px: la altura de la página difiere +52 px (referencia 5054 px, candidata 5106 px)",
+            "1440 px: pantalla 6 (desde 4500 px) con 90.62 % de coincidencia",
+            "390 px: la altura de la página difiere +52 px (referencia 6152 px, candidata 6204 px)",
+            "390 px: pantalla 8 (desde 5908 px) con 81.15 % de coincidencia"
+          ],
+          "missing": 0,
+          "ms": 6106,
+          "ts": 1794445660.5698292,
+          "kept": true,
+          "parity_report_url": "/api/parity/1fb73b91cc9c/report"
+        }
+      ],
+      "reference_sha256": "ae21742638ef200717a5ef3ef957d15c251b7ce962dacf0b02df42bcc673cf34",
+      "artifact_count": 31,
+      "artifacts_manifest_sha256": "9609028c540d9a37830292f25c1b9db3309bc3482fc78976def9bb1823be5736"
+    },
+    {
+      "id": "ubereats",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "2e6fab32a229",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "03ffb351b97c",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2326,
+              "candidate_height": 2326,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 2882,
+              "candidate_height": 2882,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 5901,
+          "ts": 1794445698.2223532,
+          "kept": true,
+          "parity_report_url": "/api/parity/03ffb351b97c/report"
+        }
+      ],
+      "reference_sha256": "c90be36b87a788dc6fd922528b7b6ab2a9b7ce0784a72704c0287f2e02b0b034",
+      "artifact_count": 17,
+      "artifacts_manifest_sha256": "3e5b64177ad718864842aaafc4ed8e41082d3fe2aef2ed67b21d4042ce0c7258"
+    },
+    {
+      "id": "warbyparker",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "8a08eab1431c",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "966f776327d1",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 10114,
+              "candidate_height": 10114,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 9926,
+              "candidate_height": 9926,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 13398,
+          "ts": 1794445738.3367178,
+          "kept": true,
+          "parity_report_url": "/api/parity/966f776327d1/report"
+        }
+      ],
+      "reference_sha256": "da73ad1d18a98b99d0cc57ce4cb26ef2e16101e2685c1bd940f40342c8d965c1",
+      "artifact_count": 47,
+      "artifacts_manifest_sha256": "e51c68d6275f561114792414fedd05adf99ef66f8277f30a54f93dab9ebd7970"
+    },
+    {
+      "id": "wayfair",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "143848a181a0",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "42556f542724",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 3,
+              "reference_height": 2558,
+              "candidate_height": 2558,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 4,
+              "reference_height": 3208,
+              "candidate_height": 3208,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 4881,
+          "ts": 1794445757.6848173,
+          "kept": true,
+          "parity_report_url": "/api/parity/42556f542724/report"
+        }
+      ],
+      "reference_sha256": "f95c2478cf047db7cb9fae16c3c739aad8be7b075a3b7d61a425d4422aa4a0e2",
+      "artifact_count": 17,
+      "artifacts_manifest_sha256": "d70cb92de92d2781176d31d71bed1dce820b29371eb05c05aa76a409da73ce5a"
+    },
+    {
+      "id": "zennioptical",
+      "status": "measured",
+      "score": 100.0,
+      "passed": true,
+      "error": null,
+      "remake_id": "e942389b0c50",
+      "browser": {
+        "version": "157.0.4341.46",
+        "launcher": "msedge"
+      },
+      "rounds": [
+        {
+          "n": 0,
+          "kind": "copy",
+          "note": "Copia de la página con su propio HTML, CSS y recursos (sin scripts)",
+          "parity_id": "98ad8412a61d",
+          "score": 100.0,
+          "passed": true,
+          "widths": [
+            {
+              "width": 1440,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 9,
+              "reference_height": 7942,
+              "candidate_height": 7942,
+              "height_pass": true
+            },
+            {
+              "width": 390,
+              "score": 100.0,
+              "min_screen": 100.0,
+              "passed": true,
+              "failing": [],
+              "screens": 12,
+              "reference_height": 9935,
+              "candidate_height": 9935,
+              "height_pass": true
+            }
+          ],
+          "failures": [],
+          "missing": 0,
+          "ms": 9994,
+          "ts": 1794445787.429347,
+          "kept": true,
+          "parity_report_url": "/api/parity/98ad8412a61d/report"
+        }
+      ],
+      "reference_sha256": "0cff4196bf35732cf68721f4a0686b842f687e3f98d58b3d1006586ff5a4b40e",
+      "artifact_count": 88,
+      "artifacts_manifest_sha256": "3f7938eb9b204751f15e47c334021e5d04219cd9feea52db7420b5e712a45698"
+    }
+  ]
+}
