@@ -185,6 +185,14 @@ RULES_ES: dict[str, tuple[str, str, str]] = {
     "ds/radius": ("Radio fuera del sistema de diseño", "Radios de esquina que no están en la escala de radios del sistema.", "Usa los tokens de radio del sistema."),
     "ds/scale": ("Tamaño de letra fuera de la escala del sistema de diseño", "Tamaños de letra que no caen en la escala tipográfica fluida del sistema.", "Usa los pasos de la escala."),
     "ds/spacing": ("Espaciado fuera de la escala del sistema de diseño", "Rellenos y huecos que no están en la escala de espaciado del sistema.", "Usa los tokens de espaciado."),
+    # ---- webcraft
+    "webcraft/legacy-pattern": ("Patrón antiguo con sustituto nativo", "Código que una función de la plataforma web ya sustituye: maquetación con float, modales hechos con div, scripts de cierre al pulsar fuera, animaciones de jQuery, listeners de scroll para efectos visuales, moment.js y parecidos. Cada hallazgo cita la guía con la alternativa nativa.", "Lee la guía citada con web_guide_read y usa la función nativa; conserva el código antiguo solo como el respaldo que pida la guía."),
+    "webcraft/flat-hero-surface": ("Todo son superficies planas", "No hay ninguna imagen, degradado, textura, sombra ni filtro en la página: cada superficie es un color plano.", "Dale a la parte superior un material: una receta de textura de craft_search o una fotografía real."),
+    "webcraft/dashboard-type-scale": ("Panel sin escala tipográfica", "Un panel con más de siete tamaños de fuente, o varios tamaños a menos de 2 px entre sí.", "Elige cinco tamaños con una razón fija (12, 14, 16, 20, 28) y no uses otros."),
+    "webcraft/dashboard-card-styles": ("Tarjetas del panel con varios aspectos", "Más de dos combinaciones distintas de radio, borde y sombra entre las tarjetas de un panel.", "Decide un único estilo de tarjeta; varía el contenido y el tamaño, no el aspecto."),
+    "webcraft/dashboard-welcome-banner": ("Banner de bienvenida en el panel", "Un saludo como «Bienvenido de nuevo» encabeza el panel en lugar de lo que ha cambiado.", "Empieza por el título de la página, sus acciones y lo que ha cambiado desde la última visita."),
+    "webcraft/dashboard-actions-below": ("Acciones del panel bajo el contenido", "El primer botón del panel aparece después de su primera tarjeta.", "Pon el título y las acciones principales en la primera fila, los filtros después y el contenido al final."),
+    "webcraft/dashboard-command-palette": ("Panel sin paleta de comandos", "Un panel con seis o más enlaces de navegación y sin paleta de comandos, diálogo ni atajo de búsqueda.", "Añade un diálogo Ctrl+K / ⌘K que salte a cualquier sitio y lance cualquier acción."),
 }
 
 # ---------------------------------------------------------------------------- the audit's own strings

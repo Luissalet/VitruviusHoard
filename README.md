@@ -25,6 +25,8 @@ Language-model work in the app uses only the globally selected model through Fau
 - Design tokens with OKLCH palettes, preview and export to CSS and Tailwind.
 - Kept-elements check and page assay: save the links, fields and handlers of a page and verify that a redesign keeps them.
 - A showcase recipe library at `/showcase/` with working reference pages, reproduction prompts and agent skills.
+- Modern web guidance: 210 vendored guides on native web platform features with search and a reader, and a legacy-pattern scan of front-end code that names the native replacement for each older pattern. Also in the critique, which cites the guide next to each finding.
+- A craft library at `/craft/`: ten texture recipes with controls, hero layouts, native 3D scenes with controls, rules against generic dashboards, an index of a permissively licensed 3D component catalogue, and a recipe for a showcase site built from a 3D model with Blender. All consultable through MCP tools; see [docs/WEB-GUIDANCE.md](docs/WEB-GUIDANCE.md) and [docs/CRAFT-LIBRARY.md](docs/CRAFT-LIBRARY.md).
 
 ### Rendering and comparison
 - Render HTML or a URL in Chromium to screenshots (several widths) and scroll video; compare two renders.
@@ -97,7 +99,7 @@ python -m vitruvius_hoard   # http://127.0.0.1:5191
 
 | Path | Contents |
 | --- | --- |
-| `vitruvius_hoard/` | Python package: API, design tools, rendering, critique, diagrams, benchmarks |
+| `vitruvius_hoard/` | Python package: API, design tools, rendering, critique, diagrams, benchmarks, web guides (`webguide/`) and craft library (`craft/`) |
 | `client/` | React/Vite interface |
 | `babel_client/`, `babels_hoard/` | API documentation module |
 | `theseus/`, `software_native/` | Reverse-engineering module and Node analysis engine |

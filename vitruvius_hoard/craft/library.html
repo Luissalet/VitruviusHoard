@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Referencias de diseño · Vitruvius</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px/1.55 system-ui,sans-serif;color:#14181c;background:#eceff1}
+main{max-width:1240px;margin:0 auto;padding:clamp(16px,4vw,48px)}h1{font:400 clamp(34px,5vw,60px)/1.05 Georgia,serif;margin:0 0 8px}
+.lead{max-width:64ch;color:#3c464e;margin:0 0 24px}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}.tabs button{min-height:44px;padding:0 18px;border:1px solid #9aa6b1;background:#fff;cursor:pointer;border-radius:8px;font:inherit}
+.tabs button[aria-selected=true]{background:#14181c;color:#fff;border-color:#14181c}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.bar input,.bar select{min-height:44px;border:1px solid #9aa6b1;border-radius:8px;padding:0 12px;font:inherit;background:#fff}.bar input{flex:1;min-width:220px}
+.split{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:20px;align-items:start}
+ul.list{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:72vh;overflow:auto}
+ul.list button{width:100%;text-align:left;background:#fff;border:1px solid #d3d9de;border-radius:10px;padding:12px 14px;cursor:pointer;font:inherit;min-height:56px}
+ul.list button[aria-current=true]{border-color:#0b5d8f;box-shadow:0 0 0 2px #0b5d8f33}
+.k{font-size:12px;color:#4a5660;text-transform:uppercase;letter-spacing:.06em}.t{font-weight:600}.s{font-size:14px;color:#3c464e}
+.detail{background:#fff;border:1px solid #d3d9de;border-radius:12px;padding:20px 24px;min-height:240px;overflow:auto}
+.detail pre{white-space:pre-wrap;background:#f4f6f8;padding:12px;border-radius:8px;overflow:auto;font-size:13px}.detail h2{font:400 30px/1.1 Georgia,serif;margin:0 0 8px}
+.detail a{color:#0b5d8f}textarea{width:100%;min-height:200px;border:1px solid #9aa6b1;border-radius:8px;padding:10px;font:13px/1.45 ui-monospace,monospace}
+.primary{min-height:44px;padding:0 20px;border-radius:8px;border:1px solid #0b5d8f;background:#0b5d8f;color:#fff;cursor:pointer;font:inherit}
+.find{border-top:1px solid #d3d9de;padding:12px 0}.find .r{font-weight:600}
+:focus-visible{outline:3px solid #0b6fb3;outline-offset:2px}
+@media(max-width:820px){.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Referencias de diseño</h1>
+<p class="lead">Guías de la plataforma web moderna con un buscador de patrones antiguos, y recetas de texturas, portadas, escenas 3D y reglas contra el panel genérico. Todo se consulta también desde las herramientas MCP de Vitruvius.</p>
+<div class="tabs" role="tablist" aria-label="Secciones">
+<button role="tab" aria-selected="true" data-tab="refs" id="t-refs">Recetas y referencias</button>
+<button role="tab" aria-selected="false" data-tab="guides" id="t-guides">Guías web</button>
+<button role="tab" aria-selected="false" data-tab="scan" id="t-scan">Buscar patrones antiguos</button>
+</div>
+
+<section id="refs" aria-labelledby="t-refs">
+<div class="bar"><input id="rq" type="search" placeholder="Busca: textura de grano, portada 3D, panel…" aria-label="Buscar referencias">
+<select id="rk" aria-label="Tipo"><option value="">Todos los tipos</option><option value="texture">Texturas</option><option value="hero">Portadas</option><option value="scene">Escenas 3D</option><option value="dashboard-rule">Reglas de panel</option><option value="model-site">Web desde modelo 3D</option><option value="threeui">Catálogo ThreeUI</option></select></div>
+<div class="split"><ul class="list" id="rlist"></ul><article class="detail" id="rdetail" aria-live="polite"><p>Elige una referencia de la lista.</p></article></div>
+</section>
+
+<section id="guides" hidden aria-labelledby="t-guides">
+<div class="bar"><input id="gq" type="search" placeholder="Busca: diálogo modal, tabla adaptable, modo oscuro…" aria-label="Buscar guías"><select id="gc" aria-label="Categoría"><option value="">Todas las categorías</option></select></div>
+<div class="split"><ul class="list" id="glist"></ul><article class="detail" id="gdetail" aria-live="polite"><p>Elige una guía de la lista.</p></article></div>
+</section>
+
+<section id="scan" hidden aria-labelledby="t-scan">
+<p class="lead">Pega el código de una página (HTML con su CSS y JavaScript) o escribe la ruta de una carpeta de frontend. Cada hallazgo es un candidato: la guía dice cuál es la alternativa nativa y cuándo el patrón antiguo sigue siendo correcto.</p>
+<div class="bar"><input id="sp" type="text" placeholder="Ruta de una carpeta o fichero (opcional)" aria-label="Ruta"><button class="primary" id="sgo" type="button">Buscar patrones antiguos</button></div>
+<textarea id="st" aria-label="Código a revisar" placeholder="<style>.a{float:left}</style> …"></textarea>
+<div id="sres" aria-live="polite"></div>
+</section>
+</main>
+<script>
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(u,o){return fetch(u,o).then(function(r){return r.json().then(function(b){if(!r.ok)throw new Error(b.detail||b.error||r.status);return b})})}
+document.querySelectorAll('.tabs button').forEach(function(b){b.addEventListener('click',function(){
+ document.querySelectorAll('.tabs button').forEach(function(o){o.setAttribute('aria-selected',o===b)});
+ ['refs','guides','scan'].forEach(function(s){$(s).hidden=(s!==b.dataset.tab)});
+ if(b.dataset.tab==='guides'&&!$('glist').children.length)loadGuides()})});
+function renderList(el,items,onpick,fields){el.innerHTML=items.map(function(i,n){return '<li><button type="button" data-n="'+n+'"><span class="k">'+esc(fields.kind(i))+'</span><br><span class="t">'+esc(fields.title(i))+'</span><br><span class="s">'+esc(fields.sum(i))+'</span></button></li>'}).join('');
+ el.querySelectorAll('button').forEach(function(b){b.addEventListener('click',function(){el.querySelectorAll('button').forEach(function(o){o.removeAttribute('aria-current')});b.setAttribute('aria-current','true');onpick(items[b.dataset.n])})})}
+var KIND={texture:'Textura',hero:'Portada','scene':'Escena 3D','dashboard-rule':'Regla de panel','model-site':'Web desde modelo 3D',threeui:'Catálogo ThreeUI'};
+function loadRefs(){api('/api/craft?limit=60&query='+encodeURIComponent($('rq').value)+'&kind='+$('rk').value).then(function(r){
+ renderList($('rlist'),r.items,showRef,{kind:function(i){return KIND[i.kind]||i.kind},title:function(i){return i.title},sum:function(i){return i.summary}})}).catch(function(e){$('rlist').innerHTML='<li>'+esc(e.message)+'</li>'})}
+function showRef(i){api('/api/craft/'+i.kind+'/'+i.id).then(function(d){var h='<h2>'+esc(d.title_es||d.title||d.label)+'</h2><p class="k">'+esc(d.cite)+'</p><p>'+esc(d.summary_es||d.summary||d.description||d.do_es||'')+'</p>';
+ if(d.reference_url)h+='<p><a href="'+esc(d.reference_url)+'" target="_blank" rel="noopener">Abrir la referencia</a></p>';
+ if(d.controls&&d.controls.length)h+='<p><b>Controles:</b> '+d.controls.map(function(c){return esc(c.label||c.key)}).join(', ')+'</p>';
+ if(d.decisions)h+=Object.keys(d.decisions).map(function(k){return '<p><b>'+esc(k)+':</b> '+esc(d.decisions[k])+'</p>'}).join('');
+ if(d.use_when)h+='<p><b>Cuándo:</b> '+esc(d.use_when)+'</p><p><b>Evitar si:</b> '+esc(d.avoid_when)+'</p><p><b>Por qué funciona:</b> '+esc(d.why)+'</p>';
+ if(d.css)h+='<pre>'+esc(d.css)+'</pre>';
+ if(d.steps)h+='<ol>'+d.steps.map(function(s){return '<li>'+esc(s)+'</li>'}).join('')+'</ol>';
+ if(d.do_es)h+='<p><b>Hacer:</b> '+esc(d.do_es)+'</p><p><b>Comprobar:</b> '+esc(d.check)+'</p>';
+ $('rdetail').innerHTML=h}).catch(function(e){$('rdetail').textContent=e.message})}
+function loadGuides(){api('/api/webguide'+($('gq').value?'?query='+encodeURIComponent($('gq').value):'?category='+encodeURIComponent($('gc').value))+($('gq').value&&$('gc').value?'&category='+encodeURIComponent($('gc').value):'')).then(function(r){
+ if(r.categories&&$('gc').options.length===1)r.categories.forEach(function(c){var o=document.createElement('option');o.value=c.category;o.textContent=c.category+' ('+c.guides+')';$('gc').appendChild(o)});
+ renderList($('glist'),r.guides.slice(0,80),showGuide,{kind:function(i){return i.category},title:function(i){return i.title},sum:function(i){return i.summary}})}).catch(function(e){$('glist').innerHTML='<li>'+esc(e.message)+'</li>'})}
+function showGuide(g){api('/api/webguide/'+g.id).then(function(d){var x=d.guides[0];$('gdetail').innerHTML='<p class="k">'+esc(x.cite)+'</p><pre>'+esc(x.markdown)+'</pre>'}).catch(function(e){$('gdetail').textContent=e.message})}
+$('rq').addEventListener('input',loadRefs);$('rk').addEventListener('change',loadRefs);$('gq').addEventListener('input',loadGuides);$('gc').addEventListener('change',loadGuides);
+$('sgo').addEventListener('click',function(){var body=$('sp').value.trim()?{path:$('sp').value.trim()}:{sources:[{name:'pegado.html',text:$('st').value}]};
+ api('/api/webguide/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){
+ if(!r.findings.length){$('sres').innerHTML='<p>No se ha encontrado ningún patrón antiguo en '+r.files_scanned+' fichero(s).</p>';return}
+ $('sres').innerHTML='<p>'+r.findings.length+' hallazgo(s) en '+r.files_scanned+' fichero(s).</p>'+r.findings.map(function(f){return '<div class="find"><div class="r">'+esc(f.name_es)+' · '+esc(f.file)+' ('+f.count+')</div><div>'+esc(f.native_es)+'</div><div class="s">Se queda si: '+esc(f.keep_when)+' · '+esc(f.cite)+'</div><div class="s">'+f.locations.map(function(l){return 'línea '+l.line+': <code>'+esc(l.snippet)+'</code>'}).join('<br>')+'</div></div>'}).join('')}).catch(function(e){$('sres').textContent=e.message})});
+loadRefs();
+</script>
+</body>
+</html>

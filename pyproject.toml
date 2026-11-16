@@ -56,6 +56,8 @@ namespaces = false
 [tool.setuptools.package-data]
 "vitruvius_hoard.benchmarks" = ["*.json", "*.Dockerfile"]
 "vitruvius_hoard.showcase" = ["*.json", "*.html", "*.css", "*.js", "*.md", "assets/*", "skills/*/*.md"]
+"vitruvius_hoard.craft" = ["*.json", "*.html", "*.js"]
+"vitruvius_hoard.webguide" = ["*.md", "*.txt", "guides/*/*.md"]
 "vitruvius_hoard.software" = ["catalog.json", "web/*"]
 "babels_hoard" = ["probes/*", "LICENSE"]
 "theseus" = ["LICENSE", "process_shim.cs"]

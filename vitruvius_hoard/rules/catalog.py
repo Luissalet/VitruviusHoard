@@ -407,6 +407,10 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
             out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name,
                         "description": description, "fix": fix, "source": source, "source_id": source_id,
                         "reference": f"{source} {'gate ' if source == 'hallmark' else ''}{source_id}"})
+    elif pack == "webcraft":
+        for name_id, engine, scope, severity, name, description, fix in _WEBCRAFT:
+            out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name, "description": description, "fix": fix,
+                        "source": "vitruvius", "source_id": "", "reference": "craft library and web guides (webguide, craft)"})
     elif pack == "unslop":
         for name_id, engine, scope, severity, name, description, fix, section in _UNSLOP:
             out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name,
@@ -433,4 +437,29 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
     return out
 
 
-PACKS = ("slop", "quality", "craft", "unslop", "visual", "ds")
+# (name_id, engine, scope, severity, name, description, fix)
+_WEBCRAFT = [
+    ("legacy-pattern", "static", "layout", "advisory", "Older pattern with a native replacement",
+     "Code that a web platform feature now replaces: float layouts, div modals, click-outside scripts, jQuery animation, scroll listeners for visual effects, moment.js and similar. Each finding cites the guide with the native alternative.",
+     "Read the cited guide with web_guide_read and use the native feature, keeping the old code only as the fallback the guide asks for."),
+    ("flat-hero-surface", "static", "imagery", "advisory", "Flat surfaces everywhere",
+     "No image, gradient, texture, shadow or filter anywhere on the page: every surface is a flat colour.",
+     "Give the top of the page a material: a texture recipe from craft_search, or a real photograph."),
+    ("dashboard-type-scale", "static", "type", "warning", "Dashboard without a type scale",
+     "A dashboard with more than seven font sizes, or several sizes within 2 px of each other.",
+     "Choose five sizes on a ratio (12, 14, 16, 20, 28) and use nothing else."),
+    ("dashboard-card-styles", "static", "layout", "warning", "Dashboard cards with several looks",
+     "More than two different radius, border and shadow combinations among the cards of a dashboard.",
+     "Decide one card style once; vary content and size, not the look."),
+    ("dashboard-welcome-banner", "static", "copy", "warning", "Welcome banner on a dashboard",
+     "A greeting such as 'Welcome back' leads a dashboard instead of what changed.",
+     "Start with the page title, its actions and what changed since the last visit."),
+    ("dashboard-actions-below", "static", "layout", "advisory", "Dashboard actions below the content",
+     "The first button of a dashboard comes after its first card.",
+     "Put the page title and its primary actions in the top row, filters next, content after."),
+    ("dashboard-command-palette", "static", "layout", "advisory", "Dashboard without a command palette",
+     "A dashboard with six or more navigation links and no command palette, dialog or search shortcut.",
+     "Add a Ctrl+K / ⌘K dialog that jumps anywhere and runs any action."),
+]
+
+PACKS = ("slop", "quality", "craft", "unslop", "visual", "ds", "webcraft")

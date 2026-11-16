@@ -37,7 +37,9 @@ CONTROLS=[
 
 def catalog():
     from ..showcase.tools import catalog as showcase_catalog
-    return [{k:v for k,v in row.items() if k!='module'} for row in json.loads((HERE/'catalog.json').read_text(encoding='utf8'))]+CONTROLS+showcase_catalog(control)
+    from ..webguide.tools import catalog as webguide_catalog
+    from ..craft.tools import catalog as craft_catalog
+    return [{k:v for k,v in row.items() if k!='module'} for row in json.loads((HERE/'catalog.json').read_text(encoding='utf8'))]+CONTROLS+showcase_catalog(control)+webguide_catalog(control)+craft_catalog(control)
 
 
 def create_app(runtime=None):
@@ -56,6 +58,8 @@ def create_app(runtime=None):
     app.state.runtime=runtime
     from ..showcase.routes import router as showcase_router
     app.include_router(showcase_router)
+    from ..craft.routes import router as craft_router
+    app.include_router(craft_router)
     from hoard_link.guard import install_guard
     from .native import port
     install_guard(app,port_getter=port,allowed_env='VITRUVIUS_ALLOWED_HOSTS')
@@ -68,6 +72,12 @@ def create_app(runtime=None):
         if name.startswith('showcase_'):
             from ..showcase.tools import execute as showcase_execute
             return await showcase_execute(runtime,name,args)
+        from ..webguide.tools import NAMES as WEBGUIDE_NAMES, execute as webguide_execute
+        from ..craft.tools import NAMES as CRAFT_NAMES, execute as craft_execute
+        if name in WEBGUIDE_NAMES:
+            return await webguide_execute(runtime,name,args)
+        if name in CRAFT_NAMES:
+            return await craft_execute(runtime,name,args)
         if name=='software_modules':
             return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed by Luis on 20 October 2026.'}
         if name=='software_module_set':

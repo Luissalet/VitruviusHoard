@@ -99,6 +99,17 @@ The MIT licence text is the same as above with that copyright line.
 - **Figma-Context-MCP** by GLips (MIT): the idea of a compact layout/style reduction of a Figma frame; `vitruvius_hoard/figma.py`
   is original code.
 
+## Web guides (Apache License 2.0)
+
+`vitruvius_hoard/webguide/guides/` contains the guide collection of the Modern Web Guidance project of the Chrome team
+(https://github.com/GoogleChrome/modern-web-guidance, revision 64a6d708f5a43f2cd3fde5d4d7db3905ba1bdf65), unmodified. The licence is in
+`vitruvius_hoard/webguide/LICENSE-Apache-2.0.txt`; provenance in `vitruvius_hoard/webguide/UPSTREAM.md`.
+
+## Component catalogue index (MIT)
+
+`vitruvius_hoard/craft/threeui_catalog.json` indexes the component catalogue of ThreeUI Community, Copyright (c) 2026 Meng To
+(https://github.com/MengTo/threeui), MIT License; see `vitruvius_hoard/craft/THIRD_PARTY.md`.
+
 ## Swift demangling test vectors
 
 `theseus_tests/fixtures/swift_manglings.txt` is an unmodified copy of `test/Demangle/Inputs/manglings.txt`

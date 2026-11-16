@@ -48,4 +48,14 @@ Attribution notices for the design-rule work (impeccable, hallmark) the sound-in
    The idea of reducing a Figma node tree to a compact layout/style description (auto-layout as flex, repeated styles under shared
    ids) was studied. vitruvius_hoard/figma.py is original code; no file of that project is copied.
 
+9. Modern Web Guidance (Apache License 2.0), by the Chrome team and its contributors, https://github.com/GoogleChrome/modern-web-guidance
+   (revision 64a6d708f5a43f2cd3fde5d4d7db3905ba1bdf65). The 210 guides under vitruvius_hoard/webguide/guides/ are copied unchanged, with
+   the licence text in vitruvius_hoard/webguide/LICENSE-Apache-2.0.txt and the provenance in webguide/UPSTREAM.md. The reader, the index,
+   the search and the legacy-pattern rules (webguide/legacy.py) are original code. Changes: none to the guides.
+
+10. ThreeUI Community (MIT License), Copyright (c) 2026 Meng To, https://github.com/MengTo/threeui
+    vitruvius_hoard/craft/threeui_catalog.json indexes the catalogue of the project (ids, labels, descriptions, tags, controls and variants).
+    No component source or media is copied. The scenes, heroes, textures and the Blender script of vitruvius_hoard/craft/ are original code.
+    See craft/THIRD_PARTY.md.
+
 Licences: https://www.apache.org/licenses/LICENSE-2.0 and https://opensource.org/license/mit

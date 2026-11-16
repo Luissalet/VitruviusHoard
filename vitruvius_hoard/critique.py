@@ -92,6 +92,22 @@ def _vision_findings(parsed: dict) -> list[dict]:
     return out
 
 
+def _guidance(findings: list[dict], focus: Optional[str]) -> tuple[list[dict], list[dict]]:
+    """Guides (older patterns found in the page) and craft references (textures, dashboard rules) a critique points at, with their cites."""
+    guides: dict[str, dict] = {}
+    for f in findings:
+        evidence = f.get("evidence")
+        if f.get("check_id") == "webcraft/legacy-pattern" and isinstance(evidence, dict) and evidence.get("guide"):
+            row = guides.setdefault(evidence["guide"], {"guide": evidence["guide"], "cite": evidence["cite"], "patterns": []})
+            row["patterns"].append(evidence["rule"])
+    try:
+        from . import craft
+        references = craft.related(findings, focus)
+    except Exception:  # noqa: BLE001 — the references never fail a critique
+        references = []
+    return list(guides.values()), references
+
+
 def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Optional[list[bytes]] = None,
              link: Any = None, use_vision: bool = True, tokens: Optional[dict] = None, waivers: Any = None,
              prior_waivers: Optional[dict[str, str]] = None, clean_review: bool = False) -> dict[str, Any]:
@@ -145,6 +161,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
             gate = {**gate, "state": "fix", "blocking": [*gate["blocking"], f"review:{review['verdict']}"]}
 
     open_n = gate["floor"] + gate["reflex_open"]
+    web_guidance, references = _guidance(findings, focus)
     summary = vision_summary or (
         f"{len(findings)} finding(s) ({gate['floor']} floor, {gate['reflex_open']} reflex open, {gate['reflex_waived']} waived, {gate['finish']} finish); "
         f"heuristic score {heuristic_score}/10."
@@ -163,5 +180,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
         "review": review,
         "design_system": bool(tokens),
         "rules_run": lint_result.get("rules_run"),
+        "web_guidance": web_guidance,
+        "references": references,
         "ms": round((time.monotonic() - t0) * 1000, 1),
     }
