@@ -12,7 +12,7 @@ Vitruvius's Hoard is the design and software-analysis studio of the Hoard family
 
 A root workspace ties them together: a design/source project with an exact source revision can be linked to API environments and to a reverse-engineering project, and results keep identifying the revision they were produced for even after the source is edited.
 
-Language-model work in the app uses only the globally selected model through Faustus. Provider keys stay in Faustus and there is no local fallback model.
+Language-model work in the app uses only the globally selected model through Faustus. Provider keys stay in Faustus, the selection follows Faustus when the Hub's "Run on" moves it to a Spark, and there is no local fallback model.
 
 ## What it does
 

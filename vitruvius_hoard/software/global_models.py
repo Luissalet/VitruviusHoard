@@ -109,7 +109,8 @@ class GlobalLink(Link):
         return selected
 
     async def _selection(self, urls):
-        base = urls[0].rstrip('/')
+        # The Hub may have moved Faustus to a Spark: the origin is the first configured or placed address that is healthy.
+        base = await asyncio.to_thread(self.config.faustus_origin)
         headers = {'Authorization': 'Bearer ' + self.config.faustus_token} if self.config.faustus_token else {}
         response = await self._client.get(base + '/api/global-model', headers=headers)
         response.raise_for_status()
