@@ -6944,6 +6944,21 @@
           "minimum": 0,
           "title": "Wait S",
           "type": "number"
+        },
+        "fidelity_target": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Keep repairing until the fidelity score (share of screens that pass: normalized SSIM >= 0.99 and the reference's headings, links, buttons and fields present) reaches this, within the rounds; a round that raises the fidelity is kept.",
+          "title": "Fidelity Target"
         }
       },
       "title": "RemakeStartArgs",
@@ -7080,6 +7095,21 @@
           "minimum": 0,
           "title": "Wait S",
           "type": "number"
+        },
+        "fidelity_target": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Go on until the fidelity score reaches this (see remake_fidelity).",
+          "title": "Fidelity Target"
         }
       },
       "required": [
@@ -7089,6 +7119,53 @@
       "type": "object"
     },
     "x-timeout-s": 960.0,
+    "module": "design"
+  },
+  {
+    "name": "remake_fidelity",
+    "description": "Fidelity of a remake round: normalized SSIM per screen, checks, zones that differ. Fidelidad del clon.\nEach viewport-high screen of each width is a case: its picture must reach normalized SSIM 0.99 against the reference (1 = identical, 0 = no better than a flat picture of the background) and the reference's headings, links, buttons and form fields in it must exist in the clone; the score is the share of screens that pass (the family's web-fidelity measure, the same one the evaluation studio uses for its website-rebuild bench). Returns per width the screens with their scores and zones, the missing elements and zones_url, the candidate's picture with the zones that differ most outlined and numbered.\nSinónimos: fidelidad del clon, cuánto se parece la copia, SSIM, zonas que difieren, puntuación de la web rehecha.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "round": {
+          "anyOf": [
+            {
+              "maximum": 200,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Round number (default: the best round).",
+          "title": "Round"
+        },
+        "recompute": {
+          "default": false,
+          "description": "Score it again from the stored pictures.",
+          "title": "Recompute",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "RemakeFidelityArgs",
+      "type": "object"
+    },
     "module": "design"
   },
   {

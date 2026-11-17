@@ -41,7 +41,8 @@ def remake_get(request: Request, remake_id: str):
 
 @router.post("/{remake_id}/continue")
 def remake_continue(request: Request, remake_id: str, body: RemakeContinueArgs):
-    return _guard(services(request).remake.continue_, remake_id, rounds=body.rounds, note=body.note, wait_s=body.wait_s)
+    return _guard(services(request).remake.continue_, remake_id, rounds=body.rounds, note=body.note, wait_s=body.wait_s,
+                  fidelity_target=body.fidelity_target)
 
 
 @router.post("/{remake_id}/stop")
@@ -52,6 +53,17 @@ def remake_stop(request: Request, remake_id: str):
 @router.delete("/{remake_id}")
 def remake_delete(request: Request, remake_id: str):
     return _guard(services(request).remake.delete, remake_id)
+
+
+@router.get("/{remake_id}/fidelity")
+def remake_fidelity(request: Request, remake_id: str, round: int | None = Query(None, ge=0, le=200), recompute: bool = False):
+    return _guard(services(request).remake.fidelity, remake_id, round, recompute=recompute)
+
+
+@router.get("/{remake_id}/fidelity/{round_n}/{name}")
+def remake_fidelity_picture(request: Request, remake_id: str, round_n: int, name: str):
+    path = _guard(services(request).remake.fidelity_file, remake_id, round_n, name)
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/{remake_id}/code")

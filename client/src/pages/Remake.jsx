@@ -125,6 +125,71 @@ function Pieces({ project, es }) {
   );
 }
 
+const pct = (v) => (v === null || v === undefined ? "—" : `${Math.round(v * 1000) / 10} %`);
+
+// Fidelity of a round: the family's web-fidelity score (normalized SSIM per screen + the reference's headings, links, buttons and fields).
+function Fidelity({ project, round, es }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState(0);
+  const roundRow = project.rounds.find((r) => r.n === round);
+  const stamp = roundRow?.fidelity?.score;
+  useEffect(() => {
+    if (round === null || round === undefined || !roundRow?.parity_id) { setData(null); return undefined; }
+    let alive = true;
+    setError("");
+    api.remakeFidelity(project.id, round).then((r) => alive && setData(r)).catch((e) => { if (alive) { setData(null); setError(e.message); } });
+    return () => { alive = false; };
+  }, [project.id, round, roundRow?.parity_id, stamp]);
+  if (error) return <div className="panel help" data-testid="remake-fidelity-error">{error}</div>;
+  if (!data) return null;
+  const w = data.widths[Math.min(tab, data.widths.length - 1)];
+  return (
+    <div className="panel flex flex-col gap-2" data-testid="remake-fidelity">
+      <div className="flex gap-2 flex-wrap items-center">
+        <h2 className="text-[15px] font-semibold" style={{ margin: 0 }}>{es ? `Fidelidad de la ronda ${data.round}` : `Round ${data.round} fidelity`}</h2>
+        <span className={`chip ${data.score >= (data.target || 1) ? "chip-ok" : ""}`} data-testid="remake-fidelity-score">{pct(data.score)}</span>
+        <span className="help">{es ? `${data.passed} de ${data.cases} pantallas pasan` : `${data.passed} of ${data.cases} screens pass`} · SSIM {es ? "medio" : "mean"} {data.visual_mean ?? "—"}
+          {data.functional_rate !== null && data.functional_rate !== undefined ? ` · ${es ? "elementos" : "elements"} ${pct(data.functional_rate)}` : ""}
+          {data.target ? ` · ${es ? "objetivo" : "target"} ${pct(data.target)}` : ""}</span>
+      </div>
+      <p className="help" style={{ margin: 0 }}>{es
+        ? "Cada pantalla de cada anchura es un caso: pasa si su SSIM normalizado llega a 0,99 y están los títulos, enlaces, botones y campos de la referencia que caen en ella. Las zonas que más difieren van marcadas y numeradas sobre la captura del clon."
+        : "Each screen of each width is a case: it passes when its normalized SSIM reaches 0.99 and the reference's headings, links, buttons and fields in it are present. The zones that differ most are outlined and numbered on the clone's picture."}</p>
+      <div className="flex gap-2 flex-wrap">
+        {data.widths.map((x, i) => (
+          <button key={x.width} type="button" className={`btn btn-sm ${i === tab ? "btn-active" : ""}`} aria-pressed={i === tab} onClick={() => setTab(i)}>
+            {x.width} px · {pct(x.score)}
+          </button>
+        ))}
+      </div>
+      {w && (
+        <div className="flex gap-3 flex-wrap items-start">
+          <div className="flex flex-col gap-1" style={{ minWidth: 220, flex: "1 1 220px" }}>
+            <div className="flex gap-1 flex-wrap" data-testid="remake-fidelity-screens">
+              {w.screens.map((s) => (
+                <span key={s.index} className={`chip ${s.passed ? "chip-ok" : "chip-danger"}`} title={`${es ? "elementos" : "elements"} ${s.checks_ok}/${s.checks}`}>
+                  {es ? "P" : "S"}{s.index + 1} · {s.score.toFixed(3)}
+                </span>
+              ))}
+            </div>
+            <div className="help">{es ? "Elementos de la referencia presentes" : "Reference elements present"}: {w.checks_ok}/{w.checks}</div>
+            {w.missing.length > 0 && (
+              <ul className="help" style={{ margin: 0, paddingLeft: 18 }}>{w.missing.map((m, i) => <li key={i} style={{ overflowWrap: "anywhere" }}>{m}</li>)}</ul>
+            )}
+          </div>
+          {w.zones_url && (
+            <a href={at(w.zones_url)} target="_blank" rel="noreferrer" aria-label={es ? "Abrir la captura con las zonas" : "Open the picture with the zones"}
+              style={{ flex: "1 1 320px", maxWidth: Math.min(520, w.width), maxHeight: 560, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 6, background: "#fff" }}>
+              <img src={at(w.zones_url)} alt={es ? `Zonas que difieren a ${w.width} px` : `Zones that differ at ${w.width} px`} style={{ width: "100%", display: "block" }} />
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Remake({ param }) {
   const { notify, lang } = useApp();
   const es = lang !== "en";
@@ -147,6 +212,8 @@ export default function Remake({ param }) {
   const [view, setView] = useState("preview");
   const [more, setMore] = useState(2);
   const [moreNote, setMoreNote] = useState("");
+  const [target, setTarget] = useState("");
+  const [moreTarget, setMoreTarget] = useState("");
 
   const loadHistory = useCallback(() => api.remakeList().then((r) => setHistory(r.remakes || [])).catch(() => setHistory([])), []);
   useEffect(() => { loadHistory(); }, [loadHistory]);
@@ -184,6 +251,7 @@ export default function Remake({ param }) {
     const list = parseWidths(widths);
     const body = { mode, widths: list.length ? list : [1440, 390], max_rounds: Number(rounds) || undefined, pass_score: Number(passScore) || 98,
       keep_scripts: keepScripts, note: note.trim() };
+    if (target !== "") body.fidelity_target = Number(target);
     if (source === "url") {
       if (!url.trim()) { notify(es ? "Escribe la URL de la página." : "Enter the page URL."); return; }
       body.url = url.trim();
@@ -264,6 +332,11 @@ export default function Remake({ param }) {
             <label className="label" htmlFor="remake-pass">{es ? "Pasa con (%)" : "Passes at (%)"}</label>
             <input id="remake-pass" type="number" min="50" max="100" step="0.1" className="field" value={passScore} onChange={(e) => setPassScore(e.target.value)} />
           </div>
+          <div style={{ width: 150 }}>
+            <label className="label" htmlFor="remake-target">{es ? "Fidelidad objetivo" : "Fidelity target"}</label>
+            <input id="remake-target" data-testid="remake-target" type="number" min="0.5" max="1" step="0.05" placeholder={es ? "opcional, 0,5–1" : "optional, 0.5–1"}
+              className="field" value={target} onChange={(e) => setTarget(e.target.value)} />
+          </div>
           {source === "url" && mode === "copy" && (
             <label className="flex gap-2 items-center text-[13px]" style={{ paddingBottom: 8 }}>
               <input type="checkbox" checked={keepScripts} onChange={(e) => setKeepScripts(e.target.checked)} />
@@ -288,6 +361,9 @@ export default function Remake({ param }) {
               {project.best_score !== null && project.best_score !== undefined && (
                 <span className={`chip ${project.passed ? "chip-ok" : ""}`}>{es ? "Mejor" : "Best"}: {project.best_score} %</span>
               )}
+              {project.fidelity && (
+                <span className="chip" data-testid="remake-fidelity-chip">{es ? "Fidelidad" : "Fidelity"}: {pct(project.fidelity.score)}{project.fidelity_target ? ` / ${pct(project.fidelity_target)}` : ""}</span>
+              )}
               <span className="text-[14px] font-semibold" style={{ wordBreak: "break-all" }}>{project.source.url || (es ? "Captura de la página" : "Page screenshot")}</span>
               <span className="help">{project.mode === "copy" ? (es ? "copia de la página" : "page copy") : (es ? "reconstrucción con el modelo" : "model rebuild")}{project.model ? ` · ${project.model}` : ""}</span>
             </div>
@@ -305,8 +381,13 @@ export default function Remake({ param }) {
                     <label className="label" htmlFor="remake-more-note">{es ? "Nuevas indicaciones (opcional)" : "New instructions (optional)"}</label>
                     <input id="remake-more-note" className="field" value={moreNote} onChange={(e) => setMoreNote(e.target.value)} />
                   </div>
+                  <div style={{ width: 150 }}>
+                    <label className="label" htmlFor="remake-more-target">{es ? "Hasta fidelidad" : "Until fidelity"}</label>
+                    <input id="remake-more-target" type="number" min="0.5" max="1" step="0.05" className="field" placeholder={project.fidelity_target ? String(project.fidelity_target) : (es ? "opcional" : "optional")}
+                      value={moreTarget} onChange={(e) => setMoreTarget(e.target.value)} />
+                  </div>
                   <button type="button" className="btn btn-sm" data-testid="remake-continue"
-                    onClick={() => act(() => api.remakeContinue(project.id, { rounds: Number(more) || 2, note: moreNote.trim() }))}>{es ? "Seguir corrigiendo" : "Keep fixing"}</button>
+                    onClick={() => act(() => api.remakeContinue(project.id, { rounds: Number(more) || 2, note: moreNote.trim(), ...(moreTarget !== "" ? { fidelity_target: Number(moreTarget) } : {}) }))}>{es ? "Seguir corrigiendo" : "Keep fixing"}</button>
                 </>
               )}
               {project.best_round !== null && project.best_round !== undefined && <a className="btn btn-sm" data-testid="remake-download" href={at(project.download_url)}>{es ? "Descargar ZIP" : "Download ZIP"}</a>}
@@ -319,13 +400,14 @@ export default function Remake({ param }) {
             <h2 className="text-[15px] font-semibold mb-2">{es ? "Rondas" : "Rounds"}</h2>
             {project.rounds.length === 0 ? <Empty>{working ? (es ? "Preparando la primera ronda…" : "Preparing the first round…") : (es ? "Sin rondas." : "No rounds.")}</Empty> : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr className="help"><th align="left">#</th><th align="left">{es ? "Qué se hizo" : "What was done"}</th><th align="left">{es ? "Paridad" : "Parity"}</th><th align="left">{es ? "Resultado" : "Result"}</th><th /></tr></thead>
+                <thead><tr className="help"><th align="left">#</th><th align="left">{es ? "Qué se hizo" : "What was done"}</th><th align="left">{es ? "Paridad" : "Parity"}</th><th align="left">{es ? "Fidelidad" : "Fidelity"}</th><th align="left">{es ? "Resultado" : "Result"}</th><th /></tr></thead>
                 <tbody>
                   {project.rounds.map((r) => (
                     <tr key={r.n} data-testid="remake-round" data-kept={r.kept ? "true" : "false"} style={{ borderTop: "1px solid var(--line)", background: r.n === shown ? "rgba(127,127,127,.10)" : undefined }}>
                       <td className="py-1">{r.n}</td>
                       <td className="text-[13px]"><span className="chip" style={{ marginRight: 6 }}>{es ? KIND[r.kind]?.[0] : KIND[r.kind]?.[1]}</span>{r.note}{r.error ? <div className="help" style={{ color: "var(--danger)" }}>{r.error}</div> : null}</td>
                       <td className="help">{(r.widths || []).map((w) => `${w.width} px ${w.score} %${w.passed ? " ✓" : ""}`).join(" · ") || "—"}</td>
+                      <td className="help" data-testid="remake-round-fidelity">{r.fidelity ? `${pct(r.fidelity.score)} · ${r.fidelity.passed}/${r.fidelity.cases}` : "—"}</td>
                       <td>
                         {r.passed && <span className="chip chip-ok">{es ? "pasa" : "pass"}</span>}{" "}
                         {r.parity_id && !r.kept && <span className="chip">{es ? "deshecha" : "undone"}</span>}
@@ -356,6 +438,8 @@ export default function Remake({ param }) {
               <Slider key={`${run.id}-${width.width}`} width={width} es={es} />
             </div>
           )}
+
+          {shown !== null && shown !== undefined && <Fidelity project={project} round={shown} es={es} />}
 
           {project.best_round !== null && project.best_round !== undefined && (
             <div className="panel flex flex-col gap-2">

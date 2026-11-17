@@ -58,6 +58,7 @@ export const api = {
   remakeStop: (id) => request("POST", `/design/api/remake/${encodeURIComponent(id)}/stop`),
   remakeDelete: (id) => request("DELETE", `/design/api/remake/${encodeURIComponent(id)}`),
   remakeCode: (id, path) => request("GET", `/design/api/remake/${encodeURIComponent(id)}/code`, { params: { path } }),
+  remakeFidelity: (id, round) => request("GET", `/design/api/remake/${encodeURIComponent(id)}/fidelity`, { params: { round } }),
   benchmarkCatalog: () => request("GET", "/api/benchmarks/catalog"),
   benchmarkList: () => request("GET", "/api/benchmarks/runs"),
   benchmarkGet: (id) => request("GET", `/api/benchmarks/runs/${encodeURIComponent(id)}`),

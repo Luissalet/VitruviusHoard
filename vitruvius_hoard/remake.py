@@ -12,11 +12,14 @@ One background job per project (`RemakeRunner`):
    (through Faustus, as every other model call of Vitruvius) writes new hand-made HTML and CSS from the layout, the palette,
    the fonts, the downloaded images and pictures of the reference.
 3. Score. The candidate is served from its folder and loaded the same frozen way; `parity.compare_widths_images` scores it
-   against the cached reference loads screen by screen. Every round is kept as a normal parity run (Parity screen).
+   against the cached reference loads screen by screen. Every round is kept as a normal parity run (Parity screen). The same
+   pictures are also scored for fidelity (`fidelity.py`: normalized SSIM per screen plus the reference's headings, links, buttons
+   and fields), with the zones that differ most drawn on the candidate's picture.
 4. Repair. Files the candidate asked for and did not have are fetched first. Otherwise the first failing screen of each width
    goes to the model with the element-by-element differences (position, size, font, colour), the pictures of both screens and
    the current code; it answers with edits (copy mode: CSS rules appended last). A round that scores lower than the best one
-   is undone. The loop stops when every screen passes, the rounds run out or several rounds bring nothing.
+   is undone. The loop stops when every screen passes, the rounds run out or several rounds bring nothing. With a fidelity
+   target the loop goes on until the fidelity score reaches it, and a round that raises the fidelity is kept.
 5. Deliver. ``site/`` always holds the best round: ``index.html`` and ``assets/``. ``assets.json`` says where every file came
    from and its licence, ``slots.json`` lists what still belongs to the original (texts, images, fonts, colours, links, forms),
    and the ZIP carries all of it with the per-round parity summary.
@@ -43,6 +46,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import unquote, urljoin, urlsplit
 
+from . import fidelity as fidelity_mod
 from .hoard_link.atomic import write_json_atomic
 
 log = logging.getLogger("vitruvius.remake")
@@ -936,6 +940,22 @@ def safe_file(base: Path, name: str) -> Path:
 
 # ---------------------------------------------------------------------------------------------------- the job
 
+def _fidelity_target(value: Optional[float]) -> Optional[float]:
+    if value is None or value == "" or value == 0:
+        return None
+    value = float(value)
+    if not 0.5 <= value <= 1.0:
+        raise ValueError("fidelity_target: entre 0.5 y 1 (proporción de pantallas que pasan)")
+    return value
+
+
+def _best_fidelity(project: dict[str, Any]) -> Optional[float]:
+    i = project.get("best_round")
+    if i is None:
+        return None
+    return ((project["rounds"][i].get("fidelity") or {}).get("score"))
+
+
 class Cancelled(Exception):
     pass
 
@@ -976,8 +996,9 @@ class RemakeRunner:
     def start(self, *, url: Optional[str] = None, image: Optional[str] = None, image_width: int = 1440, mode: str = "copy",
               widths: Optional[list[int]] = None, max_rounds: Optional[int] = None, pass_score: float = 98.0,
               tolerance: float = 0.10, keep_scripts: bool = False, note: str = "", label: str = "",
-              wait_s: float = 0.0) -> dict[str, Any]:
+              wait_s: float = 0.0, fidelity_target: Optional[float] = None) -> dict[str, Any]:
         url = (url or "").strip() or None
+        fidelity_target = _fidelity_target(fidelity_target)
         if bool(url) == bool(image):
             raise ValueError("Hace falta una URL o una captura de la página (solo una de las dos).")
         if mode not in MODES:
@@ -1015,13 +1036,17 @@ class RemakeRunner:
             "keep_scripts": bool(keep_scripts) and mode == "copy", "note": (note or "").strip()[:2000],
             "status": "queued", "phase": "En cola", "captured": False, "rounds": [], "best_round": None, "best_score": None,
             "passed": False, "error": None, "reference": {}, "model": None, "missing": [], "unfetchable": [],
+            "fidelity_target": fidelity_target, "fidelity": None,
         }
         save(self.data_dir, project)
         self._launch(project_id, "start", rounds)
         return self._wait(project_id, wait_s)
 
-    def continue_(self, project_id: str, *, rounds: int = 2, note: str = "", wait_s: float = 0.0) -> dict[str, Any]:
+    def continue_(self, project_id: str, *, rounds: int = 2, note: str = "", wait_s: float = 0.0,
+                  fidelity_target: Optional[float] = None) -> dict[str, Any]:
         project = load(self.data_dir, project_id)
+        if fidelity_target is not None:
+            project["fidelity_target"] = _fidelity_target(fidelity_target)
         if self._running(project_id):
             raise ValueError("Este proyecto ya está trabajando: espera a que termine o páralo.")
         if not 1 <= int(rounds) <= MAX_ROUNDS:
@@ -1097,6 +1122,64 @@ class RemakeRunner:
         text = target.read_bytes().decode("utf-8", errors="replace")
         return {"id": project_id, "path": path, "chars": len(text), "truncated": len(text) > max_chars, "text": text[:max_chars],
                 "files": self._site_files(folder)[:400]}
+
+    # ------------------------------------------------------------------ fidelity
+    def _fidelity_of(self, project: dict[str, Any], n: int, parity_folder: Path) -> Optional[dict[str, Any]]:
+        from . import parity as parity_mod
+        folder = project_dir(self.data_dir, project["id"])
+        widths = [int(w) for w in project["widths"]]
+        out_dir = folder / "rounds" / str(n)
+        full = fidelity_mod.score_widths({w: folder / "capture" / f"reference-{w}-1.png" for w in widths},
+                                         {w: Path(parity_folder) / f"candidate-{w}.png" for w in widths},
+                                         {w: self._outline(project, w) for w in widths}, {w: self._outline(project, w, n) for w in widths},
+                                         viewport_height=parity_mod.viewport_height, out_dir=out_dir)
+        if not full["widths"]:
+            return None
+        write_json_atomic(out_dir / "fidelity.json", full)
+        return full
+
+    def fidelity(self, project_id: str, round_n: Optional[int] = None, *, recompute: bool = False) -> dict[str, Any]:
+        """The fidelity of a round (the best one by default): per width and screen, the checks and the zones that differ. A round
+        scored before fidelity existed is scored now from its stored pictures."""
+        from . import parity as parity_mod
+        project = load(self.data_dir, project_id)
+        rounds = project.get("rounds") or []
+        if round_n is None:
+            if project.get("best_round") is None:
+                raise LookupError("Este proyecto todavía no tiene ninguna ronda medida.")
+            rnd = rounds[project["best_round"]]
+        else:
+            rnd = next((r for r in rounds if r.get("n") == int(round_n)), None)
+            if rnd is None:
+                raise LookupError(f"No existe la ronda {round_n}.")
+        if not rnd.get("parity_id"):
+            raise LookupError(f"La ronda {rnd['n']} no llegó a medirse.")
+        folder = project_dir(self.data_dir, project_id)
+        path = folder / "rounds" / str(rnd["n"]) / "fidelity.json"
+        full = None if recompute else _read_json(path)
+        if full is None:
+            if self._running(project_id):
+                raise ValueError("Este proyecto está trabajando: pide la fidelidad cuando termine.")
+            full = self._fidelity_of(project, rnd["n"], parity_mod.run_dir(self.data_dir, rnd["parity_id"]))
+            if full is None:
+                raise LookupError("No quedan las capturas de esa ronda para medir la fidelidad.")
+            rnd["fidelity"] = fidelity_mod.summary(full)
+            if project.get("best_round") is not None and rounds[project["best_round"]] is rnd:
+                project["fidelity"] = rnd["fidelity"]
+            save(self.data_dir, project)
+        base = f"/api/remake/{project_id}/fidelity/{rnd['n']}"
+        widths = [dict(w, zones_url=f"{base}/{w['zones']}" if w.get("zones") else None) for w in full["widths"]]
+        return {**full, "widths": widths, "round": rnd["n"], "best": rnd is rounds[project["best_round"]] if project.get("best_round") is not None else False,
+                "target": project.get("fidelity_target"), "parity_score": rnd.get("score"), "parity_passed": rnd.get("passed")}
+
+    def fidelity_file(self, project_id: str, round_n: int, name: str) -> Path:
+        load(self.data_dir, project_id)
+        if not re.match(r"^zones-\d{2,4}\.png$", name or ""):
+            raise LookupError("file not found")
+        path = project_dir(self.data_dir, project_id) / "rounds" / str(int(round_n)) / name
+        if not path.is_file():
+            raise LookupError("file not found")
+        return path
 
     def site_file(self, project_id: str, name: str) -> Path:
         load(self.data_dir, project_id)
@@ -1387,6 +1470,11 @@ class RemakeRunner:
             shutil.rmtree(run_folder, ignore_errors=True)
             raise ValueError("No se pudo medir ninguna anchura: " + "; ".join(errors))
         summary = parity_mod.summarize(results, errors)
+        fid = None
+        try:
+            fid = self._fidelity_of(project, n, run_folder)
+        except Exception:  # noqa: BLE001 - the parity result stands even if the fidelity cannot be computed
+            log.warning("fidelity of round %s failed", n, exc_info=True)
         source_label = project["reference"].get("url") or "captura de la página"
         run = {"id": run_id, "created_ts": time.time(), "label": f"Rehacer · {_host(source_label) or 'captura'} · ronda {n}",
                "reference": {"kind": "remake", "label": source_label}, "candidate": {"kind": "remake", "label": f"ronda {n} del proyecto {project['id']}"},
@@ -1401,13 +1489,17 @@ class RemakeRunner:
                            "candidate_height": r["candidate_height"], "height_pass": r["height_pass"]} for r in results],
                "failures": summary["failures"][:12], "missing": len(project["missing"]), "ms": round((time.monotonic() - t0) * 1000), "ts": time.time()}
         rnd.update(extra or {})
+        rnd["fidelity"] = fidelity_mod.summary(fid) if fid else None
         best_i = project.get("best_round")
         best = project["rounds"][best_i] if best_i is not None else None
         kept = best is None or (rnd["passed"] and not best["passed"]) or (rnd["passed"] == best["passed"] and score > best["score"] + 0.005)
+        if not kept and project.get("fidelity_target") and rnd["fidelity"] and (best.get("fidelity") or {}).get("score") is not None:
+            kept = (rnd["passed"] or not best["passed"]) and rnd["fidelity"]["score"] > best["fidelity"]["score"]
         rnd["kept"] = bool(kept)
         project["rounds"].append(rnd)
         if kept:
-            project.update(best_round=len(project["rounds"]) - 1, best_score=score, passed=rnd["passed"], last_reverted=None)
+            project.update(best_round=len(project["rounds"]) - 1, best_score=score, passed=rnd["passed"], last_reverted=None,
+                           fidelity=rnd["fidelity"])
         else:
             project["last_reverted"] = {"round": n, "from": best["score"], "to": score}
             self._restore_best(project)
@@ -1428,7 +1520,11 @@ class RemakeRunner:
         project["stop_reason"] = None
         for _ in range(max(0, int(budget))):
             self._check(project)
-            if project.get("passed"):
+            target = project.get("fidelity_target")
+            if target and _best_fidelity(project) is not None and _best_fidelity(project) >= target:
+                project["stop_reason"] = f"Fidelidad {_best_fidelity(project):.2f} ≥ objetivo {target:.2f}."
+                break
+            if project.get("passed") and not target:
                 break
             n = len(project["rounds"])
             if project.get("missing") and project["source"]["kind"] == "url":
@@ -1437,6 +1533,7 @@ class RemakeRunner:
                     stale = 0 if rnd.get("kept") else stale + 1
                     continue
             before = project.get("best_score") or 0.0
+            fid_before = _best_fidelity(project) or 0.0
             try:
                 rnd = self._model_round(project, n)
                 model_errors = 0
@@ -1449,7 +1546,7 @@ class RemakeRunner:
                 if model_errors >= 2:
                     project["stop_reason"] = "El modelo falló dos rondas seguidas: " + rnd["error"]
                     break
-            improved = bool(rnd.get("kept")) and (project.get("best_score") or 0.0) > before
+            improved = bool(rnd.get("kept")) and ((project.get("best_score") or 0.0) > before or (_best_fidelity(project) or 0.0) > fid_before)
             stale = 0 if improved or project.get("passed") else stale + 1
             if stale >= STALE_ROUNDS:
                 project["stop_reason"] = f"{STALE_ROUNDS} rondas seguidas sin mejorar."
@@ -1521,6 +1618,9 @@ class RemakeRunner:
         best = project["rounds"][project["best_round"]]
         run = parity_mod.get_run(self.data_dir, best["parity_id"])
         focus = focus_screens(run["widths"])[:2]
+        if not focus and project.get("fidelity_target"):
+            full = _read_json(folder / "rounds" / str(best["n"]) / "fidelity.json") or {}
+            focus = (full.get("failing_screens") or [])[:2]
         if not focus:
             return self._failed_round(project, n, "model", "No hay pantallas que corregir.")
         self._phase(project, f"Ronda {n}: el modelo corrige {self._focus_label(focus)}…")
@@ -1702,7 +1802,8 @@ class RemakeRunner:
         base = f"/api/remake/{project['id']}"
         out = dict(project)
         out.update(site_url=f"{base}/site/index.html", report_url=f"{base}/report", download_url=f"{base}/download", code_url=f"{base}/code")
-        out["rounds"] = [dict(r, parity_report_url=f"/api/parity/{r['parity_id']}/report" if r.get("parity_id") else None) for r in project.get("rounds") or []]
+        out["rounds"] = [dict(r, parity_report_url=f"/api/parity/{r['parity_id']}/report" if r.get("parity_id") else None,
+                              fidelity_url=f"{base}/fidelity?round={r['n']}" if r.get("parity_id") else None) for r in project.get("rounds") or []]
         return out
 
 

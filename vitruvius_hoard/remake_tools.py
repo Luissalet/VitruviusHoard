@@ -21,6 +21,9 @@ class RemakeStartArgs(BaseModel):
     note: str = Field("", max_length=2000, description="Extra instructions for the model in every round.")
     label: str = Field("", max_length=200)
     wait_s: float = Field(0, ge=0, le=900, description="Wait up to this many seconds for the job before answering (0 = answer at once and poll remake_get).")
+    fidelity_target: Optional[float] = Field(None, ge=0.5, le=1.0, description="Keep repairing until the fidelity score (share of screens that pass: "
+                                             "normalized SSIM >= 0.99 and the reference's headings, links, buttons and fields present) reaches this, "
+                                             "within the rounds; a round that raises the fidelity is kept.")
 
 
 class RemakeIdArgs(BaseModel):
@@ -32,6 +35,13 @@ class RemakeContinueArgs(BaseModel):
     rounds: int = Field(2, ge=1, le=20, description="How many more repair rounds.")
     note: str = Field("", max_length=2000, description="New instructions for the model (replaces the previous note).")
     wait_s: float = Field(0, ge=0, le=900)
+    fidelity_target: Optional[float] = Field(None, ge=0.5, le=1.0, description="Go on until the fidelity score reaches this (see remake_fidelity).")
+
+
+class RemakeFidelityArgs(BaseModel):
+    id: str = Field(..., min_length=1, max_length=40)
+    round: Optional[int] = Field(None, ge=0, le=200, description="Round number (default: the best round).")
+    recompute: bool = Field(False, description="Score it again from the stored pictures.")
 
 
 class RemakeCodeArgs(BaseModel):
@@ -47,7 +57,7 @@ class RemakeListArgs(BaseModel):
 def run_remake_start(s, a: RemakeStartArgs) -> dict:
     return s.remake.start(url=a.url, image=a.image, image_width=a.image_width, mode=a.mode, widths=a.widths, max_rounds=a.max_rounds,
                           pass_score=a.pass_score, tolerance=a.tolerance, keep_scripts=a.keep_scripts, note=a.note, label=a.label,
-                          wait_s=a.wait_s)
+                          wait_s=a.wait_s, fidelity_target=a.fidelity_target)
 
 
 def tools() -> list[Tool]:
@@ -70,8 +80,17 @@ def tools() -> list[Tool]:
              RemakeCodeArgs, ann(True), lambda s, a: s.remake.code(a.id, a.path, a.max_chars)),
         Tool("remake_continue",
              "Run more repair rounds on a remake, from its best round, optionally with new instructions. Seguir corrigiendo.",
-             RemakeContinueArgs, ann(False, False, False), lambda s, a: s.remake.continue_(a.id, rounds=a.rounds, note=a.note, wait_s=a.wait_s),
-             timeout_s=960),
+             RemakeContinueArgs, ann(False, False, False),
+             lambda s, a: s.remake.continue_(a.id, rounds=a.rounds, note=a.note, wait_s=a.wait_s, fidelity_target=a.fidelity_target), timeout_s=960),
+        Tool("remake_fidelity",
+             "Fidelity of a remake round: normalized SSIM per screen, checks, zones that differ. Fidelidad del clon.\n"
+             "Each viewport-high screen of each width is a case: its picture must reach normalized SSIM 0.99 against the reference "
+             "(1 = identical, 0 = no better than a flat picture of the background) and the reference's headings, links, buttons and form "
+             "fields in it must exist in the clone; the score is the share of screens that pass (the family's web-fidelity measure, the "
+             "same one the evaluation studio uses for its website-rebuild bench). Returns per width the screens with their scores and zones, "
+             "the missing elements and zones_url, the candidate's picture with the zones that differ most outlined and numbered.\n"
+             "Sinónimos: fidelidad del clon, cuánto se parece la copia, SSIM, zonas que difieren, puntuación de la web rehecha.",
+             RemakeFidelityArgs, ann(True), lambda s, a: s.remake.fidelity(a.id, a.round, recompute=a.recompute)),
         Tool("remake_stop", "Stop a running remake after its current step; the best round stays. Parar rehacer.",
              RemakeIdArgs, ann(False, False, True), lambda s, a: s.remake.stop(a.id)),
         Tool("remake_delete", "Delete a remake with its files and its parity runs. Borrar rehacer.",
