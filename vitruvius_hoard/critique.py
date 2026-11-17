@@ -108,6 +108,18 @@ def _guidance(findings: list[dict], focus: Optional[str]) -> tuple[list[dict], l
     return list(guides.values()), references
 
 
+def _keyboard_summary(probe: dict, findings: list[dict]) -> Optional[dict]:
+    """What the Tab walk measured and how many interaction findings stand (None when the capture took no measurement)."""
+    data = (probe or {}).get("keyboard")
+    if not isinstance(data, dict) or data.get("error"):
+        return None
+    mine = [f for f in findings if str(f.get("check_id") or "").startswith("interaction/") and not f.get("waived")]
+    return {"tab_stops": data.get("tab_stops", 0), "focusable": data.get("focusable", 0), "complete": bool(data.get("complete")),
+            "pointer_only": len(data.get("pointer_only") or []), "unreached": len(data.get("unreached") or []),
+            "without_focus_ring": sum(1 for s in data.get("stops") or [] if s.get("ring") is False), "open_findings": len(mine),
+            "rules": sorted({f["check_id"] for f in mine})}
+
+
 def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Optional[list[bytes]] = None,
              link: Any = None, use_vision: bool = True, tokens: Optional[dict] = None, waivers: Any = None,
              prior_waivers: Optional[dict[str, str]] = None, clean_review: bool = False) -> dict[str, Any]:
@@ -182,5 +194,6 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
         "rules_run": lint_result.get("rules_run"),
         "web_guidance": web_guidance,
         "references": references,
+        "keyboard": _keyboard_summary(probe, findings),
         "ms": round((time.monotonic() - t0) * 1000, 1),
     }

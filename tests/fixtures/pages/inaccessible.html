@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 24px; }
+  .row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .chip { cursor: pointer; padding: 8px 14px; background: #e8e8f4; border-radius: 6px; }
+  .save { padding: 10px 18px; border: 2px solid #333; background: #fff; }
+  .save:focus, .save:focus-visible { outline: none; }
+</style>
+</head>
+<body>
+<h1>Settings</h1>
+<div class="row">
+  <div class="chip" onclick="alert('light')">Light</div>
+  <div class="chip" onclick="alert('dark')">Dark</div>
+</div>
+<div class="row">
+  <button class="save">Save</button>
+  <button class="icon"><svg viewBox="0 0 8 8" width="8" height="8"><circle cx="4" cy="4" r="3"></circle></svg></button>
+  <input type="text" placeholder="Search">
+  <a href="#" onclick="go()">Open</a>
+</div>
+<div role="dialog"><p>Are you sure?</p></div>
+<div role="tab">One</div>
+<label for="ghost">Ghost</label>
+<input id="dup"><input id="dup" aria-label="Duplicate">
+<span tabindex="3">order</span>
+<button aria-labelledby="missing">x</button>
+</body>
+</html>

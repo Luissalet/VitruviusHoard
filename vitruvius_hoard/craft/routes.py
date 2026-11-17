@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from .. import webguide
 from ..webguide import legacy
-from . import ROOT, dashboard, heroes, page, pages, read, scenes, search
+from . import ROOT, dashboard, heroes, page, pages, read, scenes, search, ui_sets
 
 router = APIRouter()
 
@@ -29,20 +29,20 @@ def craft_search(query: str = Query("", max_length=300), kind: str | None = Quer
         raise HTTPException(400, str(error)) from error
 
 
-@router.get("/api/craft/{kind}/{item_id}")
-def craft_read(kind: str, item_id: str):
+@router.get("/api/craft/{kind}/{item_id:path}/page")
+def craft_page(kind: str, item_id: str):
     try:
-        return read(kind, item_id)
+        return _html(page(kind, item_id))
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
 
 
-@router.get("/api/craft/{kind}/{item_id}/page")
-def craft_page(kind: str, item_id: str):
+@router.get("/api/craft/{kind}/{item_id:path}")
+def craft_read(kind: str, item_id: str):
     try:
-        return _html(page(kind, item_id))
+        return read(kind, item_id)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
@@ -113,3 +113,33 @@ def scene(scene_id: str):
 @router.get("/craft/dashboard/index.html")
 def calm_dashboard():
     return _html(dashboard.calm_dashboard())
+
+
+@router.get("/craft/ui-sets/")
+def ui_sets_board():
+    return _html(ui_sets.board_page())
+
+
+@router.get("/craft/ui-sets/{set_id}/index.html")
+def ui_set_board(set_id: str):
+    try:
+        return _html(ui_sets.set_page(set_id))
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.get("/craft/ui-sets/{set_id}/{control_id}/index.html")
+def ui_set_control(set_id: str, control_id: str):
+    try:
+        return _html(ui_sets.control_page(set_id, control_id))
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.get("/craft/ui-sets/{set_id}/{filename}")
+def ui_set_file(set_id: str, filename: str):
+    try:
+        data = ui_sets.asset(set_id, filename)
+    except LookupError as error:
+        raise HTTPException(404, str(error)) from error
+    return Response(data, media_type="text/plain; charset=utf-8" if filename == "LICENSE" else "text/javascript")

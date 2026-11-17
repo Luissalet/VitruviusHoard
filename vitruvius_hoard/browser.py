@@ -1119,6 +1119,9 @@ class BrowserWorker:
             if dom:
                 probe["dom"] = dom
             probe["script_errors"] = script_errors
+            if payload.get("keyboard", True):
+                from . import keyboard
+                probe["keyboard"] = keyboard.walk(page)
             if url:
                 # a captured URL has no source HTML on our side: hand the rules the serialised page and its stylesheets
                 try:

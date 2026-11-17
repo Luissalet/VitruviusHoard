@@ -119,3 +119,13 @@ the demangler output against the expectations of the Swift project's own test su
 Copyright Apple Inc. and the Swift project authors.
 Licensed under the Apache License, Version 2.0 with Runtime Library Exception
 (https://swift.org/LICENSE.txt). See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors.
+
+## Control style sets (MIT)
+
+`vitruvius_hoard/craft/ui_sets/` carries the control scripts of three MIT-licensed sets, unchanged, each with its own `LICENSE` file beside them:
+
+- Sakuga VFX: https://github.com/finktheartist/sakuga-vfx @ `c3dabb173928a3ad2372183103caf2e6f50953d0`, © 2026 Justin Finkelman.
+- Rubber Hose UI: https://github.com/finktheartist/rubber-hose-ui @ `9608c12ca34057ad5ebfd64d88f9bc0194df6c2c`, © 2026 Justin Finkelman.
+- Pixel Worlds: https://github.com/finktheartist/pixel-worlds @ `efe6b5ae51de9b493030cffe96c1833caa49b14b`, © 2026 Justin Finkelman.
+
+The anime effects pack at https://github.com/kanaworksai-hue/kanaworks-sakuga-vfx is not included. Its assets are under the KanaWorks_AI VFX Asset License 1.0 (free below one million dollars of annual revenue; the credit `VFX: KanaWorks_AI (@KanaWorks_AI)` is required wherever they are used; redistribution as an asset pack is not allowed), so they are downloaded on demand with `ui_set_fetch` together with a `CREDIT.txt`.

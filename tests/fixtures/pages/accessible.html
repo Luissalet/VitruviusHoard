@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 24px; }
+  .row { display: flex; gap: 12px; margin-bottom: 16px; }
+  button, a, input { font: inherit; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid #0b6fb3; outline-offset: 3px; }
+  .chip[aria-pressed="true"] { background: #1d1a4a; color: #fff; }
+</style>
+</head>
+<body>
+<main>
+<h1>Settings</h1>
+<div class="row" role="group" aria-label="Theme">
+  <button type="button" class="chip" aria-pressed="true">Light</button>
+  <button type="button" class="chip" aria-pressed="false">Dark</button>
+</div>
+<div class="row">
+  <button type="button" class="save">Save</button>
+  <button type="button" aria-label="Help"><svg viewBox="0 0 8 8" width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="3"></circle></svg></button>
+  <label for="q">Search</label><input id="q" type="text">
+  <a href="/docs">Open the docs</a>
+</div>
+<dialog aria-labelledby="t"><h2 id="t">Are you sure?</h2><button type="button">Yes</button></dialog>
+</main>
+</body>
+</html>

@@ -411,6 +411,10 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
         for name_id, engine, scope, severity, name, description, fix in _WEBCRAFT:
             out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name, "description": description, "fix": fix,
                         "source": "vitruvius", "source_id": "", "reference": "craft library and web guides (webguide, craft)"})
+    elif pack == "interaction":
+        for name_id, engine, scope, severity, name, description, fix in _INTERACTION:
+            out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name, "description": description, "fix": fix,
+                        "source": "vitruvius", "source_id": "", "reference": "keyboard, focus and ARIA baseline (WAI-ARIA authoring practices); behaviour guides: web_guide_read ui-behaviors"})
     elif pack == "unslop":
         for name_id, engine, scope, severity, name, description, fix, section in _UNSLOP:
             out.append({"name_id": name_id, "engine": engine, "scope": scope, "severity": severity, "name": name,
@@ -462,4 +466,37 @@ _WEBCRAFT = [
      "Add a Ctrl+K / ⌘K dialog that jumps anywhere and runs any action."),
 ]
 
-PACKS = ("slop", "quality", "craft", "unslop", "visual", "ds", "webcraft")
+_INTERACTION = [
+    ("click-on-static-element", "static", "a11y", "error", "Click handler on an element that is not a control",
+     "A div, span or similar with onclick and no button or link semantics: the keyboard cannot reach it and a screen reader does not announce it.",
+     "Use a <button> or an <a href>."),
+    ("unnamed-control", "static", "a11y", "error", "Control without an accessible name",
+     "A button, link, field or custom control with no visible text, label, aria-label or aria-labelledby.",
+     "Name it: visible text, <label for>, aria-label (icon-only buttons) or aria-labelledby."),
+    ("positive-tabindex", "static", "a11y", "warning", "Tabindex above zero",
+     "A positive tabindex pulls the element ahead of the natural order and breaks it for everyone else.",
+     "Use tabindex 0 or none and order the source as the tab order should go."),
+    ("dangling-aria-reference", "static", "a11y", "warning", "ARIA or label reference to a missing id",
+     "aria-labelledby, aria-describedby, aria-controls or a label's for points to an id that is not on the page.",
+     "Point to an id that exists or remove the attribute."),
+    ("incomplete-aria-widget", "static", "a11y", "warning", "ARIA widget without what its role requires",
+     "role=dialog without a name, tab without aria-selected, switch or checkbox without aria-checked, slider without aria-valuenow, tablist without tabs.",
+     "Complete the role's attributes or use the native element that carries them."),
+    ("duplicate-id", "static", "a11y", "warning", "Repeated id",
+     "Two elements with the same id: labels and ARIA references resolve to the first one only.",
+     "Make ids unique."),
+    ("link-without-destination", "static", "a11y", "warning", "Link that acts as a button",
+     "An <a> with no href, href=\"#\" plus a click handler, or a javascript: URL: it goes nowhere.",
+     "Use <button type=\"button\">; keep links for navigation."),
+    ("pointer-only-control", "browser", "a11y", "error", "Control only a pointer can use",
+     "Elements with a pointer cursor that are not focusable and are not inside a control: a keyboard cannot operate them.",
+     "Make them real buttons or links, or add role, tabindex 0 and Enter/Space handlers."),
+    ("focus-ring-missing", "browser", "a11y", "error", "Tab stop with no visible focus indicator",
+     "Focusing the element by keyboard changes nothing on screen (outline, ring, border, background or shadow).",
+     "Add a :focus-visible style with 3:1 contrast against the background."),
+    ("keyboard-unreachable", "browser", "a11y", "warning", "Visible control that Tab never reaches",
+     "A natively focusable control that a full Tab walk through the page did not land on (tabindex -1 or a trap before it).",
+     "Remove tabindex -1 from controls that must be operable."),
+]
+
+PACKS = ("slop", "quality", "craft", "unslop", "visual", "ds", "webcraft", "interaction")

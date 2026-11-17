@@ -18,7 +18,7 @@ Language-model work in the app uses only the globally selected model through Fau
 
 ### Design library and rules
 - Searchable library of design criteria, styles, palettes and font pairings, plus a reference gallery with collections, original HTML patterns and curated design galleries that can be captured as references.
-- A lint rule registry (static, browser and visual engines) with severities, packs and Spanish text; `design_lint` can run the static engine alone after every edit.
+- A lint rule registry (static, browser and visual engines) with severities, packs and Spanish text; `design_lint` can run the static engine alone after every edit. An interaction pack checks keyboard, focus and ARIA: controls without a name, click handlers on elements that are not controls, widgets missing what their role requires, and, in a real browser, a Tab walk that finds controls only a pointer can use and tab stops with no visible focus indicator. `design_critique` scores them and reports the walk.
 - Critique in three tiers: Floor (never waived), Reflex (waivable with a reasoned justification) and Finish (advice). The gate passes only without Floor findings and open Reflex findings; a clean-context review gives a fresh second look.
 - Slop audit: renders a page at eight widths and scores generic-AI-look signs from 0 to 100, with a fix plan and a design direction brief.
 - Theme dealing with memory (the same seed gives the same theme, recent themes are blocked), 120 design presets with full light/dark tokens and shadcn registry items, and import of a Figma frame through a personal access token.
@@ -26,6 +26,7 @@ Language-model work in the app uses only the globally selected model through Fau
 - Kept-elements check and page assay: save the links, fields and handlers of a page and verify that a redesign keeps them.
 - A showcase recipe library at `/showcase/` with working reference pages, reproduction prompts and agent skills.
 - Modern web guidance: 210 vendored guides on native web platform features with search and a reader, and a legacy-pattern scan of front-end code that names the native replacement for each older pattern. Also in the critique, which cites the guide next to each finding.
+- Control style sets in the craft library: three MIT sets of ready-made controls with a distinct look (anime Sakuga VFX, 1930s Rubber Hose UI, pixel-art Pixel Worlds; 28 controls), each with a preview page and when to use it, installable into a project with its licence, plus an anime effects pack that is downloaded on demand with its required credit. See [docs/CRAFT-LIBRARY.md](docs/CRAFT-LIBRARY.md).
 - A craft library at `/craft/`: ten texture recipes with controls, hero layouts, native 3D scenes with controls, rules against generic dashboards, an index of a permissively licensed 3D component catalogue, and a recipe for a showcase site built from a 3D model with Blender. All consultable through MCP tools; see [docs/WEB-GUIDANCE.md](docs/WEB-GUIDANCE.md) and [docs/CRAFT-LIBRARY.md](docs/CRAFT-LIBRARY.md).
 
 ### Rendering and comparison

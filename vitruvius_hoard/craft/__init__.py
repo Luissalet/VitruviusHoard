@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-KINDS = ("texture", "hero", "scene", "dashboard-rule", "model-site", "threeui")
+KINDS = ("texture", "hero", "scene", "dashboard-rule", "model-site", "threeui", "ui-set", "ui-control")
 CITE = "[vitruvius: craft/{kind}/{id}]"
 
 _ES = {"textura": "texture", "texturas": "texture", "degradado": "gradient", "ondas": "waves", "grano": "grain", "cesped": "grass", "hierba": "grass",
@@ -44,7 +44,7 @@ def threeui() -> list[dict]:
 
 
 def _rows() -> list[dict]:
-    from . import dashboard, heroes, model_site, scenes, textures
+    from . import dashboard, heroes, model_site, scenes, textures, ui_sets
     rows = []
     for t in textures.TEXTURES:
         rows.append({"kind": "texture", "id": t["id"], "title": t["title_es"], "summary": t["summary_es"], "tags": t["tags"] + [t["title"], t["summary"]],
@@ -65,6 +65,11 @@ def _rows() -> list[dict]:
             continue
         rows.append({"kind": "threeui", "id": c["id"], "title": c["label"], "summary": c["description"][:200], "tags": c["tags"] + [c["category"], c["runtime"]],
                      "reference_url": ""})
+    for owner in [*ui_sets.sets(), *ui_sets.ON_DEMAND]:
+        base = ui_sets.summary_row(owner)
+        rows.append({"kind": "ui-set", "id": base["id"], "title": base["title"], "summary": base["summary"], "tags": base["tags"], "reference_url": base["reference_url"]})
+    for base in ui_sets.control_rows():
+        rows.append({"kind": "ui-control", "id": base["id"], "title": base["title"], "summary": base["summary"], "tags": base["tags"], "reference_url": base["reference_url"]})
     for row in rows:
         row["cite"] = CITE.format(kind=row["kind"], id=row["id"])
     return rows
@@ -87,7 +92,7 @@ def search(query: str = "", kind: str | None = None, limit: int = 10) -> dict:
         hay = set(re.findall(r"[a-z0-9]+", _fold(" ".join([row["summary"], *row["tags"]]))))
         score = sum(weight[t] * (6 * (t in id_words) + 4 * (t in title_words) + 2 * (t in hay)) for t in terms)
         if score:
-            scored.append((score + (0 if row["kind"] == "threeui" else 3), row))
+            scored.append((score + (0 if row["kind"] in {"threeui", "ui-control"} else 3), row))
     scored.sort(key=lambda pair: (-pair[0], pair[1]["kind"], pair[1]["id"]))
     limit = max(1, min(int(limit or 10), 60))
     items = [{"kind": r["kind"], "id": r["id"], "title": r["title"], "summary": r["summary"], "cite": r["cite"], "reference_url": r["reference_url"], "score": round(s, 2)}
@@ -99,7 +104,12 @@ def search(query: str = "", kind: str | None = None, limit: int = 10) -> dict:
 
 
 def read(kind: str, item_id: str) -> dict:
-    from . import dashboard, heroes, model_site, scenes, textures
+    from . import dashboard, heroes, model_site, scenes, textures, ui_sets
+    if kind == "ui-set":
+        return ui_sets.read_set(item_id)
+    if kind == "ui-control":
+        set_id, _, control_id = item_id.partition("/")
+        return ui_sets.read_control(set_id, control_id)
     if kind == "texture":
         t = textures.by_id(item_id)
         return {**{k: v for k, v in t.items() if k != "markup"}, "kind": kind, "cite": CITE.format(kind=kind, id=item_id), "example_html": textures.example_html(t),
@@ -132,8 +142,13 @@ def read(kind: str, item_id: str) -> dict:
 
 def page(kind: str, item_id: str, params: dict | None = None) -> dict:
     """A complete HTML document for a texture, a hero, a scene or the calm dashboard: ready to open, export or send to design_critique."""
-    from . import dashboard, heroes, pages, scenes
+    from . import dashboard, heroes, pages, scenes, ui_sets
     params = params or {}
+    if kind == "ui-set":
+        return ui_sets.set_page(item_id)
+    if kind == "ui-control":
+        set_id, _, control_id = item_id.partition("/")
+        return ui_sets.control_page(set_id, control_id, params)
     if kind == "texture":
         return pages.texture_page(item_id, params, str(params.get("title") or ""), str(params.get("subtitle") or ""))
     if kind == "hero":
@@ -142,7 +157,7 @@ def page(kind: str, item_id: str, params: dict | None = None) -> dict:
         return scenes.page(item_id, str(params.get("title") or ""))
     if kind == "dashboard-rule":
         return dashboard.calm_dashboard()
-    raise ValueError("A page can be generated for texture, hero, scene or dashboard-rule")
+    raise ValueError("A page can be generated for texture, hero, scene, dashboard-rule, ui-set or ui-control")
 
 
 def related(findings: list[dict], focus: str | None = None, limit: int = 4) -> list[dict]:
