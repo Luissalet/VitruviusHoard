@@ -12,3 +12,10 @@ pillow==12.2.0
 pytest==9.1.1
 PyYAML==6.0.3
 fastembed==0.8.1
+griffe>=2.3,<3
+pefile>=2024.8
+python-multipart>=0.0.20
+psutil>=5.9
+jsonschema>=4.20,<5
+websocket-client>=1.9
+websockets>=14
