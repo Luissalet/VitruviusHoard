@@ -577,7 +577,8 @@ TOOLS: list[Tool] = [
     Tool("render_preview",
         "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\n"
         "Use url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, "
-        "capture paths, dimensions, lint and metrics. Image bytes are optional.",
+        "capture paths, dimensions, lint and metrics. Image bytes are optional.\n"
+        "Sinónimos: renderizar, capturar, screenshot, previsualizar.",
         RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
         "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n"
