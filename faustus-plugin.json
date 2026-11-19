@@ -155,5 +155,5 @@
       "launcher": "/api/copilot/launcher.js"
     }
   },
-  "skills": {"slugs": ["hoard-design-loop", "product-ui-visual-direction", "unslop-interface", "hallmark-page-design", "web-accessibility-design", "elephant-goldfish-design", "panel-builder", "diagram-authoring", "documentation-lookup", "reverse-engineering-workflow", "code-impact-analysis"], "limit": 11}
+  "skills": {"slugs": ["hoard-design-loop", "product-ui-visual-direction", "unslop-interface", "hallmark-page-design", "web-accessibility-design", "elephant-goldfish-design", "panel-builder", "diagram-authoring", "documentation-lookup", "reverse-engineering-workflow", "code-impact-analysis", "studio-vitruvius-design-critique"], "limit": 12}
 }
