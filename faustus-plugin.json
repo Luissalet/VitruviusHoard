@@ -138,6 +138,15 @@
   },
   "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026; this incorporation does not complete its pending reverse-engineering scope.",
   "x-family": {
+    "production": {
+      "handoffs": [
+        {"accepts": "production-brief", "produces": ["interface-brief"], "skill": "product-ui-visual-direction", "check": {"en": "Check the design direction against the brief, including target widths and keyboard use.", "es": "Coteja la dirección de diseño con el expediente, incluidas las anchuras previstas y el manejo con teclado."}},
+        {"accepts": "web-page", "produces": ["responsive-captures"], "skill": "hoard-design-loop", "check": {"en": "Inspect every requested width; run design critique and test filters, focus and other interactions with page_assay.", "es": "Inspecciona cada anchura solicitada, realiza la crítica de diseño y prueba los filtros, el foco y las demás interacciones con page_assay."}}
+      ]
+    },
+    "module_controls": {
+      "software": {"list": "software_modules", "set": "software_module_set"}
+    },
     "copilot": {
       "contract_version": "1.0",
       "info": "/api/copilot/info",

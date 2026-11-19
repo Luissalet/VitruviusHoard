@@ -74,6 +74,8 @@ python -m vitruvius_hoard   # http://127.0.0.1:5191
 
 ## Connection with Faustus and Hoard Hub
 
+Declares production handoffs from order brief to interface brief and from a web page to responsive captures.
+
 - `faustus-plugin.json` is the plugin manifest (default URL `http://127.0.0.1:5191`, health at `/api/health`).
 - `python -m mcp_server` exposes the cold tool schemas (design, API documentation, reverse engineering and common controls) without starting the app or opening any store. `VITRUVIUS_URL` points to the running app. API, MCP and UI share the same handlers. See [docs/SOFTWARE-API.md](docs/SOFTWARE-API.md) and [docs/NATIVE-CONNECTIONS.md](docs/NATIVE-CONNECTIONS.md).
 - The shared Faustus panel is available inside the app.
