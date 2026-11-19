@@ -1192,9 +1192,10 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
     try:
         result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and name != "render_preview")
         if name == "render_preview" and cap:
-            # The generic cap can shorten top-level lists. These files are the render's deliverables.
-            files = result.get("files", [])
-            result = {**cap_result({**result, "files": tuple(files)}), "files": files}
+            # The generic cap can shorten top-level lists. Keep the whole capture manifest.
+            manifest = {key: result[key] for key in ("files", "widths") if key in result}
+            protected = {key: tuple(value) for key, value in manifest.items()}
+            result = {**cap_result({**result, **protected}), **manifest}
         return result
     except LookupError as error:
         if isinstance(error, KeyError):  # an unknown tool: the router answers 404 unknown_tool itself
