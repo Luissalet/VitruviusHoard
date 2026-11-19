@@ -27,6 +27,8 @@ El trabajo con modelos de lenguaje usa solo el modelo global elegido a través d
 - Una biblioteca de recetas de escaparate en `/showcase/` con páginas de referencia funcionales, prompts de reproducción y skills para agentes.
 
 ### Renderizado y comparación
+
+La herramienta `render_preview` abre URL públicas o de bucle local y archivos HTML con sus recursos relativos. El resultado incluye la ruta y las dimensiones de cada captura.
 - Renderiza HTML o una URL en Chromium a capturas (varios anchos) y vídeo de desplazamiento; compara dos renders.
 - Paridad visual: comparación en navegador congelado de un candidato con una referencia, pantalla a pantalla, con máscara de ruido.
 - Rehacer: reconstruye una página pública desde su URL o una captura hasta alcanzar paridad visual, como copia o como reconstrucción, con código descargable e informe. Cada ronda tiene una puntuación de fidelidad (SSIM normalizado por pantalla y los títulos, enlaces, botones y campos de la referencia) con las zonas que más difieren marcadas sobre la captura, y se puede seguir corrigiendo hasta alcanzar un objetivo de fidelidad.
