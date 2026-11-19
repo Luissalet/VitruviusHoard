@@ -30,6 +30,8 @@ Language-model work in the app uses only the globally selected model through Fau
 - A craft library at `/craft/`: ten texture recipes with controls, hero layouts, native 3D scenes with controls, rules against generic dashboards, an index of a permissively licensed 3D component catalogue, and a recipe for a showcase site built from a 3D model with Blender. All consultable through MCP tools; see [docs/WEB-GUIDANCE.md](docs/WEB-GUIDANCE.md) and [docs/CRAFT-LIBRARY.md](docs/CRAFT-LIBRARY.md).
 
 ### Rendering and comparison
+
+The `render_preview` tool opens public or loopback URLs and local HTML files with their relative assets. The result lists each capture's path and dimensions.
 - Render HTML or a URL in Chromium to screenshots (several widths) and scroll video; compare two renders.
 - Visual parity: frozen-browser comparison of a candidate against a reference, screen by screen, with noise masking.
 - Remake: rebuild a public page from its URL or a screenshot until it reaches visual parity, as a copy or a rebuild, with downloadable code and a report. Every round gets a fidelity score (normalized SSIM per screen plus the reference's headings, links, buttons and fields) with the zones that differ most outlined on the capture, and a remake can keep going until a fidelity target is reached.

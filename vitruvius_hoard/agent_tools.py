@@ -7,7 +7,7 @@ from typing import Annotated, Literal, Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, tool_catalog as catalog_of
+from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .app_projects import templates as app_templates
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
@@ -72,8 +72,8 @@ class FontsSearchArgs(BaseModel):
 
 class RenderArgs(BaseModel):
     html: Optional[str] = Field(None, max_length=2_000_000)
-    url: Optional[str] = Field(None, max_length=2000)
-    path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
+    url: Optional[str] = Field(None, max_length=2000, description="Public or explicit loopback HTTP(S) preview URL.")
+    path: Optional[str] = Field(None, max_length=1000, description="Local HTML file or folder with index.html. Relative assets load from the page folder.")
     widths: list[int] = Field(default_factory=lambda: [390, 1024, 1440])
     full_page: bool = True
     dark: bool = False
@@ -342,9 +342,7 @@ def run_fonts_search(services: Services, args: FontsSearchArgs) -> dict:
 MAX_LOCAL_PAGE = 2_000_000
 
 
-def read_local_page(path: str) -> str:
-    """The HTML of a page the assistant already wrote to disk (a file, or a folder's index.html),
-    so it does not have to paste the whole document again into html (slow for a local model)."""
+def _local_page_path(path: str) -> Path:
     target = Path(path).expanduser()
     if target.is_dir():
         target = target / "index.html"
@@ -354,7 +352,12 @@ def read_local_page(path: str) -> str:
         raise ValueError(f"Not an HTML file: {target.name}")
     if target.stat().st_size > MAX_LOCAL_PAGE:
         raise ValueError(f"{target.name} is larger than {MAX_LOCAL_PAGE // 1_000_000} MB")
-    return target.read_text(encoding="utf-8", errors="replace")
+    return target.resolve()
+
+
+def read_local_page(path: str) -> str:
+    """Read a local HTML file or the index.html in a folder."""
+    return _local_page_path(path).read_text(encoding="utf-8", errors="replace")
 
 
 def _page_html(args) -> Optional[str]:
@@ -366,8 +369,11 @@ def _page_html(args) -> Optional[str]:
 
 
 def run_render_preview(services: Services, args: RenderArgs) -> dict:
-    row = services.render(html=_page_html(args), url=args.url, widths=args.widths, full_page=args.full_page, dark=args.dark,
-                          wait_ms=args.wait_ms, lint=args.lint, title=args.title, tokens_id=args.tokens_id)
+    page_path = _local_page_path(args.path) if args.path and not args.html else None
+    html = page_path.read_text(encoding="utf-8", errors="replace") if page_path else args.html
+    row = services.render(html=html, url=args.url, widths=args.widths, full_page=args.full_page, dark=args.dark,
+                          wait_ms=args.wait_ms, lint=args.lint, title=args.title, tokens_id=args.tokens_id,
+                          page_path=page_path, local_preview=not html and bool(args.url))
     out = _strip_html(row)
     if not args.include_images:
         out["files"] = [{k: v for k, v in f.items() if k != "bytes"} for f in out["files"]]
@@ -569,9 +575,9 @@ TOOLS: list[Tool] = [
         "Sinónimos: tipografía, fuente, pareja de fuentes, mood tipográfico.",
         FontsSearchArgs, ann(True), run_fonts_search),
     Tool("render_preview",
-        "Render HTML or a URL in Chromium, screenshot at widths, run lint. Renderiza y captura.\n"
-        "Returns render id, absolute file paths, size, lint summary and metrics (fonts, colours, libs). Never returns "
-        "image bytes unless include_images=true. A page already written to disk goes as path, not pasted into html.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
+        "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\n"
+        "Use url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, "
+        "capture paths, dimensions, lint and metrics. Image bytes are optional.",
         RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
         "Deterministic design checks on HTML/URL (fonts, contrast, motion, a11y, generic-AI patterns). Lint de diseño.\n"
@@ -1184,7 +1190,12 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
     if name in UNCAPPED_TOOLS or (name == "render_preview" and (arguments or {}).get("include_images")):
         cap = False
     try:
-        return run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap)
+        result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and name != "render_preview")
+        if name == "render_preview" and cap:
+            # The generic cap can shorten top-level lists. These files are the render's deliverables.
+            files = result.get("files", [])
+            result = {**cap_result({**result, "files": tuple(files)}), "files": files}
+        return result
     except LookupError as error:
         if isinstance(error, KeyError):  # an unknown tool: the router answers 404 unknown_tool itself
             raise

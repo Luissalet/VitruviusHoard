@@ -90,7 +90,7 @@ class FakeBrowser:
         return {"ok": not self.fail, "error": None if not self.fail else "no browser", "playwright_installed": True}
 
     def capture(self, *, html=None, url=None, widths=None, full_page=True, dark=False, wait_ms=800, record=False,
-               out_dir=None) -> dict:
+               out_dir=None, page_path=None, local_preview=False) -> dict:
         self.calls.append({"html": html, "url": url, "widths": widths, "dark": dark, "record": record})
         if self.fail:
             return {"error": "no browser", "hint": "python -m playwright install chromium"}

@@ -13,6 +13,7 @@ checked too) and how the scroll video is encoded (`hoard_link.media`) are the sh
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import os
 import queue
@@ -23,6 +24,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Optional
+from urllib.parse import quote, urlsplit
 
 from .hoard_link.media import bins as media_bins
 from .hoard_link.media.ffmpeg import FFmpeg
@@ -30,6 +32,22 @@ from .hoard_link.web import browser as web_browser
 from .hoard_link.web import safety
 
 log = logging.getLogger("vitruvius.browser")
+
+
+def _origin(url: str) -> tuple[str, Optional[str], int]:
+    parts = urlsplit(url)
+    return parts.scheme, parts.hostname, parts.port or (443 if parts.scheme == "https" else 80)
+
+
+def loopback_preview(url: Optional[str]) -> bool:
+    if not url:
+        return False
+    try:
+        host = urlsplit(url).hostname
+        local = host == "localhost" or ipaddress.ip_address(host or "").is_loopback
+        return local and safety.check_url(url, safety.INTERNAL) is None
+    except ValueError:
+        return False
 
 # The probe JS: must never throw. Every metric is wrapped in try/catch and
 # missing/failed metrics are simply omitted or null.
@@ -722,15 +740,19 @@ class BrowserWorker:
             return None
         return problem
 
-    def _guard(self, context: Any) -> None:
+    def _guard(self, context: Any, preview_url: Optional[str] = None) -> None:
         """Refuse every request of the page (redirects, scripts, images, frames) that goes to a host the policy forbids; the
         verdict per host is kept for the capture."""
         verdicts: dict[str, Optional[str]] = {}
+        preview_origin = _origin(preview_url) if preview_url else None
 
         def handler(route: Any) -> None:
             url = route.request.url
             if url.split(":", 1)[0].lower() not in ("http", "https", "ws", "wss"):
                 route.continue_()  # data:, blob:, about:, file: are not network requests
+                return
+            if preview_origin and _origin(url) == preview_origin:
+                route.continue_()
                 return
             key = url.split("/")[2].lower() if url.count("/") >= 2 else url.lower()
             if key not in verdicts:
@@ -1063,16 +1085,23 @@ class BrowserWorker:
         out_dir: Path = Path(payload["out_dir"])
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        problem = self.url_problem(url) if html is None else None
+        page_path = Path(payload["page_path"]) if payload.get("page_path") else None
+        preview_url = url if payload.get("local_preview") and loopback_preview(url) else None
+        problem = self.url_problem(url) if html is None and not preview_url else None
         if problem:
             return {"error": "This URL cannot be opened.", "hint": problem}
         context = browser.new_context(color_scheme="dark" if dark else "light")
-        self._guard(context)
+        self._guard(context, preview_url)
+        if page_path:
+            local_origin = "https://preview.invalid"
+            self._mount(context, {"origin": local_origin, "root": str(page_path.parent)}, [])
         page = context.new_page()
         script_errors: list[str] = []
         page.on("pageerror", lambda error: script_errors.append(str(error)[:300]) if len(script_errors) < 10 else None)
         try:
-            if html is not None:
+            if page_path:
+                page.goto(local_origin + "/" + quote(page_path.name), wait_until="load")
+            elif html is not None:
                 page.set_content(html, wait_until="load")
             elif url:
                 try:
@@ -1122,7 +1151,7 @@ class BrowserWorker:
             if payload.get("keyboard", True):
                 from . import keyboard
                 probe["keyboard"] = keyboard.walk(page)
-            if url:
+            if url or page_path:
                 # a captured URL has no source HTML on our side: hand the rules the serialised page and its stylesheets
                 try:
                     probe["html_text"] = page.content()[:SOURCE_CAP]
@@ -1192,11 +1221,13 @@ class BrowserWorker:
     # -- public API --------------------------------------------------------
     def capture(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: Optional[list[int]] = None,
                 full_page: bool = True, dark: bool = False, wait_ms: int = 800, record: bool = False,
-                out_dir: Optional[Path] = None) -> dict[str, Any]:
+                out_dir: Optional[Path] = None, page_path: Optional[Path] = None,
+                local_preview: bool = False) -> dict[str, Any]:
         out_dir = out_dir or (self.data_dir / "renders" / uuid.uuid4().hex)
         return self._submit("capture", {
             "html": html, "url": url, "widths": widths or [390, 1024, 1440], "full_page": full_page,
             "dark": dark, "wait_ms": wait_ms, "record": record, "out_dir": str(out_dir),
+            "page_path": str(page_path) if page_path else None, "local_preview": local_preview,
         })
 
     def parity_capture(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: list[int], loads: int = 1,

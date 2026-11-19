@@ -387,7 +387,7 @@
   },
   {
     "name": "render_preview",
-    "description": "Render HTML or a URL in Chromium, screenshot at widths, run lint. Renderiza y captura.\nReturns render id, absolute file paths, size, lint summary and metrics (fonts, colours, libs). Never returns image bytes unless include_images=true. A page already written to disk goes as path, not pasted into html.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
+    "description": "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\nUse url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, capture paths, dimensions, lint and metrics. Image bytes are optional.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -420,6 +420,7 @@
             }
           ],
           "default": null,
+          "description": "Public or explicit loopback HTTP(S) preview URL.",
           "title": "Url"
         },
         "path": {
@@ -433,7 +434,7 @@
             }
           ],
           "default": null,
-          "description": "A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.",
+          "description": "Local HTML file or folder with index.html. Relative assets load from the page folder.",
           "title": "Path"
         },
         "widths": {

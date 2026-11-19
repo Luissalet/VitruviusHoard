@@ -24,7 +24,7 @@ from . import tokens as tokens_mod
 from . import kept as kept_mod
 from . import themes as themes_mod
 from . import waivers as waivers_mod
-from .browser import BrowserWorker
+from .browser import BrowserWorker, loopback_preview
 from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
 from .instruments import Instruments
@@ -287,16 +287,23 @@ class Services:
     # ---------------- renders ----------------
     def render(self, *, html: Optional[str] = None, url: Optional[str] = None, widths: Optional[list[int]] = None,
               full_page: bool = True, dark: bool = False, wait_ms: int = 800, lint: bool = True,
-              record: bool = False, title: str = "", tokens_id: Optional[str] = None, _browser=None, _app_project=None) -> dict[str, Any]:
+              record: bool = False, title: str = "", tokens_id: Optional[str] = None, _browser=None,
+              _app_project=None, page_path: Optional[Path] = None, local_preview: bool = False) -> dict[str, Any]:
         if not html and not url:
             raise ValueError("render needs html or url")
-        if _browser is None:
+        local_preview = local_preview and loopback_preview(url)
+        if _browser is None and not local_preview:
             self.check_url(url)
         t0 = time.monotonic()
         render_id = uuid.uuid4().hex[:12]
         out_dir = self.config.renders_dir / render_id
+        preview_options = {}
+        if page_path:
+            preview_options["page_path"] = page_path
+        if local_preview:
+            preview_options["local_preview"] = True
         capture = (_browser or self.browser).capture(html=html, url=url, widths=widths, full_page=full_page, dark=dark,
-                                       wait_ms=wait_ms, record=record, out_dir=out_dir)
+                                       wait_ms=wait_ms, record=record, out_dir=out_dir, **preview_options)
         ms = (time.monotonic() - t0) * 1000
         if html is not None:
             # Kept next to the screenshots so a later page_assay / render_compare can reopen the page.
