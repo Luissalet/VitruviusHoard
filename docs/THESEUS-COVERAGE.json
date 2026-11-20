@@ -3748,7 +3748,7 @@
       "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
       "acceptance": {
         "state": "scope-exclusion",
-        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+        "basis": "Agreed scope: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
       }
     },
     {
@@ -3764,7 +3764,7 @@
       "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
       "acceptance": {
         "state": "scope-exclusion",
-        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+        "basis": "Agreed scope: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
       }
     },
     {
@@ -3780,7 +3780,7 @@
       "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
       "acceptance": {
         "state": "scope-exclusion",
-        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+        "basis": "Agreed scope: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
       }
     },
     {
@@ -3796,7 +3796,7 @@
       "scope": "Paid engine excluded by the agreed local/free scope; no replacement parity claim.",
       "acceptance": {
         "state": "scope-exclusion",
-        "basis": "Luis: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
+        "basis": "Agreed scope: paid engines/services, Jev and mandatory external APIs excluded; task1040 scope."
       }
     },
     {

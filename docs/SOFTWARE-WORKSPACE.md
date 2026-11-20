@@ -2,7 +2,7 @@
 
 Vitruvius owns three independent native modules: Design, APIs (incorporated Babel) and existing Reverse Engineering (incorporated Theseus). All modules and automatic work are OFF on every host start. Enable only the module you need. The root workspace owns the visible Vitruvius application project and exact source revision; the complete native editors remain available alongside the combined workflow.
 
-**Theseus development is incomplete and in progress, resumed by Luis on 20 October 2026.** This integration retains existing capabilities and does not complete the pending reverse-engineering programme. See [the exact source synchronization](THESEUS-SYNC.md). The same status is visible on the owner workspace and native Theseus page. Read [the retained source-coverage ledger](../software_native/theseus-limits.md) for operation requirements and unaccepted scope. Ghidra, JDK, Frida, Android, packet/signal tools and other optional runtimes are used only when explicitly requested and actually installed; discovery is not proof of availability or acceptance.
+**Theseus development is incomplete and in progress, resumed on 20 October 2026.** This integration retains existing capabilities and does not complete the pending reverse-engineering programme. See [the exact source synchronization](THESEUS-SYNC.md). The same status is visible on the owner workspace and native Theseus page. Read [the retained source-coverage ledger](../software_native/theseus-limits.md) for operation requirements and unaccepted scope. Ghidra, JDK, Frida, Android, packet/signal tools and other optional runtimes are used only when explicitly requested and actually installed; discovery is not proof of availability or acceptance.
 
 ## Project workflow
 

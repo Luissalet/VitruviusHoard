@@ -2,7 +2,7 @@
 
 Vitruvius incorpora completos Babel y las capacidades existentes de Theseus junto a Diseño. Los tres módulos y sus automatismos empiezan apagados. El catálogo frío ofrece110 herramientas sin abrir motores, fábricas, recuperación, almacenes ni trabajadores. Los editores nativos siguen completos bajo /design/, /babel/ y /theseus/.
 
-**El desarrollo de Theseus está incompleto y permanece pausado por decisión de Luis por cuota de uso.** Esta integración conserva las funciones disponibles y no completa ni reanuda su alcance pendiente. El aviso aparece en el espacio común y en el taller nativo. Consulta el [ledger de cobertura conservado](../software_native/theseus-limits.md); una operación enumerada no acredita que su motor opcional esté instalado ni que su aceptación esté completa.
+**El desarrollo de Theseus está incompleto y permanece pausado por la cuota de uso.** Esta integración conserva las funciones disponibles y no completa ni reanuda su alcance pendiente. El aviso aparece en el espacio común y en el taller nativo. Consulta el [ledger de cobertura conservado](../software_native/theseus-limits.md); una operación enumerada no acredita que su motor opcional esté instalado ni que su aceptación esté completa.
 
 Activa Diseño y crea o elige un proyecto de aplicación. La revisión, sus archivos y SHA256 pertenecen al proyecto nativo de Vitruvius; conserva edición, datos, previews y exportación independiente. Activa APIs y asocia el entorno Babel que corresponde a esa revisión: puede haber varios por proyecto. La comprobación usa ese ID explícito y conserva hallazgos, versión de fuente y hash de archivo. Una nueva revisión no vuelve actuales los resultados anteriores.
 

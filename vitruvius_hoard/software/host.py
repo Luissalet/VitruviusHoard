@@ -79,7 +79,7 @@ def create_app(runtime=None):
         if name in CRAFT_NAMES:
             return await craft_execute(runtime,name,args)
         if name=='software_modules':
-            return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed by Luis on 20 October 2026.'}
+            return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed on 20 October 2026.'}
         if name=='software_module_set':
             return await runtime.modules[args['module']].set(args['enabled'],args.get('automatic',False))
         if name=='software_references':

@@ -1,6 +1,6 @@
 # Software workspace surface
 
-Operate extension of Vitruvius for Luis and assistants. Use the committed family theme, Cinzel headings, Source Sans 3 text, existing blue accent, restrained borders and ordinary 44px form controls. Preserve native editors and their full workflows.
+Operate extension of Vitruvius for people and assistants. Use the committed family theme, Cinzel headings, Source Sans 3 text, existing blue accent, restrained borders and ordinary 44px form controls. Preserve native editors and their full workflows.
 
 ## Direction contract
 

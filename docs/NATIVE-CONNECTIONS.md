@@ -16,4 +16,4 @@ A retired Hub identity points at the owner's `/compat/<module>` URL and existing
 
 `HOARD_AGENT_ID` and `HOARD_AGENT_SESSION` retain the native `x-agent-id` and `x-agent-session` headers. Optional request metadata `hoard/agent`, `hoard/session`, `hoard/reason` and `hoard/caller` carries per-call context. The implementation supports MCP 1.9 and later 1.x without importing the retired checkout.
 
-Theseus remains incomplete and paused by Luis because of usage limits. The merger preserves its existing capabilities and does not resume unfinished development.
+Theseus remains incomplete and paused because of usage limits. The merger preserves its existing capabilities and does not resume unfinished development.
