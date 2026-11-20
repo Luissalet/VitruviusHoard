@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 122
+    assert len(TOOLS) == 123
 
 
 def test_tool_names_are_unique():
@@ -37,7 +37,7 @@ def test_read_only_hints_correct():
                        "design_direction_brief", "design_preset_list", "design_pick_themes",
                        "design_alternatives_list", "design_alternatives_get", "design_alternatives_analyze", "instrument_list", "instrument_get", "instrument_compute", "instrument_explain",
                        "visual_parity_get", "visual_parity_list", "design_galleries", "remake_get", "remake_list", "remake_code", "remake_fidelity"}
-    write_names = {"app_project_create", "app_project_update", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
+    write_names = {"app_project_create", "app_project_update", "app_project_undo", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render", "motion_sound_render", "site_audit", "mark_audit", "mark_test_sheet",
                   "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_style_save", "diagram_style_remove", "diagram_style_apply",
                   "design_slop_audit", "design_preset_apply", "design_figma_import",

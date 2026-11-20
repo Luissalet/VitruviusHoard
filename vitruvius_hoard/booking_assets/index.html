@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="__LANG__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="__DESCRIPTION__">
+  <title>__TITLE__</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/booking.css">
+  <script id="catalogue-data" type="application/json">__SITE_DATA__</script>
+  <script src="assets/booking.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="languages" role="group">
+      <button type="button" data-language="es" lang="es">Español</button>
+      <button type="button" data-language="en" lang="en">English</button>
+    </div>
+    <h1>__TITLE__</h1>
+    <p id="description" hidden></p>
+  </header>
+  <main>
+    <section aria-labelledby="catalogue-title">
+      <div class="catalogue-heading">
+        <h2 id="catalogue-title" data-label="catalogue"></h2>
+        <label><span data-label="category"></span><select id="category"></select></label>
+      </div>
+      <ul id="catalogue" aria-labelledby="catalogue-title"></ul>
+      <p id="results" role="status"></p>
+    </section>
+    <section class="reservation" aria-labelledby="reservation-title">
+      <h2 id="reservation-title" data-label="reservation"></h2>
+      <form id="reservation" action="/api/forms" method="post">
+        <label><span data-label="item"></span><select name="item" required></select></label>
+        <label><span data-label="date"></span><input name="date" type="text" maxlength="10" required></label>
+        <label><span data-label="name"></span><input name="name" autocomplete="name" maxlength="200" required></label>
+        <label><span data-label="email"></span><input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+        <button type="submit" data-label="submit"></button>
+      </form>
+      <p id="confirmation" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

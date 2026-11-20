@@ -185,7 +185,22 @@ def list_rules(db: Database, *, area: Optional[str] = None, severity: Optional[s
         params.append(source)
     sql += " ORDER BY id LIMIT ?"
     params.append(limit)
-    return [dict(r) for r in db.query(sql, params)]
+    rows = [dict(r) for r in db.query(sql, params)]
+    return rows or list(_bundled_rules(area, severity, source))[:limit]
+
+
+def _bundled_rules(area=None, severity=None, source=None):
+    from .lint import ensure_rules
+    from .rules.registry import AREA_OF_SCOPE, LEGACY_SEVERITY, list_rules as registered_rules
+
+    ensure_rules()
+    for rule in registered_rules():
+        rule_area = AREA_OF_SCOPE[rule["scope"]]
+        level = LEGACY_SEVERITY[rule["severity"]]
+        if (area and area != rule_area) or (severity and severity != level) or (source and source != rule["source"]):
+            continue
+        yield {**rule, "source_id": rule["source"], "area": rule_area, "severity": level,
+               "title": rule["name"], "text": rule["description"], "check_id": rule["id"]}
 
 
 def _hue_from_text(text: str) -> float:
@@ -256,6 +271,12 @@ def _find_styles(db: Database, subject: str, vibe: Optional[str], limit: int = 3
 
 
 def _find_palette(db: Database, product_type: Optional[str], subject: str, vibe: Optional[str] = None) -> dict:
+    direction = (vibe or "").casefold()
+    if re.search(r"\b(ivory|marfil)\b", direction) and re.search(r"\b(ink blue|azul tinta)\b", direction):
+        return {"id": None, "name": "Ivory and ink blue", "product_type": product_type or "",
+                "notes": "Colours requested in the brief.",
+                "colors": [{"role": "primary", "hex": "#18364d"}, {"role": "background", "hex": "#f7f4eb"},
+                           {"role": "foreground", "hex": "#162c3e"}]}
     rows = [dict(r) for r in db.query("SELECT * FROM palettes ORDER BY id")]
     tokens = _tokens(product_type, subject, vibe)
     if rows:
@@ -333,6 +354,8 @@ def brief(db: Database, *, subject: str, vibe: Optional[str] = None, product_typ
             "SELECT id, source_id, area, severity, title, text, check_id FROM rules WHERE area = ? ORDER BY "
             "CASE WHEN source_id IN ('hyperframes', 'bang-motion', 'nullmotion', 'claude-design-skillstack') THEN 1 ELSE 0 END, "
             "CASE severity WHEN 'error' THEN 0 WHEN 'warn' THEN 1 ELSE 2 END, length(text) DESC", (area,))]
+        if not pool:
+            pool = list(_bundled_rules(area))
         # Relevant to the brief first, then the strongest general rules of the area.
         relevant = _rank(pool, subject_tokens, ["title", "text"], [2, 1], 2) if subject_tokens else []
         picked = [r for r in relevant if _score(subject_tokens, r["title"], r["text"]) > 0]

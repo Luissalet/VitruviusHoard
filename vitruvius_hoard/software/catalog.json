@@ -1316,6 +1316,44 @@
           ],
           "default": null,
           "title": "Fields"
+        },
+        "items": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Booking entries with stable id, title, category and optional description. Text can be an es/en pair.",
+          "title": "Items"
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "es",
+            "en"
+          ],
+          "title": "Lang",
+          "type": "string"
+        },
+        "description_es": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description Es"
         }
       },
       "required": [
@@ -1410,6 +1448,52 @@
         "expected_revision"
       ],
       "title": "AppUpdateArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_undo",
+    "description": "Undo a project creation or source edit. Deshacer un alta o una edición.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "expected_updated_ts": {
+          "title": "Expected Updated Ts",
+          "type": "number"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "expected_updated_ts"
+      ],
+      "title": "AppUndoArgs",
       "type": "object"
     },
     "module": "design"

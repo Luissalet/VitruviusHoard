@@ -616,6 +616,7 @@ class Services:
         """Drive the page's controls in a real browser. ``before`` also saves what a redesign must keep (links, fields, handlers, titles);
         ``kept`` (an id from an earlier ``before``) fails the check when any of it is missing from this page."""
         snapshot_before = None
+        preview_url = None
         if kept:
             snapshot_before = self.kept_get(kept)
         if render_id:
@@ -624,15 +625,27 @@ class Services:
                 raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
             path, html = str(source), None
         elif url:
-            self.check_url(url)
-            html = self._fetch_page(url)
-        if html is None and not path:
+            if loopback_preview(url):
+                preview_url = url
+                if before or kept:
+                    import httpx
+                    with httpx.Client(trust_env=False) as client:
+                        response = client.get(url, timeout=6)
+                        if response.status_code != 200:
+                            raise ValueError(f"Could not read the local page: HTTP {response.status_code}")
+                        html = response.text
+            else:
+                self.check_url(url)
+                html = self._fetch_page(url)
+        if html is None and not path and not preview_url:
             raise ValueError("page_assay needs html, url, render_id or a local path")
         page_source = html if html is not None else self._read_page_file(path)
         saved = self.kept_save(page_source, label=label or (url or path or "page"), source=url or path or "html") if before else None
         if snapshot_only:
             return {"works": True, "failed": 0, "kept": saved, "note": "Snapshot saved; run page_check with kept=<id> after the redesign."}
-        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s, runner=self.assay_runner, criteria=criteria)
+        options = {"url": preview_url} if preview_url else {}
+        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s,
+                               runner=self.assay_runner, criteria=criteria, **options)
         if saved:
             result["kept_saved"] = saved
         if snapshot_before is not None:

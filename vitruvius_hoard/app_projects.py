@@ -17,6 +17,7 @@ from contextlib import closing
 from pathlib import Path, PurePosixPath
 
 from .app_runtime import validate_spec
+from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
 
 _TEMPLATES = [
@@ -26,6 +27,7 @@ _TEMPLATES = [
         {"name": "title", "label": "Title", "type": "text"}, {"name": "category", "label": "Category", "type": "text"}, {"name": "source", "label": "Source", "type": "text", "required": False}, {"name": "reviewed", "label": "Reviewed", "type": "boolean"}]},
     {"id": "inventory", "name": "Inventory", "name_es": "Inventario", "accent": "#286c56", "fields": [
         {"name": "name", "label": "Item", "type": "text"}, {"name": "quantity", "label": "Quantity", "type": "number"}, {"name": "location", "label": "Location", "type": "text"}]},
+    BOOKING_TEMPLATE,
 ]
 
 
@@ -37,7 +39,8 @@ def _literal(value):
     return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
-def starter_files(name, template="work-board", description="", accent=None, fields=None):
+def starter_files(name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
+                  description_es=None):
     selected = next((row for row in templates() if row["id"] == template), None)
     if not selected:
         raise ValueError("Unknown application template")
@@ -109,7 +112,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
   catch (error) { status.textContent = error instanceof Error ? error.message : String(error); remove.disabled = false; }
 });
 '''
-    return {
+    files = {
         "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n",
         "server.py": Path(__file__).with_name("app_runtime.py").read_text(encoding="utf-8"),
         "layout.html": '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{name}}</title><link rel="stylesheet" href="/assets/style.css"></head><body><header><strong>{{name}}</strong><nav aria-label="Application"><a href="/">Overview</a><a href="/records">Records</a></nav></header><main>{{content}}</main><footer><p id="status" role="status" aria-live="polite"></p></footer><script type="module" src="/assets/client.js"></script></body></html>',
@@ -123,6 +126,12 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
         "LICENSE": Path(__file__).with_name("LICENSE").read_text(encoding="utf-8"),
         "README.md": f'# {name}\n\nRun `python server.py --port 3000` and open http://127.0.0.1:3000. Python 3.10+; no packages or workbench required. SQLite data is stored in data/app.db. Edit pages/*.html, layout.html, assets and project.json; restart after editing to use the changed source.\n\nPages are discovered from the pages directory, with index.html and [parameter].html paths. JSON operations are available through /api/records and POST /actions/create, /actions/update, /actions/delete. /api/schema and /api/routes describe the project. contracts.d.ts and the annotated API client share the field types; run `tsc -p tsconfig.json` if TypeScript is installed.\n\nGenerated application source belongs to the exported project. It uses an ordinary local HTTP server, without account, authentication or external service setup. Add production infrastructure appropriate to your deployment.\n',
     }
+    if template == "booking":
+        if lang not in ("es", "en"):
+            raise ValueError("Booking language must be es or en")
+        copy = {"es": description_es if description_es is not None else description, "en": description}
+        files.update(site_files(spec, colour, items, lang, copy))
+    return files
 
 
 class AppProjects:
@@ -136,7 +145,7 @@ class AppProjects:
         if not re.fullmatch(r"[a-f0-9]{16}", id):
             raise ValueError("Invalid project id")
         path = self.root / id
-        if not (path / "project-index.json").is_file():
+        if not (path / "project-index.json").is_file() or (path / "archived").exists():
             raise LookupError("Application project not found")
         return path
 
@@ -154,6 +163,8 @@ class AppProjects:
         with self.lock:
             result = []
             for path in sorted(self.root.glob("*/project-index.json")):
+                if (path.parent / "archived").exists():
+                    continue
                 item = json.loads(path.read_text(encoding="utf-8"))
                 result.append({**item, "preview": self.status(item["id"])})
             return sorted(result, key=lambda item: item["updated_ts"], reverse=True)
@@ -193,8 +204,18 @@ class AppProjects:
         write_json_atomic(root / "project-index.json", updated)
         return self.get(updated["id"])
 
-    def create(self, name, template="work-board", description="", accent=None, fields=None):
-        return self.create_from_files(name, template, starter_files(name, template, description, accent, fields))
+    def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
+               description_es=None):
+        project = self.create_from_files(name, template, starter_files(name, template, description, accent, fields,
+                                                                       items, lang, description_es))
+        return {**project, "undo": self._undo_call(project)}
+
+    @staticmethod
+    def _undo_call(project, revision=None):
+        return {"tool": "app_project_undo", "arguments": {
+            "id": project["id"], "expected_revision": project["revision"], "revision": revision,
+            "expected_updated_ts": project["updated_ts"],
+        }}
 
     def create_from_files(self, name, template, files):
         """Create a project from a complete generated source (instruments use this)."""
@@ -214,7 +235,28 @@ class AppProjects:
                 if conflicts:
                     raise ValueError("Project files changed: " + ", ".join(conflicts) + "; read their current source before applying edits")
             merged = {**current["files"], **files}
-            return self._save(self._directory(id), {k: v for k, v in current.items() if k not in ("files", "selected_revision", "source_sha256", "preview")}, merged)
+            saved = self._save(self._directory(id), self._index(current), merged)
+            return {**saved, "undo": self._undo_call(saved, current["revision"])} if saved["revision"] != current["revision"] else saved
+
+    @staticmethod
+    def _index(project):
+        return {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
+
+    def undo(self, id, expected_revision, expected_updated_ts, revision=None):
+        with self.lock:
+            current = self.get(id)
+            if current["revision"] != expected_revision or current["updated_ts"] != expected_updated_ts:
+                raise ValueError("Application revision changed after the original operation")
+            root = self._directory(id)
+            if revision is None:
+                if current["revisions"] != [expected_revision]:
+                    raise ValueError("The application has retained edits")
+                self.stop(id)
+                (root / "archived").touch()
+                return {"id": id, "archived": True, "revision": expected_revision}
+            previous = self.get(id, revision)
+            self.stop(id)
+            return self._save(root, self._index(current), previous["files"])
 
     def status(self, id):
         item = self.processes.get(id)

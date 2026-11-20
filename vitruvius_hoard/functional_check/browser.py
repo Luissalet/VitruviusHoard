@@ -15,7 +15,6 @@ from __future__ import annotations
 import contextlib
 import http.server
 import re
-import socketserver
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -84,11 +83,9 @@ def serve(root: Path) -> Iterator[str]:
         def log_message(self, *a: Any) -> None:
             return
 
-    class Server(socketserver.TCPServer):
-        allow_reuse_address = True
-        daemon_threads = True
-
-    httpd = Server(("127.0.0.1", 0), Handler)
+    # Chromium can open an idle connection before requesting the document.
+    # One such connection must not hold up every other request for the page.
+    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     try:
@@ -120,6 +117,9 @@ PICK = ('img,a,button,input,select,textarea,h1,h2,canvas,'
 #: other side: anything these two disagree about is surface that is invisible
 #: to the plan and invisible to the check that knows the plan is incomplete.
 CLICKY = 'div,span,li,td,th,section,p'
+
+# Labels inside a native action inherit its pointer cursor. Count the action once.
+NATIVE_CONTENT_JS = """el => el.parentElement?.closest('a[href],button') && !el.onclick"""
 
 #: Cursors that mean *take hold of this and move it*, as opposed to the click
 #: `pointer` asks for. A split pane's bar carries `col-resize` and a sortable
@@ -261,8 +261,9 @@ __CANVAS__    const pending = [];
         return r.width > 2 && r.height > 2;
     }).slice(0, 40);
     const cells = [];
+    const nativeContent = __NATIVE_CONTENT__;
     for (const el of document.querySelectorAll(__CLICKY__)) {
-        if (picked.has(el) || cells.length > 400) continue;
+        if (picked.has(el) || nativeContent(el) || cells.length > 400) continue;
         if (getComputedStyle(el).cursor !== 'pointer') continue;
         if (el.querySelector('*') && Array.from(el.querySelectorAll('*'))
                 .some(k => getComputedStyle(k).cursor === 'pointer')) continue;
@@ -351,7 +352,8 @@ __CANVAS__    const pending = [];
     await Promise.all(pending);
     return out;
 }""".replace("__PICK__", repr(PICK)).replace("__CLICKY__", repr(CLICKY)) \
-     .replace("__DRAGGY__", repr(list(DRAGGY))).replace("__CANVAS__", CANVAS_JS)
+     .replace("__DRAGGY__", repr(list(DRAGGY))).replace("__CANVAS__", CANVAS_JS) \
+     .replace("__NATIVE_CONTENT__", NATIVE_CONTENT_JS)
 
 #: What the page is showing, in the few numbers that can be compared against
 #: themselves before and after an action. Each term is here because something
@@ -369,10 +371,15 @@ __CANVAS__    const pending = [];
 #:   elements paints a cell by setting its `style`: same text, same element
 #:   count, no canvas to measure.
 SIGNATURE_JS = """async () => {
-__CANVAS__    return {
+__CANVAS__
+    const text = document.body.innerText || '';
+    let textHash = 0;
+    for (let i = 0; i < text.length; i++) textHash = (textHash * 31 + text.charCodeAt(i)) | 0;
+    return {
     canvas: await Promise.all(
         Array.from(document.querySelectorAll('canvas')).map(_pixels)),
-    text: (document.body.innerText || '').slice(0, 400),
+    text: text.slice(0, 400),
+    text_stamp: [text.length, textHash],
     // **What is in the fields is part of what the page is showing.** It is
     // not in `innerText`, not in the styles and not on a canvas, so a page
     // whose whole answer lands in an input was invisible: a converter that
@@ -825,8 +832,9 @@ UNREACHED_JS = """() => {
             && cs.visibility !== 'hidden' && cs.opacity !== '0'; };
     // Exactly what the plan is built from, asked the same way.
     const reached = new Set(document.querySelectorAll(__PICK__));
+    const nativeContent = __NATIVE_CONTENT__;
     for (const el of document.querySelectorAll(__CLICKY__)) {
-        if (reached.has(el)) continue;
+        if (reached.has(el) || nativeContent(el)) continue;
         if (getComputedStyle(el).cursor !== 'pointer') continue;
         if (el.querySelector('*') && Array.from(el.querySelectorAll('*'))
                 .some(k => getComputedStyle(k).cursor === 'pointer')) continue;
@@ -851,13 +859,14 @@ UNREACHED_JS = """() => {
     // and anything still carrying it is genuinely left over.
     for (const el of document.querySelectorAll('*')) {
         const c = getComputedStyle(el).cursor;
+        if (c === 'pointer' && nativeContent(el)) continue;
         if (['auto', 'default', 'text', 'none', 'not-allowed', 'wait',
              'progress', 'help', 'inherit'].includes(c)) continue;
         note(el, c);
     }
     return out;
 }""".replace("__PICK__", repr(PICK)).replace("__CLICKY__", repr(CLICKY)) \
-     .replace("__GRABBY__", repr(list(DRAGGY)))
+     .replace("__GRABBY__", repr(list(DRAGGY))).replace("__NATIVE_CONTENT__", NATIVE_CONTENT_JS)
 
 
 def unreached(page: Any) -> Dict[str, int]:
@@ -1417,7 +1426,7 @@ def changed(was: Dict[str, Any], now: Dict[str, Any]) -> str:
                 said += (f", mean colour rgb({a[3]}, {a[4]}, {a[5]})"
                          f"->rgb({b[3]}, {b[4]}, {b[5]})")
             bits.append(said)
-    if was.get("text") != now.get("text"):
+    if was.get("text") != now.get("text") or was.get("text_stamp") != now.get("text_stamp"):
         bits.append("the visible text changed")
     elif was.get("text"):
         bits.append("the visible text is unchanged")
