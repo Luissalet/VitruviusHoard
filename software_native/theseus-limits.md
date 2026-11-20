@@ -1,8 +1,8 @@
-> Current owner status: development is incomplete and in progress, resumed by Luis on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`. Reviewed native-context source: `3f986f6bb3ed99b0b86160dc092e1331d2551809`. Reviewed GNU-reader source: `aa81a5152f50a7466e757aa978c33256122140ba`. Reviewed WASM source: `175e25ed014cf8da637941d91d0a99e5ca99db00`.
+> Current owner status: development is incomplete and in progress, resumed on 20 October 2026. This retained ledger describes accepted scope and remaining gaps; integration does not certify completion. Original incorporation snapshot: `7f202978af91b035f5db5bfd8ed36c2a853ec844`. Reviewed web/process source: `5ff5b02ce74f218649f447b9f4ce593b109c9875`. Reviewed retained-evidence/function source: `2d623d1639716d7ce3033b1c5b11a36de0632ce9`. Reviewed ELF/client source: `345ac3c68ea4be1ef4e00625272cde32976f51a9`. Reviewed native-context source: `3f986f6bb3ed99b0b86160dc092e1331d2551809`. Reviewed GNU-reader source: `aa81a5152f50a7466e757aa978c33256122140ba`. Reviewed WASM source: `175e25ed014cf8da637941d91d0a99e5ca99db00`.
 
 # Source coverage and completion
 
-Luis explicitly requested completion of Theseus inside Vitruvius on20October2026.
+The 20 October 2026 brief explicitly calls for completing Theseus inside Vitruvius.
 The work is active. The complete declared inventory is tracked in
 [THESEUS-COVERAGE.json](../docs/THESEUS-COVERAGE.json): every one of the207
 contracts has a native counterpart candidate, an explicit implementation gap,
@@ -33,7 +33,7 @@ The independently reviewed reader batch at `b5b5f0d` adds original-fixture accep
 No Sparks or substitute local text model is used for this completion work.
 
 This is an implementation and acceptance ledger, not a claim that the current
-application already implements every row. Luis requires a complete program
+application already implements every row. The scope calls for a complete program
 covering the applicable local/free reverse engineering capabilities of the
 supplied sources. The approved `986a0ba` delivery is the existing starting point;
 it does not close that requirement.
@@ -57,8 +57,7 @@ through its Babel AST, imported array spreads and verified local factories:
 205-literal regex extraction. It is the declared reference inventory, not a
 runtime tool count on this host or a claim of 207 implemented Theseus tools.
 
-Paid engines, paid services, Jev and required external APIs are excluded by
-Luis. Generic installed free engines are allowed. Reused analysis code must be
+Paid engines, paid services, Jev and required external APIs are outside the agreed scope. Generic installed free engines are allowed. Reused analysis code must be
 incorporated as a detached native implementation, retaining its license and
 provenance, and evolve within this product. Running the reference application's
 CLI/MCP and relaying its tools does not satisfy that requirement.

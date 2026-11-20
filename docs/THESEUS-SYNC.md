@@ -1,6 +1,6 @@
 # Theseus source synchronization
 
-Theseus remains incomplete and in development. Luis resumed its separate development on 20 October 2026. Incorporation into Vitruvius preserves available capabilities and does not complete the reverse-engineering programme.
+Theseus remains incomplete and in development. Its separate development resumed on 20 October 2026. Incorporation into Vitruvius preserves available capabilities and does not complete the reverse-engineering programme.
 
 The original integration retained snapshot `3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc`. The first synchronization applied its exact delta through source Main `7f202978af91b035f5db5bfd8ed36c2a853ec844` to owner base `1547d3fa6fa4398153d00a0e98902ade08c8852c`. Its original 15-path inventory remains historical. Adaptation 972 additionally incorporates the synchronous firmware component from reviewed source `afc7f5de3ec074d63985480705c5578da5ae25b4` and the original Electron acceptance fixtures. The operation catalogue and database schema remain unchanged.
 
