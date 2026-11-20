@@ -80,15 +80,18 @@ def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
 
 
 def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = None,
-        timeout_s: int = DEFAULT_TIMEOUT_S, runner: Any = None, criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
+        url: Optional[str] = None, timeout_s: int = DEFAULT_TIMEOUT_S, runner: Any = None,
+        criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
     """Run assay on a page and return the reduced result (never raises for a failed page).
 
     `runner(cmd, timeout_s) -> (returncode, stdout, stderr)` can be injected by tests.
     """
     if not available() and runner is None:
         return {"error": "page checker browser dependency is not installed", "hint": INSTALL_HINT}
-    folder, entry, run_id = prepare(data_dir, html=html, path=path)
+    folder, entry, run_id = (data_dir, "index.html", uuid.uuid4().hex[:12]) if url else prepare(data_dir, html=html, path=path)
     cmd = _command(folder, entry)
+    if url:
+        cmd.extend(["--url", url])
     if criteria:
         criterion_dir = data_dir / "assay" / run_id
         criterion_dir.mkdir(parents=True, exist_ok=True)
@@ -101,7 +104,9 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
             done = proc.run(cmd, timeout=timeout_s, cwd=folder)  # the whole process tree is killed on a timeout
             code, out, err = done.returncode, done.stdout, done.stderr
         except subprocess.TimeoutExpired:
-            return {"error": "assay timed out", "hint": f"the page kept the browser busy for more than {timeout_s} s", "id": run_id}
+            return {"works": False, "error": "assay timed out",
+                    "hint": f"The browser did not finish in {timeout_s} s. Use explicit criteria for the interactions to check.",
+                    "id": run_id}
         except OSError as error:
             return {"error": f"assay could not start: {error}", "hint": INSTALL_HINT, "id": run_id}
     else:

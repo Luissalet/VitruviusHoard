@@ -191,6 +191,9 @@ class AppCreateArgs(BaseModel):
     description: str = ""
     accent: Optional[str] = None
     fields: Optional[list[dict]] = None
+    items: Optional[list[dict]] = Field(None, description="Booking entries with stable id, title, category and optional description. Text can be an es/en pair.")
+    lang: Literal["es", "en"] = "en"
+    description_es: Optional[str] = None
 
 
 class AppIdArgs(BaseModel):
@@ -202,6 +205,11 @@ class AppUpdateArgs(BaseModel):
     id: str = ""
     files: dict[str, str]
     expected_revision: str
+
+
+class AppUndoArgs(AppIdArgs):
+    expected_revision: str
+    expected_updated_ts: float
 
 
 class AppPreviewArgs(AppIdArgs):
@@ -387,14 +395,21 @@ def run_design_lint(services: Services, args: LintArgs) -> dict:
 def run_page_assay(services: Services, args: AssayArgs) -> dict:
     if not (args.html or args.url or args.render_id or args.path):
         raise ValueError("page_assay needs html, url, render_id or path")
-    return services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path, timeout_s=args.timeout_s, criteria=args.criteria,
-                              before=args.before, kept=args.kept, snapshot_only=args.snapshot_only, label=args.label)
+    result = services.assay_page(html=args.html, url=args.url, render_id=args.render_id, path=args.path,
+                                 timeout_s=args.timeout_s, criteria=args.criteria, before=args.before,
+                                 kept=args.kept, snapshot_only=args.snapshot_only, label=args.label)
+    if result.get("error"):
+        status = 504 if result["error"] == "assay timed out" else 503
+        raise AppError("page_assay_unavailable", f'{result["error"]}. {result.get("hint") or ""}'.strip(), status=status)
+    return result
 
 
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
     render_id = args.render_id
     if render_id is None:
-        row = services.render(html=_page_html(args), url=args.url, widths=[390, 1024, 1440], full_page=True, tokens_id=args.tokens_id)
+        page_path = _local_page_path(args.path) if args.path and not args.html and not args.url else None
+        row = services.render(html=_page_html(args), url=args.url, widths=[390, 1024, 1440], full_page=True,
+                              tokens_id=args.tokens_id, page_path=page_path, local_preview=bool(args.url))
         render_id = row["id"]
     return services.critique_render(render_id, focus=args.focus, use_vision=args.use_vision, tokens_id=args.tokens_id,
                                     waivers=args.waivers, clean_review=args.clean_review)
@@ -633,6 +648,8 @@ TOOLS: list[Tool] = [
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), lambda services, args: services.app_projects.update(args.id, args.files, args.expected_revision), capped=False),
+    Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",
+        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
@@ -1191,8 +1208,9 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
     if name in UNCAPPED_TOOLS or (name == "render_preview" and (arguments or {}).get("include_images")):
         cap = False
     try:
-        result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and name != "render_preview")
-        if name == "render_preview" and cap:
+        capture_tool = name in ("render_preview", "app_project_render")
+        result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and not capture_tool)
+        if capture_tool and cap:
             # The generic cap can shorten top-level lists. Keep the whole capture manifest.
             manifest = {key: result[key] for key in ("files", "widths") if key in result}
             protected = {key: tuple(value) for key, value in manifest.items()}

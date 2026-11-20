@@ -16,10 +16,11 @@ def main():
     parser.add_argument("-e", "--entry", default="index.html")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--criteria", type=Path)
+    parser.add_argument("--url", help="Read-only loopback preview to check in place")
     args = parser.parse_args()
     criteria = json.loads(args.criteria.read_text(encoding="utf-8")) if args.criteria else []
     cases = [Case(**{**row, "origin": "criterion"}) for row in criteria]
-    result = check(args.folder, args.entry, criteria=cases)
+    result = check(args.folder, args.entry, criteria=cases, url=args.url)
     payload = {
         "engine": "Vitruvius page checker", "format": "vitruvius-page-check/v1",
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),

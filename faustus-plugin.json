@@ -141,6 +141,7 @@
     "production": {
       "handoffs": [
         {"accepts": "production-brief", "produces": ["interface-brief"], "skill": "product-ui-visual-direction", "check": {"en": "Check the design direction against the brief, including target widths and keyboard use.", "es": "Coteja la dirección de diseño con el expediente, incluidas las anchuras previstas y el manejo con teclado."}},
+        {"accepts": "interface-brief", "produces": ["web-page", "web-package"], "skill": "hoard-design-loop", "check": {"en": "Build the booking project, exercise its filter and export the publishable ZIP.", "es": "Crea el proyecto de reservas, prueba su filtro y exporta el ZIP publicable."}},
         {"accepts": "web-page", "produces": ["responsive-captures"], "skill": "hoard-design-loop", "check": {"en": "Inspect every requested width; run design critique and test filters, focus and other interactions with page_assay.", "es": "Inspecciona cada anchura solicitada, realiza la crítica de diseño y prueba los filtros, el foco y las demás interacciones con page_assay."}}
       ]
     },

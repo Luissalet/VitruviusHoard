@@ -129,7 +129,7 @@ def test_the_launch_loop_tries_each_browser_and_reports_the_last_failure(tmp_pat
 
 # ---------------------------------------------------------------- the services refuse before anything is opened
 
-def test_render_lint_reference_and_assay_refuse_internal_urls(tmp_path):
+def test_web_tools_refuse_internal_urls_except_the_loopback_assay(tmp_path):
     svc = make_services(tmp_path)
     try:
         for bad in ("http://127.0.0.1:5191/api/health", "http://169.254.169.254/latest/meta-data/", "file:///etc/passwd", "http://localhost:9/"):
@@ -139,8 +139,9 @@ def test_render_lint_reference_and_assay_refuse_internal_urls(tmp_path):
                 svc.lint_html(url=bad)
             with pytest.raises(ValueError, match="cannot be opened"):
                 svc.reference_add(url=bad, video=False, analyze=False)
-            with pytest.raises(ValueError, match="cannot be opened"):
-                svc.assay_page(url=bad)
+            if not bad.startswith(("http://127.0.0.1:", "http://localhost:")):
+                with pytest.raises(ValueError, match="cannot be opened"):
+                    svc.assay_page(url=bad)
         assert svc.browser.calls == []
     finally:
         svc.stop()

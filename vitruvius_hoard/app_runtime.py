@@ -217,7 +217,13 @@ def make_server(root, database, *, host="127.0.0.1", port=0, revision=""):
                     return self.send(200, {"records": store.list(query)})
                 if path.startswith("/api/records/"):
                     return self.send(200, store.get(path.removeprefix("/api/records/")))
+                public = root / "public"
+                if path in ("/", "/index.html") and (public / "index.html").is_file():
+                    return self.send(200, (public / "index.html").read_bytes(), "text/html; charset=utf-8")
                 if path.startswith("/assets/"):
+                    static_asset = (public / path.lstrip("/")).resolve()
+                    if static_asset.is_relative_to(public / "assets") and static_asset.is_file():
+                        return self.send(200, static_asset.read_bytes(), mimetypes.guess_type(static_asset)[0] or "application/octet-stream")
                     asset = (root / path.lstrip("/")).resolve()
                     if not asset.is_relative_to(root / "assets") or not asset.is_file():
                         raise LookupError("Asset not found")

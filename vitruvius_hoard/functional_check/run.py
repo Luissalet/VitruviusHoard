@@ -99,12 +99,13 @@ class Browser:
     spend it starting Chromium.
     """
 
-    def __init__(self, folder: Path, entry: str, headless: bool = True) -> None:
+    def __init__(self, folder: Path, entry: str, headless: bool = True, url: Optional[str] = None) -> None:
         self.folder, self.entry, self.headless = folder, entry, headless
         self._exit = contextlib.ExitStack()
         self._engine: Any = None
         self._play: Any = None
         self._base = ""
+        self.url = url
         #: How the last page opened came to rest. See `browser.Settled`: the
         #: three facts in it are kept apart because only one of them is a
         #: fault, and the other two are ordinary properties of working pages.
@@ -112,10 +113,14 @@ class Browser:
 
     def __enter__(self) -> "Browser":
         from playwright.sync_api import sync_playwright
+        from vitruvius_hoard.browser import launch_attempts, launch_args, loopback_preview
 
-        self._base = self._exit.enter_context(browser.serve(self.folder))
+        if self.url:
+            if not loopback_preview(self.url):
+                raise ValueError("Assay URL must be a loopback preview")
+        else:
+            self._base = self._exit.enter_context(browser.serve(self.folder))
         self._play = sync_playwright().start()
-        from vitruvius_hoard.browser import launch_attempts, launch_args
         failures = []
         for label, options in launch_attempts():
             try:
@@ -147,7 +152,22 @@ class Browser:
         options = {"viewport": {"width": 1100, "height": 760}, **(environment or {})}
         if set(options) - {"viewport", "reduced_motion", "color_scheme"}:
             raise ValueError("Case environment supports viewport, reduced_motion and color_scheme")
+        if self.url:
+            options["service_workers"] = "block"
         page = self._engine.new_page(**options)
+        if self.url:
+            from vitruvius_hoard.browser import _origin
+
+            origin = _origin(self.url)
+
+            def read_only(route):
+                request = route.request
+                if request.method in ("GET", "HEAD") and _origin(request.url) == origin:
+                    route.continue_()
+                else:
+                    route.abort()
+
+            page.route("**/*", read_only)
         page.add_init_script("""(() => {
           window.__vitruviusStateShifts = [];
           try { new PerformanceObserver(list => {
@@ -167,7 +187,7 @@ class Browser:
             f"{r.url.rsplit('/', 1)[-1][:80]} -> HTTP {r.status}")
             if r.status >= 400 else None)
         try:
-            page.goto(f"{self._base}/{self.entry.lstrip('/')}",
+            page.goto(self.url or f"{self._base}/{self.entry.lstrip('/')}",
                       wait_until="load", timeout=30000)
             # `load` fires when the document and its scripts are fetched, which
             # on anything framework-rendered is before a single control exists.
@@ -591,7 +611,7 @@ def _once_there_is_data(was: Surface, now: Surface,
 
 def check(folder: str | Path, entry: str = "index.html",
           criteria: Sequence[Case] = (),
-          shots: Optional[Path] = None) -> QA:
+          shots: Optional[Path] = None, url: Optional[str] = None) -> QA:
     """Measure, plan, carry it all out, and report. The whole thing.
 
     `shots` is a folder to keep screenshots in, one before and one after each
@@ -603,7 +623,7 @@ def check(folder: str | Path, entry: str = "index.html",
     # and `assay ./todo.html` open the same thing.
     root, entry = aimed(folder, entry)
     root = root.expanduser().resolve()
-    with Browser(root, entry) as engine:
+    with Browser(root, entry, url=url) as engine:
         with engine.open() as (page, crashes, console, failed):
             opened = Opened(surface=from_page(_Shot(browser.elements(page))),
                             unreached=browser.unreached(page),
