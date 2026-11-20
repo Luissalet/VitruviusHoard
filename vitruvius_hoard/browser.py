@@ -582,7 +582,7 @@ def launch_attempts() -> list[tuple[str, dict[str, Any]]]:
     attempts: list[tuple[str, dict[str, Any]]] = []
     channels = web_browser.channel_order()
     preferred = os.getenv("VITRUVIUS_BROWSER_CHANNEL")
-    if preferred in channels:
+    if preferred and preferred in channels:
         channels = [preferred, *(channel for channel in channels if channel != preferred)]
     for channel in channels:
         attempts.append((channel or "chromium", {"channel": channel} if channel else {}))
