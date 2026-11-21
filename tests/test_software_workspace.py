@@ -155,8 +155,9 @@ async def test_stdio_catalog_and_native_handlers(tmp_path):
                 return json.loads(res.content[0].text)
             status=await call('software_modules')
             assert all(not m['enabled'] for m in status['modules'])
-            assert 'incomplete and in progress' in status['theseus_status']
-            assert '20 October 2026' in status['theseus_status']
+            assert status['theseus_status'] == (
+                'Existing capabilities; development incomplete and in progress, resumed on 20 October 2026.'
+            )
             await call('software_module_set',{'module':'design','enabled':True})
             project=await call('app_project_create',{'name':'MCP synthetic project'})
             await call('software_module_set',{'module':'theseus','enabled':True})

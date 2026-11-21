@@ -52,7 +52,7 @@ Reference behavior was read at revision
 `5f6bc69b6ee958153a2ab00da2d35055435c0bed`, reverseEngineering.ts blob
 `fb0cc9a08c01f497ca86169c6ff2279b37d1a2cd`, and reverseEngineeringToolContracts.ts
 blob `7b6542be1aa1b5fec5b6922a4820230293a48156`. This is maintained product code,
-not a relay to that reference application. Luis's requirement to preserve Ghidra
+not a relay to that reference application. The requirement to preserve Ghidra
 sessions overrides its incidental session-closing behavior.
 
 Independent revision 1 requested changes after reproducing a suspended child

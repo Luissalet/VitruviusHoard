@@ -137,7 +137,7 @@ $env:THESEUS_JAVA_HOME = 'D:\LocalAI\tools\jdk21\jdk-21.0.12.1+1'
 .\Start.ps1
 ```
 
-Those installed locations are discovered automatically on Luis's workstation.
+Those installed locations are discovered automatically on the development workstation.
 Environment variables can select other installations. No global Java setting
 is changed. JVM invocation passes an argument array, without a shell or batch
 file. Original binaries are not modified. A changed source is reported with

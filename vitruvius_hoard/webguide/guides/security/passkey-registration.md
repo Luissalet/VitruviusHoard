@@ -48,7 +48,7 @@ const options = {
   user: {
     id: userBase64UrlId, // Unique base64url string identifying the account
     name: "user@example.com",
-    displayName: "Jane Doe",
+    displayName: "Example account",
   },
   pubKeyCredParams: [
     {

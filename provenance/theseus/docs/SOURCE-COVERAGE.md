@@ -1,7 +1,7 @@
 # Source coverage and completion
 
 This is an implementation and acceptance ledger, not a claim that the current
-application already implements every row. Luis requires a complete program
+application already implements every row. The project requires a complete program
 covering the applicable local/free reverse engineering capabilities of the
 supplied sources. The approved `986a0ba` delivery is the existing starting point;
 it does not close that requirement.
@@ -25,8 +25,7 @@ through its Babel AST, imported array spreads and verified local factories:
 205-literal regex extraction. It is the declared reference inventory, not a
 runtime tool count on this host or a claim of 207 implemented Theseus tools.
 
-Paid engines, paid services, Jev and required external APIs are excluded by
-Luis. Generic installed free engines are allowed. Reused analysis code must be
+Paid engines, paid services, Jev and required external APIs are outside the project scope. Generic installed free engines are allowed. Reused analysis code must be
 incorporated as a detached native implementation, retaining its license and
 provenance, and evolve within this product. Running the reference application's
 CLI/MCP and relaying its tools does not satisfy that requirement.

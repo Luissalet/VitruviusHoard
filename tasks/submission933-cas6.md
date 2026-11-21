@@ -1,6 +1,6 @@
 #933 CAS6: mounted native inspection routes
 
-Installed browser QA found that Theseus rendered its interface but its shared request helper still fetched `/api` at the host root, returning404 rather than its retained project. Its limits link was also incorrectly rewritten into the native mount. The native helper now uses `/theseus/api`; the mounting layer preserves the owner's `/api/software/` endpoints when rewriting native HTML. No analysis engine, reverse-engineering scope, model, SDK, shutdown operation or data format changed. Theseus remains incomplete and paused by Luis.
+Installed browser QA found that Theseus rendered its interface but its shared request helper still fetched `/api` at the host root, returning404 rather than its retained project. Its limits link was also incorrectly rewritten into the native mount. The native helper now uses `/theseus/api`; the mounting layer preserves the owner's `/api/software/` endpoints when rewriting native HTML. No analysis engine, reverse-engineering scope, model, SDK, shutdown operation or data format changed. Theseus remains incomplete and paused.
 
 One focused regression runs the shipped JavaScript request helper in Node, then sends its captured URL through the real mounted ASGI application, creates and lists a synthetic native project, verifies the limits bytes, and leaves other modules OFF. PASS. The first test attempt incorrectly expected Spanish wording in the existing English limits document; it was corrected to compare the actual source document bytes, without changing that document or its scope.
 

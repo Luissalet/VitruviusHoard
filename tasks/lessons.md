@@ -1,7 +1,7 @@
 # Consolidation lessons
 
-- Follow Luis's ownership map: Cicero remains separate; Borges belongs to Writer, not Hypatia; HomeCook and PeopleDorian are not fused. This pack incorporates Babel and existing Theseus into Vitruvius only.
-- Theseus is incomplete and paused by Luis due to usage. Carry every existing capability and its source-coverage limits, without treating integration as a resumption or completion of its research programme.
+- Follow the project's ownership map: Cicero remains separate; Borges belongs to Writer, not Hypatia; HomeCook and PeopleDorian are not fused. This pack incorporates Babel and existing Theseus into Vitruvius only.
+- Theseus is incomplete and paused due to usage. Carry every existing capability and its source-coverage limits, without treating integration as a resumption or completion of its research programme.
 - Native factories may create stores and recover jobs. Static catalogues must never instantiate them; owner lifetimes begin only on explicit activation.
 - Native file, directory, JSON-source and analysis hashes use distinct formats. Retain their identities separately, verify consumed bytes and never relabel a historical result under another source revision.
 - A shared project can have several version-exact environments. Require the explicit linked environment per revision; a global most-recent default is not a project association.
