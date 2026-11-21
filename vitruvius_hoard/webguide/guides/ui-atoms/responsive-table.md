@@ -35,7 +35,7 @@ Give the wrapper a `role="region"` attribute to communicate its purpose. Provide
       <tr>
         <!-- Row header remains sticky horizontally on desktop, 
              and becomes a sticky card header on mobile -->
-        <th>Alex Rivera</th>
+        <th>Employee 01</th>
         <td>Engineer</td>
         <td>Active</td>
       </tr>

@@ -123,7 +123,7 @@ _SLOP = [
      "Meta strings joined with middle dots, an arrow glued to link text, decorative status dots before labels.",
      "Line breaks, columns, hairlines; a verb as the label.", "63"),
     ("copy-tells", "static", "copy", "error", "Copy tells",
-     "Placeholder names (Jane Doe, Acme), startup clichés, filler openers ('In today's landscape') and a stock second action beside the primary.",
+     "Placeholder names (for example, Acme), startup clichés, filler openers ('In today's landscape') and a stock second action beside the primary.",
      "Say what the product does, in its own nouns.", "19"),
     ("two-icon-libraries", "static", "imagery", "warning", "Two icon libraries on one page",
      "More than one icon set (Font Awesome, Bootstrap Icons, Material, Phosphor, Lucide, Remix...) loaded together.",
