@@ -28,7 +28,9 @@ async def test_discovery_never_calls_http_even_with_retired_autostart_enabled(mo
         pytest.fail("Discovery attempted HTTP")
     monkeypatch.setattr(owner, "HTTP_CLIENT", unexpected)
     tools = await owner.tools()
-    assert len(tools) == 217
+    from vitruvius_hoard.software.host import catalog
+
+    assert sorted(tool.name for tool in tools) == sorted(row["name"] for row in catalog())
     assert {"diagram_document_save", "software_modules", "theseus_cutter_sessions",
             "theseus_cutter_command"} <= {tool.name for tool in tools}
 
