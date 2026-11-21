@@ -4,7 +4,7 @@ from vitruvius_hoard.agent_tools import AGENT_INSTRUCTIONS, TOOLS, TOOLS_BY_NAME
 
 
 def test_catalog_has_all_native_tools():
-    assert len(TOOLS) == 123
+    assert sorted(tool["name"] for tool in tool_catalog()) == sorted(tool.name for tool in TOOLS)
 
 
 def test_tool_names_are_unique():

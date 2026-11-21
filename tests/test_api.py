@@ -2,6 +2,8 @@
 
 import json
 
+from vitruvius_hoard.agent_tools import TOOLS
+
 
 def test_health(client):
     r = client.get("/api/health")
@@ -170,7 +172,7 @@ def test_agent_tools_route(client):
     r = client.get("/api/agent/tools")
     assert r.status_code == 200
     body = r.json()
-    assert len(body["tools"]) == 123
+    assert sorted(tool["name"] for tool in body["tools"]) == sorted(tool.name for tool in TOOLS)
     assert body["instructions"]
 
 

@@ -43,7 +43,13 @@ def test_tool_route_with_the_token_works_and_the_scheme_is_case_insensitive(app,
 
 def test_every_tool_route_is_protected(app, anonymous):
     tools = [t["name"] for t in anonymous.get("/api/agent/tools").json()["tools"]]
-    assert len(tools) >= 10
+    registered = {
+        route.path.rsplit("/", 1)[-1] for route in anonymous.app.routes
+        if getattr(route, "path", "").startswith("/api/agent/") and "POST" in (getattr(route, "methods", None) or ())
+        and route.path not in {"/api/agent/call", "/api/agent/undo", "/api/agent/tokens"}
+        and "{" not in route.path
+    }
+    assert sorted(tools) == sorted(registered)
     for name in tools:
         assert anonymous.post(f"/api/agent/{name}", json={}).status_code == 401, name
 
