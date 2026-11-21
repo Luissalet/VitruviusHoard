@@ -1,6 +1,6 @@
 # Taller de software
 
-Vitruvius incorpora completos Babel y las capacidades existentes de Theseus junto a Diseño. Los tres módulos y sus automatismos empiezan apagados. El catálogo frío ofrece110 herramientas sin abrir motores, fábricas, recuperación, almacenes ni trabajadores. Los editores nativos siguen completos bajo /design/, /babel/ y /theseus/.
+Vitruvius incorpora completos Babel y las capacidades existentes de Theseus junto a Diseño. En un perfil nuevo, los módulos y sus automatismos empiezan apagados. En los siguientes arranques el anfitrión restaura la configuración guardada de cada módulo. Los [controles del taller](SOFTWARE-API.md) indican el motivo de los errores de arranque y permiten recuperar la configuración anterior. El catálogo frío ofrece110 herramientas sin abrir motores, fábricas, recuperación, almacenes ni trabajadores. Los editores nativos siguen completos bajo /design/, /babel/ y /theseus/.
 
 **El desarrollo de Theseus está incompleto y en curso. El trabajo se reanudó el 20 de octubre de 2026.** Esta integración conserva las funciones disponibles y deja pendiente el resto del programa. El aviso aparece en el espacio común y en el taller nativo. Consulta el [ledger de cobertura conservado](../software_native/theseus-limits.md); una operación enumerada no acredita que su motor opcional esté instalado ni que su aceptación esté completa.
 

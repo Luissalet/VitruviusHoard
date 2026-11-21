@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
+from ..hoard_link.atomic import read_json, write_json_atomic
 from .cancellation import join_tasks, owned
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +32,7 @@ class Module:
         self.context = None
         self.context_failed = False
         self.state = "off"
+        self.error = None
         self.automatic = False
         self.lock = asyncio.Lock()
         self.active = 0
@@ -41,61 +43,67 @@ class Module:
     async def set(self, enabled, automatic=False):
         return await owned(self._set(enabled, automatic))
 
-    async def _set(self, enabled, automatic=False):
+    async def _set(self, enabled, automatic):
         async with self.lock:
-            if not enabled and self.app is None:
-                self.automatic = automatic
-                return self.status()
-            if enabled and self.state == "on":
-                if self.name == 'design':
-                    self.app.state.services.config.embed_auto = automatic
-                self.automatic = automatic
-                return self.status()
+            return await self._transition(enabled, automatic)
+
+    async def _transition(self, enabled, automatic):
+        if not enabled and self.app is None:
+            self.context_failed = False
+            self.state = "off"
+            self.error = None
+            self.automatic = automatic
+            return self.status()
+        if enabled and self.state == "on":
+            if self.name == 'design':
+                self.app.state.services.config.embed_auto = automatic
+            self.automatic = automatic
+            return self.status()
+        if enabled and self.app is not None:
+            raise ValueError('Close the retained owner successfully before enabling it again')
+
+        try:
             if enabled:
-                if self.app is not None:
-                    raise ValueError('Close the retained owner successfully before enabling it again')
                 self.state = "starting"
                 self.automatic = automatic
-                try:
-                    self.app = await asyncio.to_thread(self.create)
-                    self.context_failed = False
-                    self.context = self.app.router.lifespan_context(self.app)
-                    await self.context.__aenter__()
-                    self.state = "on"
-                    self.automatic = automatic
-                except BaseException:
-                    self.context_failed = True
-                    self.state = "error"
-                    raise
-            elif self.app:
+                self.app = await asyncio.to_thread(self.create)
+                self.context = self.app.router.lifespan_context(self.app)
+                await self.context.__aenter__()
+                self.state = "on"
+            else:
                 self.state = "stopping"
                 await join_tasks(list(self.readers), cancel=True)
                 await self.idle.wait()
-                try:
-                    if self.context_failed:
-                        from .cleanup import invoke
-                        shutdown = getattr(self.app.state, 'shutdown', None)
-                        if shutdown is None:
-                            raise RuntimeError('Failed lifespan has no retryable shutdown; owner remains retained')
-                        await invoke(shutdown)
-                    else:
-                        await self.context.__aexit__(None, None, None)
-                except BaseException:
-                    self.context_failed = True
-                    self.state = "error"
-                    raise
+                if self.context_failed:
+                    from .cleanup import invoke
+                    shutdown = getattr(self.app.state, 'shutdown', None)
+                    if shutdown is None:
+                        raise RuntimeError('Failed lifespan has no retryable shutdown; owner remains retained')
+                    await invoke(shutdown)
+                else:
+                    await self.context.__aexit__(None, None, None)
                 self.app = self.context = None
                 self.state = "off"
-                self.automatic = False
-            return self.status()
+        except BaseException as exc:
+            self.context_failed = True
+            self.state = "error"
+            self.error = str(exc) or type(exc).__name__
+            raise
+        self.context_failed = False
+        self.error = None
+        self.automatic = automatic
+        return self.status()
 
     def create(self):
         from .native import create_native
         return create_native(self.name, self.automatic)
 
     def status(self):
-        return {"module": self.name, "state": self.state, "enabled": self.state == "on",
-                "automatic": self.automatic, "active_requests": self.active}
+        status = {"module": self.name, "state": self.state, "enabled": self.state == "on",
+                  "automatic": self.automatic, "active_requests": self.active}
+        if self.error is not None:
+            status["error"] = self.error
+        return status
 
     async def __call__(self, scope, receive, send):
         if self.state != "on":
@@ -170,6 +178,46 @@ class Module:
 class Runtime:
     def __init__(self):
         self.modules = {k: Module(k) for k in ("design", "babel", "theseus")}
+        self.settings = {}
+
+    async def restore(self):
+        self.settings.clear()
+        saved = read_json(profile() / "software-modules.json")
+        if not isinstance(saved, dict) or type(saved.get("version")) is not int or saved["version"] != 1:
+            return
+        settings = saved.get("modules")
+        if not isinstance(settings, dict):
+            return
+        for name, module in self.modules.items():
+            setting = settings.get(name)
+            if not isinstance(setting, dict) or any(
+                type(setting.get(key)) is not bool for key in ("enabled", "automatic")
+            ):
+                continue
+            self.settings[name] = {key: setting[key] for key in ("enabled", "automatic")}
+            try:
+                await module.set(**self.settings[name])
+            except Exception:
+                # The failed owner reports its error. Continue restoring the others.
+                continue
+
+    async def set_module(self, name, enabled, automatic=False):
+        return await owned(self._set_module(name, enabled, automatic))
+
+    async def _set_module(self, name, enabled, automatic):
+        module = self.modules[name]
+        async with module.lock:
+            previous = self.settings.get(name, {"enabled": module.state == "on", "automatic": module.automatic})
+            settings = {**self.settings, name: {"enabled": enabled, "automatic": automatic}}
+            try:
+                # Commit intent before touching the owner. No await between reading and replacing
+                # the settings, so updates to independent modules cannot overwrite each other.
+                write_json_atomic(profile() / "software-modules.json", {"version": 1, "modules": settings})
+            except OSError as exc:
+                raise NativeError(500, {"error": f"Could not save software module settings: {exc}"}) from exc
+            self.settings = settings
+            status = await module._transition(enabled, automatic)
+            return {**status, "previous": previous}
 
     def status(self):
         return {"modules": [m.status() for m in self.modules.values()]}
