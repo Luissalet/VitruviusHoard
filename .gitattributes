@@ -1,2 +1,5 @@
 # Keep vendored asset hashes identical across checkout platforms.
 vitruvius_hoard/showcase/assets/* -text
+vitruvius_hoard/showcase/assets/*.js text eol=lf
+vitruvius_hoard/showcase/assets/*.json text eol=lf
+vitruvius_hoard/showcase/assets/*.txt text eol=lf

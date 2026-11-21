@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import re
+import shutil
 import zipfile
 from unittest.mock import AsyncMock
 
@@ -46,6 +47,28 @@ def test_export_has_every_local_resource_and_license(recipe_id):
         for asset in provenance["assets"]:
             assert hashlib.sha256(archive.read("assets/" + asset["file"])).hexdigest() == asset["sha256"]
         assert "http.server" in archive.read("START.txt").decode()
+
+
+def test_exports_keep_provenance_hashes_after_windows_checkout(tmp_path, monkeypatch):
+    showcase = tmp_path / "showcase"
+    shutil.copytree(library.ROOT, showcase, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copyfile(library.ROOT.parent / "LICENSE", tmp_path / "LICENSE")
+    monkeypatch.setattr(library, "ROOT", showcase)
+    assets = showcase / "assets"
+    provenance = json.loads((assets / "provenance.json").read_bytes())
+    for path in assets.iterdir():
+        if path.suffix in {".js", ".json", ".txt"}:
+            lf = path.read_bytes().replace(b"\r\n", b"\n")
+            path.write_bytes(lf.replace(b"\n", b"\r\n"))
+
+    with zipfile.ZipFile(io.BytesIO(library.archive("book"))) as archive:
+        assert json.loads(archive.read("assets/provenance.json")) == provenance
+        for asset in provenance["assets"]:
+            name = "assets/" + asset["file"]
+            data = archive.read(name)
+            assert data == library.resource(name)[0]
+            assert len(data) == asset["bytes"]
+            assert hashlib.sha256(data).hexdigest() == asset["sha256"]
 
 
 @pytest.mark.parametrize("path", ["../library.py", "assets/../../library.py", "assets/../library.py", "missing/index.html", "recipes.json"])

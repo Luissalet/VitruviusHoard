@@ -71,7 +71,11 @@ def resource(path: str) -> tuple[bytes, str]:
     target = (ROOT / path).resolve()
     if (path not in allowed and not path.startswith("assets/")) or ROOT.resolve() not in target.parents or not target.is_file():
         raise LookupError("Unknown showcase resource")
-    return target.read_bytes(), mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    data = target.read_bytes()
+    if parts[0] == "assets" and target.suffix in {".js", ".json", ".txt"}:
+        # Existing Windows checkouts can retain CRLF despite the Git attributes.
+        data = data.replace(b"\r\n", b"\n")
+    return data, mimetypes.guess_type(target.name)[0] or "application/octet-stream"
 
 
 def source(recipe_id: str, path: str = "index.html") -> dict:
@@ -95,7 +99,9 @@ def archive(recipe_id: str) -> bytes:
             out.write(ROOT / name, name)
         for path in sorted((ROOT / "assets").iterdir()):
             if path.is_file():
-                out.write(path, "assets/" + path.name)
+                name = "assets/" + path.name
+                data, _ = resource(name)
+                out.writestr(name, data)
         out.writestr("recipe.json", json.dumps(row, ensure_ascii=False, indent=2))
         out.writestr("SKILL.md", row["skill"])
         out.write(ROOT.parent / "LICENSE", "LICENSE")

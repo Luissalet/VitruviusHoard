@@ -10,7 +10,7 @@ La biblioteca se abre desde la portada de Vitruvius o en `/showcase/`. Incluye c
 | Ciudad como mapa | Edificios y ventanas instanciados con alturas deterministas | Zoom, giro, destinos y pieza roja seleccionable |
 | Producto sobre roca | Anillo, gema y basalto con geometría, grano y materiales físicos | Escena fija con cámara y luz ligadas al scroll reversible |
 
-Los ejemplos usan contenido de demostración. Instrument Serif y Barlow, las fotografías de stock y el motor de representación se sirven desde el paquete. La máscara `portrait-cutout.png` deriva del retrato mediante extracción de fondo con ImageGen; método, prompt y hash constan en `assets/provenance.json`. Los orígenes, hashes y licencias acompañan las descargas. Los fotogramas de los reels se consultan mediante Links y conservan los derechos de sus autores.
+Los ejemplos usan contenido de demostración. Instrument Serif y Barlow, las fotografías de stock y el motor de representación se sirven desde el paquete. La máscara `portrait-cutout.png` deriva del retrato mediante extracción de fondo con ImageGen; método, prompt y hash constan en `assets/provenance.json`. Los orígenes, hashes y licencias acompañan las descargas. La vista, la lectura de fuentes y el ZIP usan los mismos bytes para estos recursos. Los recursos de texto de assets se sirven con finales de línea LF para que el SHA-256 publicado coincida también en copias de Windows con archivos CRLF. Los fotogramas de los reels se consultan mediante Links y conservan los derechos de sus autores.
 
 ## Materia, luz y ritmo de las referencias
 
