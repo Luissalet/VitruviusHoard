@@ -138,6 +138,11 @@
   },
   "notes": "Three independent modules and automatic work start OFF. Cold110-tool discovery never instantiates factories/stores or workers. Global LLM uses exact Sparks selection through Faustus938. Theseus development is incomplete and in progress, resumed on 20 October 2026; this incorporation does not complete its pending reverse-engineering scope.",
   "x-family": {
+    "isolated_instance": {
+      "data_env": "VITRUVIUS_PROFILE_DIR",
+      "port_env": "VITRUVIUS_PORT",
+      "token_env": "VITRUVIUS_TOKEN_FILE"
+    },
     "production": {
       "handoffs": [
         {"accepts": "production-brief", "produces": ["interface-brief"], "skill": "product-ui-visual-direction", "check": {"en": "Check the design direction against the brief, including target widths and keyboard use.", "es": "Coteja la dirección de diseño con el expediente, incluidas las anchuras previstas y el manejo con teclado."}},
