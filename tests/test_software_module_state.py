@@ -110,3 +110,20 @@ async def test_failed_save_leaves_running_state_intact(module_profile, monkeypat
             await runtime.set_module("babel", False)
         assert states(runtime)["babel"]["state"] == "on"
         assert module_profile.read_bytes() == saved
+
+
+@pytest.mark.asyncio
+async def test_host_controls_use_saved_module_settings(module_profile, monkeypatch):
+    from vitruvius_hoard.software.host import create_app
+
+    monkeypatch.setenv("VITRUVIUS_TOKEN_FILE", str(module_profile.with_name("mcp-token")))
+    app = create_app()
+    async with app.router.lifespan_context(app):
+        changed = await app.state.execute("software_module_set", {"module": "design", "enabled": True})
+        assert changed["previous"] == {"enabled": False, "automatic": False}
+
+    restarted = create_app()
+    async with restarted.router.lifespan_context(restarted):
+        result = await restarted.state.execute("software_modules", {})
+        design = next(module for module in result["modules"] if module["module"] == "design")
+        assert design["state"] == "on"

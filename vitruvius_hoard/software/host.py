@@ -23,7 +23,7 @@ def control(name,description,props,required=(),read=False):
 
 CONTROLS=[
  control('software_modules','Read independent module states and Theseus incomplete/in-progress status without loading engines.',{},read=True),
- control('software_module_set','Explicitly enable or drain a native module.',{'module':{'enum':['design','babel','theseus']},'enabled':{'type':'boolean'},'automatic':{'type':'boolean'}},('module','enabled')),
+ control('software_module_set','Set and save a native module. Reuse the previous settings to undo.',{'module':{'enum':['design','babel','theseus']},'enabled':{'type':'boolean'},'automatic':{'type':'boolean'}},('module','enabled')),
  control('software_projects','List native source projects.',{},read=True),
  control('software_project_read','Read selected project revision, files and retained linked results.',PROJECT,('project_id',),True),
  control('software_references','Read retained historical source/environment/results while engines are OFF.',{'project_id':S,'reference_id':S},read=True),
@@ -49,6 +49,7 @@ def create_app(runtime=None):
         from hoard_link.tokens import read_or_create_token
         read_or_create_token(token_path())
         try:
+            await runtime.restore()
             yield
         finally:
             await runtime.close()
@@ -81,7 +82,7 @@ def create_app(runtime=None):
         if name=='software_modules':
             return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed on 20 October 2026.'}
         if name=='software_module_set':
-            return await runtime.modules[args['module']].set(args['enabled'],args.get('automatic',False))
+            return await runtime.set_module(args['module'],args['enabled'],args.get('automatic',False))
         if name=='software_references':
             from .projects import retained
             return await owned(asyncio.to_thread(retained,**args))
