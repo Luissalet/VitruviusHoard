@@ -40,7 +40,7 @@
         "active_requests": 0
       }
     ],
-    "theseus_status": "Existing capabilities; development incomplete and paused by Luis due to usage."
+    "theseus_status": "Existing capabilities; development incomplete and paused due to usage."
   },
   "imports": {
     "vitruvius_hoard": "D:\\LocalAI\\research-inbox\\fusion-candidates-wave3\\vitruvius933-installed\\target-cas3-b\\vitruvius_hoard\\__init__.py",

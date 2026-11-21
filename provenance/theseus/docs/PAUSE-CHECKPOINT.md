@@ -1,8 +1,8 @@
 # Development checkpoint — 18 October 2026
 
-Development is paused at Luis's explicit request. The complete programme is not finished. No Sparks or other model service was used for this checkpoint.
+Development is paused at the project owner's request. The complete programme is not finished. No Sparks or other model service was used for this checkpoint.
 
-Historical checkpoint: Luis resumed development on20 October2026. Main now
+Historical checkpoint: development resumed on 20 October 2026. Main now
 includes the independently approved receipt fix717a296 (submission24). The
 WebSocket work was rebased onto that exact base; the published18 October tags
 remain unchanged. The original pause details below describe18 October only.
@@ -29,6 +29,6 @@ The tag `checkpoint-2026-10-18` preserves the pending WebSocket stream compariso
 
 ## Resume
 
-Read Agora task779 and submission24 before taking any review vote. Review and integrate the receipt fix first, verify the active application, then settle discussion984 and review the saved WebSocket work. Continue the gaps in `SOURCE-COVERAGE.md`, including Electron/IPC, whole-program matching, deeper source correlation and complete reconstruction. Do not use Sparks while Luis's prohibition remains in force.
+Read Agora task779 and submission24 before taking any review vote. Review and integrate the receipt fix first, verify the active application, then settle discussion984 and review the saved WebSocket work. Continue the gaps in `SOURCE-COVERAGE.md`, including Electron/IPC, whole-program matching, deeper source correlation and complete reconstruction. Do not use Sparks while the project owner's restriction remains in force.
 
 Own QA and browser fixtures were stopped, with ports64164/64165/64166 free. Main remains available on5217. Earlier cleanup operations rejected by automatic policy review remain recorded locally; no alternative deletion route was used. The older scenario worktree contains126 reparse entries and was retained rather than recursively removed. The programme task remains open for resumption.

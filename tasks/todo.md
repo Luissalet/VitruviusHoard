@@ -1,6 +1,6 @@
 # Software workspace consolidation #933
 
-Owner public base13983c31e30e1c0b0f5f425120dc1c98083c0918. Babel public582bacdcbd8404ace171654a69c692cd542dbb31; local7607321/817e2a4 affect only private SDK and are excluded. Theseus public3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc. Preserve every existing native capacity, format, editor and schema. Theseus remains incomplete and paused by Luis due to usage; this task does not resume its reverse-engineering programme.
+Owner public base13983c31e30e1c0b0f5f425120dc1c98083c0918. Babel public582bacdcbd8404ace171654a69c692cd542dbb31; local7607321/817e2a4 affect only private SDK and are excluded. Theseus public3fa14aeaa91b1881d2a961dd5af26e0d0d5918bc. Preserve every existing native capacity, format, editor and schema. Theseus remains incomplete and paused due to usage; this task does not resume its reverse-engineering programme.
 
 - [x] Incorporate complete public Babel package/frontend and Theseus package/web/native engine source with historical licences/hashes; no data, installed binaries or private SDK.
 - [x] Add three independent in-process native owners OFF/automaticOFF, cold static MCP schemas and explicit resource lifetimes; protect cleanup against repeated cancellation. No factories/recovery during catalogue discovery.

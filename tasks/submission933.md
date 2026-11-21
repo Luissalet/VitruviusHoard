@@ -10,7 +10,7 @@ Proyecto visible nativo Vitruvius y revisión exacta; vínculo persistente de va
 
 Ciclo de vida bajo demanda: browser/ingest/dense explícitos/opt-in, indexador Babel perezoso con drenaje, cierres native en hilos sin bloquear otros módulos. OFF espera lectores/escrituras admitidas y recursos; cancel-once/shield/join conserva finally asíncrono frente a cancelaciones concurrentes/OFF/close. Contratos nativos, JSON de fuentes, bytes binarios/Range y MCP ImageContent preservados. Escritura enviada sin respuesta: outcome_unknown/reconciliación, sin replay. La selección global Faustus938 se consume exacta por trabajo con la corrección Future/copy-context aprobada en932; credenciales familia, claves proveedor sóloFaustus, sin fallback/load/retry/schema relaxation.
 
-**Theseus sigue incompleto y pausado por Luis por usage.** Aviso coherente en espacio común, taller nativo, README EN/ES, guía/manual y FAUSTUS.md, con ledger conservado. Esta integración no reanuda ni completa su programa RE pendiente.56operaciones estáticas listadas son conservación del catálogo existente, no aceptación de todos los motores/formatos.
+**Theseus sigue incompleto y en pausa por la cuota de uso.** Aviso coherente en espacio común, taller nativo, README EN/ES, guía/manual y FAUSTUS.md, con ledger conservado. Esta integración no reanuda ni completa su programa RE pendiente.56operaciones estáticas listadas son conservación del catálogo existente, no aceptación de todos los motores/formatos.
 
 ## Evidencia y límites
 
