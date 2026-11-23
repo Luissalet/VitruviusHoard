@@ -18,3 +18,12 @@ __pycache__/
 /software_native/engine/dist/
 /vitruvius_hoard/static/assets/
 /vitruvius_hoard/static/index.html
+# Local agent and tool state (created per user at runtime)
+.faustus/
+.odysseus/
+.claude/
+.agents/
+.codex/
+.playwright-mcp/
+.hoard-integration.json
+.impeccable/
