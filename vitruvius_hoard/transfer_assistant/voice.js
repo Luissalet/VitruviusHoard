@@ -23,7 +23,7 @@ export const SPOKEN_PHRASES = {
   confirmar: "Revisa los datos y dime si la envío.",
   "sin-confirmacion": "Sin tu confirmación no envío nada.",
   hecho: "Hecho. La transferencia está enviada.",
-  cancelado: "Transferencia cancelada. No se envía nada.",
+  cancelado: "Transferencia cancelada. No he enviado nada.",
   anulada: "La transferencia se ha anulado.",
   "no-entendido": "No te he entendido. ¿Puedes repetirlo?",
   escuchando: "Te escucho.",

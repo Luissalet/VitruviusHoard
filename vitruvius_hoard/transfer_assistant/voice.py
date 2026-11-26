@@ -67,15 +67,24 @@ def _cache_root():
     return Path(VOICE_CACHE).resolve() if VOICE_CACHE else None
 
 
+def _cache_phrases(root):
+    if root is None:
+        return {}
+    try:
+        manifest = json.loads((root / "frases.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return {}
+    phrases = manifest.get("phrases") if isinstance(manifest, dict) else None
+    return {key: text for key, text in phrases.items() if isinstance(text, str)} if isinstance(phrases, dict) else {}
+
+
 def _cached_reply(phrase_id, text):
     root = _cache_root()
     if root is None or not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
         return _json(404, code="voice_phrase_unavailable")
     try:
-        manifest = json.loads((root / "frases.json").read_text(encoding="utf-8-sig"))
-        phrases = manifest.get("phrases", {}) if isinstance(manifest, dict) else {}
         path = (root / f"{phrase_id}.wav").resolve()
-        if not isinstance(phrases, dict) or phrases.get(phrase_id) != text or path.parent != root:
+        if _cache_phrases(root).get(phrase_id) != text or path.parent != root:
             return _json(404, code="voice_phrase_unavailable")
         audio = path.read_bytes()
     except (OSError, ValueError):
@@ -83,13 +92,6 @@ def _cached_reply(phrase_id, text):
     if audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
         return _json(404, code="voice_phrase_unavailable")
     return 200, audio, "audio/wav; source=cache-natural"
-
-
-def _voice_ready():
-    if VOICE_MODE == "piper":
-        return _offers("tts", "voice_tts")
-    root = _cache_root()
-    return VOICE_MODE == "cache-natural" and root is not None and (root / "frases.json").is_file()
 
 
 class TransferVoice:
@@ -130,8 +132,11 @@ class TransferVoice:
             common = self._common_dictation()
             ready = _offers("dictation", *DICTATION_TOOLS)
             route = ("common" if common else "app") if ready else "local"
+            phrases = _cache_phrases(_cache_root()) if VOICE_MODE == "cache-natural" else {}
+            tts = bool(phrases) or VOICE_MODE == "piper" and _offers("tts", "voice_tts")
             return _json(200, stt=_transcription_ready(),
-                         tts=_voice_ready(), dictation=ready, dictation_route=route)
+                         tts=tts, dictation=ready, dictation_route=route,
+                         **({"voice_phrases": phrases} if phrases else {}))
         if method == "POST" and route == "transcribe":
             return self._transcribe(query, content_type, body)
         if method == "POST" and route == "understand":

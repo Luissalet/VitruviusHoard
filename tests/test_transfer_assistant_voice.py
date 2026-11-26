@@ -197,6 +197,10 @@ def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypa
     wav = b"RIFF1234WAVE"
     (tmp_path / "confirmar.wav").write_bytes(wav)
     relay = voice.TransferVoice()
+    monkeypatch.setattr(voice, "_hub_get", lambda *_a, **_kw: (404, {}))
+    monkeypatch.setattr(voice._famsvc, "call_tool", lambda *_a, **_kw: {"ok": False})
+    availability = payload(relay.handle("GET", "capabilities", "", "", b""))
+    assert availability["tts"] and availability["voice_phrases"]["confirmar"] == text
 
     def speak(phrase, words):
         body = json.dumps({"text": words, "phrase_id": phrase, "language": "es"}).encode()

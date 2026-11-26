@@ -121,6 +121,7 @@ export function mountTransferAssistant(root, options = {}) {
   let pendingData;
   let message = copy.start;
   let phraseId = "saludo";
+  let voicePhrases = SPOKEN_PHRASES;
   let speech;
   let requestKey;
   let mic;
@@ -186,11 +187,15 @@ export function mountTransferAssistant(root, options = {}) {
     show(dictationStatus, copy["dictation_" + route] || copy.dictation_fallback);
   }
 
+  function showFixed() {
+    const fixed = lang === "es" && voicePhrases[phraseId];
+    show(fixedReply, fixed && fixed !== message ? fixed : "");
+  }
+
   function paint() {
     root.dataset.transferPhase = waitingForForm ? "collecting" : state.phase;
     response.textContent = message;
-    const fixed = lang === "es" && SPOKEN_PHRASES[phraseId];
-    show(fixedReply, fixed && fixed !== message ? fixed : "");
+    showFixed();
     const {slots} = state;
     const source = context?.accounts.find(item => item.id === slots.source);
     const values = [slots.recipient?.name, slots.amountCents && currency.format(slots.amountCents / 100), slots.concept, source?.name];
@@ -264,14 +269,16 @@ export function mountTransferAssistant(root, options = {}) {
     speech = undefined;
   }
 
-  function read(id, timing, turn = traceTurn) {
+  async function read(id, timing, turn = traceTurn) {
     stopPlayback();
-    const text = lang === "es" && SPOKEN_PHRASES[id];
-    if (!text) return;
     speech = new AbortController();
+    const {signal} = speech;
     const replyAt = performance.now();
+    await voiceCheck;
+    const text = lang === "es" && voicePhrases[id];
+    if (!text || signal.aborted) return;
     void speakTransferReply(text, {
-      phraseId: id, locale, signal: speech.signal,
+      phraseId: id, locale, signal,
       onFallback: () => {
         show(voiceStatus, copy.written_replies);
         track(turn, 2, copy.text_only, performance.now() - replyAt);
@@ -399,6 +406,11 @@ export function mountTransferAssistant(root, options = {}) {
     if (!voiceCheck) {
       voiceCheck = voiceAvailability().catch(() => ({})).then(available => {
         dictation = Boolean(available.dictation);
+        if (available.voice_phrases) {
+          voicePhrases = Object.fromEntries(Object.entries(SPOKEN_PHRASES).map(([id, fallback]) =>
+            [id, typeof available.voice_phrases[id] === "string" ? available.voice_phrases[id] : fallback]));
+          showFixed();
+        }
         showDictation(available.dictation_route);
         sttWarning = available.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
