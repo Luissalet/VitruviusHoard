@@ -24,6 +24,8 @@ MAX_AUDIO = 4 * 1024 * 1024
 MAX_JSON = 32 * 1024
 DICTATION_VERSION = "cyrano.dictation/v0"
 DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
+SPEECH_TOOL = "speech_transcribe"
+CYRANO_SPEECH_S = 6
 FINAL_TRANSCRIPTION_S = 21
 DICTATION_AUDIO_S = 25
 SPANISH_TTS_VOICE = "es_ES-davefx-medium"
@@ -46,13 +48,16 @@ def _hub_get(path, timeout):
     return fetch(family._hub() + path, timeout=timeout, headers=family._headers())
 
 
-def _offers(service, *required):
+def _tool_names(service):
     owner = _famsvc.owner_of(service)
     status, value = _hub_get(f"/api/apps/{owner}/tools", timeout=0.8)
     if status != 200 or not isinstance(value, dict) or not value.get("ok"):
-        return False
-    names = {tool.get("name") for tool in value.get("tools", []) if isinstance(tool, dict)}
-    return names.issuperset(required)
+        return set()
+    return {tool.get("name") for tool in value.get("tools", []) if isinstance(tool, dict)}
+
+
+def _offers(service, *required):
+    return _tool_names(service).issuperset(required)
 
 
 def _transcription_ready():
@@ -129,11 +134,12 @@ class TransferVoice:
     def handle(self, method, route, query, content_type, body):
         if method == "GET" and route == "capabilities":
             common = self._common_dictation()
-            ready = _offers("dictation", *DICTATION_TOOLS)
+            tools = _tool_names("dictation")
+            ready = tools.issuperset(DICTATION_TOOLS)
             route = ("common" if common else "app") if ready else "local"
             phrases = _cache_phrases(_cache_root())
             tts = bool(phrases) and (VOICE_MODE == "cache-natural" or VOICE_MODE == "piper" and _offers("tts", "voice_tts"))
-            return _json(200, stt=_transcription_ready(),
+            return _json(200, stt=SPEECH_TOOL in tools or _transcription_ready(),
                          tts=tts, dictation=ready, dictation_route=route,
                          **({"voice_phrases": phrases} if phrases else {}))
         if method == "POST" and route == "transcribe":
@@ -162,9 +168,19 @@ class TransferVoice:
             with TemporaryDirectory(prefix="transfer-voice-") as directory:
                 path = Path(directory) / ("utterance" + suffix)
                 path.write_bytes(body)
+                started = monotonic()
+                window = 1 if preview else CYRANO_SPEECH_S
+                value, _ = self._dictation_call(SPEECH_TOOL, {
+                    "path": str(path), "language": language, "initial_prompt": prompt,
+                    "vad": not preview, "fallback": False, "timeout_s": window,
+                }, timeout=window + 1)
+                if isinstance(value, dict) and isinstance(value.get("text"), str):
+                    return _json(200, text=value["text"], final=not preview)
+
+                budget = 2 if preview else FINAL_TRANSCRIPTION_S
+                remaining = max(1, budget - (monotonic() - started))
                 result = fam_media.transcribe(str(path), language=language, word_timestamps=False, initial_prompt=prompt,
-                                              timeout_s=2 if preview else FINAL_TRANSCRIPTION_S,
-                                              local_fallback=False, vad=not preview)
+                                              timeout_s=remaining, local_fallback=False, vad=not preview)
                 if result.get("still_running") and result.get("job_id"):
                     fam_media.transcribe_cancel(result["job_id"])
             if not result.get("ok"):
