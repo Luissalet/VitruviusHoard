@@ -205,21 +205,33 @@ def _literal(value):
     return _MARKER.sub(lambda match: "&#123;&#123;" + match[1] + "}}", escape(value, quote=True))
 
 
-def _text_edit(source, tag, value):
+def _text_edit(source, tag, change):
     if tag.name in _RAW:
         raise SourceMapError("Edit script or style contents in the source file.",
                              "Edita el contenido de scripts o estilos en el fichero fuente.")
     spans = [(start, end) for start, end in tag.text if source[start:end].strip(_SPACE)]
-    for start, end in spans:
+    if "index" in change:
+        index = change["index"]
+        if not 0 <= index < len(spans):
+            raise _conflict()
+        start, end = spans[index]
         _reject_marker(source[start:end])
-    if len(spans) != 1:
-        raise SourceMapError("This tag needs a single direct literal text node. Edit the source file.",
-                             "La etiqueta necesita un solo nodo de texto literal directo. Edita el fichero fuente.")
-    start, end = spans[0]
+    else:
+        for start, end in spans:
+            _reject_marker(source[start:end])
+        if len(spans) != 1:
+            raise SourceMapError("This tag needs a single direct literal text node. Edit the source file.",
+                                 "La etiqueta necesita un solo nodo de texto literal directo. Edita el fichero fuente.")
+        start, end = spans[0]
     raw = source[start:end]
     start += len(raw) - len(raw.lstrip(_SPACE))
     end -= len(raw) - len(raw.rstrip(_SPACE))
-    if unescape(source[start:end]) == value:
+    raw_value = source[start:end]
+    old = unescape(raw_value)
+    if "original" in change and unescape(raw_value.replace("\r\n", "\n").replace("\r", "\n")) != change["original"]:
+        raise _conflict()
+    value = change["value"]
+    if old == value:
         return source
     return source[:start] + _literal(value) + source[end:]
 
@@ -282,8 +294,8 @@ def _attribute_edit(source, tag, change):
     return _apply(source, [(tag.start + start, tag.start + end, replacement)])
 
 
-def edit_source(source, line, column, expected_tag, change):
-    """Apply a single positional change, preserving bytes outside the target span."""
+def source_tag(source, line, column, expected_tag):
+    """Find the literal opening tag at a preview source position."""
     parsed = _HTML(source)
     if not 1 <= line <= len(parsed.lines) or column < 1:
         raise _conflict()
@@ -296,8 +308,14 @@ def edit_source(source, line, column, expected_tag, change):
     tag = next((tag for tag in parsed.tags if tag.start == offset), None)
     if tag is None or tag.name != expected_tag.lower():
         raise _conflict()
+    return tag
+
+
+def edit_source(source, line, column, expected_tag, change):
+    """Apply a single positional change, preserving bytes outside the target span."""
+    tag = source_tag(source, line, column, expected_tag)
     if change["kind"] == "text":
-        return _text_edit(source, tag, change["value"])
+        return _text_edit(source, tag, change)
     return _attribute_edit(source, tag, change)
 
 

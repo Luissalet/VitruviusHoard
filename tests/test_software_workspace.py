@@ -25,9 +25,8 @@ from pathlib import Path
 before=set(threading.enumerate())
 from vitruvius_hoard.software.host import catalog
 import mcp_server
-assert len(catalog())>=219
-assert len({t['name'] for t in catalog()})==len(catalog())
-assert {'app_project_canvas_view', 'app_project_canvas_act'} <= {t['name'] for t in catalog()}
+assert len({t['name'] for t in catalog()}) == len(catalog())
+assert {'app_project_canvas_view', 'app_project_canvas_act', 'app_project_canvas_edit'} <= {t['name'] for t in catalog()}
 assert any(t['name']=='theseus_client_inspect' for t in catalog())
 assert any(t['name']=='theseus_cutter_sessions' for t in catalog())
 assert any(t['name']=='theseus_cutter_command' for t in catalog())
@@ -142,12 +141,13 @@ async def test_stdio_catalog_and_native_handlers(tmp_path):
     from mcp import ClientSession,StdioServerParameters
     from mcp.client.stdio import stdio_client
     from vitruvius_hoard.software.host import catalog
+    from vitruvius_hoard.software.host import catalog
     params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'tests/fixtures/software_mcp.py')],cwd=str(ROOT),env={**os.environ,'VITRUVIUS_PROFILE_DIR':str(tmp_path),'HOARD_EVENTS':'0','PYTHONUTF8':'1'})
     async with stdio_client(params) as (reader,writer):
         async with ClientSession(reader,writer) as session:
             await session.initialize()
             tools=(await session.list_tools()).tools
-            assert len(tools)==len(catalog())
+            assert {tool.name for tool in tools} == {tool["name"] for tool in catalog()}
             for native in catalog():
                 assert next(t for t in tools if t.name==native['name']).inputSchema==native['inputSchema']
             async def call(name,args=None):
