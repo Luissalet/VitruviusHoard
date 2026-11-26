@@ -7,9 +7,15 @@ import time
 import uuid
 from concurrent.futures import Future, TimeoutError, wait
 from dataclasses import dataclass, field
+from hashlib import blake2b
 
 
 PRESENCE_WAIT = 1.5
+ACTOR_TOOLS = frozenset({
+    "app_project_canvas_view", "app_project_canvas_act", "app_project_update",
+    "app_project_edit_source", "app_project_canvas_edit",
+})
+_ACTOR_COLORS = ("#7551bd", "#246cb4", "#147c68", "#a46114", "#b94265", "#8c522a", "#465ccc", "#237c87")
 
 
 def failure(code: str, message: str):
@@ -36,6 +42,35 @@ class CanvasSessions:
     def __init__(self):
         self._lock = threading.Condition()
         self._sessions: dict[str, CanvasSession] = {}
+        self._actor_profiles: dict[tuple[str, str], dict] = {}
+
+    def actor_for(self, project: str, caller: str, declared: dict) -> dict:
+        # A declared identity survives cursor expiry and frame reloads.
+        with self._lock:
+            key = (project, caller)
+            previous = self._actor_profiles.get(key)
+            profile = {**(previous or {}), **declared}
+            if not profile.get("color"):
+                occupied = {
+                    other["color"].strip().lower()
+                    for (other_project, other_caller), other in self._actor_profiles.items()
+                    if other_project == project and other_caller != caller
+                }
+                index = int.from_bytes(blake2b(caller.encode(), digest_size=2).digest(), "big") % len(_ACTOR_COLORS)
+                options = _ACTOR_COLORS[index:] + _ACTOR_COLORS[:index]
+                profile["color"] = next((color for color in options if color not in occupied), options[0])
+            self._actor_profiles[key] = profile
+            actor_id = profile.get("id", caller)
+            if previous is not None and (previous_id := previous.get("id", caller)) != actor_id:
+                message = {"hoardDock": 1, "type": "dock/cursor", "state": "gone", "actor": {"id": previous_id}}
+                for session in self._sessions.values():
+                    if session.project == project and not session.loop.is_closed():
+                        try:
+                            session.loop.call_soon_threadsafe(session.events.put_nowait, message)
+                        except RuntimeError:
+                            # A disconnect can close the loop between the check and the send.
+                            pass
+        return {"id": actor_id, "name": profile.get("name") or actor_id, "color": profile["color"]}
 
     def attach(self, project: str, revision: str | None = None) -> CanvasSession:
         session = CanvasSession(project, revision)

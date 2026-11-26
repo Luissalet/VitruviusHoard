@@ -266,7 +266,7 @@ class AppProjects:
                                target={**(target or {}), "vsrc": vsrc})
 
     def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
-                    expected_count=None, root_font_px=16, lang="en"):
+                    expected_count=None, root_font_px=16, lang="en", *, actor=None):
         with self.lock:
             current = self.get(id)
             preview = current["preview"]
@@ -291,7 +291,7 @@ class AppProjects:
                 result.update(affects_scope="page", shared_stylesheet=True)
             if operation == "plan" or confirmation or not changes:
                 return result
-            updated = self.update(id, changes, expected_revision)
+            updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc})
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"]}
 
     def _preview_html(self, id, path):

@@ -90,6 +90,53 @@ def test_cross_origin_relay_prohibited(client):
     assert response.status_code == 403
 
 
+def test_default_actor_colors_are_distinct_in_each_project_until_palette_is_full():
+    canvas = CanvasSessions()
+    callers = ["claude-capataz", "codex-agrimensor", "codex-astra"]
+    callers.extend(f"designer-{index}" for index in range(5))
+    profiles = {caller: canvas.actor_for("project", caller, {}) for caller in callers}
+    palette = {actor["color"] for actor in profiles.values()}
+    assert len(palette) == 8
+    assert profiles[callers[0]]["color"] == "#a46114"
+
+    last = canvas.actor_for("project", "extra-designer", {})
+    assert last["color"] in palette
+    assert canvas.actor_for("project", "extra-designer", {}) == last
+    assert {caller: canvas.actor_for("project", caller, {}) for caller in reversed(callers)} == profiles
+    assert canvas.actor_for("other", callers[1], {})["color"] == "#a46114"
+
+    canvas.actor_for("explicit", "agent-with-color", {"color": "#A46114"})
+    assert canvas.actor_for("explicit", callers[0], {})["color"] != "#a46114"
+
+
+@pytest.mark.asyncio
+async def test_actor_profile_follows_a_caller_across_canvas_sessions():
+    canvas = CanvasSessions()
+    session = canvas.attach("project", "before")
+    declared = {"id": "foreman", "name": "Foreman", "color": "#5b42d3"}
+    caller = "preview-foreman"
+    other_caller = "preview-designer"
+
+    assert canvas.actor_for("project", caller, declared) == declared
+    other = canvas.actor_for("project", other_caller, {})
+    assert other["id"] == other["name"] == other_caller
+    assert other["color"] != declared["color"]
+    assert canvas.actor_for("project", caller, {}) == declared
+
+    canvas.detach(session)
+    session = canvas.attach("project", "after")
+    assert canvas.actor_for("project", caller, {}) == declared
+    assert canvas.actor_for("project", other_caller, {}) == other
+    assert canvas.actor_for("separate", caller, {})["id"] == caller
+
+    alias = canvas.actor_for("project", other_caller, {"id": "designer", "name": "Designer"})
+    assert alias == {"id": "designer", "name": "Designer", "color": other["color"]}
+    retired = await asyncio.wait_for(session.next_event(), 1)
+    assert retired == {"hoardDock": 1, "type": "dock/cursor", "state": "gone", "actor": {"id": other_caller}}
+    assert canvas.actor_for("project", other_caller, {}) == alias
+    assert canvas.actor_for("project", caller, {}) == declared
+
+
 @pytest.mark.asyncio
 async def test_presence_is_project_scoped_and_keeps_separate_agents():
     canvas = CanvasSessions()

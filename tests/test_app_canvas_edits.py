@@ -2,6 +2,7 @@ from hashlib import sha256
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.request import urlopen
 
 import pytest
@@ -40,6 +41,24 @@ def edit(projects, project, line, prop="margin-left", pixels=24, **options):
         project["id"], f"pages/index.html:{line}:1", "article", project["revision"],
         {"kind": "style", "property": prop, "pixels": pixels}, **options,
     )
+
+
+def test_canvas_edit_emits_the_agent_actor_only_for_a_change(opened, monkeypatch):
+    projects, project = opened
+    presence = []
+    monkeypatch.setattr(projects.canvas, "prepare_edit", lambda *args: presence.append(args))
+    services = SimpleNamespace(app_projects=projects)
+    actor = {"id": "foreman", "name": "Foreman", "color": "#5b42d3"}
+    args = {"id": project["id"], "vsrc": "pages/index.html:3:1", "tag": "article",
+            "expected_revision": project["revision"], "actor": actor,
+            "change": {"kind": "text", "index": 0, "original": "Unique", "value": "Updated"}}
+
+    plan = call_tool(services, "app_project_canvas_edit", {**args, "operation": "plan"})
+    assert not plan["changed"]
+    assert not presence
+    saved = call_tool(services, "app_project_canvas_edit", args)
+    assert saved["changed"] and saved["undo"]["tool"] == "app_project_undo"
+    assert presence == [(project["id"], project["revision"], actor, {"vsrc": args["vsrc"], "box": None})]
 
 
 def test_token_and_shared_authored_rule_confirm_then_undo(opened):

@@ -126,6 +126,13 @@ def settings():
     return url, token
 
 
+def caller_id(headers, body):
+    from .hoard_link.agent_journal import clean_identity
+
+    return (clean_identity(headers.get("x-agent-id")) or clean_identity(body.get("agent"))
+            or clean_identity(body.get("caller")))
+
+
 def context_values(meta=None):
     values = meta.model_dump(exclude_none=True) if hasattr(meta, 'model_dump') else dict(meta or {})
     headers, body = {}, {}

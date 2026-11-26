@@ -2006,6 +2006,45 @@
           ],
           "title": "AppCanvasTextChange",
           "type": "object"
+        },
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
         }
       },
       "properties": {
@@ -2092,6 +2131,18 @@
           ],
           "title": "Lang",
           "type": "string"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasActor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agent identity for the preview cursor."
         }
       },
       "required": [
