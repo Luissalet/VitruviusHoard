@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from ..hoard_link import _famsvc, fam_media, family
 from ..hoard_link._hubclient import fetch
+from ..software.runtime import profile
 
 
 VOICE_PREFIX = "/__vitruvius_preview__/transfer-voice/"
@@ -27,7 +28,6 @@ FINAL_TRANSCRIPTION_S = 21
 DICTATION_AUDIO_S = 25
 SPANISH_TTS_VOICE = "es_ES-davefx-medium"
 VOICE_MODE = os.getenv("VITRUVIUS_TRANSFER_VOICE_MODE", "cache-natural")
-VOICE_CACHE = os.getenv("VITRUVIUS_VOICE_CACHE", "")
 AUDIO_TYPES = {
     "audio/webm": ".webm",
     "audio/ogg": ".ogg",
@@ -64,12 +64,11 @@ def _transcription_ready():
 
 
 def _cache_root():
-    return Path(VOICE_CACHE).resolve() if VOICE_CACHE else None
+    configured = os.environ.get("VITRUVIUS_VOICE_CACHE")
+    return Path(configured).resolve() if configured else profile() / "voice-cache"
 
 
 def _cache_phrases(root):
-    if root is None:
-        return {}
     try:
         manifest = json.loads((root / "frases.json").read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
@@ -80,7 +79,7 @@ def _cache_phrases(root):
 
 def _cached_reply(phrase_id, text):
     root = _cache_root()
-    if root is None or not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
+    if not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
         return _json(404, code="voice_phrase_unavailable")
     try:
         path = (root / f"{phrase_id}.wav").resolve()

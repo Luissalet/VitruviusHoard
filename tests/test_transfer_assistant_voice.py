@@ -194,7 +194,8 @@ def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch
 
 def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypatch):
     monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
-    monkeypatch.setattr(voice, "VOICE_CACHE", str(tmp_path))
+    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path / "other-profile"))
+    monkeypatch.setenv("VITRUVIUS_VOICE_CACHE", str(tmp_path))
     monkeypatch.setattr(voice.fam_media, "speak_bytes",
                         lambda *_a, **_kw: (_ for _ in ()).throw(AssertionError("The cache never calls speech generation")))
     text = "Revisa los datos y dime si la envío."
@@ -217,3 +218,30 @@ def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypa
     assert speak("saludo", "Dime")[0] == 404
     monkeypatch.setattr(voice, "VOICE_MODE", "off")
     assert speak("confirmar", text)[0] == 503
+
+
+def test_natural_cache_defaults_to_the_profile_and_handles_missing_manifest(tmp_path, monkeypatch):
+    monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
+    monkeypatch.delenv("VITRUVIUS_VOICE_CACHE", raising=False)
+    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
+    monkeypatch.setattr(voice, "_hub_get", lambda *_a, **_kw: (404, {}))
+    monkeypatch.setattr(voice._famsvc, "call_tool", lambda *_a, **_kw: {"ok": False})
+    relay = voice.TransferVoice()
+    cache = tmp_path / "voice-cache"
+    text = "Revisa los datos y dime si la envío."
+    request = json.dumps({"text": text, "phrase_id": "confirmar", "language": "es"}).encode()
+
+    for cache_exists in (False, True):
+        if cache_exists:
+            cache.mkdir()
+        response = relay.handle("GET", "capabilities", "", "", b"")
+        assert response[0] == 200
+        assert not payload(response)["tts"] and "voice_phrases" not in payload(response)
+        assert relay.handle("POST", "speak", "", "application/json", request)[0] == 404
+
+    (cache / "frases.json").write_text(json.dumps({"phrases": {"confirmar": text}}), encoding="utf-8")
+    wav = b"RIFF1234WAVE"
+    (cache / "confirmar.wav").write_bytes(wav)
+    ready = payload(relay.handle("GET", "capabilities", "", "", b""))
+    assert ready["tts"] and ready["voice_phrases"] == {"confirmar": text}
+    assert relay.handle("POST", "speak", "", "application/json", request) == (200, wav, "audio/wav; source=cache-natural")
