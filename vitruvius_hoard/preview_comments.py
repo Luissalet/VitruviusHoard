@@ -35,10 +35,13 @@ FORMAT = "vitruvius-preview-comments/v1"
 STATUSES = ("pending", "seen", "answered", "resolved", "dismissed")
 OPEN = ("pending", "seen")
 MAX_COMMENTS = 1000
+MAX_PER_PAGE = 300  # what the preview paints: the page script keeps the same limit, so no comment is left without a pin
+IDENTITY_ATTRS = ("id", "href", "data-vid", "name", "src", "for")
 MAX_NOTE = 2000
 MAX_SUMMARY = 1200
 MAX_CROP = 300_000
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+JPEG_MAGIC = b"\xff\xd8\xff"
 _BOX = ("x", "y", "w", "h")
 _FIELDS = ("summary", "reply", "resolved_in")
 
@@ -88,15 +91,23 @@ class PreviewComments:
     def _current_revision(self, project_id):
         return self.app_projects.get(project_id)["revision"]
 
-    def _check_revision(self, project_id, revision, what):
-        """A revision a comment or anchor names must be one of this project and, while a preview runs, the one it serves."""
+    def _check_revision(self, project_id, revision, what, live=False, session=None):
+        """A revision a comment or anchor names must be one of this project and, while a preview runs, the one it serves.
+        ``live`` (anchor reports) also needs the preview to be running, and ``session`` (the preview process the page was
+        loaded from) to be the one running now: a late report from a stopped or replaced preview is refused."""
         if not isinstance(revision, str) or not revision:
             raise ValueError(f"{what} needs the source revision the preview was served from")
         if revision not in self.app_projects.get(project_id)["revisions"]:
             raise ValueError(f"Unknown revision {revision}: {what} must name a revision of this project")
         status = self.app_projects.status(project_id)
-        if status.get("state") == "running" and status.get("revision") and status["revision"] != revision:
+        running = status.get("state") == "running"
+        if live and not running:
+            raise StaleSelection(f"The preview is not running: {what} from a stopped preview is dropped")
+        if running and status.get("revision") and status["revision"] != revision:
             raise StaleSelection(f"The preview now serves revision {status['revision']}, not {revision}: pick the element again on the page that is shown")
+        current = status.get("pid") or status.get("url")
+        if live and session is not None and current is not None and session != current:
+            raise StaleSelection(f"{what} is from an earlier run of the preview: it is dropped")
 
     def _view(self, comment, current):
         item = {key: value for key, value in comment.items() if key != "history"}
@@ -106,31 +117,39 @@ class PreviewComments:
         return item
 
     # ---- the crop ------------------------------------------------------------------------------------------
-    def _crop_path(self, project_id, comment_id):
+    def _crop_path(self, project_id, comment_id, suffix=".png"):
         if not re.fullmatch(r"c\d+", comment_id):
             raise LookupError("Comment not found")
-        return self.app_projects._directory(project_id) / "comment-crops" / f"{comment_id}.png"
+        return self.app_projects._directory(project_id) / "comment-crops" / f"{comment_id}{suffix}"
 
     def crop(self, project_id, comment_id):
-        """Path of the element's crop, taken when the comment was made."""
-        path = self._crop_path(project_id, comment_id)
-        if not path.is_file():
-            raise LookupError("This comment has no crop")
-        return path
+        """Path of the element's crop (PNG or JPEG), taken when the comment was made."""
+        for suffix in (".png", ".jpg"):
+            path = self._crop_path(project_id, comment_id, suffix)
+            if path.is_file():
+                return path
+        raise LookupError("This comment has no crop")
 
     @staticmethod
     def _decode_crop(crop):
         if crop in (None, ""):
             return None
-        if not isinstance(crop, str) or not crop.startswith("data:image/png;base64,"):
-            raise ValueError("The crop must be a PNG data URL")
+        if not isinstance(crop, str) or not crop.startswith(("data:image/png;base64,", "data:image/jpeg;base64,")):
+            raise ValueError("The crop must be a PNG or JPEG data URL")
         try:
             data = base64.b64decode(crop.split(",", 1)[1], validate=True)
         except (binascii.Error, ValueError) as error:
             raise ValueError("The crop is not valid base64") from error
-        if not data.startswith(PNG_MAGIC) or len(data) > MAX_CROP:
-            raise ValueError(f"The crop must be a PNG of at most {MAX_CROP} bytes")
+        if not (data.startswith(PNG_MAGIC) or data.startswith(JPEG_MAGIC)) or len(data) > MAX_CROP:
+            raise ValueError(f"The crop must be a PNG or JPEG of at most {MAX_CROP} bytes")
         return data
+
+    @staticmethod
+    def _attrs(raw):
+        """The identity attributes of the element (an id, a link's address): kept to tell look-alikes apart later."""
+        if not isinstance(raw, dict):
+            return {}
+        return {name: raw[name][:300] for name in IDENTITY_ATTRS if isinstance(raw.get(name), str) and raw[name]}
 
     # ---- reading -------------------------------------------------------------------------------------------
     def list(self, project_id, status="open"):
@@ -157,7 +176,7 @@ class PreviewComments:
         return result
 
     # ---- the person's side ---------------------------------------------------------------------------------
-    def add(self, project_id, note, revision, page, element, crop=None):
+    def add(self, project_id, note, revision, page, element, crop=None, attrs=None):
         note = _text(note, MAX_NOTE)
         if not note:
             raise ValueError("A comment needs a note")
@@ -171,12 +190,15 @@ class PreviewComments:
             data = self._load(project_id)
             if len(data["comments"]) >= MAX_COMMENTS:
                 raise ValueError(f"A project keeps at most {MAX_COMMENTS} comments")
+            if sum(1 for c in data["comments"] if c["page"] == _page(page)) >= MAX_PER_PAGE:
+                raise ValueError(f"A page keeps at most {MAX_PER_PAGE} comments: the preview paints that many pins per page")
             now = time.time()
             number = data["next"]
             comment = {
                 "id": f"c{number}", "n": number, "status": "pending", "note": note, "page": _page(page), "revision": revision,
                 "vsrc": target.get("vsrc"), "vgen": target.get("vgen"), "selector": target["selector"], "tag": target["tag"],
                 "classes": target["classes"], "element_text": target["text"], "box": target["box"], "own_vsrc": bool(target.get("own_vsrc")),
+                "parent": target.get("parent") or "", "index": target.get("index") or 0, "attrs": self._attrs(attrs),
                 "crop": {"revision": revision, "bytes": len(png)} if png else None,
                 "anchor": {"state": "ok", "revision": revision, "vsrc": target.get("vsrc"), "checked_ts": now},
                 "created_ts": now, "updated_ts": now, "summary": None, "reply": None, "resolved_in": None,
@@ -185,19 +207,19 @@ class PreviewComments:
             data["next"] = number + 1
             data["comments"].append(comment)
             if png:
-                path = self._crop_path(project_id, comment["id"])
+                path = self._crop_path(project_id, comment["id"], ".png" if png.startswith(PNG_MAGIC) else ".jpg")
                 path.parent.mkdir(exist_ok=True)
                 path.write_bytes(png)
             self._save(project_id, data)
             return self._view(comment, project["revision"])
 
-    def set_anchors(self, project_id, revision, anchors):
+    def set_anchors(self, project_id, revision, anchors, session=None):
         """The page says which pins it found on screen, and on which revision. A pin whose element is gone keeps its
         comment, flagged ``lost``. A report for a revision the preview no longer serves is refused."""
         if not isinstance(anchors, list):
             raise ValueError("anchors must be a list")
         with self._lock:
-            self._check_revision(project_id, revision, "an anchor report")
+            self._check_revision(project_id, revision, "an anchor report", live=True, session=session)
             data = self._load(project_id)
             changed = 0
             for raw in anchors[:MAX_COMMENTS]:

@@ -24,6 +24,11 @@ def project(services):
     return services.app_projects.create("Commented", "work-board")
 
 
+def serving(services, project, monkeypatch, revision=None, pid=4242):
+    """Make the project's preview look like it is running the given revision, as process ``pid``."""
+    monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "running", "revision": revision or project["revision"], "url": "http://127.0.0.1:1", "pid": pid})
+
+
 def add(services, project, note="Make the title bigger", **fields):
     return services.preview_comments.add(project["id"], note, fields.pop("revision", project["revision"]), fields.pop("page", "/"), element(**fields))
 
@@ -111,7 +116,8 @@ def test_undo_restores_the_state_before_the_last_step_and_not_the_creation(servi
     assert store.list(project["id"], "answered")["comments"][0]["reply"] == "Which one?"
 
 
-def test_an_element_that_left_the_page_leaves_the_pin_without_anchor_but_keeps_the_comment(services, project):
+def test_an_element_that_left_the_page_leaves_the_pin_without_anchor_but_keeps_the_comment(services, project, monkeypatch):
+    serving(services, project, monkeypatch)
     store = services.preview_comments
     add(services, project)
     add(services, project, "Second", selector="footer")
@@ -211,7 +217,9 @@ def test_api_covers_what_the_person_does(client):
     assert client.post(f"{base}/c1/dismiss", json={"text": "changed my mind"}).json()["status"] == "dismissed"
     assert client.post(f"{base}/c1/undo").json()["status"] == "pending"
     assert client.post(f"{base}/c1/reopen", json={}).status_code == 400  # it is pending again, nothing to reopen
-    assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"]}).json()["changed"] == 1
+    assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"]}).status_code == 409  # no preview is running
+    serving(client.svc, project, pytest.MonkeyPatch())
+    assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"], "session": 4242}).json()["changed"] == 1
     assert client.get(base, params={"status": "lost"}).json()["count"] == 1
     assert client.get(base, params={"status": "bogus"}).status_code == 400
     assert client.post(f"{base}/c7/undo").status_code == 404
@@ -310,3 +318,52 @@ def test_api_serves_the_crop(client):
     assert served.status_code == 200 and served.headers["content-type"] == "image/png" and served.content.startswith(b"\x89PNG")
     assert client.get(f"{base}/c2/crop").status_code == 404
     assert client.post(base, json={**body, "crop": "data:text/html;base64,AAAA"}).status_code == 400
+
+
+def test_a_late_anchor_report_is_dropped_once_the_preview_stopped_or_was_replaced(services, project, monkeypatch):
+    from vitruvius_hoard.preview_inspector import StaleSelection
+    store, pid = services.preview_comments, project["id"]
+    add(services, project)
+    report = [{"id": "c1", "state": "lost"}]
+    with pytest.raises(StaleSelection, match="not running"):
+        store.set_anchors(pid, project["revision"], report)  # stopped: the stub preview is not running
+    serving(services, project, monkeypatch)
+    assert store.set_anchors(pid, project["revision"], report, 4242)["changed"] == 1
+    with pytest.raises(StaleSelection, match="earlier run"):
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], 1111)  # a replaced preview
+    assert store.list(pid, "lost")["count"] == 1  # still without anchor
+    monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "stopped"})
+    with pytest.raises(StaleSelection):
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], 4242)
+    assert store.list(pid, "lost")["count"] == 1  # a report after the stop does not bring the pin back
+
+
+def test_a_page_keeps_as_many_comments_as_the_preview_paints(services, project, monkeypatch):
+    monkeypatch.setattr(preview_comments, "MAX_PER_PAGE", 2)
+    add(services, project)
+    add(services, project)
+    with pytest.raises(ValueError, match="A page keeps at most 2"):
+        add(services, project)
+    assert add(services, project, page="/about")["page"] == "/about"  # another page has its own room
+
+
+def test_the_page_limit_matches_the_one_in_the_inspector_script():
+    import re
+    from pathlib import Path
+    script = (Path(preview_comments.__file__).parent / "preview_scripts" / "preview-inspector.js").read_text(encoding="utf-8")
+    assert int(re.search(r"const MAX_PINS = (\d+)", script).group(1)) == 300
+    assert preview_comments.MAX_PER_PAGE == 300
+
+
+def test_identity_attributes_are_kept_with_the_comment(services, project):
+    made = services.preview_comments.add(project["id"], "Details", project["revision"], "/", element(tag="a", parent="ul|pages/index.html:3:1", index=2),
+                                         None, {"id": "details-archive", "href": "/records?view=archive", "class": "x", "name": 5})
+    assert made["attrs"] == {"id": "details-archive", "href": "/records?view=archive"}
+    assert (made["parent"], made["index"]) == ("ul|pages/index.html:3:1", 2)
+    assert add(services, project, "No attrs")["attrs"] == {}
+
+
+def test_a_jpeg_crop_is_kept_too(services, project):
+    jpeg = "data:image/jpeg;base64," + __import__("base64").b64encode(bytes([0xFF, 0xD8, 0xFF]) + b"x" * 40).decode()
+    made = services.preview_comments.add(project["id"], "Look", project["revision"], "/", element(), jpeg)
+    assert made["has_crop"] and services.preview_comments.crop(project["id"], "c1").suffix == ".jpg"

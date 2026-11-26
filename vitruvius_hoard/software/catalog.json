@@ -1733,7 +1733,7 @@
   },
   {
     "name": "app_project_selection",
-    "description": "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\nEach item has its source position (file, line), generated-by marker, text, box and styles: it is what \"this\" means. Sinónimos: elemento seleccionado, esto, lienzo.",
+    "description": "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\nEach item has its source position (file, line), generated-by marker, text, HTML, box, styles, revision and a clip of the element: it is what \"this\" means. `expired` lists chosen elements the served revision no longer has: do not act on them. Sinónimos: elemento seleccionado, esto, lienzo.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -1758,9 +1758,191 @@
           ],
           "default": null,
           "title": "Revision"
+        },
+        "clips": {
+          "default": false,
+          "description": "Include each element's clip as a data URL (large); by default only its size.",
+          "title": "Clips",
+          "type": "boolean"
         }
       },
-      "title": "AppIdArgs",
+      "title": "AppSelectionArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_canvas_view",
+    "description": "Read the project's open preview and control refs. Leer el lienzo abierto.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "description": "Application project ID.",
+          "title": "Id",
+          "type": "string"
+        },
+        "scope": {
+          "default": "screen",
+          "enum": [
+            "screen",
+            "page"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "max_chars": {
+          "default": 6000,
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "actor": {
+          "$ref": "#/$defs/CanvasActor",
+          "description": "Agent identity used for the visible cursor."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "CanvasViewArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_canvas_act",
+    "description": "Act on the open preview with a named cursor. Actuar en el lienzo abierto.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "description": "Application project ID.",
+          "title": "Id",
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "click",
+            "fill",
+            "select",
+            "navigate",
+            "scroll",
+            "highlight",
+            "wait"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "args": {
+          "additionalProperties": true,
+          "description": "App Dock arguments for the chosen action, e.g. ref, text or value.",
+          "title": "Args",
+          "type": "object"
+        },
+        "actor": {
+          "$ref": "#/$defs/CanvasActor",
+          "description": "Agent identity used for the visible cursor."
+        }
+      },
+      "required": [
+        "id",
+        "action"
+      ],
+      "title": "CanvasActArgs",
       "type": "object"
     },
     "module": "design"

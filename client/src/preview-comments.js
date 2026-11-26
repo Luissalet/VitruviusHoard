@@ -42,6 +42,7 @@ export function pinsFor(comments, page) {
   return comments.filter((comment) => comment.page === page).map((comment) => ({
     id: comment.id, n: comment.n, status: comment.status, selector: comment.selector, vsrc: comment.vsrc || "", own_vsrc: Boolean(comment.own_vsrc),
     tag: comment.tag || "", text: comment.element_text || "", revision: comment.revision || "",
+    attrs: comment.attrs || {}, parent: comment.parent || "", index: comment.index || 0,
   }));
 }
 

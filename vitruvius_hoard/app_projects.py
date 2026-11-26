@@ -18,6 +18,9 @@ from http.client import HTTPConnection, HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
+from .app_canvas import CanvasSessions
+from .app_preview import PreviewProxy
+from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
 from .app_source_map import SourceMapError, edit_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
@@ -145,11 +148,15 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, host_port=5191):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.processes = {}
+        self.proxies = {}
+        self.host_port = host_port
+        self.canvas = CanvasSessions()
+        self.revision_events = RevisionEvents()
 
     def _directory(self, id):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
@@ -293,8 +300,24 @@ class AppProjects:
                 if conflicts:
                     raise ValueError("Project files changed: " + ", ".join(conflicts) + "; read their current source before applying edits")
             merged = {**current["files"], **files}
+            if merged == current["files"]:
+                return current
             saved = self._save(self._directory(id), self._index(current), merged)
-            return {**saved, "undo": self._undo_call(saved, current["revision"])} if saved["revision"] != current["revision"] else saved
+            self.revision_events.publish(id, revision_change(current, saved))
+            return {**saved, "undo": self._undo_call(saved, current["revision"])}
+
+    def revision_cursor(self, id, baseline):
+        """Read current source and the corresponding subscription cursor atomically."""
+        with self.lock:
+            current = self.get(id)
+            change = None
+            if baseline and baseline != current["revision"]:
+                try:
+                    previous = self.get(id, baseline)
+                except LookupError:
+                    previous = None
+                change = revision_change(previous, current, baseline=baseline)
+            return self.revision_events.sequence, current["revision"], change
 
     @staticmethod
     def _index(project):
@@ -311,10 +334,13 @@ class AppProjects:
                     raise ValueError("The application has retained edits")
                 self.stop(id)
                 (root / "archived").touch()
+                self.revision_events.close_project(id)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            self.stop(id)
-            return self._save(root, self._index(current), previous["files"])
+            saved = self._save(root, self._index(current), previous["files"])
+            if saved["revision"] != current["revision"]:
+                self.revision_events.publish(id, revision_change(current, saved))
+            return saved
 
     def status(self, id):
         item = self.processes.get(id)
@@ -324,16 +350,29 @@ class AppProjects:
         return {"state": "running" if alive else "stopped", "revision": item["revision"], "url": item["url"] if alive else None,
                 "pid": item["process"].pid if alive else None}
 
+    @staticmethod
+    def _close_process(item):
+        process = item["process"]
+        try:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+        finally:
+            item["log"].close()
+
     def stop(self, id):
         with self.lock:
             item = self.processes.pop(id, None)
+            self.canvas.detach_project(id)
+            proxy = self.proxies.pop(id, None)
+            if proxy:
+                proxy.close()
             if item:
-                process = item["process"]
-                if process.poll() is None:
-                    process.terminate()
-                    try: process.wait(timeout=5)
-                    except subprocess.TimeoutExpired: process.kill(); process.wait()
-                item["log"].close()
+                self._close_process(item)
             return {"state": "stopped"}
 
     def preview(self, id, revision=None):
@@ -343,12 +382,11 @@ class AppProjects:
             status = self.status(id)
             if status["state"] == "running" and status["revision"] == selected:
                 return status
-            self.stop(id)
             root = self._directory(id)
             run = root / "runs" / uuid.uuid4().hex
             run.mkdir(parents=True)
             ready = run / "ready.json"
-            log = (run / "output.log").open("wb")
+            output = run / "output.log"
             # One captured source dictionary owns both the process and its receipt.
             source = run / "source"
             for name, content in project["files"].items():
@@ -363,18 +401,45 @@ class AppProjects:
             if runtime_hash in _LEGACY_STARTER_RUNTIMES:
                 command.insert(2, str(renderer))
             preview_env = {**os.environ, "VITRUVIUS_PREVIEW_SOURCE_MAP": str(renderer)}
-            process = subprocess.Popen(command, cwd=source, env=preview_env, stdout=log, stderr=log,
-                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            self.processes[id] = {"process": process, "log": log, "revision": selected, "url": None}
-            deadline = time.monotonic() + 15
-            while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
-                time.sleep(.02)
-            if not ready.exists():
-                self.stop(id)
-                raise ValueError("Application did not start: " + (run / "output.log").read_text(encoding="utf-8", errors="replace"))
-            receipt = json.loads(ready.read_text(encoding="utf-8"))
-            self.processes[id]["url"] = receipt["url"]
+            log = output.open("wb")
+            try:
+                process = subprocess.Popen(
+                    command, cwd=source, env=preview_env, stdout=log, stderr=log,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except OSError:
+                log.close()
+                raise
+            candidate = {"process": process, "log": log, "revision": selected}
+            try:
+                deadline = time.monotonic() + 15
+                while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
+                    time.sleep(.02)
+                if not ready.exists() or process.poll() is not None:
+                    raise ValueError("Application did not start: " + output.read_text(encoding="utf-8", errors="replace"))
+                receipt = urlsplit(json.loads(ready.read_text(encoding="utf-8"))["url"])
+                if receipt.scheme != "http" or receipt.hostname != "127.0.0.1" or not receipt.port:
+                    raise ValueError("Invalid preview process address")
+                proxy = self.proxies.get(id)
+                if proxy is None:
+                    proxy = self.proxies[id] = PreviewProxy(self.host_port)
+            except Exception:
+                self._close_process(candidate)
+                raise
+            previous = self.processes.get(id)
+            candidate["url"] = proxy.url
+            candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
+            proxy.backend = (receipt.port, selected)
+            self.processes[id] = candidate
+            if previous:
+                self._close_process(previous)
             return self.status(id)
+
+    def preview_runtime(self, id, revision=None):
+        """Pin server-side reads and captures to the requested runtime."""
+        with self.lock:
+            status = self.preview(id, revision)
+            return status, self.processes[id]["runtime_url"]
 
     def export(self, id, revision=None, include_data=False):
         with self.lock:
@@ -397,5 +462,6 @@ class AppProjects:
             return {"id": id, "revision": project["selected_revision"], "source_sha256": project["source_sha256"], "path": str(out), "sha256": hashlib.sha256(out.read_bytes()).hexdigest(), "includes_data": actual_data}
 
     def close(self):
+        self.revision_events.close()
         for id in list(self.processes):
             self.stop(id)

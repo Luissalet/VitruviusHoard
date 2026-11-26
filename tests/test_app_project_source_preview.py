@@ -58,8 +58,10 @@ def test_preview_repeated_source_edit_and_undo(tmp_path):
         restored = projects.undo(**updated["undo"]["arguments"])
         assert restored["files"] == original["files"]
         assert restored["revision"] == original["revision"]
-        with pytest.raises(ValueError, match="Start this project's preview"):
-            projects.source_count(project_id, vsrc)
+        assert projects.source_count(project_id, vsrc)["revision"] == updated["revision"]
+        restored_preview = projects.preview(project_id, restored["revision"])
+        assert restored_preview["url"] == new_preview["url"] == preview["url"]
+        assert projects.source_count(project_id, vsrc)["revision"] == original["revision"]
     finally:
         projects.close()
 

@@ -30,14 +30,14 @@ def test_every_tool_first_line_has_english_and_spanish():
 
 
 def test_read_only_hints_correct():
-    read_only_names = {"app_templates", "app_project_list", "app_project_get", "design_patterns", "design_pattern", "reference_collections", "design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
+    read_only_names = {"app_templates", "app_project_list", "app_project_get", "app_project_canvas_view", "design_patterns", "design_pattern", "reference_collections", "design_search", "design_brief", "design_rules", "styles_search", "palettes_search",
                        "fonts_search", "design_lint", "design_rules_list", "theme_list", "theme_deal", "theme_check", "theme_memory", "page_kept", "page_assay", "page_check", "render_compare", "tokens_get", "tokens_list",
                        "reference_search", "reference_get", "sources_list", "source_status", "vitruvius_status", "motion_templates", "motion_list", "motion_get", "motion_sound_plan", "site_audit_reports", "mark_reports",
                        "diagram_types", "diagram_get", "diagram_list", "diagram_brands", "diagram_document_list", "diagram_document_get", "diagram_document_history", "diagram_document_compare", "diagram_style_list", "diagram_style_get", "protocol_check",
                        "design_direction_brief", "design_preset_list", "design_pick_themes",
                        "design_alternatives_list", "design_alternatives_get", "design_alternatives_analyze", "instrument_list", "instrument_get", "instrument_compute", "instrument_explain",
                        "visual_parity_get", "visual_parity_list", "design_galleries", "remake_get", "remake_list", "remake_code", "remake_fidelity"}
-    write_names = {"app_project_create", "app_project_update", "app_project_undo", "app_project_preview", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
+    write_names = {"app_project_create", "app_project_update", "app_project_undo", "app_project_preview", "app_project_canvas_act", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render", "motion_sound_render", "site_audit", "mark_audit", "mark_test_sheet",
                   "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_style_save", "diagram_style_remove", "diagram_style_apply",
                   "design_slop_audit", "design_preset_apply", "design_figma_import",
@@ -58,9 +58,9 @@ def test_read_only_hints_correct():
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is False
 
 
-def test_destructive_hints_only_on_deletes():
+def test_destructive_hints_on_tools_that_can_delete():
     destructive = {name for name, t in TOOLS_BY_NAME.items() if t.annotations["destructiveHint"]}
-    assert destructive == {"app_project_call", "tokens_delete", "reference_delete", "diagram_delete", "diagram_brand_delete", "visual_parity_delete", "remake_delete"}
+    assert destructive == {"app_project_call", "app_project_canvas_act", "tokens_delete", "reference_delete", "diagram_delete", "diagram_brand_delete", "visual_parity_delete", "remake_delete"}
 
 
 def test_tool_catalog_matches_tools():

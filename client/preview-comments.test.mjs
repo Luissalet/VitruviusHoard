@@ -30,11 +30,11 @@ test("comments without anchor stay in their own list, closed ones apart", () => 
 });
 
 test("the preview gets this page's pins with the identity recorded when they were made", () => {
-  const made = { own_vsrc: true, element_text: "Taller", revision: "r1" };
+  const made = { own_vsrc: true, element_text: "Taller", revision: "r1", attrs: { id: "t" }, parent: "body|", index: 0 };
   const list = [make("c1", 1, "pending", made), make("c2", 2, "seen", { ...made, page: "/about" }), make("c3", 3, "resolved", { ...made, anchor: { state: "ok", vsrc: "pages/index.html:9:1" } })];
   assert.deepEqual(pinsFor(list, "/"), [
-    { id: "c1", n: 1, status: "pending", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1" },
-    { id: "c3", n: 3, status: "resolved", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1" },
+    { id: "c1", n: 1, status: "pending", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1", attrs: { id: "t" }, parent: "body|", index: 0 },
+    { id: "c3", n: 3, status: "resolved", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1", attrs: { id: "t" }, parent: "body|", index: 0 },
   ]);
   assert.equal(pinsFor(list, "/nowhere").length, 0);
 });

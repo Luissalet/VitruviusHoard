@@ -1,5 +1,6 @@
 """API routers."""
 
+from .app_canvas import router as app_canvas_router
 from .app_projects import router as app_projects_router
 from .agent import router as agent_router
 from .health import router as status_router
@@ -20,4 +21,4 @@ from .parity import router as parity_router
 from .remake import router as remake_router
 from ..benchmarks.routes import router as benchmark_router
 
-ROUTERS = [app_projects_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, marks_router, protocols_router, studio_router, studies_router, parity_router, remake_router, benchmark_router, agent_router]
+ROUTERS = [app_projects_router, app_canvas_router, status_router, library_router, render_router, tokens_router, references_router, settings_router, motion_router, diagrams_router, rules_router, seo_router, marks_router, protocols_router, studio_router, studies_router, parity_router, remake_router, benchmark_router, agent_router]

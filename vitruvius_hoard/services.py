@@ -82,7 +82,7 @@ class Services:
         write_url(config)
         self.db = Database(config.db_path)
 
-        self.app_projects = AppProjects(config.data_dir)
+        self.app_projects = AppProjects(config.data_dir, host_port=config.port)
         self.preview_selections = PreviewSelections()
         self.preview_comments = PreviewComments(self.app_projects)
         self.alternatives = AlternativeStudies(self)
@@ -887,10 +887,10 @@ class Services:
 
     # ---------------- application projects ----------------
     def app_project_render(self, id, revision=None, widths=None):
-        preview = self.app_projects.preview(id, revision)
+        preview, url = self.app_projects.preview_runtime(id, revision)
         project = self.app_projects.get(id, preview["revision"])
         context = {"id": id, "revision": preview["revision"], "source_sha256": project["source_sha256"]}
-        result = self.render(url=preview["url"], widths=widths or [390, 1440], title=project["name"], _browser=self.app_browser, _app_project=context)
+        result = self.render(url=url, widths=widths or [390, 1440], title=project["name"], _browser=self.app_browser, _app_project=context)
         result["app_project"] = context
         return result
 
@@ -898,7 +898,7 @@ class Services:
         import urllib.request
         import urllib.error
         from urllib.parse import quote, urlencode
-        preview = self.app_projects.preview(id)
+        _, url = self.app_projects.preview_runtime(id)
         if operation == "list":
             path, method, body = "/api/records?" + urlencode({"q": query}), "GET", None
         elif operation == "get":
@@ -914,7 +914,7 @@ class Services:
                 body["id"] = record_id
         else:
             raise ValueError("Unknown application operation")
-        request = urllib.request.Request(preview["url"] + path, method=method, data=json.dumps(body).encode("utf-8") if body is not None else None, headers={"Content-Type": "application/json"})
+        request = urllib.request.Request(url + path, method=method, data=json.dumps(body).encode("utf-8") if body is not None else None, headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(request, timeout=self.config.render_timeout_s) as response:
                 return json.load(response)
