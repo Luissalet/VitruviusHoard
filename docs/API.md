@@ -218,10 +218,10 @@ Response (a "critique" object):
 `404` if the render id is unknown.
 
 Lint's `score` and critique's `heuristic_score` use `10 / (1 + P / 10)`, rounded to two decimals. `P` sums
-the weights of open findings. Errors weigh 3, warnings 1.5, advisories 0.5 and unrecognised severities 1.
-A waived finding contributes zero. A clean result scores 10, a penalty of 10 scores 5, and larger penalties
-approach zero gradually. Fixing a finding or lowering its severity raises the unrounded score. Very small
-changes can tie at the displayed precision.
+the weights of open findings. Errors weigh 4, warnings 1.5, advisories 0.5 and unrecognised severities 1.
+One error carries more weight than two warnings. A waived finding contributes zero. A clean result scores 10,
+a penalty of 10 scores 5, and larger penalties approach zero gradually. Fixing a finding or lowering its
+severity raises the unrounded score. Very small changes can tie at the displayed precision.
 
 Critique scores the combined findings after deduplication and waivers. Without a model rating its `score` equals
 `heuristic_score`. With a model rating it averages the two. Use `gate.state` for shipping. Floor findings and
@@ -241,7 +241,7 @@ Response (a "lint result" object):
 {"findings": [{"check_id": "a11y.missing-alt", "area": "a11y", "severity": "error",
               "title": "Images missing alt text", "detail": "2 image(s) have no alt attribute.", "evidence": 2,
               "fix": "Add descriptive alt text to every meaningful image (alt=\"\" for decorative ones)."}],
- "score": 7.69, "counts": {"info": 0, "warn": 0, "error": 1}}
+ "score": 7.14, "counts": {"info": 0, "warn": 0, "error": 1}}
 ```
 
 ### `POST /api/renders/compare`

@@ -18,7 +18,7 @@ def _findings(*, errors=0, warnings=0, advisories=0):
 
 
 @pytest.mark.parametrize(("errors", "warnings", "advisories", "expected"), [
-    pytest.param(2, 15, 0, 2.60, id="original-home"),
+    pytest.param(2, 15, 0, 2.47, id="original-home"),
     pytest.param(0, 8, 1, 4.44, id="home-errors-fixed"),
     pytest.param(0, 6, 0, 5.26, id="contacts-with-warnings"),
 ])

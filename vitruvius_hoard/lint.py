@@ -14,7 +14,7 @@ from typing import Any, Callable
 Finding = dict[str, Any]
 CheckFn = Callable[[dict, str], list[Finding]]
 
-_SEVERITY_WEIGHT = {"info": 0.5, "warn": 1.5, "error": 3.0}
+_SEVERITY_WEIGHT = {"info": 0.5, "warn": 1.5, "error": 4.0}
 
 _RGB_RE = re.compile(r"rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)")
 
