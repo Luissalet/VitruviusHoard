@@ -64,39 +64,21 @@ export function understandText(text, state, context, locale, signal) {
     signal ? AbortSignal.any([signal, deadline]) : deadline).catch(() => null);
 }
 
-function audioBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",", 2)[1]);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-export async function transcribeTransferSpeech(blob, {partial, signal, state, context, locale, dictation}) {
+export async function transcribeTransferSpeech(blob, {partial, signal, state, context, locale}) {
   const started = performance.now();
-  if (dictation && !partial) {
-    const audio = {mime_type: blob.type, data_base64: await audioBase64(blob)};
-    try {
-      const result = await understand({...descriptor(state, context, locale), audio}, signal);
-      const {transcription, rules, validation} = result.timings_ms || {};
-      return {text: result.raw_transcript.trim(), interpretation: result, provider: "dictation",
-        transcriptionMs: transcription, understandingMs: Number.isFinite(rules) ? rules + (validation || 0) : undefined};
-    } catch {
-      signal.throwIfAborted();
-    }
-  }
   const query = new URLSearchParams({language: locale.slice(0, 2), partial: String(partial)});
   const prompt = vocabulary(context || undefined).join(", ").slice(0, 1000);
   if (prompt) query.set("initial_prompt", prompt);
   const response = await fetch(API + "/transcribe?" + query, {method: "POST", body: blob, signal});
   if (!response.ok) throw new Error("stt_unavailable");
-  const text = (await response.json()).text.trim();
-  if (partial || !text) return {text, provider: "shared"};
+  const {text: transcript, provider: transcriptionProvider} = await response.json();
+  const text = transcript.trim();
+  const turn = {text, provider: "shared", transcriptionProvider};
+  if (partial || !text) return turn;
   const transcribed = performance.now();
   const interpretation = await understandText(text, state, context, locale, signal);
   signal.throwIfAborted();
-  return {text, interpretation, provider: "shared",
+  return {...turn, interpretation,
     transcriptionMs: transcribed - started, understandingMs: performance.now() - transcribed};
 }
 

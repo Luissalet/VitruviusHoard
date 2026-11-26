@@ -312,30 +312,34 @@ test("common transcription formats keep the correct amounts and ask about the tw
   assert.equal(ambiguous.state.slots.concept, "Entradas");
 });
 
-test("shared transcription supplies vocabulary and gives final text to dictation", async ({mock}) => {
-  const text = "A Marta";
-  const final = {...finalResult(text, {destination_contact_id: cited("marta", "Marta")}),
-    version: "cyrano.dictation/v0", dictation_route: "app"};
-  const requests = [];
-  mock.method(globalThis, "fetch", async (url, options) => {
-    requests.push({url, body: options.body});
-    return Response.json(url.endsWith("/understand") ? final : {text});
+for (const transcriptionProvider of ["Cyrano · GPU 1 · large-v3-turbo", "Funes / Talos (reserva)"]) {
+  test(`transcription from ${transcriptionProvider} keeps its source and gives final text to dictation`, async ({mock}) => {
+    const text = "A Marta";
+    const final = {...finalResult(text, {destination_contact_id: cited("marta", "Marta")}),
+      version: "cyrano.dictation/v0", dictation_route: "app"};
+    const requests = [];
+    mock.method(globalThis, "fetch", async (url, options) => {
+      requests.push({url, body: options.body});
+      return Response.json(url.endsWith("/understand") ? final : {text, provider: transcriptionProvider});
+    });
+    const clip = new Blob(["synthetic"], {type: "audio/wav"});
+    const options = {state: initialTransfer(), context, locale: "es-ES", signal: new AbortController().signal, dictation: true};
+    const partial = await transcribeTransferSpeech(clip, {...options, partial: true});
+    assert.deepEqual(partial, {text, provider: "shared", transcriptionProvider});
+    assert.equal(requests.length, 1);
+    const reply = await transcribeTransferSpeech(clip, {...options, partial: false});
+    assert.equal(reply.text, text);
+    assert.equal(reply.provider, "shared");
+    assert.equal(reply.transcriptionProvider, transcriptionProvider);
+    assert.deepEqual(reply.interpretation, final);
+    assert.ok(reply.transcriptionMs >= 0 && reply.understandingMs >= 0);
+    const transcription = new URL(requests[1].url, "http://127.0.0.1");
+    assert.match(transcription.pathname, /\/transcribe$/u);
+    assert.match(transcription.searchParams.get("initial_prompt"), /Cuenta diaria.*Marta Vidal/u);
+    assert.deepEqual(JSON.parse(requests[2].body).vocabulary.slice(0, 2), ["Cuenta diaria", "Ahorro"]);
+    assert.equal(JSON.parse(requests[2].body).text, text);
   });
-  const clip = new Blob(["synthetic"], {type: "audio/wav"});
-  const options = {state: initialTransfer(), context, locale: "es-ES", signal: new AbortController().signal};
-  const partial = await transcribeTransferSpeech(clip, {...options, partial: true});
-  assert.deepEqual(partial, {text, provider: "shared"});
-  assert.equal(requests.length, 1);
-  const reply = await transcribeTransferSpeech(clip, {...options, partial: false});
-  assert.equal(reply.text, text);
-  assert.equal(reply.provider, "shared");
-  assert.deepEqual(reply.interpretation, final);
-  assert.ok(reply.transcriptionMs >= 0 && reply.understandingMs >= 0);
-  const fallback = new URL(requests[1].url, "http://127.0.0.1");
-  assert.match(fallback.searchParams.get("initial_prompt"), /Cuenta diaria.*Marta Vidal/u);
-  assert.deepEqual(JSON.parse(requests[2].body).vocabulary.slice(0, 2), ["Cuenta diaria", "Ahorro"]);
-  assert.equal(JSON.parse(requests[2].body).text, text);
-});
+}
 
 test("disabled or unavailable shared voice leaves the reply in writing", async ({mock}) => {
   let status = 409;

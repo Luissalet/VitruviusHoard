@@ -25,6 +25,7 @@ MAX_JSON = 32 * 1024
 DICTATION_VERSION = "cyrano.dictation/v0"
 DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
 SPEECH_TOOL = "speech_transcribe"
+FAMILY_TRANSCRIPTION = "Funes / Talos (reserva)"
 CYRANO_SPEECH_S = 6
 FINAL_TRANSCRIPTION_S = 21
 DICTATION_AUDIO_S = 25
@@ -66,6 +67,40 @@ def _transcription_ready():
     result = _famsvc.call_tool(_famsvc.owner_of("stt"), "transcribe_status",
                               {"job_id": uuid4().hex}, timeout_s=1)
     return result.get("ok", False) or (result.get("status") == 404 and "no such job" in result.get("error", "").lower())
+
+
+def _cyrano_stt_health():
+    status, app = _hub_get("/api/apps/cyrano", timeout=0.5)
+    if status != 200 or not isinstance(app, dict):
+        return {}
+    health = app.get("health")
+    if not isinstance(health, dict) or not isinstance(health.get("stt"), dict):
+        url = app.get("url")
+        if not isinstance(url, str) or not re.fullmatch(r"http://(?:127\.0\.0\.1|localhost|\[::1\]):\d{1,5}/?", url):
+            return {}
+        status, health = fetch(url.rstrip("/") + "/api/health", timeout=0.5)
+        if status != 200 or not isinstance(health, dict) or health.get("service") != "cyrano-hoard":
+            return {}
+    stt = health.get("stt")
+    return stt if isinstance(stt, dict) and stt.get("warm") is True else {}
+
+
+def _cyrano_transcription_provider(result):
+    if result.get("engine") == "family":
+        return FAMILY_TRANSCRIPTION
+    model, gpu = result.get("model"), result.get("gpu")
+    has_model = isinstance(model, str) and bool(model.strip())
+    has_gpu = type(gpu) is int and gpu >= 0
+    if not (has_model and has_gpu):
+        health = _cyrano_stt_health()
+        model = model if has_model else health.get("model")
+        gpu = gpu if has_gpu else health.get("gpu")
+    parts = ["Cyrano"]
+    if type(gpu) is int and gpu >= 0:
+        parts.append(f"GPU {gpu}")
+    if isinstance(model, str) and model.strip():
+        parts.append(model.strip())
+    return " · ".join(parts)
 
 
 def _cache_root():
@@ -172,7 +207,8 @@ class TransferVoice:
                     "vad": not preview, "fallback": False, "timeout_s": window,
                 }, timeout=window + 1)
                 if isinstance(value, dict) and isinstance(value.get("text"), str):
-                    return _json(200, text=value["text"], final=not preview)
+                    return _json(200, text=value["text"], final=not preview,
+                                 provider=_cyrano_transcription_provider(value))
 
                 budget = 2 if preview else FINAL_TRANSCRIPTION_S
                 remaining = max(1, budget - (monotonic() - started))
@@ -182,7 +218,7 @@ class TransferVoice:
                     fam_media.transcribe_cancel(result["job_id"])
             if not result.get("ok"):
                 return _json(503, code="stt_unavailable")
-            return _json(200, text=result.get("text") or "", final=not preview)
+            return _json(200, text=result.get("text") or "", final=not preview, provider=FAMILY_TRANSCRIPTION)
         finally:
             if preview:
                 self.partial.release()

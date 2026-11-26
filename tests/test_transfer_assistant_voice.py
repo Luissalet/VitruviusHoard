@@ -117,7 +117,9 @@ def test_shared_transcription_handles_provisional_and_final_audio(monkeypatch):
     for partial in (True, False):
         result = relay.handle("POST", "transcribe", f"language=es&partial={str(partial).lower()}&initial_prompt=Luc%C3%ADa%2C+Cuenta+diaria",
                               "audio/webm;codecs=opus", b"synthetic audio")
-        assert result[0] == 200 and payload(result) == {"text": "Treinta euros", "final": not partial}
+        assert result[0] == 200 and payload(result) == {
+            "text": "Treinta euros", "final": not partial, "provider": "Funes / Talos (reserva)",
+        }
     assert all(not source.exists() for source, _ in calls)
     assert [args["local_fallback"] for _, args in calls] == [False, False]
     assert [args["vad"] for _, args in calls] == [False, True]
@@ -264,7 +266,7 @@ def test_natural_cache_defaults_to_the_profile_and_handles_missing_manifest(tmp_
 
 
 def test_raw_voice_prefers_cyrano_for_partials_and_final(monkeypatch):
-    calls = []
+    calls, health_reads = [], []
     relay = voice.TransferVoice()
     monkeypatch.setattr(relay, "_common_dictation", lambda: True)
 
@@ -272,22 +274,41 @@ def test_raw_voice_prefers_cyrano_for_partials_and_final(monkeypatch):
         path = Path(args["path"])
         assert path.suffix == ".webm" and path.read_bytes() == b"synthetic"
         calls.append((owner, tool, args, timeout_s))
-        return {"ok": True, "data": {"text": "A Lucía" if args["vad"] else ""}}
+        data = {"text": "A Lucía" if args["vad"] else "", "engine": "faster-whisper"}
+        if not args["vad"]:
+            data.update(model="small", gpu=0)
+        return {"ok": True, "data": data}
+
+    def health(url, **_kwargs):
+        health_reads.append(url)
+        return 200, {"service": "cyrano-hoard", "stt": {"model": "large-v3-turbo", "gpu": 1, "warm": True}}
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError("Shared STT was called after a valid Cyrano response")
 
     monkeypatch.setattr(voice._famsvc, "call_tool", call)
     monkeypatch.setattr(voice.fam_media, "transcribe", forbidden)
-    for partial in ("true", "false"):
+    monkeypatch.setattr(voice, "_hub_get", lambda path, **_kwargs: (200, {"url": "http://127.0.0.1:59731"}))
+    monkeypatch.setattr(voice, "fetch", health)
+    for partial, provider in (("true", "Cyrano · GPU 0 · small"), ("false", "Cyrano · GPU 1 · large-v3-turbo")):
         result = relay.handle("POST", "transcribe", f"partial={partial}&initial_prompt=Luc%C3%ADa",
                               "audio/webm", b"synthetic")
         assert result[0] == 200
-        assert payload(result) == {"text": "" if partial == "true" else "A Lucía", "final": partial == "false"}
+        assert payload(result) == {"text": "" if partial == "true" else "A Lucía", "final": partial == "false",
+                                   "provider": provider}
+    assert health_reads == ["http://127.0.0.1:59731/api/health"]
     assert [(owner, tool) for owner, tool, _, _ in calls] == [("cyrano", "speech_transcribe")] * 2
     assert [args["timeout_s"] for _, _, args, _ in calls] == [1, 6]
     assert all(args["initial_prompt"] == "Lucía" and args["fallback"] is False
                and not Path(args["path"]).exists() for _, _, args, _ in calls)
+
+
+def test_cyrano_reporting_family_transcription_is_labelled_as_reserve(monkeypatch):
+    relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"text": "A Lucía", "engine": "family"}, "app"))
+    result = relay.handle("POST", "transcribe", "", "audio/webm", b"synthetic")
+    assert result[0] == 200
+    assert payload(result)["provider"] == "Funes / Talos (reserva)"
 
 
 def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):

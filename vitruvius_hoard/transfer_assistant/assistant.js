@@ -20,7 +20,7 @@ const COPY = {
     rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
     balance: "El saldo es insuficiente para este importe.",
     trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta"],
-    local_parser: "Análisis local", text_only: "Respuesta escrita", natural_voice: "Caché de voz natural (Cyrano/Prospero mañana)",
+    local_parser: "Análisis local", text_only: "Respuesta escrita", natural_voice: "Caché de voz natural",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
@@ -325,7 +325,7 @@ export function mountTransferAssistant(root, options = {}) {
     traceList.replaceChildren();
     traceRows.clear();
     trace.hidden = true;
-    if (spoken && timing) track(currentTrace, 0, "Funes / Talos", timing.transcriptionMs);
+    if (spoken && timing) track(currentTrace, 0, timing.transcriptionProvider, timing.transcriptionMs);
     const previous = state.slots;
     const previousPhase = state.phase;
     const previousNext = state.next;
@@ -415,7 +415,7 @@ export function mountTransferAssistant(root, options = {}) {
     language: locale,
     finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
-    request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale, dictation}),
+    request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale}),
     beforeStart: async () => {
       stopPlayback();
       show(transcript);
@@ -434,7 +434,8 @@ export function mountTransferAssistant(root, options = {}) {
       showDictation(result.interpretation?.dictation_route);
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {
-        ...timing, inputProvider: result.provider, transcriptionMs: result.transcriptionMs,
+        ...timing, inputProvider: result.provider, transcriptionProvider: result.transcriptionProvider,
+        transcriptionMs: result.transcriptionMs,
         understandingMs: result.understandingMs,
       }, interpretation: result.interpretation});
       else show(captureStatus, copy.empty);
