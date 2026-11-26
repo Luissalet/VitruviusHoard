@@ -231,6 +231,9 @@ class AppProjects:
             confirmation = bool(changes) and (target["kind"] == "class" or count > 1) and expected_count != count
             result = {"revision": expected_revision, "target": target, "affects": count, "token": token,
                       "scale": scale, "confirmation_required": confirmation, "changed": False}
+            if target["kind"] == "class":
+                # Only the authored preview route was counted. This stylesheet can be linked elsewhere.
+                result.update(affects_scope="page", shared_stylesheet=True)
             if operation == "plan" or confirmation or not changes:
                 return result
             updated = self.update(id, changes, expected_revision)

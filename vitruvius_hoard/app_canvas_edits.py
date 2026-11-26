@@ -6,8 +6,6 @@ from hashlib import sha256
 import re
 from urllib.parse import unquote, urljoin, urlsplit
 
-import tinycss2
-
 from .app_source_map import SourceMapError, _HTML, edit_source, source_position, source_tag
 
 
@@ -103,11 +101,11 @@ def _selectors(prelude):
     return result
 
 
-def _declarations(tokens):
+def _declarations(tinycss2, tokens):
     return tinycss2.parse_declaration_list(tokens, skip_comments=True, skip_whitespace=True)
 
 
-def _read_sheets(files, paths, tag, attrs):
+def _read_sheets(tinycss2, files, paths, tag, attrs):
     tokens = {}
     candidates = []
     for path in paths:
@@ -115,7 +113,7 @@ def _read_sheets(files, paths, tag, attrs):
             if rule.type != "qualified-rule":
                 continue
             if tinycss2.serialize(rule.prelude).strip() == ":root":
-                for declaration in _declarations(rule.content):
+                for declaration in _declarations(tinycss2, rule.content):
                     if declaration.type == "declaration" and declaration.name.startswith("--"):
                         previous = tokens.get(declaration.name)
                         if previous is None or declaration.important or not previous.important:
@@ -159,7 +157,7 @@ def _css_offset(starts, token):
     return starts[token.source_line - 1] + token.source_column - 1
 
 
-def _insert_declaration(css, rule, property_name, value, important=False):
+def _insert_declaration(tinycss2, css, rule, property_name, value, important=False):
     """Insert only at the winning rule, leaving the rest of the stylesheet byte-for-byte."""
     starts = [0, *(match.end() for match in re.finditer(r"\r\n|[\r\n\f]", css))]
     tokens = tinycss2.parse_component_value_list(css)
@@ -173,7 +171,7 @@ def _insert_declaration(css, rule, property_name, value, important=False):
     end = (offsets[index + 1] if index + 1 < len(tokens) else len(css)) - 1
     if css[end] != "}":
         raise _error("Close the CSS rule before editing it.", "Cierra la regla CSS antes de editarla.")
-    declarations = _declarations(rule.content)
+    declarations = _declarations(tinycss2, rule.content)
     shorthand = property_name.split("-")[0]
     last = next((item for item in reversed(declarations)
                  if item.type == "declaration" and item.lower_name in {property_name, shorthand, "all"}), None)
@@ -218,9 +216,13 @@ def _add_stylesheet(files):
     return filename, layout[:offset] + link + layout[offset:]
 
 
-def _target_class(vsrc, page):
+def _target_class(vsrc, page, files):
     stem = _CLASS_PREFIX + sha256(vsrc.encode()).hexdigest()[:12]
     classes = {name for tag in page.tags for name in _classes(dict(tag.attrs))}
+    # Reserve dormant rules and classes on other pages as well as rendered classes.
+    for path, content in files.items():
+        if path.lower().endswith((".css", ".html")):
+            classes.update(re.findall(r"\b" + re.escape(stem) + r"(?:-[0-9]+)?\b", content))
     name = stem
     serial = 1
     while name in classes:
@@ -236,15 +238,23 @@ def _style_plan(files, page, route, vsrc, source, tag, line, column, change, roo
     if pixels < 0 and not property_name.startswith("margin-"):
         raise _error("Use zero or a positive size.", "Usa cero o un tamaño positivo.")
 
+    try:
+        import tinycss2
+    except ImportError as error:
+        raise _error(
+            "Canvas style editing needs tinycss2. Install the project dependencies or use the source editor.",
+            "La edición de estilos en el lienzo requiere tinycss2. Instala las dependencias o usa el editor de fuente.",
+        ) from error
+
     attrs = dict(tag.attrs)
     paths = list(dict.fromkeys(_sheets(files, page, route)))
-    tokens, candidate = _read_sheets(files, paths, tag.name, attrs)
+    tokens, candidate = _read_sheets(tinycss2, files, paths, tag.name, attrs)
     scale = _scale(tokens, root_font_px)
     token = next((item["name"] for item in scale if item["pixels"] == pixels), None)
     number = format(Decimal(str(pixels)).normalize(), "f")
     value = f"var({tinycss2.serialize_identifier(token)})" if token else f"{number}px"
 
-    inline = [item for item in _declarations(attrs.get("style") or "") if item.type == "declaration"
+    inline = [item for item in _declarations(tinycss2, attrs.get("style") or "") if item.type == "declaration"
               and item.lower_name in {property_name, property_name.split("-")[0], "all"}]
     if any(item.important for item in inline):
         raise _error("This property has an important inline declaration. Edit it in the source file first.",
@@ -253,13 +263,13 @@ def _style_plan(files, page, route, vsrc, source, tag, line, column, change, roo
     if candidate and (not inline or candidate[0][0]):
         _, filename, rule, selectors = candidate
         css = files[filename]
-        updated = _insert_declaration(css, rule, property_name, value, important=bool(inline))
+        updated = _insert_declaration(tinycss2, css, rule, property_name, value, important=bool(inline))
         affected = sum(any(selector.matches(entry.name, dict(entry.attrs)) for selector in selectors)
                        for entry in page.tags)
         target = {"kind": "class", "selector": tinycss2.serialize(rule.prelude).strip(), "file": filename}
         return {filename: updated} if updated != css else {}, target, scale, token, affected
 
-    name = next((name for name in _classes(attrs) if _MANAGED_CLASS.fullmatch(name)), None) or _target_class(vsrc, page)
+    name = next((name for name in _classes(attrs) if _MANAGED_CLASS.fullmatch(name)), None) or _target_class(vsrc, page, files)
     source_file = source_position(vsrc)[0]
     updated = edit_source(source, line, column, tag.name, {"kind": "class", "operation": "add", "value": name})
     changes = {source_file: updated}

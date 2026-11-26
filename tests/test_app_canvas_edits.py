@@ -1,4 +1,6 @@
+from hashlib import sha256
 import json
+import sys
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -187,3 +189,42 @@ def test_http_and_agent_share_the_same_plan_and_agent_catalog(client):
             assert "margin-left: var(--step)" in stylesheet.read().decode("utf-8")
     finally:
         client.post(base + "/preview", json={"operation": "stop"})
+
+
+def test_canvas_text_and_preview_work_without_the_style_parser(opened, monkeypatch):
+    projects, project = opened
+    monkeypatch.setitem(sys.modules, "tinycss2", None)
+    with pytest.raises(ValueError, match="requiere tinycss2"):
+        edit(projects, project, 1, lang="es")
+    assert projects.get(project["id"])["preview"]["state"] == "running"
+    result = projects.canvas_edit(
+        project["id"], "pages/index.html:1:1", "article", project["revision"],
+        {"kind": "text", "index": 0, "original": "First", "value": "Updated"},
+    )
+    assert result["changed"] and result["undo"]["tool"] == "app_project_undo"
+
+
+def test_shared_rule_receipt_distinguishes_open_page_from_other_routes(opened):
+    projects, project = opened
+    project = projects.update(project["id"], {
+        "pages/other.html": '<article class="card">Other route</article>',
+    }, project["revision"])
+    projects.preview(project["id"])
+    plan = edit(projects, project, 1, operation="plan")
+    assert plan["affects"] == 2 and plan["confirmation_required"]
+    assert plan["affects_scope"] == "page" and plan["shared_stylesheet"] is True
+
+
+def test_new_class_avoids_retained_rule_and_existing_class_on_another_page(opened):
+    projects, project = opened
+    vsrc = "pages/index.html:3:1"
+    reserved = "canvas-" + sha256(vsrc.encode()).hexdigest()[:12]
+    project = projects.update(project["id"], {
+        "assets/dormant.css": "@media (min-width: 0px) { ." + reserved + " { color: red; } }",
+        "pages/other.html": '<article class="' + reserved + '-2">Other route</article>',
+    }, project["revision"])
+    projects.preview(project["id"])
+    result = edit(projects, project, 3, "width", 90)
+    assert result["target"]["selector"] == "#bare." + reserved + "-3"
+    new = projects.get(project["id"])
+    assert new["files"]["assets/dormant.css"] == project["files"]["assets/dormant.css"]
