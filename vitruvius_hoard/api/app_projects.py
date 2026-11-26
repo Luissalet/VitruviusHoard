@@ -9,6 +9,7 @@ from ..agent_tools import (
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
+from ..preview_comments import list_comments
 
 router = APIRouter(prefix="/api/app-projects")
 
@@ -47,6 +48,62 @@ def selection_get(request: Request, id: str, revision: str | None = None):
 @router.put("/{id}/selection")
 def selection_put(request: Request, id: str, body: SelectionBody):
     return execute(lambda: write_selection(services(request), id, body.selection, body.revision))
+
+
+class CommentBody(BaseModel):
+    note: str = ""
+    revision: str | None = None
+    page: str = "/"
+    element: dict = {}
+
+
+class CommentTextBody(BaseModel):
+    text: str = ""
+
+
+class AnchorsBody(BaseModel):
+    anchors: list = []
+    revision: str | None = None
+
+
+def _comments(request, id):
+    services(request).app_projects._directory(id)
+    return services(request).preview_comments
+
+
+@router.get("/{id}/comments")
+def comments_get(request: Request, id: str, status: str = "all"):
+    return execute(lambda: list_comments(services(request), id, status))
+
+
+@router.post("/{id}/comments")
+def comment_add(request: Request, id: str, body: CommentBody):
+    return execute(lambda: _comments(request, id).add(id, body.note, body.revision, body.page, body.element))
+
+
+@router.put("/{id}/comments/anchors")
+def comment_anchors(request: Request, id: str, body: AnchorsBody):
+    return execute(lambda: _comments(request, id).set_anchors(id, body.revision, body.anchors))
+
+
+@router.post("/{id}/comments/{comment_id}/respond")
+def comment_respond(request: Request, id: str, comment_id: str, body: CommentTextBody):
+    return execute(lambda: _comments(request, id).respond(id, comment_id, body.text))
+
+
+@router.post("/{id}/comments/{comment_id}/dismiss")
+def comment_dismiss(request: Request, id: str, comment_id: str, body: CommentTextBody):
+    return execute(lambda: _comments(request, id).dismiss(id, comment_id, body.text, "person"))
+
+
+@router.post("/{id}/comments/{comment_id}/reopen")
+def comment_reopen(request: Request, id: str, comment_id: str, body: CommentTextBody):
+    return execute(lambda: _comments(request, id).reopen(id, comment_id, body.text))
+
+
+@router.post("/{id}/comments/{comment_id}/undo")
+def comment_undo(request: Request, id: str, comment_id: str):
+    return execute(lambda: _comments(request, id).undo(id, comment_id))
 
 
 @router.get("")
