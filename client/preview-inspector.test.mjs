@@ -8,7 +8,7 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, gate, escapeCss } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss } = context.VitruviusInspectorCore;
 
 function node(tagName, attrs = {}, children = [], text = "") {
   const element = { tagName: tagName.toUpperCase(), attrs, children, parentElement: null, textContent: text, getAttribute: (name) => (name in attrs ? attrs[name] : null) };
@@ -148,6 +148,30 @@ test("lookalikes are told apart by source position, then by place; otherwise the
   assert.equal(reconcile({ tag: "li", text: "Same", vsrc: null, own_vsrc: false, parent: "ul|", index: 0 }, bare.all), bare.items[0]);
 });
 
+// Two rows with the same text and different ids, swapped in the source: the id is the element's own name.
+test("an id or data-vid keeps the element through a swap of lookalikes; href tells lookalike links apart", () => {
+  const rows = (order) => {
+    const items = order.map((id) => node("li", { id, "data-vsrc": "pages/index.html:7:3" }, [], "Available"));
+    const html = node("html", {}, [node("head"), node("body", {}, [node("ul", {}, items)])]);
+    return { items, all: (selector) => walk(html).filter((candidate) => { const m = selector.match(/^\[id="(.*)"\]$/); return m ? candidate.attrs.id === m[1] : matches(candidate, selector); }) };
+  };
+  const before = rows(["qa-duplicate-first", "qa-duplicate-second"]);
+  const env = { count: () => 1, rect: () => ({ left: 0, top: 0, width: 1, height: 1 }), style: () => ({}), scroll: { x: 0, y: 0 } };
+  const chosen = JSON.parse(JSON.stringify(describeElement(before.items[0], env)));
+  assert.deepEqual(chosen.anchor, { id: "qa-duplicate-first" });
+  const after = rows(["qa-duplicate-second", "qa-duplicate-first"]);
+  assert.equal(reconcile(chosen, after.all), after.items[1], "the element named qa-duplicate-first, wherever it is now");
+  assert.equal(reconcile(chosen, rows(["qa-duplicate-second"]).all), null, "its name is gone: expired, not a lookalike");
+  const link = (href) => node("a", { href }, [], "Open");
+  const page2 = (hrefs) => { const items = hrefs.map(link); const html = node("html", {}, [node("head"), node("body", {}, items)]); return { items, all: (selector) => walk(html).filter((c) => matches(c, selector)) }; };
+  const links = page2(["/a", "/b"]);
+  const picked = JSON.parse(JSON.stringify(describeElement(links.items[1], env)));
+  assert.deepEqual(picked.anchor, { href: "/b" });
+  const swapped = page2(["/b", "/a"]);
+  assert.equal(reconcile(picked, swapped.all), swapped.items[0], "same text, told apart by href");
+  assert.deepEqual(JSON.parse(JSON.stringify(anchorOf(node("div", { "data-vid": "v1", id: "x" })))), { vid: "v1", id: "x" });
+});
+
 test("the inspector listens only to its parent, from an origin fixed once", () => {
   const parent = {};
   const message = (type, origin, source = parent) => ({ source, origin, data: { hoardDock: 1, type } });
@@ -197,4 +221,20 @@ test("the identity attributes of an element are the ones that tell look-alikes a
   const { identityAttrs } = context.VitruviusInspectorCore;
   const found = identityAttrs(node("a", { id: "x", href: "/y", class: "btn", "data-vsrc": "p:1:1" }, [], "T"));
   assert.equal(found.id, "x"); assert.equal(found.href, "/y"); assert.equal(found.class, undefined); assert.equal(found["data-vsrc"], undefined);
+});
+
+test("a very long address keeps its pin, and an address that differs only late is another link", () => {
+  const { locatePin, identityAttrs, compactAttr } = context.VitruviusInspectorCore;
+  const base = "/records?view=archive&" + "filter=".padEnd(300, "x");
+  const link = (href) => node("a", { id: "long", href }, [], "Details");
+  const original = link(base + "&tail=1");
+  assert.equal(base.length + 7 > 300, true);
+  const recorded = identityAttrs(original);
+  assert.equal(recorded.href.length < 220, true, "the stored value stays short");
+  assert.equal(compactAttr("short"), "short");
+  const pin = { selector: "#long", tag: "a", text: "Details", revision: "r1", own_vsrc: false, attrs: recorded };
+  const lookup = (table) => (selector) => { if (!(selector in table)) throw new Error("bad selector"); return table[selector]; };
+  assert.equal(locatePin(pin, lookup({ a: [original] }), "r1").element, original, "the intact link is found again");
+  const later = link(base + "&tail=2");
+  assert.equal(locatePin(pin, lookup({ a: [later] }), "r1").state, "lost", "a link that differs only after character 300 is not the same");
 });

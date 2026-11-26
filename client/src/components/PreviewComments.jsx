@@ -9,12 +9,11 @@ const POLL_MS = 2500;
  * buttons and the message listener). The inspector inside the preview paints the pins and reports the element a person
  * picked in Comment mode; this component writes the note, keeps the list (polled, so the agent's steps show up) and
  * says which comments lost their element. `register.current` is the handler `PreviewSelection` calls with each message;
- * `frameSession.current` is the preview process the frame was loaded from (a late report from an earlier run is refused),
  * `served.current` is the revision the page says it serves (`previewRevision.current`, the one the preview was started on,
  * stands in for a page that does not say), `onContext` receives what the copilot sees of the open comments.
  * A draft keeps the revision its element was picked on: if the page moved on, it is dropped, never saved as the newer one.
  */
-export default function PreviewComments({ projectId, running, served, previewRevision, frameSession, es, notify, send, register, ready, onContext }) {
+export default function PreviewComments({ projectId, running, served, previewRevision, es, notify, send, register, ready, onContext }) {
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState(null); // {element, page}
   const [note, setNote] = useState("");
@@ -51,7 +50,7 @@ export default function PreviewComments({ projectId, running, served, previewRev
         // The report names the revision the page itself serves; the server refuses one the preview no longer serves.
         const reported = data.revision || previewRevision.current;
         const changed = anchorChanges(state.current.comments, data.anchors, reported);
-        if (changed.length && projectId && reported) api.appProjectCommentAnchors(projectId, { anchors: changed, revision: reported, session: frameSession.current ?? undefined }).then(load).catch(() => {});
+        if (changed.length && projectId && reported) api.appProjectCommentAnchors(projectId, { anchors: changed, revision: reported, session: data.session || undefined }).then(load).catch(() => {});
       } else if (data.type === "dock/comment-focus") setFocusId(data.id);
     };
     return () => { register.current = null; };

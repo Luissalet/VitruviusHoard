@@ -93,8 +93,9 @@ class PreviewComments:
 
     def _check_revision(self, project_id, revision, what, live=False, session=None):
         """A revision a comment or anchor names must be one of this project and, while a preview runs, the one it serves.
-        ``live`` (anchor reports) also needs the preview to be running, and ``session`` (the preview process the page was
-        loaded from) to be the one running now: a late report from a stopped or replaced preview is refused."""
+        ``live`` (anchor reports) also needs the preview to be running and ``session`` (the opening of the preview the page
+        was served from, stamped by the preview proxy: it survives live refreshes) to be the one open now. A report without
+        it, or from a stopped or reopened preview, is refused."""
         if not isinstance(revision, str) or not revision:
             raise ValueError(f"{what} needs the source revision the preview was served from")
         if revision not in self.app_projects.get(project_id)["revisions"]:
@@ -105,9 +106,11 @@ class PreviewComments:
             raise StaleSelection(f"The preview is not running: {what} from a stopped preview is dropped")
         if running and status.get("revision") and status["revision"] != revision:
             raise StaleSelection(f"The preview now serves revision {status['revision']}, not {revision}: pick the element again on the page that is shown")
-        current = status.get("pid") or status.get("url")
-        if live and session is not None and current is not None and session != current:
-            raise StaleSelection(f"{what} is from an earlier run of the preview: it is dropped")
+        if live:
+            if not session:
+                raise ValueError(f"{what} needs the preview session the page was served from")
+            if session != status.get("session"):
+                raise StaleSelection(f"{what} is from an earlier opening of the preview: it is dropped")
 
     def _view(self, comment, current):
         item = {key: value for key, value in comment.items() if key != "history"}

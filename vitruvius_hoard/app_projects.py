@@ -347,8 +347,9 @@ class AppProjects:
         if not item:
             return {"state": "stopped"}
         alive = item["process"].poll() is None
+        proxy = self.proxies.get(id)
         return {"state": "running" if alive else "stopped", "revision": item["revision"], "url": item["url"] if alive else None,
-                "pid": item["process"].pid if alive else None}
+                "pid": item["process"].pid if alive else None, "session": proxy.session if alive and proxy else None}
 
     @staticmethod
     def _close_process(item):

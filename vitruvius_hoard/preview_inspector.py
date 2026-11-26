@@ -53,7 +53,10 @@ def _item(raw):
     clip = raw.get("clip")
     if isinstance(clip, dict) and isinstance(clip.get("data_url"), str) and clip["data_url"].startswith("data:image/") and len(clip["data_url"]) <= MAX_CLIP:
         item["clip"] = {"mime": clip["data_url"][5:clip["data_url"].index(";")] if ";" in clip["data_url"] else "image/png", "w": _number(clip.get("w")),
-                        "h": _number(clip.get("h")), "bytes": len(clip["data_url"]) * 3 // 4, "data_url": clip["data_url"]}
+                        "h": _number(clip.get("h")), "bytes": len(clip["data_url"]) * 3 // 4, "data_url": clip["data_url"],
+                        "omitted": [o[:120] for o in clip["omitted"][:8] if isinstance(o, str)] if isinstance(clip.get("omitted"), list) else []}
+        if item["clip"]["omitted"]:
+            item["clip_note"] = "The clip is not complete: it leaves out " + "; ".join(item["clip"]["omitted"]) + "."
     if item["expired"]:
         item["note"] = "Expired: the revision now served no longer has this same element (tag, text and place). Select it again."
     if vsrc:

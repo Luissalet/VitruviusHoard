@@ -30,7 +30,7 @@ def test_booking_export_has_the_same_page_as_the_owned_preview(tmp_path):
             assert json.loads(archive.read("website.json"))["form"]["fields"]["item"] == "estuary"
         with urlopen(preview["url"], timeout=5) as response:
             scripts = ("app-bridge.js", *(name for name in PREVIEW_SCRIPTS if (SCRIPT_DIR / name).is_file()))
-            expected = inject_scripts(page.decode("utf-8"), scripts, preview["revision"])
+            expected = inject_scripts(page.decode("utf-8"), scripts, preview["revision"], preview["session"])
             assert response.read().decode("utf-8") == expected
         with pytest.raises(ValueError, match="unique"):
             projects.create("Duplicate", template="booking", items=ITEMS * 2)

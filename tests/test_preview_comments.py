@@ -24,9 +24,9 @@ def project(services):
     return services.app_projects.create("Commented", "work-board")
 
 
-def serving(services, project, monkeypatch, revision=None, pid=4242):
+def serving(services, project, monkeypatch, revision=None, session="opening-1"):
     """Make the project's preview look like it is running the given revision, as process ``pid``."""
-    monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "running", "revision": revision or project["revision"], "url": "http://127.0.0.1:1", "pid": pid})
+    monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "running", "revision": revision or project["revision"], "url": "http://127.0.0.1:1", "pid": 7, "session": session})
 
 
 def add(services, project, note="Make the title bigger", **fields):
@@ -121,14 +121,14 @@ def test_an_element_that_left_the_page_leaves_the_pin_without_anchor_but_keeps_t
     store = services.preview_comments
     add(services, project)
     add(services, project, "Second", selector="footer")
-    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "lost"}, {"id": "c2", "state": "ok", "vsrc": "pages/index.html:9:1", "box": {"x": 1, "y": 2, "w": 3, "h": 4}}, {"id": "zz", "state": "ok"}, "junk"])["changed"] == 2
+    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "lost"}, {"id": "c2", "state": "ok", "vsrc": "pages/index.html:9:1", "box": {"x": 1, "y": 2, "w": 3, "h": 4}}, {"id": "zz", "state": "ok"}, "junk"], "opening-1")["changed"] == 2
     lost = store.list(project["id"], "lost")
     assert [c["id"] for c in lost["comments"]] == ["c1"] and lost["counts"]["lost"] == 1
     assert lost["comments"][0]["note"] == "Make the title bigger" and lost["comments"][0]["status"] == "pending"
     moved = store.list(project["id"], "all")["comments"][1]
     assert moved["vsrc"] == "pages/index.html:3:5" and moved["anchor"]["vsrc"] == "pages/index.html:9:1" and moved["box"]["w"] == 3
-    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "lost"}])["changed"] == 0  # same report: nothing rewritten
-    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}])["changed"] == 1
+    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "lost"}], "opening-1")["changed"] == 0  # same report: nothing rewritten
+    assert store.set_anchors(project["id"], project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], "opening-1")["changed"] == 1
     assert store.list(project["id"], "lost")["count"] == 0
 
 
@@ -219,7 +219,7 @@ def test_api_covers_what_the_person_does(client):
     assert client.post(f"{base}/c1/reopen", json={}).status_code == 400  # it is pending again, nothing to reopen
     assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"]}).status_code == 409  # no preview is running
     serving(client.svc, project, pytest.MonkeyPatch())
-    assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"], "session": 4242}).json()["changed"] == 1
+    assert client.put(f"{base}/anchors", json={"anchors": [{"id": "c1", "state": "lost"}], "revision": project["revision"], "session": "opening-1"}).json()["changed"] == 1
     assert client.get(base, params={"status": "lost"}).json()["count"] == 1
     assert client.get(base, params={"status": "bogus"}).status_code == 400
     assert client.post(f"{base}/c7/undo").status_code == 404
@@ -328,13 +328,17 @@ def test_a_late_anchor_report_is_dropped_once_the_preview_stopped_or_was_replace
     with pytest.raises(StaleSelection, match="not running"):
         store.set_anchors(pid, project["revision"], report)  # stopped: the stub preview is not running
     serving(services, project, monkeypatch)
-    assert store.set_anchors(pid, project["revision"], report, 4242)["changed"] == 1
-    with pytest.raises(StaleSelection, match="earlier run"):
-        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], 1111)  # a replaced preview
+    assert store.set_anchors(pid, project["revision"], report, "opening-1")["changed"] == 1
+    with pytest.raises(ValueError, match="needs the preview session"):
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}])  # no session: nothing is revalidated
+    with pytest.raises(ValueError, match="needs the preview session"):
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], "")
+    with pytest.raises(StaleSelection, match="earlier opening"):
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], "opening-0")  # an earlier opening of the preview
     assert store.list(pid, "lost")["count"] == 1  # still without anchor
     monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "stopped"})
     with pytest.raises(StaleSelection):
-        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], 4242)
+        store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:3:5"}], "opening-1")
     assert store.list(pid, "lost")["count"] == 1  # a report after the stop does not bring the pin back
 
 
@@ -367,3 +371,28 @@ def test_a_jpeg_crop_is_kept_too(services, project):
     jpeg = "data:image/jpeg;base64," + __import__("base64").b64encode(bytes([0xFF, 0xD8, 0xFF]) + b"x" * 40).decode()
     made = services.preview_comments.add(project["id"], "Look", project["revision"], "/", element(), jpeg)
     assert made["has_crop"] and services.preview_comments.crop(project["id"], "c1").suffix == ".jpg"
+
+
+def test_the_preview_session_survives_a_live_refresh_and_changes_with_a_new_opening(tmp_path):
+    import re
+    from urllib.request import urlopen
+    from vitruvius_hoard.app_projects import AppProjects
+    projects = AppProjects(tmp_path)
+    try:
+        project = projects.create("Session", "work-board")
+        first = projects.preview(project["id"])
+
+        def served(preview):
+            with urlopen(preview["url"], timeout=5) as response:
+                html = response.read().decode("utf-8")
+                return re.search(r'name="vitruvius-preview-session" content="([^"]+)"', html).group(1), response.headers["X-Vitruvius-Session"]
+        assert served(first) == (first["session"], first["session"])
+        newer = projects.update(project["id"], {"pages/index.html": "<h1>Changed</h1>\n"}, project["revision"])
+        refreshed = projects.preview(project["id"], newer["revision"])  # what the live refresh does: another process, the same opening
+        assert refreshed["revision"] == newer["revision"] and refreshed["pid"] != first["pid"] and refreshed["session"] == first["session"]
+        projects.stop(project["id"])
+        assert projects.status(project["id"]).get("session") is None
+        reopened = projects.preview(project["id"], newer["revision"])
+        assert reopened["session"] and reopened["session"] != first["session"]
+    finally:
+        projects.close()

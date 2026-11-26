@@ -38,9 +38,6 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
   const served = useRef(null);
   const previewRevision = useRef(null);
   previewRevision.current = preview?.revision || null;
-  const previewSession = useRef(null); // the preview process now running
-  previewSession.current = preview?.pid ?? preview?.url ?? null;
-  const frameSession = useRef(null); // the process the frame in the page was loaded from
   const store = (list) => {
     if (!projectId) return;
     api.appProjectSelectionSet(projectId, { selection: list, revision: served.current || undefined })
@@ -59,9 +56,10 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
   useEffect(() => {
     const frame = frameRef.current;
     if (!running || !frame) return undefined;
-    frameSession.current = previewSession.current;
-    const hello = () => { frameSession.current = previewSession.current; send("inspect/hello"); };
-    if (lastFrame.current !== frameKey) { lastFrame.current = frameKey; hello(); } // the new frame has already loaded: greet it now
+    const hello = () => send("inspect/hello");
+    // A swapped-in frame has already loaded: greet it now. The first frame is greeted by its own load event instead.
+    if (lastFrame.current !== undefined && frameKey !== undefined && lastFrame.current !== frameKey) hello();
+    lastFrame.current = frameKey;
     const onMessage = (event) => {
       const current = frameRef.current;
       if (isCommentMessage(event, current?.contentWindow, current && originOf(current))) {
@@ -124,6 +122,6 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
       <span><strong style={item.expired ? { textDecoration: "line-through" } : undefined}>{chipText(item, index)}</strong>{item.expired && <><br /><span>{es ? "caducada: la versión actual ya no tiene este elemento" : "expired: the current revision no longer has this element"}</span></>}{sourceText(item, es) && <><br /><span>{sourceText(item, es)}</span></>}{affectsText(item, es) && <><br /><span>{affectsText(item, es)}</span></>}</span>
       <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length }); const next = items.filter((_, at) => at !== index); setItems(next); store(next); }}>×</button>
     </li>)}</ul>}
-    <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} frameSession={frameSession} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} />
+    <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} />
   </div>;
 }
