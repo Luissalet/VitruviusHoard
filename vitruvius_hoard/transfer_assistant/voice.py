@@ -132,8 +132,8 @@ class TransferVoice:
             common = self._common_dictation()
             ready = _offers("dictation", *DICTATION_TOOLS)
             route = ("common" if common else "app") if ready else "local"
-            phrases = _cache_phrases(_cache_root()) if VOICE_MODE == "cache-natural" else {}
-            tts = bool(phrases) or VOICE_MODE == "piper" and _offers("tts", "voice_tts")
+            phrases = _cache_phrases(_cache_root())
+            tts = bool(phrases) and (VOICE_MODE == "cache-natural" or VOICE_MODE == "piper" and _offers("tts", "voice_tts"))
             return _json(200, stt=_transcription_ready(),
                          tts=tts, dictation=ready, dictation_route=route,
                          **({"voice_phrases": phrases} if phrases else {}))
@@ -232,6 +232,9 @@ class TransferVoice:
             return _cached_reply(request.get("phrase_id"), text) if language == "es" else _json(404, code="voice_phrase_unavailable")
         if VOICE_MODE != "piper":
             return _json(503, code="tts_disabled")
+        phrase_id = request.get("phrase_id")
+        if language != "es" or not isinstance(phrase_id, str) or _cache_phrases(_cache_root()).get(phrase_id) != text:
+            return _json(404, code="voice_phrase_unavailable")
         result = fam_media.speak_bytes(text, lang=language, timeout_s=12, local_fallback=False,
                                        voice=SPANISH_TTS_VOICE if language == "es" else None,
                                        engine="piper" if language == "es" else None)

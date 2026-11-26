@@ -147,6 +147,7 @@ def test_versioned_text_and_audio_follow_the_common_tools(monkeypatch):
 
 def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch):
     monkeypatch.setattr(voice, "VOICE_MODE", "piper")
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"saludo": "Hola"})
     monkeypatch.setattr(voice.fam_media, "speak_bytes", lambda *_args, **_kwargs: {"ok": False})
     monkeypatch.setattr(voice.fam_media, "transcribe", lambda *_args, **_kwargs: {"ok": False})
     monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: {"ok": False})
@@ -155,7 +156,7 @@ def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch)
     cases = [
         ("transcribe", "", "audio/webm", b"synthetic", 503, "stt_unavailable"),
         ("transcribe", "", "text/html", b"synthetic", 415, "unsupported_audio"),
-        ("speak", "", "application/json", b'{"text":"Hola"}', 503, "tts_unavailable"),
+        ("speak", "", "application/json", b'{"text":"Hola","phrase_id":"saludo"}', 503, "tts_unavailable"),
         ("speak", "", "application/json", b"[]", 400, "invalid_voice_request"),
         ("understand", "", "application/json", b'{"version":"cyrano.dictation/v0","text":"hola"}', 503, "dictation_unavailable"),
         ("understand", "", "application/json", b'{"version":"cyrano.dictation/v0","audio":{"mime_type":"audio/wav","data_base64":"?"}}', 400, "invalid_audio"),
@@ -167,14 +168,16 @@ def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch)
 
 def test_disabled_voice_generation_preserves_expected_conflict(monkeypatch):
     monkeypatch.setattr(voice, "VOICE_MODE", "piper")
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"saludo": "Hola"})
     monkeypatch.setattr(voice.fam_media, "speak_bytes",
                         lambda *_a, **_kw: {"ok": False, "error": "generation is OFF"})
-    reply = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"Hola"}')
+    reply = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"Hola","phrase_id":"saludo"}')
     assert reply[0] == 409 and payload(reply)["code"] == "tts_disabled"
 
 
 def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch):
     monkeypatch.setattr(voice, "VOICE_MODE", "piper")
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"confirmar": "¿Confirmas la transferencia?"})
     def speak(text, **arguments):
         assert text == "¿Confirmas la transferencia?"
         assert arguments["lang"] == "es" and arguments["local_fallback"] is False
@@ -183,8 +186,10 @@ def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch
         return {"ok": True, "data": b"RIFF synthetic WAV"}
 
     monkeypatch.setattr(voice.fam_media, "speak_bytes", speak)
-    body = json.dumps({"text": "¿Confirmas la transferencia?", "language": "es"}).encode()
+    body = json.dumps({"text": "¿Confirmas la transferencia?", "language": "es", "phrase_id": "confirmar"}).encode()
     assert voice.TransferVoice().handle("POST", "speak", "", "application/json", body) == (200, b"RIFF synthetic WAV", "audio/wav")
+    unknown = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"variable","phrase_id":"confirmar"}')
+    assert unknown[0] == 404
 
 
 def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypatch):

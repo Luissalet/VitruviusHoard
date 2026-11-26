@@ -1,5 +1,5 @@
 import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
-import {SPOKEN_PHRASES, speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
+import {speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 
 const COPY = {
@@ -121,7 +121,7 @@ export function mountTransferAssistant(root, options = {}) {
   let pendingData;
   let message = copy.start;
   let phraseId = "saludo";
-  let voicePhrases = SPOKEN_PHRASES;
+  let voicePhrases = {};
   let speech;
   let requestKey;
   let mic;
@@ -406,11 +406,8 @@ export function mountTransferAssistant(root, options = {}) {
     if (!voiceCheck) {
       voiceCheck = voiceAvailability().catch(() => ({})).then(available => {
         dictation = Boolean(available.dictation);
-        if (available.voice_phrases) {
-          voicePhrases = Object.fromEntries(Object.entries(SPOKEN_PHRASES).map(([id, fallback]) =>
-            [id, typeof available.voice_phrases[id] === "string" ? available.voice_phrases[id] : fallback]));
-          showFixed();
-        }
+        voicePhrases = available.voice_phrases || {};
+        showFixed();
         showDictation(available.dictation_route);
         sttWarning = available.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);

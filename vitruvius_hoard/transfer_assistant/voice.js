@@ -7,34 +7,6 @@ const WIRE_FIELDS = {
   source: "source_account_id",
 };
 
-export const SPOKEN_PHRASES = {
-  saludo: "Dime a quién quieres enviar dinero y cuánto.",
-  "pide-destino": "¿A quién quieres hacer la transferencia?",
-  "pide-importe": "¿Qué importe quieres enviar?",
-  "pide-concepto": "¿Qué concepto le pongo?",
-  "pide-origen": "¿Desde qué cuenta la envío?",
-  "ambiguo-contacto": "Hay dos contactos con ese nombre. ¿Cuál de los dos?",
-  "contacto-no-encontrado": "No encuentro ese contacto. Elige uno de la lista.",
-  "iban-invalido": "Ese número de cuenta no es válido. Revísalo, por favor.",
-  "importe-invalido": "Ese importe no es válido. Dímelo otra vez.",
-  "saldo-insuficiente": "No tienes saldo suficiente en esa cuenta.",
-  "misma-cuenta": "La cuenta de destino no puede ser la de origen.",
-  corregido: "Lo he cambiado. Revisa el formulario.",
-  confirmar: "Revisa los datos y dime si la envío.",
-  "sin-confirmacion": "Sin tu confirmación no envío nada.",
-  hecho: "Hecho. La transferencia está enviada.",
-  cancelado: "Transferencia cancelada. No he enviado nada.",
-  anulada: "La transferencia se ha anulado.",
-  "no-entendido": "No te he entendido. ¿Puedes repetirlo?",
-  escuchando: "Te escucho.",
-  transcribiendo: "Un momento, que lo estoy escribiendo.",
-  otra: "¿Quieres hacer otra transferencia?",
-  "transcripcion-caida": "Ahora mismo no puedo escucharte. Puedes escribirlo.",
-  "dictado-caido": "Te entiendo peor de lo normal. Revisa bien el formulario.",
-  "servicio-caido": "Algo no responde. Escríbelo, por favor.",
-  espera: "Sigo aquí cuando quieras.",
-};
-
 function vocabulary({accounts = [], contacts = []} = {}) {
   return [...new Set([...accounts, ...contacts].map(row => row.name.slice(0, 128)))].slice(0, 90);
 }
