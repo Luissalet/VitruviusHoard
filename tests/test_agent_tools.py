@@ -47,7 +47,7 @@ def test_read_only_hints_correct():
                   "remake_start", "remake_continue", "remake_stop", "remake_delete"}
     read_only_names.update({"benchmark_catalog", "benchmark_get", "benchmark_list", "benchmark_compare"})
     write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
-    read_only_names.add("app_project_source_count")
+    read_only_names.update({"app_project_source_count", "app_transfer_assistant_assets"})
     write_names.add("app_project_edit_source")
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
