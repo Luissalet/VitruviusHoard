@@ -17,7 +17,7 @@ from .hoard_link.guard import DEV_ORIGINS, check_request
 
 SCRIPT_ROOT = "/__vitruvius_preview__/"
 # Additional preview-only scripts live alongside the application package.
-PREVIEW_SCRIPTS = ("preview-inspector.js",)
+PREVIEW_SCRIPTS = ("preview-inspector.js", "preview-refresh.js")
 SCRIPT_DIR = Path(__file__).with_name("preview_scripts")
 
 

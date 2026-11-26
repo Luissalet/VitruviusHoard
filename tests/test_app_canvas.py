@@ -25,8 +25,8 @@ def test_listed_preview_extension_and_frame_guard(tmp_path, monkeypatch):
     from vitruvius_hoard import app_preview
     from vitruvius_hoard.app_projects import AppProjects
 
-    inspector = b'window.inspectorInPreview = true;'
-    (tmp_path / PREVIEW_SCRIPTS[0]).write_bytes(inspector)
+    for script in PREVIEW_SCRIPTS:
+        (tmp_path / script).write_bytes(f"/* {script} */".encode("utf-8"))
     monkeypatch.setattr(app_preview, "SCRIPT_DIR", tmp_path)
     projects = AppProjects(tmp_path, host_port=59249)
     project = projects.create("Nested preview")
@@ -38,10 +38,12 @@ def test_listed_preview_extension_and_frame_guard(tmp_path, monkeypatch):
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
             html = response.read().decode("utf-8")
             assert response.headers["X-Vitruvius-Revision"] == preview["revision"]
-        assert html.index("app-bridge.js") < html.index(PREVIEW_SCRIPTS[0])
+        script_positions = [html.index(script) for script in ("app-bridge.js", *PREVIEW_SCRIPTS)]
+        assert script_positions == sorted(script_positions)
         assert f'<meta name="vitruvius-preview-revision" content="{preview["revision"]}">' in html
-        with urllib.request.urlopen(url + SCRIPT_ROOT + PREVIEW_SCRIPTS[0], timeout=5) as response:
-            assert response.read() == inspector
+        for script in PREVIEW_SCRIPTS:
+            with urllib.request.urlopen(url + SCRIPT_ROOT + script, timeout=5) as response:
+                assert response.read() == (tmp_path / script).read_bytes()
         headers["Referer"] = "http://localhost:59248/"
         with pytest.raises(urllib.error.HTTPError) as rejected:
             urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5)
