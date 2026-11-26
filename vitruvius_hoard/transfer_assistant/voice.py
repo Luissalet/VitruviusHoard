@@ -6,6 +6,7 @@ import base64
 import binascii
 import json
 import os
+import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Lock
@@ -24,7 +25,9 @@ DICTATION_VERSION = "cyrano.dictation/v0"
 DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
 FINAL_TRANSCRIPTION_S = 21
 DICTATION_AUDIO_S = 25
-SPANISH_TTS_VOICE = os.getenv("VITRUVIUS_TRANSFER_TTS_VOICE", "es_ES-davefx-medium")
+SPANISH_TTS_VOICE = "es_ES-davefx-medium"
+VOICE_MODE = os.getenv("VITRUVIUS_TRANSFER_VOICE_MODE", "cache-natural")
+VOICE_CACHE = os.getenv("VITRUVIUS_VOICE_CACHE", "")
 AUDIO_TYPES = {
     "audio/webm": ".webm",
     "audio/ogg": ".ogg",
@@ -58,6 +61,35 @@ def _transcription_ready():
     result = _famsvc.call_tool(_famsvc.owner_of("stt"), "transcribe_status",
                               {"job_id": uuid4().hex}, timeout_s=1)
     return result.get("ok", False) or (result.get("status") == 404 and "no such job" in result.get("error", "").lower())
+
+
+def _cache_root():
+    return Path(VOICE_CACHE).resolve() if VOICE_CACHE else None
+
+
+def _cached_reply(phrase_id, text):
+    root = _cache_root()
+    if root is None or not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
+        return _json(404, code="voice_phrase_unavailable")
+    try:
+        manifest = json.loads((root / "frases.json").read_text(encoding="utf-8-sig"))
+        phrases = manifest.get("phrases", {}) if isinstance(manifest, dict) else {}
+        path = (root / f"{phrase_id}.wav").resolve()
+        if not isinstance(phrases, dict) or phrases.get(phrase_id) != text or path.parent != root:
+            return _json(404, code="voice_phrase_unavailable")
+        audio = path.read_bytes()
+    except (OSError, ValueError):
+        return _json(404, code="voice_phrase_unavailable")
+    if audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
+        return _json(404, code="voice_phrase_unavailable")
+    return 200, audio, "audio/wav; source=cache-natural"
+
+
+def _voice_ready():
+    if VOICE_MODE == "piper":
+        return _offers("tts", "voice_tts")
+    root = _cache_root()
+    return VOICE_MODE == "cache-natural" and root is not None and (root / "frases.json").is_file()
 
 
 class TransferVoice:
@@ -99,7 +131,7 @@ class TransferVoice:
             ready = _offers("dictation", *DICTATION_TOOLS)
             route = ("common" if common else "app") if ready else "local"
             return _json(200, stt=_transcription_ready(),
-                         tts=_offers("tts", "voice_tts"), dictation=ready, dictation_route=route)
+                         tts=_voice_ready(), dictation=ready, dictation_route=route)
         if method == "POST" and route == "transcribe":
             return self._transcribe(query, content_type, body)
         if method == "POST" and route == "understand":
@@ -191,6 +223,10 @@ class TransferVoice:
         text, language = request.get("text"), request.get("language", "es")
         if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000 or language not in ("es", "en"):
             return _json(400, code="invalid_voice_request")
+        if VOICE_MODE == "cache-natural":
+            return _cached_reply(request.get("phrase_id"), text) if language == "es" else _json(404, code="voice_phrase_unavailable")
+        if VOICE_MODE != "piper":
+            return _json(503, code="tts_disabled")
         result = fam_media.speak_bytes(text, lang=language, timeout_s=12, local_fallback=False,
                                        voice=SPANISH_TTS_VOICE if language == "es" else None,
                                        engine="piper" if language == "es" else None)

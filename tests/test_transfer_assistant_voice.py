@@ -146,6 +146,7 @@ def test_versioned_text_and_audio_follow_the_common_tools(monkeypatch):
 
 
 def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch):
+    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
     monkeypatch.setattr(voice.fam_media, "speak_bytes", lambda *_args, **_kwargs: {"ok": False})
     monkeypatch.setattr(voice.fam_media, "transcribe", lambda *_args, **_kwargs: {"ok": False})
     monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: {"ok": False})
@@ -165,6 +166,7 @@ def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch)
 
 
 def test_disabled_voice_generation_preserves_expected_conflict(monkeypatch):
+    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
     monkeypatch.setattr(voice.fam_media, "speak_bytes",
                         lambda *_a, **_kw: {"ok": False, "error": "generation is OFF"})
     reply = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"Hola"}')
@@ -172,6 +174,7 @@ def test_disabled_voice_generation_preserves_expected_conflict(monkeypatch):
 
 
 def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch):
+    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
     def speak(text, **arguments):
         assert text == "¿Confirmas la transferencia?"
         assert arguments["lang"] == "es" and arguments["local_fallback"] is False
@@ -182,3 +185,26 @@ def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch
     monkeypatch.setattr(voice.fam_media, "speak_bytes", speak)
     body = json.dumps({"text": "¿Confirmas la transferencia?", "language": "es"}).encode()
     assert voice.TransferVoice().handle("POST", "speak", "", "application/json", body) == (200, b"RIFF synthetic WAV", "audio/wav")
+
+
+def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypatch):
+    monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
+    monkeypatch.setattr(voice, "VOICE_CACHE", str(tmp_path))
+    monkeypatch.setattr(voice.fam_media, "speak_bytes",
+                        lambda *_a, **_kw: (_ for _ in ()).throw(AssertionError("The cache never calls speech generation")))
+    text = "Revisa los datos y dime si la envío."
+    (tmp_path / "frases.json").write_text(json.dumps({"phrases": {"confirmar": text, "saludo": "Dime"}}), encoding="utf-8")
+    wav = b"RIFF1234WAVE"
+    (tmp_path / "confirmar.wav").write_bytes(wav)
+    relay = voice.TransferVoice()
+
+    def speak(phrase, words):
+        body = json.dumps({"text": words, "phrase_id": phrase, "language": "es"}).encode()
+        return relay.handle("POST", "speak", "", "application/json", body)
+
+    assert speak("confirmar", text) == (200, wav, "audio/wav; source=cache-natural")
+    assert speak("confirmar", "Transfiere dinero a María")[0] == 404
+    assert speak("../confirmar", text)[0] == 404
+    assert speak("saludo", "Dime")[0] == 404
+    monkeypatch.setattr(voice, "VOICE_MODE", "off")
+    assert speak("confirmar", text)[0] == 503

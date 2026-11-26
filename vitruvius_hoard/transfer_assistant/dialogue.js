@@ -323,7 +323,7 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
   if (CONFIRM.test(raw)) {
     if (state.phase === "ready" && allowConfirm) return {state: {...state, phase: "executing"}, action: {...state.slots}};
     if (state.phase === "ready") return {state, message: state.summary};
-    return {state, message: copy[state.next] || copy.start};
+    return {state, message: copy[state.next] || copy.start, phraseId: "sin-confirmacion"};
   }
 
   const next = state.phase === "cancelled" || state.phase === "complete" ? initialTransfer() : state;
@@ -364,14 +364,15 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
       else {
         delete slots.recipient;
         if (!candidates.length && next.candidates.length) candidates = next.candidates;
-        if (!candidates.length) issue = ["recipient", copy.unknownRecipient];
+        if (!candidates.length) issue = ["recipient", copy.unknownRecipient,
+          /^[a-z]{2}\s*\d/iu.test(changes.recipient) ? "iban-invalido" : "contacto-no-encontrado"];
       }
     }
     if (Object.hasOwn(changes, "amountCents")) {
       const amount = typeof changes.amountCents === "number" ? changes.amountCents : parseAmount(changes.amountCents, lang);
       if (amount === null) {
         delete slots.amountCents;
-        issue ??= ["amountCents", copy.badAmount];
+        issue ??= ["amountCents", copy.badAmount, "importe-invalido"];
       } else slots.amountCents = amount;
     }
     if (Object.hasOwn(changes, "concept")) {
@@ -395,7 +396,10 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
     return {state: {...progress, next: "recipient"}, message: copy.ambiguous(candidates.map(item => item.name))};
   }
   const missing = SLOTS.find(key => slots[key] === undefined);
-  if (missing) return {state: {...progress, next: missing}, message: issue?.[0] === missing ? issue[1] : copy[missing]};
+  if (missing) {
+    const currentIssue = issue?.[0] === missing ? issue : null;
+    return {state: {...progress, next: missing}, message: currentIssue ? currentIssue[1] : copy[missing], phraseId: currentIssue?.[2]};
+  }
 
   const account = accounts.find(item => item.id === slots.source);
   if (!account) {
