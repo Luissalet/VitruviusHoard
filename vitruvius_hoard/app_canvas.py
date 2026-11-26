@@ -50,6 +50,15 @@ class CanvasSessions:
             key = (project, caller)
             previous = self._actor_profiles.get(key)
             profile = {**(previous or {}), **declared}
+            if not profile.get("color"):
+                occupied = {
+                    other["color"].strip().lower()
+                    for (other_project, other_caller), other in self._actor_profiles.items()
+                    if other_project == project and other_caller != caller
+                }
+                index = int.from_bytes(blake2b(caller.encode(), digest_size=2).digest(), "big") % len(_ACTOR_COLORS)
+                options = _ACTOR_COLORS[index:] + _ACTOR_COLORS[:index]
+                profile["color"] = next((color for color in options if color not in occupied), options[0])
             self._actor_profiles[key] = profile
             actor_id = profile.get("id", caller)
             if previous is not None and (previous_id := previous.get("id", caller)) != actor_id:
@@ -61,9 +70,7 @@ class CanvasSessions:
                         except RuntimeError:
                             # A disconnect can close the loop between the check and the send.
                             pass
-        index = int.from_bytes(blake2b(caller.encode(), digest_size=2).digest(), "big") % len(_ACTOR_COLORS)
-        return {"id": actor_id, "name": profile.get("name") or actor_id,
-                "color": profile.get("color") or _ACTOR_COLORS[index]}
+        return {"id": actor_id, "name": profile.get("name") or actor_id, "color": profile["color"]}
 
     def attach(self, project: str, revision: str | None = None) -> CanvasSession:
         session = CanvasSession(project, revision)

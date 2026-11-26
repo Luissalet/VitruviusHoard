@@ -90,6 +90,25 @@ def test_cross_origin_relay_prohibited(client):
     assert response.status_code == 403
 
 
+def test_default_actor_colors_are_distinct_in_each_project_until_palette_is_full():
+    canvas = CanvasSessions()
+    callers = ["claude-capataz", "codex-agrimensor", "codex-astra"]
+    callers.extend(f"designer-{index}" for index in range(5))
+    profiles = {caller: canvas.actor_for("project", caller, {}) for caller in callers}
+    palette = {actor["color"] for actor in profiles.values()}
+    assert len(palette) == 8
+    assert profiles[callers[0]]["color"] == "#a46114"
+
+    last = canvas.actor_for("project", "extra-designer", {})
+    assert last["color"] in palette
+    assert canvas.actor_for("project", "extra-designer", {}) == last
+    assert {caller: canvas.actor_for("project", caller, {}) for caller in reversed(callers)} == profiles
+    assert canvas.actor_for("other", callers[1], {})["color"] == "#a46114"
+
+    canvas.actor_for("explicit", "agent-with-color", {"color": "#A46114"})
+    assert canvas.actor_for("explicit", callers[0], {})["color"] != "#a46114"
+
+
 @pytest.mark.asyncio
 async def test_actor_profile_follows_a_caller_across_canvas_sessions():
     canvas = CanvasSessions()

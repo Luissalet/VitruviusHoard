@@ -55,7 +55,7 @@ def create_app(runtime=None):
         finally:
             await runtime.close()
     app=FastAPI(title="Vitruvius's Hoard",lifespan=lifespan)
-    from ..compat_mcp import install
+    from ..compat_mcp import caller_id, install
     install(app)
     app.state.runtime=runtime
     from ..showcase.routes import router as showcase_router
@@ -134,9 +134,7 @@ def create_app(runtime=None):
         name, arguments = body['name'], body.get('arguments', {})
         agent = ''
         if request.url.path == '/api/agent/call' and name in ACTOR_TOOLS:
-            from ..hoard_link.agent_journal import clean_identity
-            agent = (clean_identity(request.headers.get('x-agent-id')) or clean_identity(body.get('agent'))
-                     or clean_identity(body.get('caller')))
+            agent = caller_id(request.headers, body)
         return await execute(name, arguments, agent=agent)
     @app.exception_handler(ValueError)
     @app.exception_handler(LookupError)
