@@ -10,7 +10,7 @@ Put `data-transfer-scope` on their shared container. Mark the existing controls 
 
 The project exposes `GET /api/schema`, `GET /api/collections/accounts` and `GET /api/collections/contacts`. An account includes `id`, `name` and `balance_cents`; a contact has `id` and `name`. `POST /api/actions/transfer` accepts `source_account_id`, either `destination_contact_id` or `destination_iban`, `amount_cents` and `concept`. Set `confirmable_by_voice: true` on the action to allow a spoken confirmation. The panel attaches an idempotency key to the confirmed draft. Its `transfer-assistant:receipt` event carries the action receipt so the page can refresh balances, display the receipt or use its undo token.
 
-For a custom integration, set `data-transfer-assistant="manual"`, import `mountTransferAssistant` and pass the container with optional `language`, `loadContext` and `execute` options. The default language comes from the page. Use `es` for Spain Spanish or `en` for English. The inherited text styles and the CSS variables `--transfer-assistant-accent`, `--transfer-assistant-on-accent` and `--transfer-assistant-radius` match the project theme.
+For a custom integration, set `data-transfer-assistant="manual"`, import `mountTransferAssistant` and pass the container with optional `language`, `loadContext`, `execute` and `onDraft` options. Use `onDraft` to switch a legacy form to the matching recipient mode before its fields are filled. The default language comes from the page. Use `es` for Spain Spanish or `en` for English. The inherited text styles and the CSS variables `--transfer-assistant-accent`, `--transfer-assistant-on-accent` and `--transfer-assistant-radius` match the project theme.
 
 ## Local audio
 
@@ -18,7 +18,7 @@ Open the project preview on loopback to grant the microphone. The opt-in Applica
 
 In owned previews with the assistant asset, the same-origin `/__vitruvius_preview__/transfer-voice/` route uses the registered local services through the common transport. The versioned dictation service can supply validated, cited fields for text and audio. When it is unavailable, final audio uses the common transcription service and text goes through the local slot parser. Audio replies use the common voice service. If it fails, the browser can use a system voice whose `localService` flag is true. The page shows service availability and keeps typing and reading available. The exported project carries the panel and the written dialogue. Audio service access is supplied by the owned preview.
 
-The `transfer-assistant:latency` event reports the input and output provider and milliseconds from the detected speech end to final text, from final text to reply, from reply to audio and from speech end to audio playback. The event is local to the page. The preview does not save audio in the project. The microphone control source is shared with the local dictation service so its controls, pause detection and cancellation match across consumers.
+The `transfer-assistant:latency` event reports the input and output provider and milliseconds from the detected speech end to capture stop and final text, from final text to reply, from reply to audio and from speech end to audio playback. The event is local to the page. The preview does not save audio in the project. The microphone control source is shared with the local dictation service so its controls, pause detection and cancellation match across consumers.
 
 ## Uso en castellano
 

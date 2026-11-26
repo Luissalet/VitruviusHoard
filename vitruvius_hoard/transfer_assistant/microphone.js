@@ -29,15 +29,19 @@ export async function recordDictation({
   let timer;
   let stopped = false;
   let speechEnd;
+  let captureStoppedAt;
+  let stopReason;
   let audibleFrames = 0;
   const started = performance.now();
 
-  function stop({cancel = false} = {}) {
+  function stop({cancel = false, reason = "manual"} = {}) {
     if (cancel) final.abort();
     if (stopped) return;
     stopped = true;
     partial?.abort();
-    speechEnd ??= performance.now();
+    captureStoppedAt = performance.now();
+    speechEnd ??= captureStoppedAt;
+    stopReason = reason;
     clearInterval(timer);
     if (capture.state !== "inactive") capture.stop();
     stream.getTracks().forEach(track => track.stop());
@@ -52,7 +56,9 @@ export async function recordDictation({
     partial = controller;
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(4000)]);
     Promise.resolve().then(() => request(new Blob(chunks, {type: capture.mimeType}), {partial: true, signal}))
-      .then(result => { if (!stopped && result?.text) onPartial(result); })
+      .then(result => {
+        if (!stopped && (result?.text_clean || result?.text || result?.raw_transcript)) onPartial(result);
+      })
       .catch(() => {})
       .finally(() => { partial = null; });
   });
@@ -62,7 +68,7 @@ export async function recordDictation({
     try {
       const signal = AbortSignal.any([final.signal, AbortSignal.timeout(15000)]);
       const result = blob.size ? await request(blob, {partial: false, signal}) : {text: ""};
-      if (!final.signal.aborted) onFinal(result, {speechEnd, transcriptAt: performance.now()});
+      if (!final.signal.aborted) onFinal(result, {speechEnd, captureStoppedAt, stopReason, transcriptAt: performance.now()});
     } catch {
       if (!final.signal.aborted) onError("stt_unavailable");
     }
@@ -93,8 +99,8 @@ export async function recordDictation({
       audibleFrames += 1;
       if (audibleFrames >= 4) speechEnd = now;
     } else if (!speechEnd) audibleFrames = 0;
-    if (speechEnd && now - speechEnd >= silenceMs) stop();
-    else if (now - started >= maxDurationMs) stop();
+    if (speechEnd && now - speechEnd >= silenceMs) stop({reason: "silence"});
+    else if (now - started >= maxDurationMs) stop({reason: "limit"});
   }, 50);
   return {stop};
 }
@@ -111,7 +117,8 @@ export function mountDictationMicrophone(button, {
   silenceMs, partials,
 } = {}) {
   if (!request && !client?.understandAudio) throw new TypeError("A dictation client or request is required");
-  const transcribe = request || ((blob, {signal}) => client.understandAudio(blob, {...options(), language, signal}));
+  const transcribe = request || ((blob, {partial, signal}) =>
+    client.understandAudio(blob, {...options(), language, is_final: !partial, signal}));
   const copy = labels || LABELS[language.startsWith("en") ? "en" : "es"];
   let sequence = 0;
   let capture;

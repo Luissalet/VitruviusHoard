@@ -157,3 +157,38 @@ test("literal confirmation alone can submit, even when service normalisation cha
   });
   assert.equal(altered.action, undefined);
 });
+
+
+test("speech output uses only a matching system voice when the local service is down", async () => {
+  const {speakTransferReply} = await import("../vitruvius_hoard/transfer_assistant/voice.js");
+  const originalFetch = globalThis.fetch;
+  const fallback = [], started = [], spoken = [];
+  globalThis.fetch = async () => ({ok: false});
+  const voices = [{lang: "es-ES", localService: false}, {lang: "en-IE", localService: true}];
+  globalThis.window = {speechSynthesis: {
+    getVoices: () => voices,
+    speak: utterance => { spoken.push(utterance); utterance.onstart(); utterance.onend(); },
+  }};
+  globalThis.SpeechSynthesisUtterance = class {
+    constructor(text) { this.text = text; }
+  };
+  const options = {
+    locale: "es-ES", signal: new AbortController().signal,
+    onFallback: available => fallback.push(available), onStart: provider => started.push(provider),
+  };
+  try {
+    await speakTransferReply("Hola", options);
+    assert.deepEqual(fallback, [false]);
+    assert.deepEqual(spoken, []);
+    const systemVoice = {lang: "es-ES", localService: true};
+    voices.push(systemVoice);
+    await speakTransferReply("Hola", options);
+    assert.deepEqual(fallback, [false,true]);
+    assert.equal(spoken[0].voice, systemVoice);
+    assert.deepEqual(started, ["system"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.window;
+    delete globalThis.SpeechSynthesisUtterance;
+  }
+});

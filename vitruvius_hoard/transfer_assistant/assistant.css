@@ -101,3 +101,11 @@
   color: color-mix(in srgb, currentColor 75%, transparent);
   opacity: 1;
 }
+
+[data-transfer-slot][data-transfer-next] {
+  border-color: var(--transfer-assistant-accent, #14645c);
+}
+[data-transfer-slot][data-transfer-changed]:not(:focus-visible) {
+  outline: 2px solid var(--transfer-assistant-accent, #14645c);
+  outline-offset: 2px;
+}

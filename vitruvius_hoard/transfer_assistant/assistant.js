@@ -109,6 +109,7 @@ export function mountTransferAssistant(root, options = {}) {
   let cursorSequence = 0;
   let sending = false;
   const managed = new Set();
+  const marks = new WeakMap();
 
   root.classList.add("transfer-assistant");
   add(root, "h2", {class: "transfer-assistant__title"}, copy.title);
@@ -167,11 +168,16 @@ export function mountTransferAssistant(root, options = {}) {
 
   async function reflect() {
     const sequence = ++cursorSequence;
-    const current = state.slots;
+    const snapshot = state;
+    const current = snapshot.slots;
+    const hasSlots = Object.keys(current).length > 0;
+    options.onDraft?.(snapshot);
     const scope = root.closest("[data-transfer-scope]") || document;
     const fields = [...scope.querySelectorAll("[data-transfer-slot]")];
     for (const field of fields) {
+      if (sequence !== cursorSequence) return;
       const key = field.dataset.transferSlot;
+      field.toggleAttribute("data-transfer-next", key === snapshot.next && hasSlots);
       const after = controlValue(field, key, current, locale);
       if (after === undefined && !managed.has(field)) continue;
       if (after !== undefined) managed.add(field);
@@ -183,6 +189,12 @@ export function mountTransferAssistant(root, options = {}) {
       }
       if (sequence !== cursorSequence) return;
       field.value = after ?? "";
+      const mark = Symbol();
+      marks.set(field, mark);
+      field.setAttribute("data-transfer-changed", "");
+      setTimeout(() => {
+        if (marks.get(field) === mark) field.removeAttribute("data-transfer-changed");
+      }, 900);
       if (after === undefined) managed.delete(field);
       field.dispatchEvent(new Event("input", {bubbles: true}));
       field.dispatchEvent(new Event("change", {bubbles: true}));
@@ -217,7 +229,10 @@ export function mountTransferAssistant(root, options = {}) {
           root.dispatchEvent(new CustomEvent("transfer-assistant:latency", {
             bubbles: true,
             detail: {
-              inputProvider: timing.inputProvider, outputProvider: provider, speechEndToTranscriptMs: round(timing.transcriptAt - timing.speechEnd),
+              inputProvider: timing.inputProvider, outputProvider: provider, stopReason: timing.stopReason,
+              speechEndToCaptureStopMs: round(timing.captureStoppedAt - timing.speechEnd),
+              captureStopToTranscriptMs: round(timing.transcriptAt - timing.captureStoppedAt),
+              speechEndToTranscriptMs: round(timing.transcriptAt - timing.speechEnd),
               transcriptToReplyMs: round(replyAt - timing.transcriptAt),
               replyToAudioMs: round(performance.now() - replyAt),
               speechEndToAudioMs: round(performance.now() - timing.speechEnd),
@@ -228,28 +243,40 @@ export function mountTransferAssistant(root, options = {}) {
     }).catch(() => show(voiceStatus, copy.tts_unavailable));
   }
 
-  let turnSequence = 0;
-  async function submit(text, {spoken = false, timing, interpretation} = {}) {
-    if (!text.trim() || sending) return false;
-    const sequence = ++turnSequence;
-    if (!spoken) {
+  let turnQueue = Promise.resolve();
+  let formVersion = 0;
+
+  function submit(text, options = {}) {
+    if (!text.trim() || sending) return Promise.resolve(false);
+    const reviewed = state.phase === "ready" ? state.summary : undefined;
+    const version = formVersion;
+    if (!options.spoken) {
       mic?.cancel();
       show(transcript);
     }
+    const turn = turnQueue.then(() => handleTurn(text, options, version, reviewed));
+    turnQueue = turn.catch(() => false);
+    return turn;
+  }
+
+  async function handleTurn(text, {spoken = false, timing, interpretation}, version, reviewed) {
+    if (version !== formVersion) return false;
     stopPlayback();
     if (!context) {
       try { await refreshData(); }
       catch { response.textContent = copy.data; return false; }
     }
     if (!spoken && dictation) interpretation = await understandText(text, state, context, locale);
-    if (sequence !== turnSequence || sending) return false;
+    if (version !== formVersion || sending) return false;
     const previous = state.slots;
     const previousPhase = state.phase;
-    const turn = transferTurn(state, text, {...context, lang, allowConfirm: !spoken || context.allowConfirm, interpretation});
+    const previousNext = state.next;
+    const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
+    const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation});
     state = turn.state;
     if (turn.message) message = turn.message;
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
-    if (changed || previousPhase !== state.phase) void reflect();
+    if (changed || previousPhase !== state.phase || previousNext !== state.next) void reflect();
     if (!turn.action) {
       if (changed || state.phase !== "ready") requestKey = undefined;
       paint();
@@ -342,7 +369,7 @@ export function mountTransferAssistant(root, options = {}) {
     delete slots[slot];
     state = {...state, slots, phase: "collecting", next: slot};
     cursorSequence++;
-    turnSequence++;
+    formVersion++;
     managed.delete(event.target);
     requestKey = undefined;
     stopPlayback();
