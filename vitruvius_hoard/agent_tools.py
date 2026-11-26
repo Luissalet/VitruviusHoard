@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal, Any, Optional
 
-from pydantic import BaseModel, Field, FiniteFloat, model_validator
+from pydantic import BaseModel, Field, FiniteFloat, StrictBool, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
@@ -222,6 +222,19 @@ class CanvasTarget(BaseModel):
     vsrc: str | None = Field(None, max_length=512, description="Source position in the displayed revision.")
     selector: str | None = Field(None, max_length=512, description="Stable CSS selector in the preview.")
     box: CanvasBox | None = Field(None, description="Optional document-relative selection box (x, y, w, h).")
+
+
+class AppProjectListArgs(BaseModel):
+    archived: bool = Field(False, description="List archived projects. The default lists active projects.")
+
+
+class AppArchiveArgs(BaseModel):
+    id: str = ""
+    expected_revision: str = Field(description="Current source revision from the project or archive list.")
+    expected_updated_ts: FiniteFloat | None = Field(None, description="Also match the last update or archive state.")
+    operation: Literal["archive", "restore"] = "archive"
+    confirm: StrictBool = Field(False, description="Explicit confirmation of the archive or restore action.")
+    lang: Literal["en", "es"] = "en"
 
 
 class AppUpdateArgs(BaseModel):
@@ -816,8 +829,8 @@ TOOLS: list[Tool] = [
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
     Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
         AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump()), capped=False),
-    Tool("app_project_list", "List application projects, saved revisions and owned preview state. Listar aplicaciones.",
-        Empty, ann(True), lambda services, args: {"projects": services.app_projects.list()}, capped=False),
+    Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
+        AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
@@ -828,7 +841,9 @@ TOOLS: list[Tool] = [
         AppCanvasEditArgs, ann(False, False, True), lambda services, args: services.app_projects.canvas_edit(**args.model_dump())),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
-    Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",
+    Tool("app_project_archive", "Archive or restore a project with its history. Archivar o restaurar una aplicación.",
+        AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
+    Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),

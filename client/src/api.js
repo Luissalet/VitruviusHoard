@@ -141,9 +141,10 @@ export const api = {
   diagramDocumentViewer: (id, revision) => `/design/api/diagrams/documents/${encodeURIComponent(id)}/viewer?revision=${revision}`,
 
   appTemplates: () => request("GET", "/design/api/app-projects/templates"),
-  appProjects: () => request("GET", "/design/api/app-projects"),
+  appProjects: (archived = false) => request("GET", "/design/api/app-projects", { params: { archived: archived || undefined } }),
   appProject: (id, revision) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}`, { params: { revision } }),
   appProjectCreate: (body) => request("POST", "/design/api/app-projects", { body }),
+  appProjectArchive: (id, body) => request("POST", "/design/api/app-projects/" + encodeURIComponent(id) + "/archive", { body }),
   appProjectUpdate: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}`, { body }),
   appProjectPreview: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/preview`, { body }),
   appProjectExport: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/export`, { body }),
