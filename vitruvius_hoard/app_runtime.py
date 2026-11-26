@@ -71,6 +71,8 @@ def _validate_fields(fields, collections=None):
             raise ValueError("Field names must be unique; id is reserved for record identity")
         names.add(name)
         if not isinstance(kind, str) or kind not in kinds:
+            if collections is None:
+                raise ValueError("Field type must be text, number, boolean or choice")
             raise ValueError(f"Unknown field type for {name}")
         if not isinstance(field.get("label", name), str):
             raise ValueError("Field label must be text")

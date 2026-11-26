@@ -937,7 +937,7 @@ class Services:
         except urllib.error.HTTPError as error:
             payload = json.loads(error.read())
             message = payload.get("error", str(error))
-            if "code" in payload:
+            if "code" in payload and (collection is not None or operation in ("schema", "invoke", "undo_action")):
                 raise AppError(payload["code"], message, status=error.code) from error
             raise ValueError(message) from error
         if operation == "invoke" and result.get("undo_token"):
