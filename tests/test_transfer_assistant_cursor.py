@@ -10,8 +10,8 @@ def test_preview_cursor_presence_expires_and_respects_reduced_motion():
         pytest.skip("Set VITRUVIUS_BROWSER_TESTS=1 to run Chrome cursor checks")
     from playwright.sync_api import expect, sync_playwright
 
-    point = """([id, presence]) =>
-        window.HoardApp.pointTo(document.getElementById('field'), {id}, {presence})"""
+    point = """([id, expiryMs]) =>
+        window.HoardApp.pointTo(document.getElementById('field'), {id}, {presence: true, expiryMs})"""
     prepare_html = '<div style="height: 900px"></div><input id="field">'
 
     with sync_playwright() as playwright:
@@ -23,13 +23,18 @@ def test_preview_cursor_presence_expires_and_respects_reduced_motion():
             page.add_script_tag(content=BRIDGE_JS)
             actor = page.locator('.cursor[data-actor="assistant"]')
             other = page.locator('.cursor[data-actor="other"]')
-            page.evaluate(point, ["other", False])
-            page.evaluate(point, ["assistant", True])
+            page.evaluate(point, ["other"])
+            page.evaluate(point, ["assistant", 2500])
             expect(actor).to_be_visible()
-            page.clock.fast_forward(4100)
+            page.clock.fast_forward(1900)
+            expect(actor).to_be_visible()
+            page.clock.fast_forward(700)
             expect(actor).to_have_count(0)
             expect(other).to_be_visible()
-            page.evaluate(point, ["assistant", True])
+            page.clock.fast_forward(1500)
+            expect(other).to_have_count(0)
+            page.evaluate(point, ["other"])
+            page.evaluate(point, ["assistant", 2500])
             expect(actor).to_be_visible()
             page.evaluate("window.HoardApp.clearPoint({id: 'assistant'})")
             expect(actor).to_have_count(0)
@@ -41,7 +46,7 @@ def test_preview_cursor_presence_expires_and_respects_reduced_motion():
             page.add_script_tag(content=BRIDGE_JS)
             field = page.locator("#field")
             expect(field).not_to_be_in_viewport()
-            page.evaluate(point, ["assistant", True])
+            page.evaluate(point, ["assistant", 2500])
             expect(field).to_be_in_viewport()
             expect(page.locator(".cursor")).to_have_count(0)
         finally:

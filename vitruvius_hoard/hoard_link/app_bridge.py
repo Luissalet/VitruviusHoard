@@ -204,18 +204,19 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     return cursor;
   }
 
-  function scheduleCursorExpiry(id, cursor, presence) {
+  function scheduleCursorExpiry(id, cursor, presence, expiryMs) {
     clearTimeout(cursor.timer);
     if (cursor.active || actors.get(id) !== cursor) return;
+    const delay = Number.isFinite(expiryMs) && expiryMs >= 0 ? expiryMs : (presence ? 4000 : 20000);
     cursor.timer = setTimeout(() => {
       if (presence) removeCursor(id, cursor);
       else cursor.node.style.opacity = '0';
-    }, presence ? 4000 : 20000);
+    }, delay);
   }
 
-  function releaseCursor(actor, cursor, presence) {
+  function releaseCursor(actor, cursor, presence, expiryMs) {
     cursor.active--;
-    scheduleCursorExpiry(String(actor.id || 'agent'), cursor, presence);
+    scheduleCursorExpiry(String(actor.id || 'agent'), cursor, presence, expiryMs);
   }
 
   function positionAnnotations(cursor) {
@@ -461,14 +462,14 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   const api = Object.assign(previous, {
     bridgeVersion: 1,
     registerTool,
-    pointTo(element, actor = {}, {presence = false, ...options} = {}) {
+    pointTo(element, actor = {}, {presence = false, expiryMs, ...options} = {}) {
       if (!(element instanceof Element) || !element.getClientRects().length) return;
       if (presence && reduced()) return cursorApi(undefined, undefined, true).to(element, undefined, options);
       const cursor = cursorFor(actor, presence);
       cursor.active++;
       clearTimeout(cursor.timer);
       return cursorApi(cursor, undefined, presence).to(element, undefined, options)
-        .finally(() => releaseCursor(actor, cursor, presence));
+        .finally(() => releaseCursor(actor, cursor, presence, expiryMs));
     },
     clearPoint(actor) {
       if (!actor?.id) return;
