@@ -9,7 +9,8 @@ import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedMo
 
 const MODE_TEXT = {
   navigate: ["Navegar", "Navigate", "Usa la aplicación como siempre.", "Use the application as usual."],
-  select: ["Seleccionar", "Select", "Pasa el ratón y haz clic. Mayús+clic añade o quita. Esc sale.", "Hover and click. Shift+click adds or removes. Esc leaves."],
+  select: ["Seleccionar", "Select", "Pasa el ratón y haz clic. Mayús+clic añade o quita. Con un elemento elegido, sus tiradores cambian tamaño y espaciado. Esc sale.", "Hover and click. Shift+click adds or removes. With one element chosen, its handles change size and spacing. Esc leaves."],
+  comment: ["Comentar", "Comment", "Haz clic en un elemento y escribe la nota en el panel. Esc sale.", "Click an element and write the note in the panel. Esc leaves."],
   handles: ["Tiradores", "Handles", "Arrastra los tiradores para cambiar tamaño, margen o relleno. Esc sale.", "Drag the handles to change size, margin or padding. Esc leaves."],
 };
 
@@ -86,7 +87,7 @@ export default function Canvas({ param }) {
       if (!isCanvasMessage(event, frame?.contentWindow, frame && originOf(frame))) return;
       const data = event.data;
       if (data.type === "dock/inspector-ready") {
-        setModes(supportedModes(data).filter((item) => item !== "comment"));
+        setModes(supportedModes(data));
         setMode(modeFromPage(data));
         if (Array.isArray(data.selection) && data.selection.length) setSelection(data.selection); // empty: PreviewSelection restores it
         return;
@@ -97,10 +98,22 @@ export default function Canvas({ param }) {
     return () => window.removeEventListener("message", onMessage);
   }, [running, visible?.url, frameKey]);
 
-  // What the Dock host (Faustus) sees of this screen.
+  // Open comments for the Dock summary (the panel lists and edits them through PreviewSelection).
+  const [comments, setComments] = useState([]);
   useEffect(() => {
-    window.HoardApp?.setContext?.(canvasContext({ project, revision: visible?.revision, mode, selection }));
-  }, [project?.id, project?.name, visible?.revision, mode, selection]);
+    setComments([]);
+    if (!running || !project?.id) return undefined;
+    const id = project.id;
+    const load = () => api.appProjectComments(id).then((data) => { if (currentId.current === id) setComments(data.comments || []); }).catch(() => {});
+    load();
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 2500);
+    return () => clearInterval(timer);
+  }, [running, project?.id]);
+
+  // What the Dock host (Faustus) sees of this screen: the same active and expired elements the panel shows.
+  useEffect(() => {
+    window.HoardApp?.setContext?.(canvasContext({ project, revision: visible?.revision, mode, selection, comments }));
+  }, [project?.id, project?.name, visible?.revision, mode, selection, comments]);
   useEffect(() => () => window.HoardApp?.setContext?.({}), []);
 
   const choose = (next) => {

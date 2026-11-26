@@ -52,3 +52,15 @@ test("open comments keep their place when a long selection fills the summary", (
   assert.ok(many.summary.length <= 400);
   assert.match(many.summary, /open comments 9: /);
 });
+
+test("expired elements are never counted as selected and carry no source position", () => {
+  const project = { id: "p1", name: "Board" };
+  const heading = { selector: "main > h2", tag: "h2", text: "Current records", vsrc: "pages/index.html:1:167" };
+  const gone = canvasContext({ project, revision: "newrev", mode: "select", selection: [{ ...heading, expired: true }] });
+  assert.equal(gone.summary, 'Board @newrev · mode select · selected 0 · expired 1, not in this revision: h2 "Current records"');
+  assert.doesNotMatch(gone.summary, /selected 1|pages\/index\.html/);
+  const mixed = canvasContext({ project, revision: "newrev", selection: [{ tag: "p", text: "Kept", vsrc: "pages/index.html:4:3" }, { ...heading, expired: true }] });
+  assert.equal(mixed.summary, 'Board @newrev · selected 1: p "Kept" pages/index.html:4:3 · expired 1, not in this revision: h2 "Current records"');
+  const restored = canvasContext({ project, revision: "newrev", selection: [heading] });
+  assert.equal(restored.summary, 'Board @newrev · selected 1: h2 "Current records" pages/index.html:1:167');
+});

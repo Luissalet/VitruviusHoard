@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useProjectCanvas } from "../pages/projectCanvas.js";
 import { useProjectLivePreview } from "../pages/projectLivePreview.js";
+import { usePreviewEdits } from "../preview-edits.js";
 
 /**
  * The project preview shared by the Applications and Canvas screens: one frame reference, the live refresh
- * (`useProjectLivePreview`) and the second Dock frame bridge (`useProjectCanvas`). Both screens use this hook, so the
- * preview, its refresh and the agent tools that reach it behave the same in both places.
+ * (`useProjectLivePreview`), the second Dock frame bridge (`useProjectCanvas`) and the in-place edits of the handles
+ * (`usePreviewEdits`). Both screens use this hook, so the preview, its refresh, its edits and the agent tools that
+ * reach it behave the same in both places.
  */
 export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, onRevision, onError }) {
   const frameRef = useRef(null);
@@ -15,6 +17,7 @@ export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, on
   const mountedFrame = useMemo(() => ({ current: frameElement }), [frameElement]);
   const frames = useProjectLivePreview(projectId, preview, baseline, frameRef, onRevision, onError);
   const visible = frames[0] || preview;
+  usePreviewEdits(projectId, visible?.state === "running", frameRef, lang);
   useProjectCanvas(mountedFrame, projectId, visible?.state === "running" ? visible.url : null, visible?.revision, lang);
   return { frameRef, attachFrame, frames, visible };
 }
