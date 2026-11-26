@@ -514,9 +514,9 @@ CHECK_IDS = [
 
 
 def score_of(findings: list[Finding]) -> float:
-    """10 minus the weight of the findings that still stand (a waived finding is out of the sum)."""
+    """Weight open findings on a curve that reaches 5/10 at a penalty of 10."""
     penalty = sum(_SEVERITY_WEIGHT.get(f.get("severity"), 1.0) for f in findings if not f.get("waived"))
-    return round(max(0.0, 10.0 - penalty), 2)
+    return round(10.0 / (1.0 + penalty / 10.0), 2)
 
 
 def _register_core() -> None:
