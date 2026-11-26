@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
+import { useProjectCanvas } from "./projectCanvas.js";
 
 export default function Projects({ param }) {
   const { lang, notify } = useApp();
@@ -21,6 +22,9 @@ export default function Projects({ param }) {
   const [includeData, setIncludeData] = useState(false);
   const [busy, setBusy] = useState("");
   const [render, setRender] = useState(null);
+  const previewFrame = useRef(null);
+  useProjectCanvas(previewFrame, project?.id === param ? param : null,
+    preview?.state === "running" ? preview.url : null, preview?.revision, lang);
   const loadSequence = useRef(0);
   const listSequence = useRef(0);
   const currentId = useRef(param);
@@ -141,7 +145,7 @@ export default function Projects({ param }) {
           </div>
           {preview?.state === "running" && <p className="help mt-3">{preview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={preview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
         </div>
-        {preview?.state === "running" && <iframe title={es ? "Vista previa de aplicación" : "Application preview"} src={preview.url} className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white" }} />}
+        {preview?.state === "running" && <iframe key={preview.revision} ref={previewFrame} referrerPolicy="origin" title={es ? "Vista previa de aplicación" : "Application preview"} src={preview.url} className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white" }} />}
         <div className="panel">
           <h3 className="font-semibold">{es ? "Archivos de la aplicación" : "Application files"}</h3>
           <label className="label mt-3">{es ? "Archivo" : "File"}<select aria-label={es ? "Archivo" : "File"} className="field" value={file} onChange={(event) => setFile(event.target.value)}>{Array.from(new Set([...Object.keys(project.files), ...draftPaths])).sort().map((path) => <option key={path} value={path}>{path}{drafts[draftPrefix + path] !== undefined ? " *" : ""}</option>)}</select></label>

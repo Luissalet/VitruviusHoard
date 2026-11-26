@@ -1,5 +1,9 @@
 # Vitruvius software workspace
 
+## App project canvas
+
+Use `app_project_canvas_view` to read the project preview open in Applications and `app_project_canvas_act` to interact through its controls with a named cursor. With no open canvas, the tools report how to open it in Applications. The same bridge runs inside the project frame when Vitruvius is docked. Standalone exports run their own source without the canvas bridge. See [docs/APP_CANVAS.md](docs/APP_CANVAS.md).
+
 ## Web guides and craft library
 
 Cold tools (available with every module OFF, no engine, no data store, nothing to start):
