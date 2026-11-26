@@ -12,6 +12,10 @@ export function euros(cents, {sign = false} = {}) {
 export const groupIban = (iban) => String(iban || '').replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim();
 export const maskIban = (iban) => `${iban.slice(0, 4)} •••• ${iban.slice(-4)}`;
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const ICONS = {"Nómina": "<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18\"/>", "Hogar": "<path d=\"M3 11l9-7 9 7\"/><path d=\"M5 10v10h14V10\"/><path d=\"M10 20v-6h4v6\"/>", "Supermercado": "<circle cx=\"9\" cy=\"20\" r=\"1.5\"/><circle cx=\"17\" cy=\"20\" r=\"1.5\"/><path d=\"M3 4h2l2.4 11h11.2L21 8H6.2\"/>", "Transporte": "<rect x=\"5\" y=\"3\" width=\"14\" height=\"14\" rx=\"3\"/><path d=\"M5 11h14M8 21l2-4M16 21l-2-4\"/>", "Ocio": "<path d=\"M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z\"/><path d=\"M14 8v8\"/>", "Suscripciones": "<path d=\"M17 2l3 3-3 3\"/><path d=\"M4 11V9a4 4 0 0 1 4-4h12\"/><path d=\"M7 22l-3-3 3-3\"/><path d=\"M20 13v2a4 4 0 0 1-4 4H4\"/>", "Transferencia": "<path d=\"M4 8h15l-4-4M20 16H5l4 4\"/>", "Ahorro": "<ellipse cx=\"12\" cy=\"6\" rx=\"7\" ry=\"3\"/><path d=\"M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6\"/>", "Salud": "<path d=\"M9 3h6v6h6v6h-6v6H9v-6H3V9h6z\"/>", "Restaurantes": "<path d=\"M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4\"/><path d=\"M17 21V3c-2 1-3 4-3 7h3\"/>"};
+const DOT = '<circle cx="12" cy="12" r="4"/>';
+const icon = (cat) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[cat] || DOT}</svg>`;
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const COLORS = ['var(--bar-1)', 'var(--bar-2)', 'var(--bar-3)', 'var(--bar-4)'];
 const DATE = new Intl.DateTimeFormat('es-ES', {weekday: 'long', day: 'numeric', month: 'long'});
 const dayLabel = (iso) => {
@@ -35,12 +39,27 @@ export async function loadBank() {
   return {accounts, contacts: contactos, moves};
 }
 
+function paintAmount(el, cents) {
+  const [main, rest] = euros(cents).split(',');
+  el.innerHTML = `${esc(main)}<span class="cents">,${esc(rest)}</span>`;
+}
+/** The total enters by counting up over the library's slow duration (320 ms, ease-out); reduced motion shows it at once. */
+function countUp(el, cents) {
+  if (reduced()) { paintAmount(el, cents); return; }
+  const start = performance.now();
+  const frame = (now) => {
+    const t = Math.min(1, (now - start) / 320);
+    paintAmount(el, Math.round(cents * (1 - Math.pow(1 - t, 3))));
+    if (t < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 function renderTotal(accounts) {
   const el = document.getElementById('total-balance');
   if (!el) return;
   const total = accounts.reduce((s, a) => s + a.saldo_cent, 0);
-  const [main, cents] = euros(total).split(',');
-  el.innerHTML = `${esc(main)}<span class="cents">,${esc(cents)}</span>`;
+  countUp(el, total);
   const meta = document.getElementById('total-meta');
   if (meta) meta.textContent = `En ${accounts.length} productos · incluye lo dispuesto de la tarjeta`;
   const positive = accounts.filter(a => a.saldo_cent > 0);
@@ -78,7 +97,7 @@ export function renderMoves(target, moves, accounts, {limit = 0, showAccount = t
     if (m.fecha !== day) { day = m.fecha; html += `<li class="day">${esc(dayLabel(day))}</li>`; }
     const incoming = m.importe_cent > 0;
     const acc = byId[m.cuenta];
-    html += `<li class="move" data-move="${esc(m.id)}"><span class="cat" data-in="${incoming ? 1 : 0}" aria-hidden="true">${esc((m.categoria || m.concepto || '?').slice(0, 2))}</span>
+    html += `<li class="move" data-move="${esc(m.id)}"><span class="cat" data-in="${incoming ? 1 : 0}" title="${esc(m.categoria || '')}">${icon(m.categoria)}</span>
       <div class="move-text"><div class="move-title">${esc(m.concepto)}</div><div class="move-sub">${esc(m.contraparte || '')}${m.categoria ? ' · ' + esc(m.categoria) : ''}</div></div>
       <div class="move-amt${incoming ? ' in' : ''}">${euros(m.importe_cent, {sign: true})}${showAccount && acc ? `<span class="move-acc">${esc(acc.nombre)}</span>` : ''}</div></li>`;
   }
@@ -188,6 +207,31 @@ async function contactsPage() {
   } catch (error) { renderError(list, error, contactsPage); }
 }
 
+
+function voiceControl() {
+  const fab = document.getElementById('voice-fab');
+  const panel = document.getElementById('voz');
+  if (!fab || !panel) return;
+  const open = (on) => {
+    on = on && matchMedia('(max-width: 900px)').matches;
+    document.body.toggleAttribute('data-voice-open', on);
+    fab.setAttribute('aria-expanded', String(on));
+    fab.querySelector('.voice-fab-label').textContent = on ? 'Cerrar asistente' : 'Asistente';
+    if (on) setTimeout(() => panel.querySelector('input')?.focus({preventScroll: true}), 60);
+  };
+  fab.addEventListener('click', (e) => {
+    e.preventDefault();
+    const sheet = matchMedia('(max-width: 900px)').matches;
+    if (sheet) open(!document.body.hasAttribute('data-voice-open'));
+    else { panel.scrollIntoView({block: 'nearest'}); panel.querySelector('input')?.focus(); }
+  });
+  document.getElementById('voice-close')?.addEventListener('click', () => { open(false); fab.focus(); });
+  if (location.hash === '#asistente') {
+    if (matchMedia('(max-width: 900px)').matches) open(true);
+    else setTimeout(() => panel.querySelector('input')?.focus({preventScroll: true}), 120);
+  }
+}
+
 function navAndTheme() {
   const here = location.pathname.replace(/\/+$/, '') || '/';
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -203,6 +247,7 @@ function navAndTheme() {
 }
 
 navAndTheme();
+voiceControl();
 summary();
 accountPage();
 movesPage();

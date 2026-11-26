@@ -1,12 +1,15 @@
 // Tesela transfer flow: data → confirm → receipt, through the project's atomic action `transferir`.
 // Voice/assistant anchors: every field has data-voice-field; window.teselaTransfer exposes the same steps a person takes.
 import {euros, groupIban, maskIban, loadBank, esc} from './bank.js';
+import {mountTransferAssistant} from './transfer-assistant/assistant.js';
 
 const form = document.getElementById('transfer-form');
 const $ = (id) => document.getElementById(id);
 let accounts = [];
 let contacts = [];
 let pending = null;
+let voice = null;
+const amountText = (cents) => euros(cents).replace(/\u00a0€$/, '');
 
 /** Parses "1.234,56", "1234.56", "50" or "50,5" into integer cents; NaN when it is not an amount. */
 export function parseCents(text) {
@@ -106,7 +109,7 @@ function recipient(v) {
 }
 
 /** Moves to the confirmation step when everything is valid; returns the problems otherwise. */
-export function review() {
+export function review({focus = true, via = 'formulario'} = {}) {
   const v = fields();
   const list = problems(v);
   showProblems(list);
@@ -120,9 +123,11 @@ export function review() {
     <div><dt>Concepto</dt><dd>${esc(v.concepto)}</dd></div>
     <div><dt>Saldo después</dt><dd>${euros(from.saldo_cent - v.importe_cent)}</dd></div>
     <div><dt>Llega</dt><dd>${pending.para.cuenta ? 'Al momento, entre tus cuentas' : 'Hoy, transferencia inmediata'}</dd></div>`;
+  if (via === 'voz') $('transfer-summary').insertAdjacentHTML('afterbegin', '<p class="read-note">Datos leídos por el asistente. Revísalos antes de confirmar.</p>');
   $('transfer-error').textContent = '';
+  form.dataset.via = via;
   step('confirmar');
-  $('transfer-confirm').focus();
+  if (focus) $('transfer-confirm').focus();
   return {ok: true, transfer: pending};
 }
 
@@ -138,15 +143,21 @@ async function post(url, body, key) {
 /** Sends the reviewed transfer with one call to the atomic action and shows the receipt. The same review retried keeps one charge. */
 export async function confirm() {
   if (!pending) return {ok: false, problems: {transferencia: 'Revisa la transferencia antes de confirmarla.'}};
+  // A draft the assistant read is confirmed through the assistant, so voice and button share one execution and key.
+  if (voice?.ready()) { await voice.api.submit('confirmo'); return {ok: form.dataset.step === 'justificante', via: 'voz'}; }
+  try { return {ok: true, ...(await send(pending, pending.key))}; } catch (error) { return {ok: false, problems: {transferencia: error.message}, code: error.code}; }
+}
+
+/** Calls the atomic action once for a reviewed transfer and shows the receipt; throws with the action's code. */
+async function send(t, key) {
   const button = $('transfer-confirm');
   button.disabled = true; button.textContent = 'Enviando…';
-  const t = pending;
   const input = {origen: t.origen, importe_cent: t.importe_cent, concepto: t.concepto, fecha: new Date().toLocaleDateString('sv-SE')};
   if (t.modo === 'contacto') input.contacto = t.contacto;
   else if (t.modo === 'propia') input.destino = t.destino;
   else { input.iban = t.iban; input.beneficiario = t.beneficiario; }
   try {
-    const result = await post('/api/actions/transferir', input, t.key);
+    const result = await post('/api/actions/transferir', input, key);
     const ref = 'TSL-' + input.fecha.replace(/-/g, '') + '-' + String(result.undo_token || t.key).replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase();
     const now = new Intl.DateTimeFormat('es-ES', {dateStyle: 'long', timeStyle: 'short'}).format(new Date());
     $('transfer-receipt').innerHTML = `<div class="receipt-ok" aria-hidden="true">✓</div><h2>Transferencia enviada</h2>
@@ -167,11 +178,12 @@ export async function confirm() {
     step('justificante');
     $('transfer-receipt').focus();
     await refresh();
-    return {ok: true, transfer: done, receipt: result};
+    document.dispatchEvent(new CustomEvent('tesela:transfer-done', {detail: done}));
+    return {transfer: done, receipt: result};
   } catch (error) {
     $('transfer-error').textContent = `No se ha enviado: ${error.message}.`;
     if (error.code === 'insufficient_balance') await refresh();
-    return {ok: false, problems: {transferencia: error.message}, code: error.code};
+    throw error;
   } finally {
     button.disabled = false; button.textContent = 'Confirmar y enviar';
   }
@@ -205,7 +217,7 @@ export function set(values = {}) {
   if (values.contacto) { $('contacto').value = values.contacto; syncContactIban(); }
   if (values.destino) $('destino').value = values.destino;
   for (const name of ['beneficiario', 'iban', 'concepto']) if (values[name] != null) $(name).value = values[name];
-  if (values.importe_cent != null) $('importe').value = euros(values.importe_cent).replace(/ €$/, '');
+  if (values.importe_cent != null) $('importe').value = amountText(values.importe_cent);
   else if (values.importe != null) $('importe').value = values.importe;
   return problems();
 }
@@ -217,6 +229,74 @@ async function refresh() {
   fillSelects();
 }
 
+// ---------- Voice assistant (shared transfer panel) ----------
+// The panel owns the dialogue; this page gives it its accounts and contacts, its atomic action, and shows every
+// understood field filling in the form, the missing ones marked, and the confirmation step with the data read.
+const SLOT_FIELDS = {source: 'origen', recipient: 'contacto', iban: 'iban', amountCents: 'importe', concept: 'concepto'};
+
+function markMissing(state) {
+  const {slots} = state;
+  const started = Object.keys(slots).length > 0 && !['complete', 'cancelled'].includes(state.phase);
+  const r = slots.recipient;
+  const has = {source: slots.source != null, recipient: Boolean(r), iban: Boolean(r?.iban || r?.id), amountCents: slots.amountCents != null, concept: Boolean(slots.concept)};
+  for (const [slot, id] of Object.entries(SLOT_FIELDS)) {
+    const field = $(id).closest('.field');
+    if (started && !has[slot]) field.dataset.missing = $(id).value ? 'sin-confirmar' : 'falta';
+    else delete field.dataset.missing;
+  }
+}
+
+function mountVoice() {
+  const root = document.getElementById('voz-asistente');
+  if (!root) return null;
+  let last = '';
+  const api = mountTransferAssistant(root, {
+    language: 'es',
+    loadContext: async () => {
+      const [bank, schema] = await Promise.all([loadBank(), fetch('/api/schema').then(r => r.json())]);
+      ({accounts, contacts} = bank);
+      fillSelects();
+      return {
+        accounts: accounts.map(a => ({id: a.id, name: a.nombre, iban: a.iban, balanceCents: a.disponible_cent, aliases: [a.nombre.replace(/^cuenta\s+/i, ''), a.tipo]})),
+        contacts: contacts.map(c => ({id: c.id, name: c.nombre, iban: c.iban, aliases: c.alias ? [c.alias] : []})),
+        allowConfirm: schema.actions?.transferir?.confirmable_by_voice === true,
+      };
+    },
+    execute: async (draft, key) => {
+      const checked = review({focus: false, via: 'voz'});
+      if (!checked.ok) throw Object.assign(new Error(Object.values(checked.problems)[0]), {code: 'invalid_input'});
+      return (await send(checked.transfer, key)).receipt;
+    },
+    onDraft: (state) => {
+      const r = state.slots.recipient;
+      const wanted = r ? (r.id ? 'contacto' : 'iban') : null;
+      if (wanted && mode() !== wanted) { form.querySelector(`input[name="modo"][value="${wanted}"]`).checked = true; syncMode(); }
+      if (wanted === 'iban') $('beneficiario').value = r.name || '';
+      markMissing(state);
+      if (state.phase !== 'ready' && form.dataset.step === 'confirmar' && form.dataset.via === 'voz') step('datos');
+    },
+  });
+  // When the panel reaches its review, the form shows the same data in its confirmation step (after the fields fill).
+  new MutationObserver(() => {
+    const phase = root.dataset.transferPhase;
+    if (phase === last) return;
+    last = phase;
+    if (phase !== 'ready') return;
+    let tries = 0;
+    const show = () => {
+      if (root.dataset.transferPhase !== 'ready') return;
+      if (review({focus: false, via: 'voz'}).ok) $('transfer-summary').scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+      else if (++tries < 12) setTimeout(show, 80);
+    };
+    setTimeout(show, 60);
+  }).observe(root, {attributes: true, attributeFilter: ['data-transfer-phase']});
+  // A field the assistant changes scrolls into the visible part of the page (above the sheet on a phone).
+  new MutationObserver((records) => {
+    for (const rec of records) if (rec.target.hasAttribute('data-transfer-changed')) rec.target.scrollIntoView({block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  }).observe(form, {attributes: true, subtree: true, attributeFilter: ['data-transfer-changed']});
+  return {api, ready: () => root.dataset.transferPhase === 'ready'};
+}
+
 if (form) {
   syncMode();
   form.addEventListener('change', (e) => {
@@ -225,6 +305,10 @@ if (form) {
     if (e.target.id === 'contacto') syncContactIban();
   });
   form.addEventListener('submit', (e) => { e.preventDefault(); review(); });
+  $('importe').addEventListener('blur', () => {
+    const cents = parseCents($('importe').value);
+    if (Number.isFinite(cents) && cents > 0) $('importe').value = amountText(cents);
+  });
   $('transfer-back').addEventListener('click', () => { step('datos'); $('importe').focus(); });
   $('transfer-confirm').addEventListener('click', confirm);
   $('transfer-undo').addEventListener('click', undoLast);
@@ -233,7 +317,8 @@ if (form) {
   const q = new URLSearchParams(location.search);
   const pre = Object.fromEntries(['origen', 'modo', 'contacto', 'beneficiario', 'iban', 'destino', 'importe', 'concepto'].filter(k => q.get(k)).map(k => [k, q.get(k)]));
   if (Object.keys(pre).length) set(pre);
+  voice = mountVoice();
   window.teselaTransfer = {fields, problems, set, review, confirm, undo: undoLast, reset, findContacts, validIban, parseCents,
-    accounts: () => accounts, contacts: () => contacts};
+    accounts: () => accounts, contacts: () => contacts, assistant: voice?.api};
   document.dispatchEvent(new CustomEvent('tesela:transfer-ready'));
 }

@@ -81,3 +81,14 @@ def test_undo_restores_the_balances(store):
     store.undo(result["undo_token"])
     rows = accounts(store)
     assert (rows["cuenta-diaria"]["saldo_cent"], rows["cuenta-compartida"]["saldo_cent"]) == (238417, 84632)
+
+
+def test_transfer_page_gives_the_assistant_its_place():
+    page = (EXAMPLE / "pages" / "transferir.html").read_text(encoding="utf-8")
+    layout = (EXAMPLE / "layout.html").read_text(encoding="utf-8")
+    for slot in ("source", "recipient", "iban", "amountCents", "concept"):
+        assert f'data-transfer-slot="{slot}"' in page
+    assert "data-transfer-scope" in page and 'data-transfer-assistant="manual"' in page
+    assert 'id="voice-fab"' in layout and "/assets/transfer-assistant/assistant.css" in layout
+    script = (EXAMPLE / "assets" / "transfer.js").read_text(encoding="utf-8")
+    assert "from './transfer-assistant/assistant.js'" in script and "'/api/actions/transferir'" in script
