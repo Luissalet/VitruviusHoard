@@ -12,7 +12,9 @@ export default function Projects({ param }) {
   const { lang, notify } = useApp();
   const es = lang === "es";
   const [templates, setTemplates] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [{ active: projects, archived }, setProjects] = useState({ active: [], archived: [] });
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivePending, setArchivePending] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [template, setTemplate] = useState("work-board");
@@ -41,7 +43,13 @@ export default function Projects({ param }) {
   useCopilotForm("app-create-draft", { initial: { name: "", description: "", template: "work-board" }, current: { name, description, template } });
   useCopilotForm("app-source-draft", { objectId: project?.id, initial: { file, source: project?.files[file] ?? "" }, current: { file, source, revision: project?.selected_revision } });
   useCopilotObjects(project ? [{ kind: "app_project", id: project.id }] : []);
-  const loadList = async () => { const sequence = ++listSequence.current; try { const data = await api.appProjects(); if (sequence === listSequence.current) setProjects(data.projects); } catch (error) { if (sequence === listSequence.current) notify(error.message); } };
+  const loadList = async () => {
+    const sequence = ++listSequence.current;
+    try {
+      const [active, archivedList] = await Promise.all([api.appProjects(), api.appProjects(true)]);
+      if (sequence === listSequence.current) setProjects({ active: active.projects, archived: archivedList.projects });
+    } catch (error) { if (sequence === listSequence.current) notify(error.message); }
+  };
   const loadProject = async (id, revision) => {
     const sequence = ++loadSequence.current;
     try {
@@ -49,7 +57,11 @@ export default function Projects({ param }) {
       if (sequence !== loadSequence.current || currentId.current !== id) return;
       setProject(data);
       setPreview((current) => current?.state === "running" && data.preview.state === "running" ? current : data.preview);
-    } catch (error) { if (sequence === loadSequence.current) notify(error.message); }
+    } catch (error) {
+      if (sequence !== loadSequence.current || currentId.current !== id) return;
+      if (error.status === 404) { setProject(null); setPreview(null); setArchivePending(null); }
+      notify(error.message);
+    }
   };
   const syncRevision = async () => {
     const id = project.id;
@@ -75,6 +87,7 @@ export default function Projects({ param }) {
   useEffect(() => {
     loadSequence.current++;
     setProject(null); setPreview(null); setBundle(null); setRender(null); setFile("pages/index.html");
+    setArchivePending(null);
     if (param) loadProject(param, new URLSearchParams(window.location.search).get("source_revision") || undefined);
     return () => { loadSequence.current++; };
   }, [param]);
@@ -87,7 +100,11 @@ export default function Projects({ param }) {
       const data = await api.appProjectCreate(submitted);
       if (createDraft.current.name === submitted.name) setName("");
       if (createDraft.current.description === submitted.description) setDescription("");
-      await loadList(); if (window.location.hash === submittedRoute) window.location.hash = `#/projects/${data.id}`;
+      await loadList();
+      if (window.location.hash === submittedRoute) {
+        setShowArchived(false);
+        window.location.hash = "#/projects/" + data.id;
+      }
     } catch (error) { notify(error.message); }
     finally { setBusy(""); }
   };
@@ -138,9 +155,40 @@ export default function Projects({ param }) {
     catch (error) { notify(error.message); }
     finally { setBusy(""); }
   };
+  const changeArchive = async (item, operation) => {
+    setBusy(operation);
+    const archiving = operation === "archive";
+    try {
+      await api.appProjectArchive(item.id, {
+        operation, confirm: true, lang, expected_revision: item.revision, expected_updated_ts: item.updated_ts,
+      });
+      if (archiving && currentId.current === item.id) {
+        loadSequence.current++;
+        setProject(null);
+        setPreview(null);
+        setArchivePending(null);
+        setShowArchived(true);
+        window.location.hash = "#/projects";
+      } else if (!archiving) {
+        setShowArchived(false);
+        if (currentId.current === item.id) loadProject(item.id);
+        else if (!currentId.current) window.location.hash = "#/projects/" + item.id;
+      }
+      notify(archiving ? (es ? "Proyecto archivado" : "Project archived") : (es ? "Proyecto restaurado" : "Project restored"));
+      await loadList();
+    } catch (error) {
+      notify(error.message);
+      if (error.status === 409 || error.status === 404) {
+        setArchivePending(null);
+        loadList();
+        if (archiving && currentId.current === item.id) loadProject(item.id);
+      }
+    } finally { setBusy(""); }
+  };
+
   return <div className="flex flex-col gap-6">
     <h1 className="text-[20px] font-semibold">{es ? "Aplicaciones" : "Applications"}</h1>
-    <details className="panel" open={!projects.length && !project}><summary className="cursor-pointer font-semibold">{es ? "Crear aplicación" : "Create application"}</summary>
+    <details className="panel" open={!showArchived && !projects.length && !project}><summary className="cursor-pointer font-semibold">{es ? "Crear aplicación" : "Create application"}</summary>
     <form className="flex flex-col gap-3 mt-3" onSubmit={create}>
       <div className="grid md:grid-cols-2 gap-3">
         <label className="label">{es ? "Nombre" : "Name"}<input className="field mt-1" value={name} onChange={(event) => setName(event.target.value)} required /></label>
@@ -153,10 +201,25 @@ export default function Projects({ param }) {
     <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-5">
       <aside className="panel">
         <h2 className="font-semibold mb-3">{es ? "Proyectos" : "Projects"}</h2>
-        {!projects.length && <p className="help">{es ? "Crea una aplicación para empezar." : "Create an application to begin."}</p>}
-        <div className="flex flex-col gap-2">{projects.map((item) => <a key={item.id} className={`btn text-left break-words ${item.id === param ? "btn-active" : ""}`} href={`#/projects/${item.id}`} aria-current={item.id === param ? "page" : undefined}>{item.name}</a>)}</div>
+        <div className="flex gap-2 flex-wrap mb-3" role="group" aria-label={es ? "Estado de los proyectos" : "Project status"}>
+          <button type="button" className={showArchived ? "btn" : "btn btn-active"} aria-pressed={!showArchived} onClick={() => setShowArchived(false)}>{es ? "Activos" : "Active"}</button>
+          <button type="button" className={showArchived ? "btn btn-active" : "btn"} aria-pressed={showArchived} onClick={() => { setShowArchived(true); loadList(); }}>{es ? "Archivados" : "Archived"}</button>
+        </div>
+        {showArchived ? (archived.length ? <ul className="flex flex-col gap-3">
+          {archived.map((item) => <li key={item.id} className="flex flex-col gap-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+            <strong className="break-words">{item.name}</strong>
+            <span className="help">{es ? "Versiones guardadas" : "Saved revisions"} · {item.revisions.length}</span>
+            <button type="button" className="btn self-start mt-1" disabled={!!busy} aria-label={(es ? "Restaurar " : "Restore ") + item.name}
+              onClick={() => changeArchive(item, "restore")}>{es ? "Restaurar" : "Restore"}</button>
+          </li>)}
+        </ul> : <p className="help">{es ? "No hay proyectos archivados." : "There are no archived projects."}</p>) : <>
+          {!projects.length && <p className="help">{es ? "Crea una aplicación para empezar." : "Create an application to begin."}</p>}
+          <div className="flex flex-col gap-2">{projects.map((item) => <a key={item.id} className={`btn block whitespace-normal text-left break-words ${item.id === param ? "btn-active" : ""}`} href={`#/projects/${item.id}`} aria-current={item.id === param ? "page" : undefined}>{item.name}</a>)}</div>
+        </>}
       </aside>
-      {!project ? <Empty>{es ? "Selecciona un proyecto para editarlo y probarlo." : "Select a project to edit and test it."}</Empty> : <div className="min-w-0 flex flex-col gap-4">
+      {!project ? <Empty>{showArchived
+        ? (es ? "Restaura un proyecto para volver a editarlo." : "Restore a project to edit it again.")
+        : (es ? "Selecciona un proyecto para editarlo y probarlo." : "Select a project to edit and test it.")}</Empty> : <div className="min-w-0 flex flex-col gap-4">
         <div className="panel">
           <h2 className="text-[16px] font-semibold break-words">{project.name}</h2>
           <div className="flex gap-2 items-center flex-wrap mt-3">
@@ -164,7 +227,22 @@ export default function Projects({ param }) {
             <button className="btn" disabled={!!busy} onClick={() => run("start")}>{busy === "start" ? (es ? "Abriendo…" : "Opening…") : (es ? "Abrir vista previa" : "Open preview")}</button>
             {preview?.state === "running" && <button className="btn" disabled={!!busy} onClick={() => run("stop")}>{es ? "Detener vista previa" : "Stop preview"}</button>}
             <button className="btn" disabled={!!busy} onClick={capture}>{busy === "render" ? (es ? "Capturando…" : "Capturing…") : (es ? "Capturar para revisión" : "Capture for review")}</button>
+            <button type="button" className="btn" disabled={!!busy || !!archivePending} aria-expanded={!!archivePending}
+              onClick={() => setArchivePending({ id: project.id, revision: project.revision, updated_ts: project.updated_ts, name: project.name })}>
+              {es ? "Archivar proyecto…" : "Archive project…"}
+            </button>
           </div>
+          {archivePending && <div className="border-t mt-3 pt-3" style={{ borderColor: "var(--line)" }} role="group" aria-labelledby="project-archive-question">
+            <p id="project-archive-question" className="font-semibold break-words">{es ? "¿Archivar " + archivePending.name + "?" : "Archive " + archivePending.name + "?"}</p>
+            <p className="help mt-1">{es
+              ? "Se cerrará la vista previa. Se conservarán el historial guardado y los datos. Podrás restaurar el proyecto desde Archivados."
+              : "The preview will close. Saved history and data will be kept. Restore the project from Archived."}</p>
+            {!!draftPaths.length && <p className="help mt-1">{es ? "Hay cambios sin guardar en esta sesión." : "This session has unsaved changes."}</p>}
+            <div className="flex gap-2 flex-wrap mt-3">
+              <button type="button" className="btn btn-primary" disabled={!!busy} onClick={() => changeArchive(archivePending, "archive")}>{es ? "Confirmar archivo" : "Confirm archive"}</button>
+              <button type="button" className="btn" disabled={!!busy} onClick={() => setArchivePending(null)}>{es ? "Cancelar" : "Cancel"}</button>
+            </div>
+          </div>}
           {preview?.state === "running" && visiblePreview && <p className="help mt-3">{visiblePreview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={visiblePreview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
         </div>
         {preview?.state === "running" && <div className="relative" style={{ height: 560 }}>

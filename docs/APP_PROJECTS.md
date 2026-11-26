@@ -6,7 +6,15 @@ The Applications page and `/api/app-projects` expose a complete source workspace
 
 `app_project_get` returns every source file and its selected revision. `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
 
-Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. Undoing creation archives a project with no retained edits and stops its preview.
+Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. The creation receipt only applies while the project has had no saved source edits. If you save a revision and then undo it, the history stays and the creation receipt cannot be used to retire the project.
+
+### Archive and restore
+
+Use **Archive project** in Applications and confirm. The preview closes and the project moves from **Active** to **Archived**. The project ID, saved revisions, records and existing exports are kept. Use **Restore** on its archived row to make the project available again. Open the preview when you want to resume.
+
+Use `app_project_archive` with the project ID, `expected_revision`, `operation: "archive" or "restore"` and `confirm: true`. For a receipt that also checks whether the archive state has changed, pass `expected_updated_ts` from the current project or archived listing. A change returns an `undo` call for the opposite operation with both checks set. The HTTP equivalent is `POST /api/app-projects/{id}/archive`. Both interfaces reject stale checks. The HTTP API returns 409 for a conflict. An already applied operation with the current checks returns `changed: false`.
+
+Use `app_project_list` to list active projects or use `archived: true` to find archived ones with their revision and update timestamp. The HTTP archive list is `GET /api/app-projects?archived=true`. Restore an archived project before reading or editing its source.
 
 A single-record-type `project.json` declares `name`, `description` and `fields`. Fields have an identifier `name`, human `label`, `type` (`text`, `number`, `boolean`, `choice`), optional `required`, and `choices` for a choice field. Record identity uses the reserved `id` property. The original starter supplies matching `contracts.d.ts` and an annotated client; custom schema edits should keep their custom declarations/client consistent. Runtime input validation uses the running revision's schema. Existing stored values are retained rather than silently migrated or removed when a schema changes.
 
