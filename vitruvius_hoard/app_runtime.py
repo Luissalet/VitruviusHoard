@@ -9,7 +9,9 @@ import argparse
 import html
 import json
 import mimetypes
+import os
 import re
+import runpy
 import sqlite3
 import time
 import uuid
@@ -149,7 +151,12 @@ def _text(value):
     return html.escape(str(value if value is not None else ""), quote=True)
 
 
-def render_page(root, spec, store, route, params, query):
+def _render_template(_root, path, values):
+    source = path.read_text(encoding="utf-8")
+    return re.sub(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}", lambda match: values.get(match[1], match[0]), source)
+
+
+def render_page(root, spec, store, route, params, query, *, render_template=_render_template):
     fields = spec["fields"]
     rows = store.list(query)
     row = store.get(params["id"]) if route["path"] == "/records/[id]" and "id" in params else None
@@ -178,14 +185,12 @@ def render_page(root, spec, store, route, params, query):
     values = {"name": _text(spec["name"]), "description": _text(spec.get("description", "")), "table": table, "form": form,
               "count": str(len(rows)), "query": _text(query), "record_title": _text((row or {}).get(fields[0]["name"], "Record") if fields else "Record")}
     values.update({"param_" + name: _text(value) for name, value in params.items()})
-    page = route["file"].read_text(encoding="utf-8")
-    page = re.sub(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}", lambda match: values.get(match[1], match[0]), page)
-    layout = (Path(root) / "layout.html").read_text(encoding="utf-8")
-    values["content"] = page
-    return re.sub(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}", lambda match: values.get(match[1], match[0]), layout)
+    root = Path(root)
+    values["content"] = render_template(root, route["file"], values)
+    return render_template(root, root / "layout.html", values)
 
 
-def make_server(root, database, *, host="127.0.0.1", port=0, revision=""):
+def make_server(root, database, *, host="127.0.0.1", port=0, revision="", render_template=_render_template):
     root = Path(root).resolve()
     spec = validate_spec(json.loads((root / "project.json").read_text(encoding="utf-8")))
     store = Records(database)
@@ -231,7 +236,8 @@ def make_server(root, database, *, host="127.0.0.1", port=0, revision=""):
                 for route in discovered:
                     match = route["regex"].match(path)
                     if match:
-                        page = render_page(root, spec, store, route, dict(zip(route["names"], match.groups())), query)
+                        page = render_page(root, spec, store, route, dict(zip(route["names"], match.groups())), query,
+                                           render_template=render_template)
                         return self.send(200, page.encode("utf-8"), "text/html; charset=utf-8")
                 raise LookupError("Page not found")
             except LookupError as error:
@@ -286,7 +292,13 @@ def main():
     parser.add_argument("--ready-file")
     parser.add_argument("--revision", default="")
     args = parser.parse_args()
-    server = make_server(Path(__file__).resolve().parent, args.database, host=args.host, port=args.port, revision=args.revision)
+    root = Path(__file__).resolve().parent
+    render_template = _render_template
+    preview_renderer = os.environ.get("VITRUVIUS_PREVIEW_SOURCE_MAP")
+    if preview_renderer:
+        render_template = runpy.run_path(preview_renderer)["render_template"]
+    server = make_server(root, args.database, host=args.host, port=args.port, revision=args.revision,
+                         render_template=render_template)
     ready = {"url": f"http://{args.host}:{server.server_port}", "revision": args.revision}
     if args.ready_file:
         ready_path = Path(args.ready_file)
