@@ -119,7 +119,7 @@ class PreviewProxy:
                     body = self.rfile.read(size) if size else None
                 except ValueError:
                     return self.respond(400, b"Invalid request length", "text/plain")
-                forwarded = {key: headers[key] for key in ("content-type", "cookie", "accept", "range")
+                forwarded = {key: headers[key] for key in ("content-type", "cookie", "accept", "range", "idempotency-key")
                              if key in headers}
                 try:
                     with closing(HTTPConnection("127.0.0.1", backend_port, timeout=15)) as upstream:

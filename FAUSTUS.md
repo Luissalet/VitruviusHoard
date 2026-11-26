@@ -4,6 +4,10 @@
 
 Use `app_project_canvas_view` to read the project preview open in Applications and `app_project_canvas_act` to interact through its controls with a named cursor. With no open canvas, the tools report how to open it in Applications. The same bridge runs inside the project frame when Vitruvius is docked. For an annotated element, use `app_project_source_count` to check how many elements share its source and `app_project_edit_source` with the served revision to edit literal text, attributes or classes by position. The named cursor travels before the write and the open preview briefly outlines the result. The edit returns an undo call. Pass the same optional actor and selection target to identify the cursor and its destination. Standalone exports run their saved source without preview markup or scripts. See [the canvas contract](docs/APP_CANVAS.md) and [the source editing workflow](docs/APP_PROJECTS.md).
 
+## App project data
+
+Use `app_project_create` with `files` to create a custom project with a `vitruvius-app/v2` specification. `app_project_call` reads the schema and collection records, runs declared actions in SQLite and returns an undo call on success. Pass the same `request_key` when retrying the same confirmed action. See [the collection schema and routes](docs/APP_PROJECTS.md#collections-and-declared-actions).
+
 ## Web guides and craft library
 
 Cold tools (available with every module OFF, no engine, no data store, nothing to start):

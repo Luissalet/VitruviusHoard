@@ -46,6 +46,7 @@ The `render_preview` tool opens public or loopback URLs and local HTML files wit
 
 ### Application projects and instruments
 - Application-source projects with templates, typed actions, owned local previews with a Select mode that hands the chosen elements to the agent, a functional page checker and standalone export. Preview elements link to their HTML source, with revision-checked edits and undo. See [docs/APP_PROJECTS.md](docs/APP_PROJECTS.md). The App Dock bridge lets an agent read the open preview and act with a named cursor. See [docs/APP_CANVAS.md](docs/APP_CANVAS.md).
+- Custom applications can declare multiple typed collections, relationships and atomic SQLite actions with undo. Their data API is available to the preview, the standalone export and the agent.
 - An open application preview follows source edits and undo in real time, briefly outlining the changed elements. The agent's named cursor travels to the target before an edit. With reduced motion, the outline appears on its own.
 - Instrument factory: a typed spec of inputs, formulas and outputs becomes an app project with generated tests and a stdlib-only standalone export, plus an explainer. See [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Protocol checker: explores every interleaving of a small bounded protocol, checks invariants and deadlocks, and returns the shortest counterexample with a reproducing pytest file.

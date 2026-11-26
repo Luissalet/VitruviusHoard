@@ -28,11 +28,13 @@ from .browser import BrowserWorker, loopback_preview
 from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
 from .preview_inspector import PreviewSelections
+from .app_runtime import validate_request_key
 from .instruments import Instruments
 from .config import Config
 from .db import Database
 from .hoard_link import fam_web
 from .hoard_link import tokens as tokens_lib
+from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
 from .hoard_link.config import LinkConfig
 from .hoard_link.media import bins as media_bins
@@ -892,17 +894,32 @@ class Services:
         result["app_project"] = context
         return result
 
-    def app_project_call(self, id, operation, data=None, record_id=None, query=""):
+    def app_project_call(self, id, operation, data=None, record_id=None, query="", *,
+                         collection=None, action=None, request_key=None, undo_token=None):
         import urllib.request
         import urllib.error
         from urllib.parse import quote, urlencode
-        _, url = self.app_projects.preview_runtime(id)
+        headers = {"Content-Type": "application/json"}
+        records = "/api/records" if collection is None else "/api/collections/" + quote(collection, safe="")
         if operation == "list":
-            path, method, body = "/api/records?" + urlencode({"q": query}), "GET", None
+            path, method, body = records + "?" + urlencode({"q": query}), "GET", None
         elif operation == "get":
             if not record_id:
                 raise ValueError("record_id is required")
-            path, method, body = "/api/records/" + quote(record_id, safe=""), "GET", None
+            path, method, body = records + "/" + quote(record_id, safe=""), "GET", None
+        elif operation == "schema":
+            path, method, body = "/api/schema", "GET", None
+        elif operation == "invoke":
+            if not action:
+                raise ValueError("action is required")
+            if request_key is not None:
+                validate_request_key(request_key)
+                headers["Idempotency-Key"] = request_key
+            path, method, body = "/api/actions/" + quote(action, safe=""), "POST", data if data is not None else {}
+        elif operation == "undo_action":
+            if not undo_token:
+                raise ValueError("undo_token is required")
+            path, method, body = "/api/action-receipts/" + quote(undo_token, safe="") + "/undo", "POST", {}
         elif operation in ("create", "update", "delete"):
             if operation != "create" and not record_id:
                 raise ValueError("record_id is required")
@@ -912,13 +929,24 @@ class Services:
                 body["id"] = record_id
         else:
             raise ValueError("Unknown application operation")
-        request = urllib.request.Request(url + path, method=method, data=json.dumps(body).encode("utf-8") if body is not None else None, headers={"Content-Type": "application/json"})
+        _, url = self.app_projects.preview_runtime(id)
+        request = urllib.request.Request(url + path, method=method,
+                                         data=json.dumps(body).encode("utf-8") if body is not None else None,
+                                         headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=self.config.render_timeout_s) as response:
-                return json.load(response)
+                result = json.load(response)
         except urllib.error.HTTPError as error:
             payload = json.loads(error.read())
-            raise ValueError(payload.get("error", str(error))) from error
+            message = payload.get("error", str(error))
+            if "code" in payload and (collection is not None or operation in ("schema", "invoke", "undo_action")):
+                raise AppError(payload["code"], message, status=error.code) from error
+            raise ValueError(message) from error
+        if operation == "invoke" and result.get("undo_token"):
+            result["undo"] = {"tool": "app_project_call", "arguments": {
+                "id": id, "operation": "undo_action", "undo_token": result["undo_token"],
+            }}
+        return result
 
     # ---------------- references ----------------
     def reference_add(self, **kwargs) -> dict[str, Any]:

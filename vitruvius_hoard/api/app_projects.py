@@ -3,7 +3,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
@@ -13,6 +13,7 @@ from ..agent_tools import (
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
+from ..hoard_link.agentkit import AppError
 
 router = APIRouter(prefix="/api/app-projects")
 
@@ -20,6 +21,8 @@ router = APIRouter(prefix="/api/app-projects")
 def execute(operation):
     try:
         return operation()
+    except AppError as error:
+        return JSONResponse(error.to_dict(), status_code=error.status)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except StaleSelection as error:
@@ -162,4 +165,4 @@ def project_render(request: Request, id: str, body: AppRenderArgs):
 
 @router.post("/{id}/call")
 def project_call(request: Request, id: str, body: AppCallArgs):
-    return execute(lambda: services(request).app_project_call(id, body.operation, body.data, body.record_id, body.query))
+    return execute(lambda: services(request).app_project_call(id, **body.model_dump(exclude={"id"})))

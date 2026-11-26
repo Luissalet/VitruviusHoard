@@ -8,11 +8,73 @@ The Applications page and `/api/app-projects` expose a complete source workspace
 
 Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. Undoing creation archives a project with no retained edits and stops its preview.
 
-`project.json` declares `name`, `description` and `fields`. Fields have an identifier `name`, human `label`, `type` (`text`, `number`, `boolean`, `choice`), optional `required`, and `choices` for a choice field. Record identity uses the reserved `id` property. The original starter supplies matching `contracts.d.ts` and an annotated client; custom schema edits should keep their custom declarations/client consistent. Runtime input validation uses the running revision's schema. Existing stored values are retained rather than silently migrated or removed when a schema changes.
+A single-record-type `project.json` declares `name`, `description` and `fields`. Fields have an identifier `name`, human `label`, `type` (`text`, `number`, `boolean`, `choice`), optional `required`, and `choices` for a choice field. Record identity uses the reserved `id` property. The original starter supplies matching `contracts.d.ts` and an annotated client; custom schema edits should keep their custom declarations/client consistent. Runtime input validation uses the running revision's schema. Existing stored values are retained rather than silently migrated or removed when a schema changes.
 
 The server discovers `pages/**/*.html`: `index.html` defines the containing path and `[parameter].html` defines a dynamic segment. `layout.html` wraps each page. Templates support `{{name}}`, `{{description}}`, `{{table}}`, `{{form}}`, `{{count}}`, `{{query}}`, `{{record_title}}` and escaped `{{param_name}}` values. This is HTML templating with server-rendered content; it does not execute template expressions. Source files can be edited to change the runtime itself.
 
-Data lives separately in `app-projects/<id>/data/app.db`. It survives preview restarts and source revisions. The record API uses SQLite write transactions; independent field updates merge in one transaction. The supplied client sends changed fields for edits and retains newer form edits if an older request completes. This is source revision history, not record undo or an automatic data migration system.
+Data lives separately in `app-projects/<id>/data/app.db`. It survives preview restarts and source revisions. The record API uses SQLite write transactions; independent field updates merge in one transaction. The supplied client sends changed fields for edits and retains newer form edits if an older request completes. Source revision history is independent of data. The single-record-type API retains its existing data operations.
+
+## Collections and declared actions
+
+A `vitruvius-app/v2` project declares named `collections` and `actions` in `project.json`. Create a custom project with `app_project_create` using `template: "custom"` and a `files` map with `project.json`, `layout.html`, `pages/index.html` and any other pages or assets. Omit `server.py` to save the current built-in standalone runtime with the project. To upgrade an existing project, save the new specification and the current `vitruvius_hoard/app_runtime.py` as `server.py` in the same source revision. Earlier source versions and their data are retained. The legacy starter reads its original single-type records, and the v2 runtime uses separate tables for named collections.
+
+Each collection has `fields` and optional initial `records` with explicit string IDs. Identifiers for collections, actions and fields start with a letter or underscore and can contain ASCII letters, digits and underscores. Record IDs also allow hyphens and can start with a digit. A new collection's records are inserted together on its first start, including references between collections declared in either order. Editing initial records after the first start leaves the stored records intact. A source-only export loads the stated initial records on first start. An export with data keeps the captured records and action receipts.
+
+Fields are required by default. In addition to the v1 field types, `integer` accepts integers in the range from −(2⁵³−1) to 2⁵³−1 and optional inclusive `min` and `max`. Use it for money in minor units. A `ref` field names a target `collection` and takes an existing record ID. A `text` field with `format: "iban"` normalises whitespace and case and checks the generic IBAN form and MOD97 checksum. Declare that format on stored and input fields used in the same lookup.
+
+Actions validate the `input` field list. `exactly_one` can require one of the named optional inputs. Omit an absent field. `confirmable_by_voice` is metadata for clients that gather and confirm data before submitting it.
+
+- An expression is a scalar literal, `{"input":"field"}`, `{"record":"lookup_alias","field":"field"}`, `{"negate":expression}` for an integer, or `{"coalesce":[expression,...]}` to select the first present value.
+- An optional named `lookups` object resolves records by exact field value. Each entry uses `collection`, `field` (including `id`) and `equals` (an expression). A missing match yields no value. Multiple matches reject the action with `ambiguous_reference`. Lookups run in declaration order and can use earlier aliases.
+- An optional `different` pair of expressions rejects equal values when both are present. An effect's optional `when` runs it when the expression is present, including a present zero or false.
+- An `adjust` effect names `collection`, `id`, integer `field` and `amount` (a signed integer expression). A debit below the field minimum returns HTTP 409 with `insufficient_balance`. A `create` effect names `collection` and a `values` object of field expressions. An absent evaluated value is omitted and required fields still apply.
+
+The following action deducts units from a seeded stock record and logs the change.
+
+```json
+{
+  "format": "vitruvius-app/v2",
+  "name": "Stock room",
+  "collections": {
+    "stock": {
+      "fields": [{"name": "units", "type": "integer", "min": 0}],
+      "records": [{"id": "shelf-1", "units": 12}]
+    },
+    "entries": {
+      "fields": [
+        {"name": "stock_id", "type": "ref", "collection": "stock"},
+        {"name": "units", "type": "integer"}
+      ]
+    }
+  },
+  "actions": {
+    "take": {
+      "input": [
+        {"name": "stock_id", "type": "ref", "collection": "stock"},
+        {"name": "units", "type": "integer", "min": 1}
+      ],
+      "effects": [
+        {"op": "adjust", "collection": "stock", "id": {"input": "stock_id"},
+         "field": "units", "amount": {"negate": {"input": "units"}}},
+        {"op": "create", "collection": "entries",
+         "values": {"stock_id": {"input": "stock_id"}, "units": {"input": "units"}}}
+      ]
+    }
+  }
+}
+```
+
+These declarations run the fixed operations in order inside a single SQLite write transaction. If any effect fails, the transaction rolls back every change and no receipt is committed. On success the response contains `ok`, `action`, `undo_token` and an ordered `changes` array with each effect's `collection`, `operation` and resulting `record`. Undo reverses the receipt atomically and returns 409 if newer changes or references would be lost. The app can supply an idempotency key per confirmed operation. A retry with the same key and normalised input returns the original receipt, and a different input or already undone receipt returns 409.
+
+| Operation | Owned preview and standalone HTTP | `app_project_call` arguments besides `id` |
+| --- | --- | --- |
+| Discover schema and actions | `GET /api/schema` | `operation: "schema"` |
+| List or search records | `GET /api/collections/{collection}?q=...` | `operation: "list", collection, query?` |
+| Read one record | `GET /api/collections/{collection}/{record_id}` | `operation: "get", collection, record_id` |
+| Execute an action | `POST /api/actions/{action}` with the input object as JSON and optional `Idempotency-Key` header | `operation: "invoke", action, data, request_key?` |
+| Undo an action | `POST /api/action-receipts/{undo_token}/undo` | Apply the returned `undo` call or use `operation: "undo_action", undo_token` |
+
+The native `POST /api/app-projects/{id}/call` accepts the same arguments as the tool. V2 runtime errors use an `error` message and a stable `code`. Custom pages can use relative API URLs and present translations based on those codes. V2 HTML templates provide `{{name}}`, `{{description}}`, `{{query}}`, `{{param_name}}` and `{{content}}`. Use a custom client to render or act on collections.
 
 ## Preview, calls and inspection
 
@@ -20,7 +82,7 @@ Data lives separately in `app-projects/<id>/data/app.db`. It survives preview re
 
 The Applications page connects the App Dock bridge to the visible preview. Agents can read the open page with `app_project_canvas_view` and point at or operate its controls with `app_project_canvas_act`. See [the canvas tool and frame contract](APP_CANVAS.md).
 
-`app_project_call` provides native access to the application's `list`, `get`, `create`, `update` and `delete` record operations. The standalone application exposes:
+For single-record-type projects, `app_project_call` provides `list`, `get`, `create`, `update` and `delete`. Their standalone application exposes the following routes.
 
 - `GET /api/health`, `/api/schema`, `/api/routes`.
 - `GET/POST /api/records`, `GET/PATCH/DELETE /api/records/<id>`.
@@ -87,6 +149,6 @@ Export the booking revision with `app_project_export`. The publishable site is u
 
 ## Standalone output
 
-`app_project_export` returns a ZIP path/hash and its source revision/hash. The UI supplies a native download link. Export uses the same captured file contents as preview, with exact UTF-8 source bytes. Optional data export makes an online SQLite backup and includes it only when a database actually exists. Code-only export starts with empty data on first launch.
+`app_project_export` returns a ZIP path/hash and its source revision/hash. The UI supplies a native download link. Export uses the same captured file contents as preview, with exact UTF-8 source bytes. Optional data export makes an online SQLite backup and includes it only when a database actually exists. A code-only export starts with the initial records declared by its collections. A single-record-type export starts with an empty database.
 
 Extract the ZIP and run `python server.py --port 3000` from that directory. Python 3.10+ and its standard library are sufficient. The supplied Dockerfile describes a Python container; cloud deployment/authentication/billing/provider adapters are not configured or certified by this feature. The worker is an editable local application server. No parity with RSC, streaming SSR, experimental compilers or every framework renderer is implied.
