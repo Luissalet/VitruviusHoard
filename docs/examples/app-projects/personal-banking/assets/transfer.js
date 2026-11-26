@@ -266,6 +266,7 @@ function mountVoice() {
   if (!root) return null;
   let last = '';
   let draft = null;
+  let scheduleReview = () => {};
   const api = mountTransferAssistant(root, {
     language: 'es',
     loadContext: async () => {
@@ -295,26 +296,32 @@ function mountVoice() {
       if (changedRecipient && mode() !== wanted) { form.querySelector(`input[name="modo"][value="${wanted}"]`).checked = true; syncMode(); }
       if (changedRecipient && wanted === 'iban') $('beneficiario').value = r.name || '';
       markMissing(state);
+      if (state.phase === 'ready' && root.dataset.transferPhase === 'ready' && !(pending && sameDraft(state.slots, pending))) scheduleReview();
       if (state.phase !== 'ready' && form.dataset.step === 'confirmar' && form.dataset.via === 'voz') step('datos');
     },
   });
-  // When the panel reaches its review, the form shows the same data in its confirmation step (after the fields fill).
-  new MutationObserver(() => {
-    const phase = root.dataset.transferPhase;
-    if (phase === last) return;
-    last = phase;
-    if (phase !== 'ready') return;
+  // When the panel reaches its review, or corrects a draft it already reviewed, the form shows the same data in its
+  // confirmation step once the fields have filled.
+  let showing = 0;
+  scheduleReview = () => {
+    const run = ++showing;
     let tries = 0;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const show = () => {
-      if (root.dataset.transferPhase !== 'ready') return;
+      if (run !== showing || root.dataset.transferPhase !== 'ready') return;
       // Wait while a field is still marked as just changed, so the last fill is seen before the summary replaces it.
       if (form.querySelector('[data-transfer-changed]') && ++tries < 40) { setTimeout(show, 80); return; }
-      if (!review({focus: false, via: 'voz'}).ok) { if (++tries < 40) setTimeout(show, 80); return; }
+      if (!sameDraft(draft, fields()) || !review({focus: false, via: 'voz'}).ok) { if (++tries < 40) setTimeout(show, 80); return; }
       if (matchMedia('(max-width: 900px)').matches) document.dispatchEvent(new CustomEvent('tesela:voice-sheet', {detail: {open: false}}));
       requestAnimationFrame(() => $('transfer-confirm').scrollIntoView({block: 'end', behavior: reduce ? 'auto' : 'smooth'}));
     };
     setTimeout(show, reduce ? 300 : 700);
+  };
+  new MutationObserver(() => {
+    const phase = root.dataset.transferPhase;
+    if (phase === last) return;
+    last = phase;
+    if (phase === 'ready') scheduleReview();
   }).observe(root, {attributes: true, attributeFilter: ['data-transfer-phase']});
   // A field the assistant changes scrolls into the visible part of the page (above the sheet on a phone).
   new MutationObserver((records) => {

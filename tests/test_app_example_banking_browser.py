@@ -130,3 +130,24 @@ def test_matching_read_draft_confirms_through_the_panel(page):
     page.wait_for_selector("#receipt-ref")
     assert [post.get("contacto") for post in page.posts] == ["maria-ortega"]
     page.wait_for_function("() => document.getElementById('voz-asistente').dataset.transferPhase === 'complete'")
+
+
+def test_a_correction_while_ready_updates_the_form_summary(page):
+    read_by_panel(page)
+    page.wait_for_function("() => document.getElementById('transfer-summary').innerText.includes('12,50')")
+    page.wait_for_timeout(1500)  # the review scheduled when the panel became ready has run
+    page.evaluate("""async () => {
+      // The panel fills its slots in place, without leaving the confirmation step.
+      for (const [id, value] of [['contacto', 'lucia-ferrer'], ['importe', '60,00']]) {
+        const field = document.getElementById(id);
+        field.value = value;
+        field.dispatchEvent(new Event('input', {bubbles: true}));
+        field.dispatchEvent(new Event('change', {bubbles: true}));
+      }
+      await window.standInPanel.ready({source: 'cuenta-diaria', recipient: {id: 'lucia-ferrer', name: 'Lucía Ferrer Soler'}, amountCents: 6000, concept: 'entradas de cine'});
+    }""")
+    page.wait_for_function("() => document.getElementById('transfer-form').dataset.step === 'confirmar' && document.getElementById('transfer-summary').innerText.includes('60,00')")
+    assert "Lucía Ferrer Soler" in page.inner_text("#transfer-summary")
+    page.click("#transfer-confirm")
+    page.wait_for_selector("#receipt-ref")
+    assert [(post.get("contacto"), post["importe_cent"]) for post in page.posts] == [("lucia-ferrer", 6000)]
