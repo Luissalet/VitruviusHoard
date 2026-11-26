@@ -97,16 +97,23 @@ def test_registered_service_uses_common_contract_and_never_replays_through_app(m
 
 
 def test_shared_transcription_handles_provisional_and_final_audio(monkeypatch):
-    calls = []
+    calls, order = [], []
+
+    def cyrano(tool, args, timeout):
+        order.append((tool, args["path"]))
+        assert args["fallback"] is False
+        return None, "common"
 
     def transcribe(path, **arguments):
         source = Path(path)
         assert source.suffix == ".webm" and source.read_bytes() == b"synthetic audio"
         calls.append((source, arguments))
+        order.append(("family", path))
         return {"ok": True, "text": "Treinta euros"}
 
     monkeypatch.setattr(voice.fam_media, "transcribe", transcribe)
     relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_dictation_call", cyrano)
     for partial in (True, False):
         result = relay.handle("POST", "transcribe", f"language=es&partial={str(partial).lower()}&initial_prompt=Luc%C3%ADa%2C+Cuenta+diaria",
                               "audio/webm;codecs=opus", b"synthetic audio")
@@ -116,6 +123,8 @@ def test_shared_transcription_handles_provisional_and_final_audio(monkeypatch):
     assert [args["vad"] for _, args in calls] == [False, True]
     assert [args["initial_prompt"] for _, args in calls] == ["Lucía, Cuenta diaria"] * 2
     assert calls[1][1]["timeout_s"] > 11
+    assert [tool for tool, _ in order] == [voice.SPEECH_TOOL, "family"] * 2
+    assert order[0][1] == order[1][1] and order[2][1] == order[3][1]
 
 
 def test_versioned_text_and_audio_follow_the_common_tools(monkeypatch):
@@ -251,3 +260,45 @@ def test_natural_cache_defaults_to_the_profile_and_handles_missing_manifest(tmp_
     ready = payload(relay.handle("GET", "capabilities", "", "", b""))
     assert ready["tts"] and ready["voice_phrases"] == {"confirmar": text}
     assert relay.handle("POST", "speak", "", "application/json", request) == (200, wav, "audio/wav; source=cache-natural")
+
+
+
+def test_raw_voice_prefers_cyrano_for_partials_and_final(monkeypatch):
+    calls = []
+    relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_common_dictation", lambda: True)
+
+    def call(owner, tool, args, timeout_s):
+        path = Path(args["path"])
+        assert path.suffix == ".webm" and path.read_bytes() == b"synthetic"
+        calls.append((owner, tool, args, timeout_s))
+        return {"ok": True, "data": {"text": "A Lucía" if args["vad"] else ""}}
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("Shared STT was called after a valid Cyrano response")
+
+    monkeypatch.setattr(voice._famsvc, "call_tool", call)
+    monkeypatch.setattr(voice.fam_media, "transcribe", forbidden)
+    for partial in ("true", "false"):
+        result = relay.handle("POST", "transcribe", f"partial={partial}&initial_prompt=Luc%C3%ADa",
+                              "audio/webm", b"synthetic")
+        assert result[0] == 200
+        assert payload(result) == {"text": "" if partial == "true" else "A Lucía", "final": partial == "false"}
+    assert [(owner, tool) for owner, tool, _, _ in calls] == [("cyrano", "speech_transcribe")] * 2
+    assert [args["timeout_s"] for _, _, args, _ in calls] == [1, 6]
+    assert all(args["initial_prompt"] == "Lucía" and args["fallback"] is False
+               and not Path(args["path"]).exists() for _, _, args, _ in calls)
+
+
+def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):
+    def get(path, **_kwargs):
+        if path == "/api/services/status":
+            return 200, {"services": [{"service": "dictation"}]}
+        if path != "/api/apps/cyrano/tools":
+            raise AssertionError(f"Unexpected probe {path}")
+        return 200, {"ok": True, "tools": [{"name": voice.SPEECH_TOOL}]}
+
+    monkeypatch.setattr(voice, "_hub_get", get)
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {})
+    result = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
+    assert result == {"stt": True, "tts": False, "dictation": False, "dictation_route": "local"}
