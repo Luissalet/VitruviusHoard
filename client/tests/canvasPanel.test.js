@@ -39,7 +39,16 @@ test("the Dock context fits what the host keeps: focus and a short summary with 
   });
   assert.deepEqual(context.focus, { kind: "app_project", id: "p1", label: "Board" });
   assert.equal(context.summary, 'Board @r2 · mode select · selected 1: h1 "Current records" pages/index.html:3:1 x3 · open comments 1: #1 Bigger');
-  const many = canvasContext({ project: { id: "p1", name: "Board" }, selection: Array.from({ length: 30 }, () => ({ tag: "p", text: "y".repeat(60), vsrc: "pages/index.html:10:2" })),
-    comments: Array.from({ length: 9 }, (_, n) => ({ n, status: "pending", note: "z".repeat(90) })) });
+});
+
+test("open comments keep their place when a long selection fills the summary", () => {
+  const selection = Array.from({ length: 30 }, (_, n) => ({ tag: "p", text: "y".repeat(60), vsrc: `pages/records/index.html:${n + 10}:2` }));
+  const comments = [{ n: 1, status: "pending", note: "Make the heading larger" }];
+  const context = canvasContext({ project: { id: "p1", name: "Board" }, revision: "abcdef1234567890", mode: "select", selection, comments });
+  assert.ok(context.summary.length <= 400, context.summary.length);
+  assert.match(context.summary, /open comments 1: #1 Make the heading larger$/);
+  assert.match(context.summary, /selected 30: p "y{30}" pages\/records\/index\.html:10:2; .*\+\d+ more/);
+  const many = canvasContext({ project: { id: "p1", name: "Board" }, selection, comments: Array.from({ length: 9 }, (_, n) => ({ n, status: "pending", note: "z".repeat(90) })) });
   assert.ok(many.summary.length <= 400);
+  assert.match(many.summary, /open comments 9: /);
 });

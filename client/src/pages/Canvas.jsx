@@ -3,21 +3,22 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
+import PreviewSelection from "../components/PreviewSelection.jsx";
 import { PreviewFrames, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
-import { canvasContext, elementLabel, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
+import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
 
 const MODE_TEXT = {
   navigate: ["Navegar", "Navigate", "Usa la aplicación como siempre.", "Use the application as usual."],
   select: ["Seleccionar", "Select", "Pasa el ratón y haz clic. Mayús+clic añade o quita. Esc sale.", "Hover and click. Shift+click adds or removes. Esc leaves."],
-  comment: ["Comentar", "Comment", "Haz clic en un elemento y escribe la nota. Esc sale.", "Click an element and write the note. Esc leaves."],
-  handles: ["Tiradores", "Handles", "Arrastra los tiradores para cambiar tamaño, margen o relleno.", "Drag the handles to change size, margin or padding."],
+  handles: ["Tiradores", "Handles", "Arrastra los tiradores para cambiar tamaño, margen o relleno. Esc sale.", "Drag the handles to change size, margin or padding. Esc leaves."],
 };
-const POLL_MS = 2500;
 
 /**
- * Canvas: one application preview across the screen, the mode toolbar and a side panel with the person's selection and
- * comments. It shares the preview, its live refresh and the agent bridge with Applications (`useProjectPreviewCanvas`),
- * and tells the Dock host what is selected through `HoardApp.setContext`, so Faustus sees it in the turn.
+ * Canvas: one application preview across the screen, the mode toolbar and a side panel with the person's selection.
+ * The preview, its live refresh and the agent bridge come from `useProjectPreviewCanvas`, and the selection from
+ * `PreviewSelection`, both shared with Applications. This screen only adds the toolbar (modes the inspector announces)
+ * and tells the Dock host what is selected through `HoardApp.setContext`, so Faustus sees it in the turn. While it is
+ * open, the copilot opens on the left so the preview keeps the right.
  */
 export default function Canvas({ param }) {
   const { lang, notify } = useApp();
@@ -29,13 +30,10 @@ export default function Canvas({ param }) {
   const [modes, setModes] = useState(["navigate"]);
   const [mode, setMode] = useState("navigate");
   const [selection, setSelection] = useState([]);
-  const [comments, setComments] = useState([]);
-  const [draft, setDraft] = useState(null);
-  const [note, setNote] = useState("");
   const currentId = useRef(param);
   currentId.current = param;
-  const held = useRef({ mode, selection });
-  held.current = { mode, selection };
+  const held = useRef(mode);
+  held.current = mode;
 
   const loadProject = async (id) => {
     try {
@@ -50,15 +48,28 @@ export default function Canvas({ param }) {
     projectId: project?.id === param ? param : null, preview, baseline: project?.revision, lang, onRevision: syncRevision,
     onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
   });
-  const running = visible?.state === "running";
+  const running = preview?.state === "running" && Boolean(visible);
+  const frameKey = frames[0]?.key;
 
   useEffect(() => { api.appProjects().then((data) => setProjects(data.projects)).catch((error) => notify(error.message)); }, []);
   useEffect(() => {
-    setProject(null); setPreview(null); setSelection([]); setComments([]); setDraft(null); setModes(["navigate"]); setMode("navigate");
+    setProject(null); setPreview(null);
     if (param) loadProject(param);
   }, [param]);
   useCopilotRefresh(() => { if (param) loadProject(param); });
   useCopilotObjects(project ? [{ kind: "app_project", id: project.id }] : []);
+
+  // The copilot panel takes the left while this screen is open; the preview keeps the right.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.hoardCopilotPosition = "left";
+    return () => { delete root.dataset.hoardCopilotPosition; };
+  }, []);
+
+  // A new project, a stopped or reopened preview, or a swapped frame knows nothing yet: only Navigate until the
+  // inspector in that frame announces what it supports. The selection itself is kept and restored by PreviewSelection.
+  useEffect(() => { setModes(["navigate"]); setMode("navigate"); }, [param, running, visible?.url, frameKey]);
+  useEffect(() => { if (!running) setSelection([]); }, [running, param]);
 
   const originOf = (frame) => { try { return new URL(frame.src, window.location.href).origin; } catch { return null; } };
   const send = (message) => {
@@ -67,7 +78,7 @@ export default function Canvas({ param }) {
     if (frame?.contentWindow && target) frame.contentWindow.postMessage({ hoardDock: 1, ...message }, target);
   };
 
-  // The inspector inside the preview says which modes it supports and what the person picks.
+  // Read-only: the modes the inspector announces and the selection it reports (PreviewSelection answers it).
   useEffect(() => {
     if (!running) return undefined;
     const onMessage = (event) => {
@@ -75,44 +86,32 @@ export default function Canvas({ param }) {
       if (!isCanvasMessage(event, frame?.contentWindow, frame && originOf(frame))) return;
       const data = event.data;
       if (data.type === "dock/inspector-ready") {
-        setModes(supportedModes(data));
-        // A reloaded page forgets its mode: give back the one this screen holds.
-        if (held.current.mode !== "navigate" && modeFromPage(data) !== held.current.mode) modeMessages(held.current.mode, "navigate").forEach(send);
-        if (Array.isArray(data.selection) && data.selection.length) setSelection(data.selection);
-        else if (held.current.selection.length) send({ type: "inspect/restore", selectors: held.current.selection.map((item) => item.selector).filter(Boolean) });
+        setModes(supportedModes(data).filter((item) => item !== "comment"));
+        setMode(modeFromPage(data));
+        if (Array.isArray(data.selection) && data.selection.length) setSelection(data.selection); // empty: PreviewSelection restores it
         return;
       }
       if (data.type === "dock/select") { setMode(modeFromPage(data)); if (Array.isArray(data.selection)) setSelection(data.selection); }
-      if (data.type === "dock/comment-target" && data.element) { setDraft({ element: data.element, page: data.page || "/" }); setNote(""); }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [running, visible?.url]);
+  }, [running, visible?.url, frameKey]);
 
-  // Comments are stored by the server when this build has them; the list is polled so the agent's steps show up.
-  const canComment = typeof api.appProjectComments === "function";
-  const loadComments = () => canComment && project && api.appProjectComments(project.id).then((data) => setComments(data.comments || [])).catch(() => {});
+  // What the Dock host (Faustus) sees of this screen.
   useEffect(() => {
-    if (!running || !project || !canComment) return undefined;
-    loadComments();
-    const timer = setInterval(() => { if (!document.hidden) loadComments(); }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [running, project?.id]);
-
-  // What the Dock host (Faustus) and the copilot see of this screen.
-  useEffect(() => {
-    const context = canvasContext({ project, revision: visible?.revision, mode, selection, comments });
-    window.HoardApp?.setContext?.(context);
-  }, [project?.id, project?.name, visible?.revision, mode, selection, comments]);
+    window.HoardApp?.setContext?.(canvasContext({ project, revision: visible?.revision, mode, selection }));
+  }, [project?.id, project?.name, visible?.revision, mode, selection]);
   useEffect(() => () => window.HoardApp?.setContext?.({}), []);
 
   const choose = (next) => {
-    if (next === mode) next = "navigate";
-    modeMessages(next, mode).forEach(send);
+    const current = held.current;
+    if (next === current) next = "navigate";
+    modeMessages(next, current).forEach(send);
     setMode(next);
   };
   useEffect(() => {
-    const onKey = (event) => { if (event.key === "Escape" && held.current.mode !== "navigate") choose("navigate"); };
+    // Select has its own Esc in PreviewSelection; the handles mode is left from here.
+    const onKey = (event) => { if (event.key === "Escape" && held.current === "handles") choose("navigate"); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
@@ -123,13 +122,6 @@ export default function Canvas({ param }) {
     catch (error) { notify(error.message); }
     finally { setBusy(""); }
   };
-  const clearSelection = () => { send({ type: "inspect/clear" }); setSelection([]); };
-  const saveComment = () => {
-    if (!draft || !note.trim() || typeof api.appProjectCommentAdd !== "function") return;
-    api.appProjectCommentAdd(project.id, { note: note.trim(), revision: visible?.revision, page: draft.page, element: draft.element })
-      .then(() => { setDraft(null); setNote(""); send({ type: "inspect/draft-clear" }); return loadComments(); }).catch((error) => notify(error.message));
-  };
-  const open = comments.filter((comment) => ["pending", "seen", "answered"].includes(comment.status));
 
   return <div className="flex flex-col gap-3">
     <div className="flex items-center gap-3 flex-wrap">
@@ -158,25 +150,8 @@ export default function Canvas({ param }) {
         </div>
         <div className="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start">
           <PreviewFrames frames={frames} frameRef={attachFrame} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
-          <aside className="panel flex flex-col gap-4" aria-label={es ? "Selección y comentarios" : "Selection and comments"}>
-            <section>
-              <div className="flex items-center gap-2"><h2 className="font-semibold">{es ? "Selección" : "Selection"} ({selection.length})</h2>
-                {selection.length > 0 && <button type="button" className="btn btn-sm ml-auto" onClick={clearSelection}>{es ? "Quitar todo" : "Clear all"}</button>}</div>
-              {selection.length ? <ul className="flex flex-col gap-2 mt-2">{selection.map((item, index) => <li key={(item.selector || "") + index} className="chip chip-wrap chip-accent">
-                <span><strong>{index + 1}. {elementLabel(item)}</strong>{item.vsrc && <><br /><span>{item.vsrc}</span></>}{item.vgen && <><br /><span>{es ? `generado por {{${item.vgen}}}` : `generated by {{${item.vgen}}}`}</span></>}{item.same_vsrc_count > 1 && <><br /><span>{es ? `afecta a ${item.same_vsrc_count} elementos` : `affects ${item.same_vsrc_count} elements`}</span></>}</span>
-              </li>)}</ul> : <p className="help mt-2">{es ? "Lo que selecciones lo ve el agente en su turno." : "The agent sees what you select in its turn."}</p>}
-            </section>
-            {(canComment || modes.includes("comment")) && <section>
-              <h2 className="font-semibold">{es ? "Comentarios abiertos" : "Open comments"} ({open.length})</h2>
-              {draft && <form className="flex flex-col gap-2 mt-2" onSubmit={(event) => { event.preventDefault(); saveComment(); }}>
-                <strong>{es ? "Comentario sobre " : "Comment on "}{elementLabel(draft.element)}</strong>
-                <label className="label">{es ? "Nota para el agente" : "Note for the agent"}<textarea className="field" rows={3} autoFocus value={note} onChange={(event) => setNote(event.target.value)} /></label>
-                <div className="flex gap-2"><button type="submit" className="btn btn-primary" disabled={!note.trim()}>{es ? "Guardar comentario" : "Save comment"}</button><button type="button" className="btn" onClick={() => { setDraft(null); send({ type: "inspect/draft-clear" }); }}>{es ? "Cancelar" : "Cancel"}</button></div>
-              </form>}
-              {open.length ? <ul className="flex flex-col gap-2 mt-2">{open.map((comment) => <li key={comment.id}>
-                <button type="button" className="text-left w-full" onClick={() => send({ type: "inspect/pin-focus", id: comment.id })}><strong>#{comment.n}</strong> {comment.note}</button>
-              </li>)}</ul> : !draft && <p className="help mt-2">{es ? "Sin comentarios abiertos." : "No open comments."}</p>}
-            </section>}
+          <aside className="flex flex-col gap-3" aria-label={es ? "Selección" : "Selection"}>
+            <PreviewSelection project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} />
           </aside>
         </div>
       </>}

@@ -138,3 +138,6 @@ table.grid td { border-bottom-color: var(--hoard-border); }
 .toast { background: var(--hoard-elevated); border-color: var(--hoard-border); box-shadow: var(--hoard-shadow); }
 aside > div:first-child > div > div:first-child { font-family: var(--hoard-font-serif); font-weight: 700; font-size: 15px; line-height: 1.2; white-space: nowrap; color: var(--hoard-accent); }
 aside > div:first-child > div:has(> div:nth-child(2)) { font-family: inherit; font-weight: 400; font-size: inherit; color: inherit; }
+
+/* Canvas screen: the shared copilot opens on the left, so the application preview keeps the right. */
+html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: auto; }
