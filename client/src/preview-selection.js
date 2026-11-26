@@ -35,15 +35,19 @@ export function affectsText(item, es) {
   return es ? `afecta a ${count} elementos` : `affects ${count} elements`;
 }
 
-/** What the copilot sees of the selection: small, so it fits the turn context. The tool returns the full detail. */
-export function copilotSelection(items, limit = 12) {
+/** What the copilot sees of the selection: a bounded card per element. The tool returns the full detail. */
+export function copilotSelection(items, limit = 8) {
   return items.slice(0, limit).map((item) => ({
-    selector: item.selector, tag: item.tag, ...(item.vsrc ? { source: item.vsrc } : {}), ...(item.vgen ? { generated_by: `{{${item.vgen}}}` } : {}),
-    ...(item.text ? { text: item.text.slice(0, 80) } : {}), ...(item.same_vsrc_count > 1 ? { affects: item.same_vsrc_count } : {}),
+    selector: item.selector, tag: item.tag, ...(item.classes && item.classes.length ? { classes: item.classes } : {}),
+    ...(item.vsrc ? { source: item.vsrc } : {}), ...(item.vgen ? { generated_by: `{{${item.vgen}}}` } : {}),
+    ...(item.text ? { text: item.text.slice(0, 120) } : {}), ...(item.same_vsrc_count > 1 ? { affects: item.same_vsrc_count } : {}),
+    ...(item.revision ? { revision: item.revision } : {}),
+    ...(item.html ? { html: item.html.slice(0, 300) } : {}),
+    ...(item.computed ? { styles: Object.fromEntries(["color", "backgroundColor", "fontSize", "fontWeight", "margin", "padding", "display"].filter((key) => item.computed[key]).map((key) => [key, item.computed[key]])) } : {}),
   }));
 }
 
-/** Selectors to hand back to a freshly loaded page so the selection survives a reload. */
-export function selectorsOf(items) {
-  return items.map((item) => item.selector).filter(Boolean);
+/** What a freshly loaded page needs to find the same elements again: identity, not position alone. */
+export function identitiesOf(items) {
+  return items.map(({ selector, tag, text, vsrc, own_vsrc }) => ({ selector, tag, text, vsrc, own_vsrc })).filter((item) => item.selector);
 }

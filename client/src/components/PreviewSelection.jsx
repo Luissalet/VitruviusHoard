@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { useCopilotForm } from "../copilot-hooks.js";
-import { affectsText, chipText, copilotSelection, isInspectorMessage, selectorsOf, sourceText } from "../preview-selection.js";
+import { affectsText, chipText, copilotSelection, identitiesOf, isInspectorMessage, sourceText } from "../preview-selection.js";
 
 /**
  * "Select" mode for the application preview. The inspector script inside the preview reports the elements the person
@@ -25,11 +25,12 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
     const target = frame && originOf(frame);
     if (frame?.contentWindow && target) frame.contentWindow.postMessage({ hoardDock: 1, type, ...fields }, target);
   };
-  const revision = useRef(preview?.revision);
-  revision.current = preview?.revision;
+  // The revision the page itself says it was served (meta vitruvius-preview-revision), never the one this page believes.
+  const served = useRef(null);
   const store = (list) => {
     if (!projectId) return;
-    api.appProjectSelectionSet(projectId, { selection: list, revision: revision.current }).catch((error) => notify(error.message));
+    api.appProjectSelectionSet(projectId, { selection: list, revision: served.current || undefined })
+      .catch((error) => { if (error.status !== 409) notify(error.message); }); // 409: the page settled on another revision and will report again
   };
 
   // A new project or a stopped preview starts clean. A reload of the same preview (a new address) keeps the selection.
@@ -47,13 +48,14 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
       if (!isInspectorMessage(event, current?.contentWindow, current && originOf(current))) return;
       setConnected(true);
       const { selection, mode: pageMode } = event.data;
+      served.current = event.data.revision ?? null;
       if (event.data.type === "dock/inspector-ready") {
         // A reloaded page forgets: give it back the selection and the mode this page still holds.
         const held = state.current;
         const samePage = page.current === null || page.current === event.data.page;
         page.current = event.data.page ?? null;
         if (!samePage && held.items.length) { setItems([]); store([]); }
-        else if (!selection.length && held.items.length) send("inspect/restore", { selectors: selectorsOf(held.items) });
+        else if (!selection.length && held.items.length) send("inspect/restore", { items: identitiesOf(held.items) });
         if (held.mode && !pageMode) send("inspect/mode", { on: true });
         if (selection.length && samePage) { setItems(selection); store(selection); }
         return;
@@ -76,7 +78,7 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [running]);
-  useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [] }, current: { selection: copilotSelection(items) } });
+  useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [] }, current: { revision: items.length ? served.current || undefined : undefined, selection: copilotSelection(items) } });
 
   if (!running) return null;
   return <div className="panel flex flex-col gap-3" aria-label={es ? "Selección en la vista previa" : "Preview selection"}>

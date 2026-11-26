@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { affectsText, chipText, copilotSelection, elementName, isInspectorMessage, selectorsOf, sourceText } from "./src/preview-selection.js";
+import { affectsText, chipText, copilotSelection, elementName, identitiesOf, isInspectorMessage, sourceText } from "./src/preview-selection.js";
 
 const item = { selector: "ul > li:nth-of-type(2)", tag: "li", classes: ["row", "odd", "x"], text: "Buy milk and then a very long second sentence", vsrc: "pages/index.html:7:5", same_vsrc_count: 3 };
 
@@ -25,9 +25,14 @@ test("only messages from the preview frame with the inspector envelope are accep
   assert.equal(isInspectorMessage(good, null, "http://127.0.0.1:9"), false);
 });
 
-test("the copilot gets a small summary and a reload gets the selectors back", () => {
-  const [summary] = copilotSelection([item]);
-  assert.deepEqual(summary, { selector: item.selector, tag: "li", source: item.vsrc, text: item.text.slice(0, 80), affects: 3 });
-  assert.equal(copilotSelection(Array.from({ length: 40 }, () => item)).length, 12);
-  assert.deepEqual(selectorsOf([item, { tag: "p" }]), ["ul > li:nth-of-type(2)"]);
+test("the copilot gets a bounded card per element and a reload gets identities back", () => {
+  const full = { ...item, revision: "r1", html: "<li>" + "x".repeat(500), computed: { color: "red", gap: "1px", margin: "0px" } };
+  const [card] = copilotSelection([full]);
+  assert.equal(card.revision, "r1");
+  assert.equal(card.source, item.vsrc);
+  assert.equal(card.affects, 3);
+  assert.equal(card.html.length, 300);
+  assert.deepEqual(card.styles, { color: "red", margin: "0px" });
+  assert.equal(copilotSelection(Array.from({ length: 40 }, () => item)).length, 8);
+  assert.deepEqual(identitiesOf([{ ...full, own_vsrc: true }, { tag: "p" }]), [{ selector: item.selector, tag: "li", text: item.text, vsrc: item.vsrc, own_vsrc: true }]);
 });

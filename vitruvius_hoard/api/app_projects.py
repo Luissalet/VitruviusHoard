@@ -8,7 +8,7 @@ from ..agent_tools import (
     AppCallArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
-from ..preview_inspector import inspector_script, read_selection, write_selection
+from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
 
 router = APIRouter(prefix="/api/app-projects")
 
@@ -18,6 +18,8 @@ def execute(operation):
         return operation()
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
+    except StaleSelection as error:
+        raise HTTPException(409, str(error)) from error
     except (ValueError, OSError) as error:
         raise HTTPException(400, str(error)) from error
 

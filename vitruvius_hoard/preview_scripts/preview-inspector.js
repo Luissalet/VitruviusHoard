@@ -6,6 +6,7 @@
   'use strict';
   const MAX_TEXT = 200;
   const MAX_SELECTION = 24;
+  const MAX_HTML = 1200;
   const COMPUTED = ['display', 'width', 'height', 'color', 'backgroundColor', 'fontFamily', 'fontSize', 'fontWeight',
     'lineHeight', 'margin', 'padding', 'borderRadius', 'borderWidth', 'gap'];
 
@@ -30,6 +31,8 @@
       if (vid) { const selector = `[data-vid="${String(vid).replace(/["\\]/g, '\\$&')}"]`; if (count(selector) === 1) return selector; }
       const id = attrOf(node, 'id');
       if (id) { const selector = `#${escapeCss(id)}`; if (count(selector) === 1) return selector; }
+      const vsrc = attrOf(node, 'data-vsrc');
+      if (vsrc) { const selector = `[data-vsrc="${String(vsrc).replace(/["\\]/g, '\\$&')}"]`; if (count(selector) === 1) return selector; }
       return null;
     };
     const own = anchor(element);
@@ -63,6 +66,8 @@
     const classes = String(attrOf(element, 'class') || '').split(/\s+/).filter(Boolean).slice(0, 12);
     return {
       vsrc: vsrc || null,
+      own_vsrc: Boolean(vsrcOwner),
+      html: String(element.outerHTML || '').slice(0, MAX_HTML),
       vgen: generated ? attrOf(generated, 'data-vgen') : null,
       selector: selectorFor(element, count),
       tag: tagOf(element),
@@ -74,7 +79,23 @@
     };
   }
 
-  const core = {selectorFor, describeElement, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  // The element a recorded description stands for, or null when it cannot be told apart any more. A unique data-vsrc
+  // is an identity; otherwise the tag and visible text must still match, so a reordered page never hands the
+  // selection to a neighbour. `all(selector)` lists the matching elements of the document.
+  function resolveElement(item, all) {
+    if (!item || typeof item !== 'object') return null;
+    const same = element => tagOf(element) === item.tag && compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT) === item.text;
+    let found = [];
+    try {
+      if (item.own_vsrc && item.vsrc) {
+        found = all(`[data-vsrc="${String(item.vsrc).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag);
+        if (found.length > 1) found = found.filter(same);
+      } else if (item.selector) found = all(String(item.selector)).filter(same);
+    } catch (_) { return null; }
+    return found.length === 1 ? found[0] : null;
+  }
+
+  const core = {selectorFor, describeElement, resolveElement, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -87,18 +108,29 @@
     style: element => getComputedStyle(element),
     scroll: {get x() { return window.scrollX; }, get y() { return window.scrollY; }},
   };
-  let hostOrigin = null;
+  let hostOrigin = null; // the origin of the page that frames this one: fixed by the browser, or by the first hello
   let mode = false;
   let selected = []; // elements, in the order they were chosen
   let hovered = null;
   let focusIndex = -1;
-  const picked = new Map(); // element -> selector, so a page that re-renders can be followed
+  const picked = new Map(); // element -> its last description, so a page that re-renders can be followed
+  let lastRevision;
+  let cursorSheet;
   let layer; let root; let frame = 0; let watcher = 0;
 
   const post = (type, fields = {}) => { if (hostOrigin !== null) window.parent.postMessage({hoardDock: 1, type, ...fields}, hostOrigin); };
   const pageId = () => location.pathname + location.search;
-  const describe = element => { const item = describeElement(element, env); picked.set(element, item.selector); return item; };
-  const report = () => post('dock/select', {mode, page: pageId(), selection: selected.map(describe)});
+  const revision = () => { const meta = document.querySelector('meta[name="vitruvius-preview-revision"]'); return (meta && meta.content) || null; };
+  const describe = element => { const item = {...describeElement(element, env), revision: revision()}; picked.set(element, item); return item; };
+  const snapshot = () => ({mode, page: pageId(), revision: revision(), selection: selected.map(describe)});
+  // The App Dock context of the page (when the bridge is present) names the selection, so the agent's turn carries it.
+  function publishContext(items) {
+    const app = window.HoardApp;
+    if (!app || typeof app.setContext !== 'function') return;
+    const summary = items.length ? 'Selected on the preview: ' + items.map((item, index) => `${index + 1}. ${item.tag}${item.classes[0] ? '.' + item.classes[0] : ''} "${item.text.slice(0, 40)}"${item.vsrc ? ' (' + item.vsrc + ')' : ''}`).join('; ') : '';
+    try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {})})); } catch (_) { /* the bridge must not break selection */ }
+  }
+  const report = () => { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
   const candidates = () => [...document.body.querySelectorAll('*')].filter(element => !isOwn(element)
     && !['script', 'style', 'link', 'meta', 'head', 'noscript', 'template'].includes(tagOf(element))
@@ -106,10 +138,10 @@
 
   function ensureLayer() {
     if (layer) return;
-    layer = document.createElement('div');
+    layer = document.createElement('vitruvius-inspector-layer');
     layer.setAttribute('data-vitruvius-inspector-layer', '');
     layer.setAttribute('aria-hidden', 'true');
-    layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483646;contain:layout style;';
+    layer.setAttribute('style', LAYER_STYLE);
     root = layer.attachShadow({mode: 'open'});
     root.innerHTML = `<style>
       .box{position:absolute;box-sizing:border-box;pointer-events:none}
@@ -122,6 +154,19 @@
       .fade{transition:opacity .12s} @media (prefers-reduced-motion:reduce){.fade{transition:none}}
     </style><div id="stage"></div>`;
     document.documentElement.appendChild(layer);
+    // Project CSS must not hide or move the layer: inline !important wins over any stylesheet rule, and the layer is
+    // put back (or its style restored) if the page removes or rewrites it.
+    new MutationObserver(() => { if (layer.getAttribute('style') !== LAYER_STYLE) layer.setAttribute('style', LAYER_STYLE); }).observe(layer, {attributes: true, attributeFilter: ['style', 'class', 'hidden']});
+  }
+  const LAYER_STYLE = ['all:initial', 'display:block', 'position:fixed', 'inset:0', 'width:auto', 'height:auto', 'margin:0', 'padding:0', 'border:0', 'transform:none', 'opacity:1', 'visibility:visible',
+    'overflow:visible', 'pointer-events:none', 'z-index:2147483647', 'contain:layout style'].map(rule => rule + '!important').join(';');
+  // The crosshair is an adopted stylesheet: the page's own inline styles are never touched.
+  function setCursor(on) {
+    try {
+      if (!cursorSheet) { cursorSheet = new CSSStyleSheet(); cursorSheet.replaceSync('html,html *{cursor:crosshair!important}'); }
+      const others = document.adoptedStyleSheets.filter(sheet => sheet !== cursorSheet);
+      document.adoptedStyleSheets = on ? [...others, cursorSheet] : others;
+    } catch (_) { /* a browser without adopted stylesheets keeps its normal cursor */ }
   }
 
   const px = value => (parseFloat(value) || 0);
@@ -152,17 +197,25 @@
   // When the page replaces elements (a live refresh), selected ones that left the document are looked up again by
   // their selector, or dropped; the host is told only when the selection really changed.
   function follow() {
-    watcher = 0;
     if (!selected.some(element => !element.isConnected)) return;
     const next = [];
     for (const element of selected) {
-      let found = element;
-      if (!element.isConnected) { try { found = document.querySelector(picked.get(element) || ''); } catch (_) { found = null; } }
+      const found = element.isConnected ? element : resolveElement(picked.get(element), all);
       if (found && !next.includes(found)) next.push(found);
     }
     selected = next; schedule(); report();
   }
-  new MutationObserver(() => { if (selected.length && !watcher) watcher = requestAnimationFrame(follow); }).observe(document.documentElement, {childList: true, subtree: true});
+  const all = selector => [...document.querySelectorAll(selector)];
+  // A change of the served revision (a live refresh patches the page in place) is reported again with the new one;
+  // a layer the page removed is put back.
+  new MutationObserver(() => {
+    if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
+    if (selected.length && !watcher) watcher = requestAnimationFrame(() => {
+      watcher = 0;
+      if (selected.some(element => !element.isConnected)) follow();
+      else if (revision() !== lastRevision) report();
+    });
+  }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
 
   function elementAt(event) {
     const hit = document.elementsFromPoint ? document.elementsFromPoint(event.clientX, event.clientY).find(element => !isOwn(element)) : event.target;
@@ -197,16 +250,15 @@
     mode = Boolean(on);
     ensureLayer();
     if (!mode) hovered = null;
-    document.documentElement.style.cursor = mode ? 'crosshair' : '';
+    setCursor(mode);
     schedule(); report();
   }
 
-  function restore(selectors) {
+  function restore(items) {
     const found = [];
-    for (const selector of Array.isArray(selectors) ? selectors.slice(0, MAX_SELECTION) : []) {
-      let element = null;
-      try { element = document.querySelector(String(selector)); } catch (_) { /* a stale selector is skipped */ }
-      if (element && !found.includes(element)) found.push(element);
+    for (const item of Array.isArray(items) ? items.slice(0, MAX_SELECTION) : []) {
+      const element = resolveElement(item, all); // an element that cannot be told apart is dropped, never guessed
+      if (element) { picked.set(element, item); if (!found.includes(element)) found.push(element); }
     }
     selected = found; ensureLayer(); schedule(); report();
   }
@@ -215,12 +267,14 @@
     if (event.source !== window.parent) return;
     const data = event.data;
     if (!data || data.hoardDock !== 1 || typeof data.type !== 'string' || !data.type.startsWith('inspect/')) return;
-    hostOrigin = event.origin;
-    if (data.type === 'inspect/hello') post('dock/inspector-ready', {mode, page: pageId(), selection: selected.map(describe)});
+    // The origin is fixed once: by the browser (ancestorOrigins) or by the first hello. Later messages from any other origin are ignored.
+    if (hostOrigin === null) { if (data.type !== 'inspect/hello') return; hostOrigin = event.origin; }
+    else if (event.origin !== hostOrigin) return;
+    if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/mode') setMode(data.on);
     else if (data.type === 'inspect/clear') { selected = []; schedule(); report(); }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }
-    else if (data.type === 'inspect/restore') restore(data.selectors);
+    else if (data.type === 'inspect/restore') restore(data.items);
   });
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('click', onClick, true);
@@ -229,5 +283,5 @@
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', schedule);
   window.__vitruviusInspector = {version: 1, core};
-  try { const ancestor = (location.ancestorOrigins && location.ancestorOrigins[0]) || (document.referrer ? new URL(document.referrer).origin : null); if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', {mode, page: pageId(), selection: []}); } } catch (_) { /* the host will say hello */ }
+  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
 })();

@@ -48,28 +48,83 @@ def test_selection_is_per_project_replaced_and_cleared():
     assert store.set("a", [])["count"] == 0 and store.get("a")["updated_ts"] is None
 
 
+class Preview:
+    """Stands in for the project's preview process: the tool and the routes only read its status."""
+    def __init__(self, services):
+        self.state, self.revision, self.pid = "running", "rev1", 100
+        services.app_projects.status = lambda id: {"state": self.state, "revision": self.revision, "pid": self.pid if self.state == "running" else None}
+
+    def restart(self, revision=None):
+        self.state, self.pid = "running", self.pid + 1
+        self.revision = revision or self.revision
+
+
 def test_tool_is_read_only_and_reports_the_selection(services):
     tool = TOOLS_BY_NAME["app_project_selection"]
     assert tool.annotations["readOnlyHint"] is True and not tool.annotations.get("destructiveHint")
     project = services.app_projects.create("Selector", "work-board")
+    preview = Preview(services)
     empty = call_tool(services, "app_project_selection", {"id": project["id"]})
     assert empty["selection"] == [] and "Nothing is selected" in empty["note"]
-    services.preview_selections.set(project["id"], [element()], project["revision"])
+    preview_inspector.write_selection(services, project["id"], [element(revision="rev1", html="<h1>x</h1>", own_vsrc=True)], "rev1")
     found = call_tool(services, "app_project_selection", {"id": project["id"]})
-    assert found["count"] == 1 and found["selection"][0]["line"] == 1 and found["revision"] == project["revision"]
+    assert found["count"] == 1 and found["selection"][0]["line"] == 1 and found["revision"] == "rev1"
+    assert found["selection"][0]["html"] == "<h1>x</h1>" and found["selection"][0]["own_vsrc"] is True and found["selection"][0]["revision"] == "rev1"
+    assert "_session" not in found
     with pytest.raises(LookupError):
         preview_inspector.read_selection(services, "0" * 16)
+    assert preview.pid == 100
+
+
+def test_the_selection_dies_with_the_preview_however_it_was_stopped(services):
+    project = services.app_projects.create("Selector", "work-board")
+    id = project["id"]
+    preview = Preview(services)
+    preview_inspector.write_selection(services, id, [element()], "rev1")
+    # an agent (or anything else) stops the preview: the next read is empty, with no help from the page
+    preview.state = "stopped"
+    stopped = call_tool(services, "app_project_selection", {"id": id})
+    assert stopped["selection"] == [] and "not running" in stopped["note"]
+    # starting it again does not bring the old selection back
+    preview.restart()
+    assert call_tool(services, "app_project_selection", {"id": id})["selection"] == []
+    # a restart without a read in between is a new session too
+    preview_inspector.write_selection(services, id, [element()], "rev1")
+    preview.restart()
+    restarted = call_tool(services, "app_project_selection", {"id": id})
+    assert restarted["selection"] == [] and "restarted" in restarted["note"]
+    # a report that arrives for a stopped preview is dropped
+    preview.state = "stopped"
+    assert preview_inspector.write_selection(services, id, [element()], "rev1")["selection"] == []
+
+
+def test_the_selection_is_tied_to_the_revision_the_preview_serves(services):
+    project = services.app_projects.create("Selector", "work-board")
+    id = project["id"]
+    preview = Preview(services)
+    with pytest.raises(preview_inspector.StaleSelection):
+        preview_inspector.write_selection(services, id, [element()], "old")
+    assert preview_inspector.write_selection(services, id, [element()], "rev1")["count"] == 1
+    preview.revision = "rev2"  # a live refresh moved the preview on; the page has not reported yet
+    stale = call_tool(services, "app_project_selection", {"id": id})
+    assert stale["selection"] == [] and stale["stale_revision"] == "rev1" and stale["preview_revision"] == "rev2"
+    assert preview_inspector.write_selection(services, id, [element()], "rev2")["revision"] == "rev2"
+    assert call_tool(services, "app_project_selection", {"id": id})["count"] == 1
 
 
 def test_api_stores_the_selection_and_serves_the_script(client):
     project = client.svc.app_projects.create("Selector", "work-board")
+    preview = Preview(client.svc)
     base = f"/api/app-projects/{project['id']}/selection"
     assert client.get(base).json()["selection"] == []
-    stored = client.put(base, json={"selection": [element(), {"selector": ""}], "revision": project["revision"]})
+    stored = client.put(base, json={"selection": [element(), {"selector": ""}], "revision": "rev1"})
     assert stored.status_code == 200 and stored.json()["count"] == 1
     assert client.get(base).json()["selection"][0]["tag"] == "h1"
+    assert client.put(base, json={"selection": [element()], "revision": "other"}).status_code == 409
     assert client.put(base, json={"selection": "nope"}).status_code == 400
     assert client.put("/api/app-projects/" + "0" * 16 + "/selection", json={"selection": []}).status_code == 404
+    preview.state = "stopped"
+    assert client.get(base).json()["selection"] == []
     script = client.get("/api/app-projects/preview-inspector.js")
     assert script.status_code == 200 and script.headers["content-type"].startswith("text/javascript")
     assert script.text == preview_inspector.inspector_script() and "dock/select" in script.text

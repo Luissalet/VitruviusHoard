@@ -12,6 +12,7 @@ from pathlib import Path
 
 MAX_SELECTION = 24
 MAX_TEXT = 200
+MAX_HTML = 1200
 _SCRIPT = Path(__file__).with_name("preview_scripts") / "preview-inspector.js"
 _BOX = ("x", "y", "w", "h")
 
@@ -42,7 +43,8 @@ def _item(raw):
         "text": _text(raw.get("text"), MAX_TEXT) or "",
         "box": {key: _number((raw.get("box") or {}).get(key)) for key in _BOX} if isinstance(raw.get("box"), dict) else dict.fromkeys(_BOX, 0),
         "computed": {str(k)[:40]: str(v)[:120] for k, v in list(raw["computed"].items())[:16]} if isinstance(raw.get("computed"), dict) else {},
-        "vsrc": vsrc, "vgen": vgen, "same_vsrc_count": count,
+        "vsrc": vsrc, "vgen": vgen, "same_vsrc_count": count, "own_vsrc": raw.get("own_vsrc") is True,
+        "html": _text(raw.get("html"), MAX_HTML) or "", "revision": _text(raw.get("revision"), 64) or None,
     }
     if vsrc:
         file, _, rest = vsrc.partition(":")
@@ -66,36 +68,83 @@ def normalise(selection):
     return [item for item in map(_item, selection[:MAX_SELECTION]) if item]
 
 
+def _empty(project_id, revision, note):
+    return {"id": project_id, "selection": [], "count": 0, "revision": revision, "updated_ts": None, "note": note}
+
+
+class StaleSelection(ValueError):
+    """The selection names a revision other than the one the open preview serves."""
+
+
 class PreviewSelections:
     def __init__(self):
         self._lock = threading.Lock()
         self._by_project = {}
 
-    def set(self, project_id, selection, revision=None):
+    def set(self, project_id, selection, revision=None, session=None):
         items = normalise(selection)
-        entry = {"id": project_id, "selection": items, "count": len(items), "revision": revision, "updated_ts": time.time()}
+        entry = {"id": project_id, "selection": items, "count": len(items), "revision": revision, "updated_ts": time.time(),
+                 "_session": session}
         with self._lock:
             if items:
                 self._by_project[project_id] = entry
             else:
                 self._by_project.pop(project_id, None)
-        return entry if items else self.get(project_id, revision)
+        return self._public(entry) if items else self.get(project_id, revision)
+
+    def clear(self, project_id):
+        with self._lock:
+            self._by_project.pop(project_id, None)
+
+    def entry(self, project_id):
+        with self._lock:
+            return self._by_project.get(project_id)
+
+    @staticmethod
+    def _public(entry):
+        return {key: value for key, value in entry.items() if not key.startswith("_")}
 
     def get(self, project_id, revision=None):
-        with self._lock:
-            entry = self._by_project.get(project_id)
+        entry = self.entry(project_id)
         if entry:
-            return dict(entry)
-        return {"id": project_id, "selection": [], "count": 0, "revision": revision, "updated_ts": None,
-                "note": "Nothing is selected in the open preview. The person selects elements with Select on the preview."}
+            return self._public(entry)
+        return _empty(project_id, revision, "Nothing is selected in the open preview. The person selects elements with Select on the preview.")
+
+
+def _running(services, project_id):
+    """(revision, session) of the open preview, or None when the project has no running preview. The session is the
+    preview process (or its address), so a stop and a new start are different sessions."""
+    status = services.app_projects.status(project_id)
+    if status.get("state") != "running":
+        return None
+    return status.get("revision"), status.get("pid") or status.get("url")
 
 
 def read_selection(services, project_id, revision=None):
-    """Current selection of an existing project (an unknown project is a LookupError, like the other project tools)."""
+    """Current selection of an existing project's open preview. It is empty once the preview stopped (by the person, an agent or a
+    crash), after it restarted, or when it was taken on another revision than the one now served."""
     services.app_projects._directory(project_id)
-    return services.preview_selections.get(project_id, revision)
+    store = services.preview_selections
+    entry = store.entry(project_id)
+    live = _running(services, project_id)
+    if entry and (live is None or live[1] != entry["_session"]):
+        store.clear(project_id)
+        return _empty(project_id, revision, "The preview is not running, so nothing is selected." if live is None
+                      else "The preview restarted since the selection was made, so it was dropped.")
+    if entry and entry["revision"] and live[0] and entry["revision"] != live[0]:
+        return {**_empty(project_id, live[0], "The selection was made on another revision than the preview now serves; the page will report it again once it settles."),
+                "stale_revision": entry["revision"], "preview_revision": live[0]}
+    return store.get(project_id, revision or (live[0] if live else None))
 
 
 def write_selection(services, project_id, selection, revision=None):
+    """Store what the preview page reported. A report for a stopped preview is dropped, and one that names another revision than the
+    preview serves is refused (StaleSelection)."""
     services.app_projects._directory(project_id)
-    return services.preview_selections.set(project_id, selection, revision)
+    live = _running(services, project_id)
+    if live is None:
+        services.preview_selections.clear(project_id)
+        return services.preview_selections.get(project_id, revision)
+    if revision and live[0] and revision != live[0]:
+        raise StaleSelection(f"The selection is from revision {revision}; the preview serves {live[0]}")
+    return services.preview_selections.set(project_id, selection, revision or live[0], live[1])

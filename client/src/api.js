@@ -16,7 +16,7 @@ async function request(method, path, { params, body } = {}) {
   } catch {
     data = { error: text };
   }
-  if (!response.ok) throw new Error((data && data.error) || `Error ${response.status}`);
+  if (!response.ok) throw Object.assign(new Error((data && data.error) || `Error ${response.status}`), { status: response.status });
   if (data?.download_url?.startsWith('/api/')) data.download_url='/design'+data.download_url;
   if (path.startsWith('/design/api/diagrams') && data?.files) data.files=Object.fromEntries(Object.entries(data.files).map(([k,v])=>[k,typeof v==='string'&&v.startsWith('/api/')?'/design'+v:v]));
   return data;
