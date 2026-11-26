@@ -58,6 +58,7 @@ a { color: var(--accent); }
 .sim-chip { font-size: 0.75rem; font-weight: 600; letter-spacing: .02em; color: var(--ochre); background: var(--ochre-soft); padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
 .icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
 .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.language-switch { min-width: 44px; min-height: 44px; font-size: .8125rem; font-weight: 600; text-decoration: none; }
 main { max-width: 1120px; margin: 0 auto; padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 40px) 64px; }
 .foot { max-width: 1120px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) 96px; color: var(--faint); font-size: 0.8125rem; }
 .foot-note { margin: 4px 0 0; max-width: 62ch; }
@@ -145,10 +146,12 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .error-text { color: var(--danger); font-size: 0.8125rem; min-height: 1em; margin: 0; }
 
 /* Mobile */
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .topbar { gap: 12px; backdrop-filter: none; background: var(--bg); }
   .mainnav { position: fixed; left: 0; right: 0; bottom: 0; justify-content: space-around; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); z-index: 6; }
-  .mainnav a { flex: 1; text-align: center; padding: 12px 4px; font-size: 0.8125rem; }
+  .mainnav a { flex: 1; justify-content: center; text-align: center; padding: 12px 4px; font-size: 0.8125rem; }
+}
+@media (max-width: 720px) {
   .hero { grid-template-columns: 1fr; }
   .accounts { grid-template-columns: 1fr; }
   .move { padding: 12px 16px; }
@@ -238,12 +241,18 @@ p.state.error { margin: 0 0 16px; padding: 12px 16px; background: var(--danger-s
 .account .limit { margin-top: auto; }
 .account .limit + .account-foot { margin-top: 0; }
 
-/* Assistant: the fixed control on every page and its place on the transfer page */
-.voice-fab { position: fixed; right: clamp(16px, 3vw, 32px); bottom: 24px; z-index: 8; display: inline-flex; align-items: center; gap: 8px;
-  min-height: 52px; padding: 0 20px 0 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); text-decoration: none;
-  font-weight: 600; box-shadow: 0 8px 24px rgb(0 0 0 / .18); transition: translate var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard); }
+/* The launcher lives in the header so transfer and receipt actions keep their space. */
+.voice-fab { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 8px;
+  min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--accent); color: var(--on-accent); text-decoration: none;
+  font-weight: 600; transition: translate var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard); }
 .voice-fab:hover { background: var(--accent-strong); translate: 0 -1px; }
 .voice-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+@media (min-width: 901px) { body:has(.voice-slot) .voice-fab { display: none; } }
+@media (max-width: 720px) {
+  .topbar-tools { gap: 6px; }
+  .voice-fab { padding: 0; }
+  .voice-fab-label { display: none; }
+}
 .voice-slot { --transfer-assistant-accent: var(--accent); --transfer-assistant-on-accent: var(--on-accent); --transfer-assistant-radius: var(--r-md);
   border-style: solid; border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
 .voice-slot .transfer-assistant__title { font-family: var(--font-head); font-size: 1.2rem; font-weight: 500; }
@@ -261,29 +270,23 @@ p.state.error { margin: 0 0 16px; padding: 12px 16px; background: var(--danger-s
 .field[data-missing] > label::after { content: "Falta"; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600; color: var(--ochre); background: var(--ochre-soft); }
 .field[data-missing] :is(input, select) { border-style: dashed; border-color: var(--ochre); }
 .field[data-missing="sin-confirmar"] > label::after { content: "Sin confirmar"; }
+:lang(en) .field[data-missing] > label::after { content: "Missing"; }
+:lang(en) .field[data-missing="sin-confirmar"] > label::after { content: "Unconfirmed"; }
 [data-transfer-slot][data-transfer-next] { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 
-@media (max-width: 900px) {
-  .voice-slot { position: fixed; left: 8px; right: 8px; bottom: calc(72px + env(safe-area-inset-bottom)); top: auto; z-index: 7; max-height: 56vh; overflow: auto;
-    display: none; box-shadow: 0 -8px 32px rgb(0 0 0 / .22); }
-  body[data-voice-open] .voice-slot { display: block; animation: sheet-in var(--dur-enter) var(--ease-out) both; }
-  body[data-voice-open] .voice-fab { bottom: calc(56vh + 84px); }
-}
-@media (max-width: 720px) {
-  .voice-fab { bottom: calc(72px + env(safe-area-inset-bottom)); right: 12px; min-height: 48px; padding: 0 16px 0 12px; }
-  body[data-voice-open] .voice-fab { bottom: calc(56vh + 84px); }
-}
-
-/* Phone: a compact sheet so the form stays in view while it fills */
+/* On smaller screens, give the form and assistant their own scrollable rows. */
 .voice-close { display: none; }
 @media (max-width: 900px) {
-  .voice-slot { max-height: 44vh; padding: 14px 16px 12px; }
+  .voice-slot { display: none; position: relative; top: auto; min-height: 0; max-height: min(44dvh, 360px);
+    flex-direction: column; padding: 14px 16px 12px; }
+  .voice-content { overflow: auto; min-height: 0; }
+  body[data-voice-open] .transfer-layout { grid-template-rows: minmax(0, 1fr) auto; align-items: stretch;
+    height: calc(100dvh - 9rem - env(safe-area-inset-bottom)); min-height: 15rem; gap: 12px; scroll-margin-top: 4.75rem; }
+  body[data-voice-open] .transfer { min-height: 0; overflow: auto; scroll-padding: 12px; }
+  body[data-voice-open] .voice-slot { display: flex; }
+  body[data-voice-open] .voice-fab { visibility: hidden; }
   .voice-close { display: grid; place-items: center; position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
   .voice-close svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-  body[data-voice-open] .voice-fab { display: none; }
-  body[data-voice-open] main { padding-bottom: 50vh; }
-  body[data-voice-open] [data-transfer-slot], body[data-voice-open] #transfer-summary { scroll-margin-bottom: calc(44vh + 96px); scroll-margin-top: 84px; }
-  #transfer-confirm { scroll-margin-bottom: 148px; }
   .voice-slot .transfer-assistant { gap: .5rem; }
   .voice-slot .transfer-assistant__title { font-size: 1rem; padding-right: 44px; }
   .voice-slot .transfer-assistant__reply { font-size: .95rem; padding: 8px 12px; }
@@ -292,6 +295,11 @@ p.state.error { margin: 0 0 16px; padding: 12px 16px; background: var(--danger-s
   .voice-slot .transfer-assistant__slots dd { font-size: .8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .voice-slot .transfer-assistant__note { font-size: .75rem; color: var(--faint); }
   .voice-slot .voice-foot { display: none; }
+}
+
+@media print {
+  body[data-voice-open] .transfer-layout { height: auto; min-height: 0; }
+  body[data-voice-open] .transfer { overflow: visible; }
 }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

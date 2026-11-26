@@ -61,7 +61,7 @@ def page(bank):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as playwright:
         browser = None
-        for options in ({}, {"channel": "chrome"}):
+        for options in ({"channel": "chrome"}, {}):
             try:
                 browser = playwright.chromium.launch(headless=True, **options)
                 break
@@ -82,6 +82,35 @@ def page(bank):
 def balances(page):
     rows = page.evaluate("async () => (await (await fetch('/api/collections/cuentas')).json()).records")
     return {row["id"]: row["saldo_cent"] for row in rows}
+
+
+def test_mobile_assistant_keeps_the_transfer_and_receipt_accessible_in_english(page, bank):
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(bank + "/transferir?lang=en")
+    page.wait_for_function("() => window.teselaTransfer && window.standInPanel")
+    assert page.locator("html").get_attribute("lang") == "en"
+    assert page.get_by_role("heading", name="New transfer").is_visible()
+    page.get_by_role("link", name="Open the assistant").click()
+    panel = page.get_by_role("complementary", name="Boltagon, voice assistant")
+    assert panel.is_visible()
+    form_box = page.locator("#transfer-form").bounding_box()
+    assert form_box["y"] + form_box["height"] <= panel.bounding_box()["y"]
+    page.select_option("#contacto", "javier-navarro")
+    page.fill("#importe", "1,234.56")
+    page.fill("#concepto", "Dinner")
+    page.get_by_role("button", name="Review transfer").click()
+    page.get_by_role("button", name="Confirm and send").click()
+    page.get_by_role("heading", name="Transfer sent").wait_for()
+    print_button = page.get_by_role("button", name="Print receipt")
+    print_button.click(trial=True)
+    page.get_by_role("link", name="New transfer", exact=True).click(trial=True)
+    page.get_by_role("button", name="Reverse transfer").click()
+    page.get_by_text("Transfer reversed.", exact=False).wait_for()
+    page.get_by_role("button", name="Close assistant").click()
+    assert not panel.is_visible()
+    assert page.get_by_role("link", name="Open the assistant").evaluate("(link) => link === document.activeElement")
+    page.get_by_role("link", name="Español").click()
+    assert page.get_by_role("heading", name="Nueva transferencia").is_visible()
 
 
 def read_by_panel(page):

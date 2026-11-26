@@ -101,7 +101,8 @@ def _cyrano_transcription_provider(result):
     if not (has_model and has_gpu):
         model = model if has_model else health.get("model")
         gpu = gpu if has_gpu else health.get("gpu")
-    parts = [re.sub(r"['’]s Hoard$", "", name, flags=re.IGNORECASE).rstrip() or name]
+    label = re.sub(r"['’]s Hoard$", "", name, flags=re.IGNORECASE).strip()
+    parts = ["Boltagon" if label.casefold() == DICTATION_APP else label or name]
     if type(gpu) is int and gpu >= 0:
         parts.append(f"GPU {gpu}")
     if isinstance(model, str) and model.strip():

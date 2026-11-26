@@ -1,26 +1,26 @@
 <section class="hero" aria-labelledby="total-label">
   <div>
-    <p class="eyebrow" id="total-label">Saldo total</p>
+    <p class="eyebrow" id="total-label" data-en="Total balance">Saldo total</p>
     <p class="total" id="total-balance" data-bank="total"><span class="skeleton" style="display:inline-block;width:6em;height:.8em"></span></p>
-    <p class="hero-meta" id="total-meta">Cargando tus cuentas…</p>
+    <p class="hero-meta" id="total-meta" data-en="Loading your accounts…">Cargando tus cuentas…</p>
   </div>
   <div class="actions">
-    <a class="btn btn-primary" href="/transferir" id="quick-transfer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Nueva transferencia</a>
-    <a class="btn" href="/contactos">Contactos</a>
+    <a class="btn btn-primary" href="/transferir" id="quick-transfer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span data-en="New transfer">Nueva transferencia</span></a>
+    <a class="btn" href="/contactos" data-en="Contacts">Contactos</a>
   </div>
 </section>
 
-<section class="split" aria-label="Reparto del dinero entre cuentas">
+<section class="split" aria-label="Reparto del dinero entre cuentas" data-en-label="Balance by account">
   <div class="split-bar" id="split-bar"></div>
   <ul class="split-legend" id="split-legend"></ul>
 </section>
 
 <section aria-labelledby="accounts-title">
-  <div class="section-head"><h2 id="accounts-title">Tus cuentas</h2></div>
+  <div class="section-head"><h2 id="accounts-title" data-en="Your accounts">Tus cuentas</h2></div>
   <ul class="accounts" id="accounts" data-bank="accounts"></ul>
 </section>
 
 <section aria-labelledby="moves-title">
-  <div class="section-head"><h2 id="moves-title">Últimos movimientos</h2><a href="/movimientos">Ver todos</a></div>
+  <div class="section-head"><h2 id="moves-title" data-en="Recent transactions">Últimos movimientos</h2><a href="/movimientos" data-en="View all">Ver todos</a></div>
   <div class="panel"><div id="recent-moves" data-bank="moves" data-limit="8"></div></div>
 </section>
