@@ -112,6 +112,32 @@ def test_the_selection_is_tied_to_the_revision_the_preview_serves(services):
     assert call_tool(services, "app_project_selection", {"id": id})["count"] == 1
 
 
+def test_a_selection_needs_the_served_revision_and_expired_items_are_not_the_selection(services):
+    project = services.app_projects.create("Selector", "work-board")
+    id = project["id"]
+    Preview(services)
+    with pytest.raises(ValueError):  # the old behaviour filled in the backend's revision for the page
+        preview_inspector.write_selection(services, id, [element()], None)
+    with pytest.raises(preview_inspector.StaleSelection):  # a card that names another revision than the report
+        preview_inspector.write_selection(services, id, [element(revision="rev0")], "rev1")
+    clip = {"data_url": "data:image/png;base64," + "A" * 40, "w": 10, "h": 5}
+    expired = element(selector="li", expired=True, revision="rev0", text="First revised row")
+    saved = preview_inspector.write_selection(services, id, [element(revision="rev1", clip=clip), expired], "rev1")
+    assert saved["count"] == 1 and len(saved["expired"]) == 1 and saved["expired"][0]["expired"] is True
+    assert "Expired" in saved["expired"][0]["note"] and "affects" not in saved["expired"][0]
+    found = preview_inspector.read_selection(services, id)
+    assert found["selection"][0]["clip"] == {"mime": "image/png", "w": 10, "h": 5, "bytes": len(clip["data_url"]) * 3 // 4}  # pixels only on request
+    assert preview_inspector.read_selection(services, id, clips=True)["selection"][0]["clip"]["data_url"] == clip["data_url"]
+    assert [i["text"] for i in found["expired"]] == ["First revised row"]
+    # only expired items left: nothing is selected, and revision is not required to say so
+    only = preview_inspector.write_selection(services, id, [expired], None)
+    assert only["count"] == 0 and only["selection"] == []
+    # a clip that is not an image or is too big is dropped, the card stays
+    big = element(clip={"data_url": "data:image/png;base64," + "A" * (preview_inspector.MAX_CLIP + 1)})
+    assert "clip" not in preview_inspector.normalise([big])[0]
+    assert "clip" not in preview_inspector.normalise([element(clip={"data_url": "javascript:alert(1)"})])[0]
+
+
 def test_api_stores_the_selection_and_serves_the_script(client):
     project = client.svc.app_projects.create("Selector", "work-board")
     preview = Preview(client.svc)

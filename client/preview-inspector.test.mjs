@@ -8,12 +8,15 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, resolveElement, gate, escapeCss } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, gate, escapeCss } = context.VitruviusInspectorCore;
 
 function node(tagName, attrs = {}, children = [], text = "") {
   const element = { tagName: tagName.toUpperCase(), attrs, children, parentElement: null, textContent: text, getAttribute: (name) => (name in attrs ? attrs[name] : null) };
   element.closest = (selector) => { for (let n = element; n; n = n.parentElement) if (selector === "[data-vgen]" ? n.attrs["data-vgen"] !== undefined : false) return n; return null; };
   children.forEach((child) => { child.parentElement = element; });
+  const sibling = (offset) => ({ get() { const list = element.parentElement ? element.parentElement.children : []; return list[list.indexOf(element) + offset] || null; } });
+  Object.defineProperty(element, "previousElementSibling", sibling(-1));
+  Object.defineProperty(element, "nextElementSibling", sibling(1));
   return element;
 }
 const walk = (root) => [root, ...root.children.flatMap(walk)];
@@ -100,35 +103,49 @@ test("the served description carries the element HTML and says whether the sourc
   assert.equal(JSON.parse(JSON.stringify(describeElement(generated.children[0], env))).own_vsrc, false);
 });
 
-// A page that re-renders its list in another order must not hand the selection to a neighbour.
-function listPage(order) {
-  const rows = { a: ["pages/index.html:2:5", "First"], b: ["pages/index.html:3:5", "Second"], c: ["pages/index.html:4:5", "Second"] };
-  const items = order.map((key) => node("li", { "data-vsrc": rows[key][0] }, [], rows[key][1]));
+// A page that re-renders its list: rows are [vsrc, text] in document order.
+function listPage(rows) {
+  const items = rows.map(([vsrc, text]) => node("li", vsrc ? { "data-vsrc": vsrc } : {}, [], text));
   const body = node("body", {}, [node("ul", {}, items)]);
   const html = node("html", {}, [node("head"), body]);
   return { html, items, all: (selector) => walk(html).filter((candidate) => matches(candidate, selector)) };
 }
 const matches = (element, selector) => { const parts = selector.split(" > "); let current = element; for (let i = parts.length - 1; i >= 0; i--) { if (!current || !seg(current, parts[i])) return false; current = current.parentElement; } return true; };
+const identityOf = (list, at) => { const env = { count: counter(list.html), rect: () => ({ left: 0, top: 0, width: 1, height: 1 }), style: () => ({}), scroll: { x: 0, y: 0 } }; return JSON.parse(JSON.stringify(describeElement(list.items[at], env))); };
 
-test("a unique source position follows its element through a reorder; a lookalike never takes its place", () => {
-  const identity = { tag: "li", text: "First", vsrc: "pages/index.html:2:5", own_vsrc: true, selector: "li:nth-of-type(1)" };
-  const after = listPage(["b", "a"]); // same elements, reversed
-  const found = resolveElement(identity, after.all);
-  assert.equal(found.textContent, "First");
-  assert.equal(found, after.items[1]);
+test("an element follows its own text through a reorder, and its source position alone never decides", () => {
+  const before = listPage([["pages/index.html:2:5", "First revised row"], ["pages/index.html:3:5", "Second stable row"]]);
+  const chosen = identityOf(before, 0);
+  // the source rows were swapped: the positions now belong to the other text
+  const after = listPage([["pages/index.html:2:5", "Second stable row"], ["pages/index.html:3:5", "First revised row"]]);
+  assert.equal(reconcile(chosen, after.all), after.items[1], "the chip goes with the text, not with the position");
+  // the same list in the same order keeps the element
+  assert.equal(reconcile(chosen, listPage([["pages/index.html:2:5", "First revised row"], ["pages/index.html:3:5", "Second stable row"]]).all).textContent, "First revised row");
 });
 
-test("without a source position the tag and text must still match, and ambiguity drops the selection", () => {
-  const page2 = listPage(["a", "b", "c"]);
-  const positional = { tag: "li", text: "First", selector: "li:nth-of-type(1)", own_vsrc: false };
-  assert.equal(resolveElement(positional, page2.all).textContent, "First");
-  const reordered = listPage(["b", "a", "c"]);
-  assert.equal(resolveElement(positional, reordered.all), null, "the first li is now another element");
-  const repeated = { tag: "li", text: "Second", vsrc: "pages/index.html:3:5", own_vsrc: true, selector: "li:nth-of-type(2)" };
-  assert.equal(resolveElement(repeated, listPage(["a", "b", "c"]).all).textContent, "Second");
-  const twins = { tag: "li", text: "Second", selector: "li", own_vsrc: false };
-  assert.equal(resolveElement(twins, listPage(["a", "b", "c"]).all), null, "two lookalikes are ambiguous");
-  assert.equal(resolveElement(null, page2.all), null);
+test("an element edited in place is the same element; one that is gone expires", () => {
+  const before = listPage([["pages/index.html:2:5", "Old text"], ["pages/index.html:3:5", "Other"]]);
+  const chosen = identityOf(before, 0);
+  const edited = listPage([["pages/index.html:2:5", "New text"], ["pages/index.html:3:5", "Other"]]);
+  assert.equal(reconcile(chosen, edited.all), edited.items[0], "nothing else carries the old text and the place is the same");
+  const rewritten = listPage([["pages/index.html:2:5", "Other"], ["pages/index.html:3:5", "Another one"]]);
+  assert.equal(reconcile(chosen, rewritten.all), null, "the position now holds something else");
+  const removed = listPage([["pages/index.html:3:5", "Other"]]);
+  assert.equal(reconcile(chosen, removed.all), null);
+  assert.equal(reconcile(null, edited.all), null);
+});
+
+test("lookalikes are told apart by source position, then by place; otherwise the selection expires", () => {
+  const before = listPage([["pages/index.html:2:5", "Same"], ["pages/index.html:3:5", "Same"], ["pages/index.html:4:5", "Same"]]);
+  const second = identityOf(before, 1);
+  const kept = listPage([["pages/index.html:2:5", "Same"], ["pages/index.html:3:5", "Same"], ["pages/index.html:4:5", "Same"]]);
+  assert.equal(reconcile(second, kept.all), kept.items[1]);
+  const same = [["pages/index.html:3:5", "Same"], ["pages/index.html:3:5", "Same"]];
+  const twins = listPage(same);
+  assert.equal(reconcile({ ...second, index: 1 }, twins.all), twins.items[1], "same position: the place among siblings decides");
+  assert.equal(reconcile({ ...second, index: 5 }, twins.all), null, "nothing singles one out");
+  const bare = listPage([[null, "Same"], [null, "Same"]]);
+  assert.equal(reconcile({ tag: "li", text: "Same", vsrc: null, own_vsrc: false, parent: "ul|", index: 0 }, bare.all), bare.items[0]);
 });
 
 test("the inspector listens only to its parent, from an origin fixed once", () => {

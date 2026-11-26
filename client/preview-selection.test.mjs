@@ -32,7 +32,13 @@ test("the copilot gets a bounded card per element and a reload gets identities b
   assert.equal(card.source, item.vsrc);
   assert.equal(card.affects, 3);
   assert.equal(card.html.length, 300);
+  const [boxed] = copilotSelection([{ ...full, box: { x: 1, y: 2, w: 3, h: 4 }, clip: { mime: "image/png", w: 9, h: 9, bytes: 12, data_url: "data:image/png;base64,AAAA" }, expired: true }]);
+  assert.deepEqual(boxed.box, { x: 1, y: 2, w: 3, h: 4 });
+  assert.deepEqual(boxed.clip, { mime: "image/png", w: 9, h: 9, bytes: 12 }, "the context carries the clip's description, never its pixels");
+  assert.equal(boxed.expired, true);
   assert.deepEqual(card.styles, { color: "red", margin: "0px" });
   assert.equal(copilotSelection(Array.from({ length: 40 }, () => item)).length, 8);
-  assert.deepEqual(identitiesOf([{ ...full, own_vsrc: true }, { tag: "p" }]), [{ selector: item.selector, tag: "li", text: item.text, vsrc: item.vsrc, own_vsrc: true }]);
+  const [identity] = identitiesOf([{ ...full, own_vsrc: true, parent: "ul|", index: 1, near: ["a", "b"], html: "<li>", computed: {}, clip: { data_url: "data:..." } }, { tag: "p" }]);
+  assert.deepEqual(identity, { selector: item.selector, tag: "li", text: item.text, vsrc: item.vsrc, own_vsrc: true, parent: "ul|", index: 1, near: ["a", "b"], revision: "r1", expired: undefined, classes: item.classes, vgen: undefined, box: undefined });
+  assert.equal(identitiesOf([{ tag: "p" }]).length, 0, "no selector, no identity");
 });

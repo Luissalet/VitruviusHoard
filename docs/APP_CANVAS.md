@@ -1,0 +1,11 @@
+# App preview canvas
+
+In **Applications**, open a project and choose **Open preview**. The preview runs on its own loopback origin and keeps the same address when the project switches revisions. Links, stylesheets and record actions use the project's own routes. Opening the preview in another tab is still available.
+
+- `app_project_canvas_view(id, scope?, max_chars?, actor?)` reads the displayed page or current viewport and returns control references.
+- `app_project_canvas_act(id, action, args, actor?)` supports `click`, `fill`, `select`, `navigate`, `scroll`, `highlight` and `wait`. It uses the App Dock arguments for that action. Send `actor: {id, name, color}` to identify the cursor. To point out part of a page, call `highlight` with a `ref` or `text` and an optional `note`.
+- Use the same actor identity for reads and actions to keep one cursor. Both tools need one Applications tab hosting the project's preview. They report when it is absent or when multiple tabs are hosting it. Preview actions go through the project's own controls. Source revisions and `app_project_undo` are managed by the [application project workflow](APP_PROJECTS.md).
+
+Vitruvius owns the reverse proxy and starts a separate copy of the source runtime for each displayed revision. The current runtime stays available until its successor is ready. The proxy adds the shared App Dock bridge and any installed scripts listed in `app_preview.PREVIEW_SCRIPTS` to HTML. A response exposes its actual revision through `X-Vitruvius-Revision` and the `vitruvius-preview-revision` meta tag. The script list affects served previews. The source files, standalone runtime and export ZIP preserve the project's own content.
+
+When Vitruvius is docked, the outer App Dock continues to address the Vitruvius page. **Applications** hosts the preview in an inner frame with `referrerPolicy="origin"`. The inner handshake and calls use the existing `dock/hello`, `dock/ready`, `dock/call` and `dock/result` messages. Each host checks its own frame's window and origin. A project-specific event stream connects the Applications page to the canvas tools without opening a tab.

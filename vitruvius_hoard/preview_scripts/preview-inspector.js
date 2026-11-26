@@ -75,24 +75,42 @@
       text: compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT),
       box: {x: Math.round(box.left + scroll.x), y: Math.round(box.top + scroll.y), w: Math.round(box.width), h: Math.round(box.height)},
       computed,
+      ...relationOf(element),
       same_vsrc_count: vsrc ? count(`[data-vsrc="${String(vsrc).replace(/["\\]/g, '\\$&')}"]`) : 0,
     };
   }
 
-  // The element a recorded description stands for, or null when it cannot be told apart any more. A unique data-vsrc
-  // is an identity; otherwise the tag and visible text must still match, so a reordered page never hands the
-  // selection to a neighbour. `all(selector)` lists the matching elements of the document.
-  function resolveElement(item, all) {
-    if (!item || typeof item !== 'object') return null;
-    const same = element => tagOf(element) === item.tag && compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT) === item.text;
-    let found = [];
-    try {
-      if (item.own_vsrc && item.vsrc) {
-        found = all(`[data-vsrc="${String(item.vsrc).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag);
-        if (found.length > 1) found = found.filter(same);
-      } else if (item.selector) found = all(String(item.selector)).filter(same);
-    } catch (_) { return null; }
-    return found.length === 1 ? found[0] : null;
+  const textOf = element => compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT);
+  // Where an element sits among its siblings: its parent (tag and source position) and its index there.
+  function relationOf(element) {
+    const parent = element.parentElement;
+    const text = sibling => (sibling ? textOf(sibling).slice(0, 80) : null);
+    return {parent: parent ? `${tagOf(parent)}|${attrOf(parent, 'data-vsrc') || ''}` : '', index: parent ? [...parent.children].indexOf(element) : 0,
+      near: [text(element.previousElementSibling), text(element.nextElementSibling)]};
+  }
+
+  // The element a recorded description stands for, in this document or in another revision of it, or null when it is
+  // no longer the same element: the tag and visible text must still match, and when several elements look alike the
+  // source position and then the place among the siblings must single one out. A source position alone is never an
+  // identity across revisions (editing the source reassigns positions). When no element carries the old text, an
+  // element at the very same position and place is taken as the same element edited in place. Otherwise null: the
+  // selection is reported as expired, never handed to a neighbour. `all(selector)` lists matching elements.
+  function reconcile(item, all) {
+    if (!item || typeof item !== 'object' || !item.tag) return null;
+    let alike;
+    try { alike = all(String(item.tag)).filter(element => tagOf(element) === item.tag && textOf(element) === item.text); } catch (_) { return null; }
+    let pick = alike;
+    if (pick.length > 1 && item.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === item.vsrc);
+    if (pick.length > 1) pick = pick.filter(element => { const at = relationOf(element); return at.parent === item.parent && at.index === item.index; });
+    if (pick.length === 1) return pick[0];
+    if (alike.length > 0) return null; // several look alike and nothing singles one out
+    if (item.own_vsrc && item.vsrc) {
+      let here;
+      try { here = all(`[data-vsrc="${String(item.vsrc).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag); } catch (_) { return null; }
+      // An edit keeps the place; text that used to belong to a neighbour means the content moved, not that this was edited.
+      if (here.length === 1) { const at = relationOf(here[0]); if (at.parent === item.parent && at.index === item.index && !(item.near || []).includes(textOf(here[0]).slice(0, 80))) return here[0]; }
+    }
+    return null;
   }
 
   // Who may talk to the inspector: only the frame's parent window, from the origin fixed at the start (the browser's
@@ -104,7 +122,7 @@
     return event.origin === known ? known : null;
   }
 
-  const core = {selectorFor, describeElement, resolveElement, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, textOf, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -122,7 +140,9 @@
   let selected = []; // elements, in the order they were chosen
   let hovered = null;
   let focusIndex = -1;
-  const picked = new Map(); // element -> its last description, so a page that re-renders can be followed
+  const picked = new Map(); // element -> what it was when chosen (tag, text, position, place), so another revision can be matched
+  const clips = new WeakMap(); // element -> data URL of its clip, or false when none could be made
+  let expired = []; // chosen elements that are no longer the same element on the revision now served
   let lastRevision;
   let cursorSheet;
   let layer; let root; let frame = 0; let watcher = 0;
@@ -130,14 +150,58 @@
   const post = (type, fields = {}) => { if (hostOrigin !== null) window.parent.postMessage({hoardDock: 1, type, ...fields}, hostOrigin); };
   const pageId = () => location.pathname + location.search;
   const revision = () => { const meta = document.querySelector('meta[name="vitruvius-preview-revision"]'); return (meta && meta.content) || null; };
-  const describe = element => { const item = {...describeElement(element, env), revision: revision()}; picked.set(element, item); return item; };
-  const snapshot = () => ({mode, page: pageId(), revision: revision(), selection: selected.map(describe)});
+  const describe = element => {
+    const item = {...describeElement(element, env), revision: revision()};
+    if (!picked.has(element)) picked.set(element, item);
+    const clip = clips.get(element);
+    if (clip) item.clip = clip;
+    else if (clip === undefined) wantClip(element);
+    return item;
+  };
+  // Live cards first, then the expired ones: they stay in the list, flagged, until the person removes them.
+  const snapshot = () => ({mode, page: pageId(), revision: revision(), selection: [...selected.map(describe), ...expired]});
+  // A clip of the element (an SVG foreignObject drawn to a canvas), made once, off the report path; the list is reported again when it is ready.
+  let clipTimer = 0;
+  function wantClip(element) {
+    clips.set(element, false);
+    captureClip(element).then(clip => { if (clip) { clips.set(element, clip); if (!clipTimer) clipTimer = setTimeout(() => { clipTimer = 0; if (selected.includes(element)) report(); }, 60); } }, () => {});
+  }
+  const CLIP_STYLES = ['display', 'position', 'box-sizing', 'width', 'height', 'margin', 'padding', 'border', 'border-radius', 'color', 'background-color', 'background-image', 'font-family', 'font-size', 'font-weight',
+    'font-style', 'line-height', 'letter-spacing', 'text-align', 'text-decoration', 'text-transform', 'white-space', 'flex', 'flex-direction', 'justify-content', 'align-items', 'gap', 'grid-template-columns',
+    'overflow', 'opacity', 'list-style', 'vertical-align', 'border-collapse', 'min-width', 'max-width', 'object-fit'];
+  async function captureClip(element) {
+    const r = element.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return null;
+    const scale = Math.min(1, 480 / r.width, 360 / r.height);
+    const w = Math.max(1, Math.round(r.width * scale)); const h = Math.max(1, Math.round(r.height * scale));
+    const clone = element.cloneNode(true);
+    const originals = [element, ...element.querySelectorAll('*')].slice(0, 80);
+    const copies = [clone, ...clone.querySelectorAll('*')];
+    originals.forEach((original, index) => {
+      const target = copies[index]; if (!target || !target.setAttribute) return;
+      const computed = getComputedStyle(original);
+      target.setAttribute('style', CLIP_STYLES.map(name => `${name}:${computed.getPropertyValue(name)}`).join(';') + ';margin:0');
+      target.removeAttribute('data-vsrc'); target.removeAttribute('data-vgen');
+    });
+    copies.slice(80).forEach(extra => extra.remove());
+    const markup = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${Math.ceil(r.width)} ${Math.ceil(r.height)}"><foreignObject x="0" y="0" width="${Math.ceil(r.width)}" height="${Math.ceil(r.height)}">${markup}</foreignObject></svg>`;
+    const image = new Image();
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const context = canvas.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, w, h); context.drawImage(image, 0, 0, w, h);
+    let data = canvas.toDataURL('image/png');
+    if (data.length > 150000) data = canvas.toDataURL('image/jpeg', 0.6);
+    return data.length <= 150000 ? {mime: data.slice(5, data.indexOf(';')), w, h, bytes: Math.round(data.length * 0.75), data_url: data} : null;
+  }
   // The App Dock context of the page (when the bridge is present) names the selection, so the agent's turn carries it.
   function publishContext(items) {
     const app = window.HoardApp;
     if (!app || typeof app.setContext !== 'function') return;
-    const summary = items.length ? 'Selected on the preview: ' + items.map((item, index) => `${index + 1}. ${item.tag}${item.classes[0] ? '.' + item.classes[0] : ''} "${item.text.slice(0, 40)}"${item.vsrc ? ' (' + item.vsrc + ')' : ''}`).join('; ') : '';
-    try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {})})); } catch (_) { /* the bridge must not break selection */ }
+    const summary = items.length ? 'Selected on the preview: ' + items.map((item, index) => (item.expired ? '(expired) ' : '') + `${index + 1}. ${item.tag}${item.classes[0] ? '.' + item.classes[0] : ''} "${item.text.slice(0, 40)}"${item.vsrc ? ' (' + item.vsrc + ')' : ''}`).join('; ') : '';
+    // The whole card travels in `view` (the clip as its description only: its pixels stay in the preview's report).
+    const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes}} : {})}));
+    try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
   const report = () => { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
@@ -203,26 +267,28 @@
     stage.innerHTML = html;
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
-  // When the page replaces elements (a live refresh), selected ones that left the document are looked up again by
-  // their selector, or dropped; the host is told only when the selection really changed.
-  function follow() {
-    if (!selected.some(element => !element.isConnected)) return;
-    const next = [];
+  // After a change of the served revision, or when the page replaced a selected element, each chosen element is matched
+  // again against what it was when chosen. One that is no longer the same element is kept in the list as expired.
+  function settle() {
+    const next = []; const lost = [];
     for (const element of selected) {
-      const found = element.isConnected ? element : resolveElement(picked.get(element), all);
-      if (found && !next.includes(found)) next.push(found);
+      const identity = picked.get(element);
+      const found = identity ? reconcile(identity, all) : (element.isConnected ? element : null);
+      if (found && !next.includes(found)) {
+        next.push(found);
+        if (found !== element || (identity && revision() !== identity.revision)) picked.set(found, {...describeElement(found, env), revision: revision()});
+      } else if (identity) lost.push({...identity, expired: true});
     }
-    selected = next; schedule(); report();
+    selected = next; expired = [...expired, ...lost].slice(-MAX_SELECTION); schedule(); report();
   }
   const all = selector => [...document.querySelectorAll(selector)];
-  // A change of the served revision (a live refresh patches the page in place) is reported again with the new one;
-  // a layer the page removed is put back.
+  // A layer the page removed is put back. A change of the served revision (a live refresh patches the page in place)
+  // or a selected element that left the document settles the selection.
   new MutationObserver(() => {
     if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
     if (selected.length && !watcher) watcher = requestAnimationFrame(() => {
       watcher = 0;
-      if (selected.some(element => !element.isConnected)) follow();
-      else if (revision() !== lastRevision) report();
+      if (selected.some(element => !element.isConnected) || revision() !== lastRevision) settle();
     });
   }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
 
@@ -263,13 +329,17 @@
     schedule(); report();
   }
 
+  // A new document (a reload, or the frame replaced after an edit of the layout) gets the selection back: every item is
+  // matched against what it was when chosen, and one that no longer identifies an element is reported as expired.
   function restore(items) {
-    const found = [];
+    const found = []; const lost = [];
     for (const item of Array.isArray(items) ? items.slice(0, MAX_SELECTION) : []) {
-      const element = resolveElement(item, all); // an element that cannot be told apart is dropped, never guessed
-      if (element) { picked.set(element, item); if (!found.includes(element)) found.push(element); }
+      if (!item || typeof item !== 'object') continue;
+      const element = item.expired ? null : reconcile(item, all);
+      if (element && !found.includes(element)) { found.push(element); picked.set(element, {...describeElement(element, env), revision: revision()}); }
+      else if (!element) lost.push({tag: item.tag, text: item.text, selector: item.selector, vsrc: item.vsrc || null, own_vsrc: Boolean(item.own_vsrc), index: item.index, parent: item.parent, revision: item.revision || null, classes: Array.isArray(item.classes) ? item.classes : [], html: '', box: item.box || {x: 0, y: 0, w: 0, h: 0}, computed: {}, same_vsrc_count: 0, vgen: item.vgen || null, expired: true});
     }
-    selected = found; ensureLayer(); schedule(); report();
+    selected = found; expired = lost; ensureLayer(); schedule(); report();
   }
 
   window.addEventListener('message', event => {
@@ -279,7 +349,8 @@
     const data = event.data;
     if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/mode') setMode(data.on);
-    else if (data.type === 'inspect/clear') { selected = []; schedule(); report(); }
+    else if (data.type === 'inspect/clear') { selected = []; expired = []; schedule(); report(); }
+    else if (data.type === 'inspect/dismiss') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < expired.length) { expired.splice(at, 1); report(); } }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }
     else if (data.type === 'inspect/restore') restore(data.items);
   });

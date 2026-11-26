@@ -1,7 +1,11 @@
 """Native application projects and owned local previews."""
+import asyncio
+import json
+
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
@@ -62,6 +66,53 @@ def project_create(request: Request, body: AppCreateArgs):
 @router.get("/{id}")
 def project_get(request: Request, id: str, revision: str | None = None):
     return execute(lambda: services(request).app_projects.get(id, revision))
+
+
+def _encode_revision(change):
+    return f'id: {change["revision"]}\nevent: revision\ndata: {json.dumps(change, separators=(",", ":"))}\n\n'
+
+
+async def revision_stream(projects, id, baseline):
+    with projects.revision_events.subscribe(id) as queue:
+        try:
+            cursor, latest, change = await run_in_threadpool(projects.revision_cursor, id, baseline)
+            yield "retry: 500\n\n"
+            if change:
+                yield _encode_revision(change)
+            # A bounded connection also lets the HTTP server drain during shutdown.
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + 30
+            while loop.time() < deadline:
+                try:
+                    notification = await asyncio.wait_for(queue.get(), min(10, deadline - loop.time()))
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+                    continue
+                if notification is None:
+                    return
+                sequence, change = notification
+                if sequence <= cursor:
+                    continue
+                if change["previous_revision"] != latest:
+                    # A lagging subscriber can catch up from the last snapshot it received.
+                    cursor, latest, change = await run_in_threadpool(projects.revision_cursor, id, latest)
+                    if change:
+                        yield _encode_revision(change)
+                    continue
+                cursor, latest = sequence, change["revision"]
+                yield _encode_revision(change)
+        except LookupError:
+            # Undoing creation archives the project and closes its stream.
+            return
+
+
+@router.get("/{id}/events")
+def project_events(request: Request, id: str, revision: str | None = None):
+    projects = services(request).app_projects
+    execute(lambda: projects._directory(id))
+    baseline = request.headers.get("last-event-id") or revision
+    return StreamingResponse(revision_stream(projects, id, baseline), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.put("/{id}")
