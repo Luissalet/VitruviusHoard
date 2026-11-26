@@ -22,7 +22,7 @@ from .app_canvas import CanvasSessions
 from .app_preview import PreviewProxy
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
-from .app_source_map import SourceMapError, edit_source, source_count, source_position
+from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
 
@@ -186,7 +186,7 @@ class AppProjects:
                 result.append({**item, "preview": self.status(item["id"])})
             return sorted(result, key=lambda item: item["updated_ts"], reverse=True)
 
-    def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en"):
+    def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -207,7 +207,8 @@ class AppProjects:
                 raise
             if updated == source:
                 return current
-            return self.update(id, {filename: updated}, expected_revision)
+            return self.update(id, {filename: updated}, expected_revision, actor=actor,
+                               target={**(target or {}), "vsrc": vsrc})
 
     def source_count(self, id, vsrc, path="/"):
         source_position(vsrc)
@@ -234,7 +235,7 @@ class AppProjects:
         return {"id": id, "revision": preview["revision"], "path": path, "vsrc": vsrc,
                 "same_vsrc_count": source_count(html, vsrc)}
 
-    def _save(self, root, index, files):
+    def _save(self, root, index, files, *, before_commit=None):
         destinations = set()
         for name, source in files.items():
             path = PurePosixPath(name)
@@ -266,6 +267,8 @@ class AppProjects:
                 if stage.exists() and stage.resolve().parent == (root / "revisions").resolve():
                     shutil.rmtree(stage)
         updated = {**index, "name": spec["name"], "revision": revision, "updated_ts": time.time(), "revisions": list(dict.fromkeys(index.get("revisions", []) + [revision]))}
+        if before_commit is not None:
+            before_commit(revision)
         write_json_atomic(root / "project-index.json", updated)
         return self.get(updated["id"])
 
@@ -291,7 +294,7 @@ class AppProjects:
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
             return self._save(root, index, files)
 
-    def update(self, id, files, expected_revision):
+    def update(self, id, files, expected_revision, *, actor=None, target=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -302,8 +305,31 @@ class AppProjects:
             merged = {**current["files"], **files}
             if merged == current["files"]:
                 return current
-            saved = self._save(self._directory(id), self._index(current), merged)
-            self.revision_events.publish(id, revision_change(current, saved))
+            change = None
+
+            def before_commit(revision):
+                nonlocal change
+                change = revision_change(current, {"revision": revision, "files": merged})
+                hint = dict(target or {})
+                if expected_revision != current["revision"]:
+                    hint.pop("vsrc", None)
+                    hint.pop("box", None)
+                if not hint.get("vsrc") and not hint.get("selector"):
+                    sources = []
+                    for name in change["files"]:
+                        if name in change["ranges"] or name == "layout.html":
+                            position = first_changed_source(name, current["files"].get(name, ""), merged[name])
+                            if position:
+                                sources.append(position)
+                    hint["sources"] = sources
+                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint})
+                # Whole-frame refreshes can still outline a caller-supplied selector.
+                if hint.get("selector"):
+                    change["selectors"] = [hint["selector"]]
+
+            saved = self._save(self._directory(id), self._index(current), merged,
+                               before_commit=before_commit if actor is not None else None)
+            self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
 
     def revision_cursor(self, id, baseline):

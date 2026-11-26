@@ -85,6 +85,32 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     fail('not_found', 'No visible target matches. Read the page or use one of these labels.', nearest);
   }
 
+  function presenceTarget(hint, selector = '*') {
+    const sources = hint.vsrc ? [hint.vsrc] : hint.sources || [];
+    let candidates = [];
+    try {
+      if (hint.selector) candidates = [...document.querySelectorAll(hint.selector)];
+      else if (sources.length) candidates = [...document.querySelectorAll('[data-vsrc]')];
+    } catch (_) { return; }
+    const matches = candidates.filter(node => node.matches(selector) && visible(node) &&
+      (!sources.length || sources.includes(node.getAttribute('data-vsrc'))));
+    if (hint.box && matches.length > 1) {
+      const distance = node => {
+        const rect = node.getBoundingClientRect();
+        return Math.hypot(rect.left + scrollX - hint.box.x, rect.top + scrollY - hint.box.y);
+      };
+      return matches.reduce((nearest, node) => distance(node) < distance(nearest) ? node : nearest);
+    }
+    return matches.find(node => visible(node, true)) || matches[0];
+  }
+
+  function actionTarget(args, selector, presence) {
+    if ((!presence?.vsrc && !presence?.selector) || args.ref || args.text || args.label) return target(args, selector);
+    const element = presenceTarget(presence, selector);
+    if (!element) fail('not_found', 'The preview selection is no longer visible');
+    return element;
+  }
+
   function enabled(element) {
     if (element.matches(':disabled,[aria-disabled=true]') || element.closest('[aria-disabled=true]')) fail('disabled', 'Target is disabled');
   }
@@ -148,7 +174,14 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     document.documentElement.append(host);
   }
 
-  function cursorFor(actor = {}) {
+  function removeCursor(id, cursor) {
+    clearTimeout(cursor.timer);
+    cursor.animation?.cancel();
+    cursor.node.remove();
+    actors.delete(id);
+  }
+
+  function cursorFor(actor = {}, presence = false) {
     ensureLayer();
     const id = String(actor.id || 'agent');
     let cursor = actors.get(id);
@@ -167,9 +200,22 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     cursor.node.style.transform = `translate(${cursor.x}px,${cursor.y}px)`;
     cursor.node.style.opacity = '1';
     positionAnnotations(cursor);
-    clearTimeout(cursor.timer);
-    cursor.timer = setTimeout(() => { if (!cursor.active) cursor.node.style.opacity = '0'; }, 20000);
+    scheduleCursorExpiry(id, cursor, presence);
     return cursor;
+  }
+
+  function scheduleCursorExpiry(id, cursor, presence) {
+    clearTimeout(cursor.timer);
+    if (cursor.active || actors.get(id) !== cursor) return;
+    cursor.timer = setTimeout(() => {
+      if (presence) removeCursor(id, cursor);
+      else cursor.node.style.opacity = '0';
+    }, presence ? 4000 : 20000);
+  }
+
+  function releaseCursor(actor, cursor, presence) {
+    cursor.active--;
+    scheduleCursorExpiry(String(actor.id || 'agent'), cursor, presence);
   }
 
   function positionAnnotations(cursor) {
@@ -185,13 +231,15 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     }
   }
 
-  function cursorApi(actor, signal) {
-    const cursor = cursorFor(actor);
+  function cursorApi(cursor, signal, presence) {
     return {
-      async to(element) {
+      presence,
+      async to(element, box) {
         signal?.throwIfAborted();
-        element.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
-        const rect = element.getBoundingClientRect();
+        element?.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
+        if (!cursor) return;
+        const rect = element?.getBoundingClientRect() ||
+          {left: box.x - scrollX, top: box.y - scrollY, width: box.w, height: box.h};
         const x = Math.max(4, Math.min(innerWidth - 28, rect.left + Math.min(rect.width / 2, 60)));
         const y = Math.max(4, Math.min(innerHeight - 36, rect.top + rect.height / 2));
         cursor.node.classList.remove('thinking');
@@ -201,12 +249,15 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
         const distance = Math.hypot(x - cursor.x, y - cursor.y);
         cursor.animation?.cancel();
         if (!reduced()) {
-          cursor.animation = cursor.node.animate([
+          const animation = cursor.animation = cursor.node.animate([
             {transform: `translate(${cursor.x}px,${cursor.y}px)`},
             {transform: `translate(${(cursor.x + x) / 2}px,${(cursor.y + y) / 2 - Math.min(45, distance / 8)}px)`, offset: .5},
             {transform: `translate(${x}px,${y}px)`}
-          ], {duration: Math.min(600, 250 + distance / 3), easing: 'cubic-bezier(.2,.7,.2,1)'});
-          await cursor.animation.finished.catch(() => {});
+          ], {duration: Math.min(600, 250 + distance / 3), easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards'});
+          await animation.finished.catch(() => {});
+          if (cursor.animation !== animation) return;
+          cursor.animation = null;
+          animation.cancel();
         }
         signal?.throwIfAborted();
         cursor.x = x;
@@ -216,8 +267,18 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
         cursor.animation = null;
       },
       press() {
-        if (reduced()) return;
+        if (!cursor || reduced()) return;
         cursor.node.querySelector('.ring').animate([{opacity: .9, transform: 'scale(.5)'}, {opacity: 0, transform: 'scale(2)'}], {duration: 450});
+      },
+      async touch() {
+        this.press();
+        if (presence && cursor && !reduced()) await sleep(120);
+        signal?.throwIfAborted();
+      },
+      changed(element) {
+        if (presence && element.isConnected) {
+          document.dispatchEvent(new CustomEvent('vitruvius:canvas-changed', {detail: element}));
+        }
       },
       note(text) {
         cursor.node.classList.add('highlight');
@@ -288,12 +349,13 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   });
 
   generic('app_click', 'Click a visible control', targetProperties, [], async (args, {cursor}) => {
-    const element = target(args, controls);
+    const element = actionTarget(args, controls, cursor.presence);
     enabled(element);
     await cursor.to(element);
+    await cursor.touch();
     enabled(element);
-    cursor.press();
     element.click();
+    cursor.changed(element);
     return {clicked: label(element), url_after: location.pathname + location.search + location.hash};
   });
 
@@ -306,12 +368,12 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   }
 
   generic('app_fill', 'Fill a text field, optionally submit it', {...targetProperties, value: {type: 'string'}, submit: {type: 'boolean'}}, ['value'], async (args, {cursor, signal}) => {
-    const element = target(args, 'input:not([type=hidden]),textarea,[contenteditable=true]');
+    const element = actionTarget(args, 'input:not([type=hidden]),textarea,[contenteditable=true]', cursor.presence);
     enabled(element);
     if (element.readOnly || element.matches('input[type=file],input[type=checkbox],input[type=radio],input[type=button],input[type=submit]')) fail('bad_args', 'Target is not an editable text field');
     await cursor.to(element);
+    await cursor.touch();
     element.focus();
-    cursor.press();
     const characters = Array.from(args.value);
     const step = Math.max(1, Math.ceil(characters.length / 60));
     if (!reduced()) for (let index = step; index < characters.length; index += step) {
@@ -327,14 +389,15 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       element.dispatchEvent(new KeyboardEvent('keyup', {key: 'Enter', code: 'Enter', bubbles: true}));
       if (proceed && element.form) element.form.requestSubmit();
     }
+    cursor.changed(element);
     return {filled: label(element), length: args.value.length, submitted: Boolean(args.submit)};
   });
 
   generic('app_select', 'Select an option, radio, checkbox or tab', {...targetProperties, option: {type: ['string', 'boolean']}}, ['option'], async (args, {cursor}) => {
-    const element = target(args, 'select,input[type=radio],input[type=checkbox],[role=tab],[role=radio],[role=checkbox],[role=switch]');
+    const element = actionTarget(args, 'select,input[type=radio],input[type=checkbox],[role=tab],[role=radio],[role=checkbox],[role=switch]', cursor.presence);
     enabled(element);
     await cursor.to(element);
-    cursor.press();
+    await cursor.touch();
     if (element instanceof HTMLSelectElement) {
       const query = normalize(args.option);
       const options = [...element.options];
@@ -351,6 +414,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       const current = element.matches('input') ? element.checked : element.getAttribute('aria-checked') === 'true' || element.getAttribute('aria-selected') === 'true';
       if (current !== desired) element.click();
     }
+    cursor.changed(element);
     return {selected: label(element), option: args.option};
   });
 
@@ -414,6 +478,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   async function call(message) {
     const controller = new AbortController();
     const actor = message.actor || {};
+    const presence = message.presence;
     let actorCursor;
     let timer;
     try {
@@ -421,9 +486,11 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       if (!tool) fail('not_found', 'Unknown tool');
       const args = message.args ?? {};
       validate(args, tool.inputSchema);
-      actorCursor = cursorFor(actor);
-      actorCursor.active++;
-      const cursor = cursorApi(actor, controller.signal);
+      if (!presence || !reduced()) {
+        actorCursor = cursorFor(actor, Boolean(presence));
+        actorCursor.active++;
+      }
+      const cursor = cursorApi(actorCursor, controller.signal, presence);
       const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); const error = new Error('Tool exceeded 45 seconds'); error.code = 'timeout'; reject(error); }, 45000); });
       const result = await Promise.race([Promise.resolve().then(() => tool.handler(args, {actor, cursor, signal: controller.signal})), timeout]);
       send('dock/result', {id: message.id, ok: true, result: result ?? null});
@@ -432,9 +499,37 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       send('dock/result', {id: message.id, ok: false, error: {code: codes.includes(error.code) ? error.code : 'bad_args', message: error.message || String(error), ...(error.candidates ? {candidates: error.candidates} : {})}});
     } finally {
       clearTimeout(timer);
-      if (actorCursor) { actorCursor.active--; cursorFor(actor); }
+      if (actorCursor) releaseCursor(actor, actorCursor, Boolean(presence));
       scheduleContext();
     }
+  }
+
+  async function preparePresence(message) {
+    const remaining = message.expires_at - Date.now();
+    const revision = document.querySelector('meta[name="vitruvius-preview-revision"]')?.content;
+    const hint = message.target || {};
+    let shown = false;
+    if (remaining > 0 && revision === message.revision && !reduced()) {
+      const actor = message.actor || {};
+      const explicit = hint.vsrc || hint.selector;
+      const fallback = !explicit && !hint.box ? document.querySelector('main, body > section') || document.body : null;
+      const element = presenceTarget(hint) || fallback;
+      if (element || hint.box) {
+        const cursor = cursorFor(actor, true);
+        cursor.active++;
+        try {
+          const motion = cursorApi(cursor, AbortSignal.timeout(Math.ceil(remaining)), hint);
+          await motion.to(element, hint.box);
+          await motion.touch();
+          shown = true;
+        } catch (_) {
+          // The edit proceeds if this preview changed or the visual window expired.
+        } finally {
+          releaseCursor(actor, cursor, true);
+        }
+      }
+    }
+    send('dock/result', {id: message.id, ok: true, result: {shown}});
   }
 
   function navigation() {
@@ -469,6 +564,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     }
     if (origin === null) return;
     if (message.type === 'dock/call' && typeof message.id === 'string' && typeof message.tool === 'string') void call(message);
+    if (message.type === 'canvas/presence' && typeof message.id === 'string') void preparePresence(message);
     if (message.type === 'dock/theme' && ['light', 'dark'].includes(message.theme)) document.documentElement.dataset.theme = message.theme;
     if (message.type === 'dock/changed') {
       const detail = {server: message.server, tool: message.tool};
@@ -481,7 +577,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       const id = String(message.actor?.id || 'agent');
       if (message.state === 'gone') {
         const cursor = actors.get(id);
-        if (cursor) { clearTimeout(cursor.timer); cursor.animation?.cancel(); cursor.node.remove(); actors.delete(id); }
+        if (cursor) removeCursor(id, cursor);
       } else if (['idle', 'thinking'].includes(message.state)) cursorFor(message.actor).node.classList.toggle('thinking', message.state === 'thinking');
     }
   });

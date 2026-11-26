@@ -1,4 +1,5 @@
 import asyncio
+import json
 import urllib.error
 import urllib.request
 
@@ -87,3 +88,104 @@ def test_cross_origin_relay_prohibited(client):
     response = client.get("/api/app-projects/project/canvas/events",
                           headers={"Origin": "http://localhost:59248", "Sec-Fetch-Site": "same-site"})
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_presence_is_project_scoped_and_keeps_separate_agents():
+    canvas = CanvasSessions()
+    first = canvas.attach("project")
+    second = canvas.attach("project")
+    other = canvas.attach("other")
+    actors = [{"id": "one", "name": "One"}, {"id": "two", "name": "Two", "color": "#266bb2"}]
+    target = {"vsrc": "pages/index.html:1:12", "box": {"x": 10, "y": 20, "w": 30, "h": 40}}
+    workers = [asyncio.create_task(asyncio.to_thread(canvas.prepare_edit, "project", "old", actor, target))
+               for actor in actors]
+    events = [await asyncio.wait_for(first.next_event(), 1) for _ in actors]
+    assert {event["actor"]["id"] for event in events} == {"one", "two"}
+    observed = {event["id"]: event for event in events}
+    for _ in actors:
+        event = await asyncio.wait_for(second.next_event(), 1)
+        assert observed[event["id"]] == event
+        assert event["type"] == "canvas/presence"
+        assert event["revision"] == "old"
+        assert event["target"] == target
+        assert not canvas.resolve("project", other.id, event["id"], {"ok": True})
+        assert canvas.resolve("project", first.id, event["id"], {"ok": True})
+        assert canvas.resolve("project", second.id, event["id"], {"ok": True})
+    assert other.events.empty()
+    await asyncio.gather(*workers)
+
+
+@pytest.mark.asyncio
+async def test_unanswered_presence_expires_and_does_not_consume_the_next_call():
+    canvas = CanvasSessions()
+    session = canvas.attach("project")
+    await asyncio.to_thread(canvas.prepare_edit, "project", "old", {"id": "leaving"}, {"box": None}, timeout=0.02)
+    expired = session.events.get_nowait()
+    assert expired["actor"]["id"] == "leaving"
+    session.events.put_nowait(expired)
+    assert not canvas.resolve("project", session.id, expired["id"], {"ok": True})
+    work = asyncio.create_task(asyncio.to_thread(canvas.call, "project", "app_read", {}, {}))
+    current = await asyncio.wait_for(session.next_event(), 1)
+    assert current["type"] == "dock/call"
+    result = {"ok": True}
+    assert canvas.resolve("project", session.id, current["id"], result)
+    assert await work == result
+
+
+@pytest.mark.asyncio
+async def test_presence_waits_for_the_visible_revision_across_preview_reconnect():
+    canvas = CanvasSessions()
+    old = canvas.attach("project", "old")
+    canvas.attach("other", "new")
+    work = asyncio.create_task(asyncio.to_thread(canvas.wait_for_revision, "project", "new"))
+    await asyncio.sleep(0.03)
+    assert not work.done()
+    canvas.detach(old)
+    canvas.attach("project", "new")
+    await asyncio.wait_for(work, 0.5)
+
+
+@pytest.mark.asyncio
+async def test_source_presence_precedes_committed_revision(tmp_path):
+    from vitruvius_hoard.app_projects import AppProjects
+
+    projects = AppProjects(tmp_path)
+    project = projects.create("Presence fixture")
+    id = project["id"]
+    revision = project["revision"]
+    session = projects.canvas.attach(id)
+    source = project["files"]["pages/index.html"]
+    heading = source.index("<h2>") + 1
+    vsrc = f"pages/index.html:1:{heading}"
+    with projects.revision_events.subscribe(id) as changes:
+        work = asyncio.create_task(asyncio.to_thread(
+            projects.edit_source, id, vsrc, "h2", revision, {"kind": "text", "value": "Updated"},
+            actor={"id": "one"},
+        ))
+        event = await asyncio.wait_for(session.next_event(), 1)
+        assert event["target"] == {"vsrc": vsrc, "box": None}
+        index = json.loads((projects.root / id / "project-index.json").read_text(encoding="utf-8"))
+        assert index["revision"] == revision
+        assert changes.empty()
+        assert projects.canvas.resolve(id, session.id, event["id"], {"ok": True})
+        edited = await work
+        assert edited["revision"] != revision
+        assert edited["undo"]["tool"] == "app_project_undo"
+        _, change = await asyncio.wait_for(changes.get(), 1)
+        assert change["revision"] == edited["revision"]
+
+        replacement = edited["files"]["pages/index.html"].replace("Updated", "File patch")
+        work = asyncio.create_task(asyncio.to_thread(
+            projects.update, id, {"pages/index.html": replacement}, edited["revision"], actor={"id": "two"},
+        ))
+        event = await asyncio.wait_for(session.next_event(), 1)
+        assert event["actor"]["id"] == "two"
+        assert event["target"]["sources"] == [vsrc]
+        assert projects.canvas.resolve(id, session.id, event["id"], {"ok": True})
+        updated = await work
+        assert updated["files"]["pages/index.html"] == replacement
+
+    assert projects.update(id, {"pages/index.html": replacement}, updated["revision"],
+                           actor={"id": "two"})["revision"] == updated["revision"]
+    assert session.events.empty()

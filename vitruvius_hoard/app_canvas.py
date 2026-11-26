@@ -3,9 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import time
 import uuid
-from concurrent.futures import Future, TimeoutError
+from concurrent.futures import Future, TimeoutError, wait
 from dataclasses import dataclass, field
+
+
+PRESENCE_WAIT = 1.5
 
 
 def failure(code: str, message: str):
@@ -15,22 +19,39 @@ def failure(code: str, message: str):
 @dataclass
 class CanvasSession:
     project: str
+    revision: str | None = None
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     loop: asyncio.AbstractEventLoop = field(default_factory=asyncio.get_running_loop)
     events: asyncio.Queue = field(default_factory=asyncio.Queue)
     pending: dict[str, Future] = field(default_factory=dict)
 
+    async def next_event(self):
+        while True:
+            event = await self.events.get()
+            if event is None or event.get("expires_at", float("inf")) > time.time() * 1000:
+                return event
+
 
 class CanvasSessions:
     def __init__(self):
-        self._lock = threading.Lock()
+        self._lock = threading.Condition()
         self._sessions: dict[str, CanvasSession] = {}
 
-    def attach(self, project: str) -> CanvasSession:
-        session = CanvasSession(project)
+    def attach(self, project: str, revision: str | None = None) -> CanvasSession:
+        session = CanvasSession(project, revision)
         with self._lock:
             self._sessions[session.id] = session
+            self._lock.notify_all()
         return session
+
+    def wait_for_revision(self, project: str, revision: str, *, timeout=PRESENCE_WAIT):
+        # The previous write may have returned while the visible iframe still follows its revision.
+        # Keep this wait outside the project lock so the preview can start the new runtime.
+        with self._lock:
+            if not any(session.project == project and session.revision for session in self._sessions.values()):
+                return
+            self._lock.wait_for(lambda: any(session.project == project and session.revision == revision
+                                            for session in self._sessions.values()), timeout=timeout)
 
     def _detach(self, session):
         if self._sessions.pop(session.id, None) is None:
@@ -51,7 +72,35 @@ class CanvasSessions:
                 if session.project == project:
                     self._detach(session)
 
-    def call(self, project: str, tool: str, args: dict, actor: dict, *, timeout: float = 47):
+    def prepare_edit(self, project: str, revision: str, actor: dict, target: dict, *, timeout=PRESENCE_WAIT):
+        """Give attached previews a bounded chance to show the cursor before committing."""
+        id = uuid.uuid4().hex
+        event = {"hoardDock": 1, "type": "canvas/presence", "id": id,
+                 "actor": actor, "revision": revision, "target": target,
+                 "expires_at": int((time.time() + timeout) * 1000)}
+        pending = {}
+        with self._lock:
+            for session in self._sessions.values():
+                if session.project != project or session.loop.is_closed():
+                    continue
+                session.pending[id] = reply = Future()
+                try:
+                    session.loop.call_soon_threadsafe(session.events.put_nowait, event)
+                except RuntimeError:
+                    session.pending.pop(id)
+                    continue
+                pending[session.id] = reply
+        try:
+            if pending:
+                wait(pending.values(), timeout=timeout)
+        finally:
+            with self._lock:
+                for session_id in pending:
+                    session = self._sessions.get(session_id)
+                    if session:
+                        session.pending.pop(id, None)
+
+    def call(self, project: str, tool: str, args: dict, actor: dict, *, target=None, timeout: float = 47):
         id = uuid.uuid4().hex
         pending = Future()
         with self._lock:
@@ -63,6 +112,8 @@ class CanvasSessions:
             session = sessions[0]
             session.pending[id] = pending
             event = {"hoardDock": 1, "type": "dock/call", "id": id, "tool": tool, "args": args, "actor": actor}
+            if target is not None:
+                event["presence"] = target
             session.loop.call_soon_threadsafe(session.events.put_nowait, event)
         try:
             return pending.result(timeout)

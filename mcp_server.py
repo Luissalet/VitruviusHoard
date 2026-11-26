@@ -27,9 +27,16 @@ async def call(name, arguments):
             raise ValueError('Unknown tool')
         token = token_path().read_text(encoding='utf-8').strip()
         base = os.environ.get('VITRUVIUS_URL', 'http://127.0.0.1:5191').rstrip('/')
+        from vitruvius_hoard.compat_mcp import context_values
+        try:
+            meta = server.request_context.meta
+        except LookupError:
+            meta = None
+        headers, caller = context_values(meta)
         async with HTTP_CLIENT(timeout=entry.get('x-timeout-s', 1800), trust_env=False) as client:
-            request = client.build_request('POST', base + '/api/agent/call', headers={'Authorization':'Bearer ' + token},
-                                           json={'name':name,'arguments':arguments})
+            request = client.build_request('POST', base + '/api/agent/call',
+                                           headers={**headers, 'Authorization': 'Bearer ' + token},
+                                           json={'name': name, 'arguments': arguments, **caller})
             # A transport hook marks the boundary after the connection is made.
             async def trace(event, info):
                 nonlocal sent

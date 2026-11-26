@@ -127,8 +127,16 @@ def create_app(runtime=None):
             tokens=[p.read_text(encoding='utf8').strip() for p in paths if p.is_file()]
             if not any(secrets.compare_digest(request.headers.get('authorization',''),'Bearer '+token) for token in tokens):
                 raise HTTPException(401,'Invalid bridge token')
-        body=await request.json()
-        return await execute(body['name'],body.get('arguments',{}))
+        body = await request.json()
+        name, arguments = body['name'], body.get('arguments', {})
+        if request.url.path == '/api/agent/call' and name in {
+            'app_project_update', 'app_project_edit_source', 'app_project_canvas_view', 'app_project_canvas_act',
+        } and isinstance(arguments, dict) and arguments.get('actor') is None:
+            from ..hoard_link.agent_journal import clean_identity
+            agent = clean_identity(request.headers.get('x-agent-id')) or clean_identity(body.get('agent'))
+            if agent:
+                arguments = {**arguments, 'actor': {'id': agent}}
+        return await execute(name, arguments)
     @app.exception_handler(ValueError)
     @app.exception_handler(LookupError)
     @app.exception_handler(ValidationError)

@@ -176,8 +176,7 @@
     }
   }
 
-  function highlight(change) {
-    let targets = [];
+  function highlight(change, targets = []) {
     const sources = new Set(change.sources || []);
     if (sources.size) targets = sourced(document).filter((node) => sources.has(node.getAttribute("data-vsrc")));
     for (const selector of change.selectors || []) {
@@ -221,6 +220,10 @@
     window.addEventListener("scroll", remove, { once: true, signal: dismiss.signal });
     setTimeout(remove, 1250);
   }
+
+  document.addEventListener("vitruvius:canvas-changed", ({ detail }) => {
+    if (detail instanceof Element && detail.isConnected) highlight({ exact: true }, [detail]);
+  });
 
   window.addEventListener("message", async (event) => {
     const message = event.data;
