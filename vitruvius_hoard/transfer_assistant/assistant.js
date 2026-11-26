@@ -5,7 +5,7 @@ import {mountDictationMicrophone} from "./microphone.js";
 const COPY = {
   es: {
     title: "Asistente de transferencias", start: "¿A quién quieres hacer una transferencia simulada?",
-    input: "Escribe lo que quieres hacer", send: "Enviar", mic: "Hablar", stop: "Terminar",
+    input: "Escribe lo que quieres hacer", placeholder: "Escribe un mensaje", send: "Enviar", mic: "Hablar", stop: "Terminar",
     listen: "Escuchar respuesta", confirm: "Confirmar transferencia", cancel: "Cancelar",
     getting_mic: "Solicitando acceso al micrófono…", recording: "Escuchando…", transcribing: "Transcribiendo…",
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
@@ -21,7 +21,7 @@ const COPY = {
   },
   en: {
     title: "Transfer assistant", start: "Who would you like to make a simulated transfer to?",
-    input: "Type what you want to do", send: "Send", mic: "Speak", stop: "Finish",
+    input: "Type what you want to do", placeholder: "Type a message", send: "Send", mic: "Speak", stop: "Finish",
     listen: "Read reply aloud", confirm: "Confirm transfer", cancel: "Cancel",
     getting_mic: "Requesting microphone access…", recording: "Listening…", transcribing: "Transcribing…",
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
@@ -123,7 +123,7 @@ export function mountTransferAssistant(root, options = {}) {
   });
   const composer = add(root, "form", {class: "transfer-assistant__composer"});
   const input = add(composer, "input", {
-    type: "text", "aria-label": copy.input, placeholder: copy.input, autocomplete: "off", maxlength: "1000",
+    type: "text", "aria-label": copy.input, placeholder: copy.placeholder, autocomplete: "off", maxlength: "1000",
   });
   const send = add(composer, "button", {type: "submit", class: "transfer-assistant__primary"}, copy.send);
   const controls = add(root, "div", {class: "transfer-assistant__controls"});
