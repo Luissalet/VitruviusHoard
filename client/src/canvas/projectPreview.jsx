@@ -23,11 +23,16 @@ export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, on
  * The preview frames. During a refresh the next page loads hidden on top of the visible one, so there can be two.
  * `height` is any CSS height; the visible frame gets `frameRef` (pass `attachFrame` from the hook).
  */
-export function PreviewFrames({ frames, frameRef, title, height = 560 }) {
+/** Permissions the preview frame may use: the microphone only for projects that carry the transfer assistant. */
+export function previewAllow(project) {
+  return project && Object.hasOwn(project.files || {}, "assets/transfer-assistant/assistant.js") ? "microphone 'src'" : undefined;
+}
+
+export function PreviewFrames({ frames, frameRef, title, height = 560, allow }) {
   return <div className="relative" style={{ height }}>
     {frames.map(({ key, src, pending, onLoad }) => <iframe key={key} ref={pending ? null : frameRef}
       title={title} src={src} onLoad={onLoad}
-      referrerPolicy="origin" aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
+      referrerPolicy="origin" allow={allow} aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
       className="w-full border rounded-md" style={{ height: "100%", borderColor: "var(--line)", background: "white",
         ...(pending ? { position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" } : {}) }} />)}
   </div>;
