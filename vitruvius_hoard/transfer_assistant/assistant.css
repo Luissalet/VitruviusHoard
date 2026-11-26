@@ -35,8 +35,17 @@
   min-width: 0;
 }
 .transfer-assistant__slots dt,
-.transfer-assistant__note {
+.transfer-assistant__note,
+.transfer-assistant__trace {
   font-size: .875rem;
+}
+.transfer-assistant__trace summary {
+  cursor: pointer;
+}
+.transfer-assistant__trace ul {
+  margin: .4rem 0 0;
+  padding-inline-start: 1.2rem;
+  font-variant-numeric: tabular-nums;
 }
 .transfer-assistant__slots dd {
   overflow-wrap: anywhere;

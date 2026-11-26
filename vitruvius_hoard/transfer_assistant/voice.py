@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Lock
@@ -23,6 +24,7 @@ DICTATION_VERSION = "cyrano.dictation/v0"
 DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
 FINAL_TRANSCRIPTION_S = 21
 DICTATION_AUDIO_S = 25
+SPANISH_TTS_VOICE = os.getenv("VITRUVIUS_TRANSFER_TTS_VOICE", "es_ES-davefx-medium")
 AUDIO_TYPES = {
     "audio/webm": ".webm",
     "audio/ogg": ".ogg",
@@ -189,7 +191,11 @@ class TransferVoice:
         text, language = request.get("text"), request.get("language", "es")
         if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000 or language not in ("es", "en"):
             return _json(400, code="invalid_voice_request")
-        result = fam_media.speak_bytes(text, lang=language, timeout_s=7, local_fallback=False)
+        result = fam_media.speak_bytes(text, lang=language, timeout_s=12, local_fallback=False,
+                                       voice=SPANISH_TTS_VOICE if language == "es" else None,
+                                       engine="piper" if language == "es" else None)
         if not result.get("ok") or not result.get("data"):
+            if result.get("status") == 409 or "generation is off" in str(result.get("error")).lower():
+                return _json(409, code="tts_disabled")
             return _json(503, code="tts_unavailable")
         return 200, result["data"], "audio/wav"

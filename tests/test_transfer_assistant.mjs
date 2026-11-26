@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {initialTransfer, parseAmount, transferTurn} from "../vitruvius_hoard/transfer_assistant/dialogue.js";
-import {transcribeTransferSpeech} from "../vitruvius_hoard/transfer_assistant/voice.js";
+import {speakTransferReply, transcribeTransferSpeech} from "../vitruvius_hoard/transfer_assistant/voice.js";
 
 const context = {
   contacts: [
@@ -31,7 +31,7 @@ test("(a) all slots at once and a later explicit confirmation", () => {
   const [draft, confirmed] = conversation(complete, "Sí, confirmo");
   assert.equal(draft.state.phase, "ready");
   assert.equal(draft.action, undefined);
-  assert.match(draft.message, /40,00.*Marta Vidal.*Cuenta diaria.*cena.*Confirmas/);
+  assert.match(draft.message, /^¿Confirmas la transferencia.*40,00.*Marta Vidal.*Cuenta diaria.*cena.*\?$/u);
   assert.deepEqual(confirmed.action, {
     recipient: {id: "marta", name: "Marta Vidal"}, amountCents: 4000, concept: "cena", source: "daily",
   });
@@ -160,40 +160,6 @@ test("literal confirmation alone can submit, even when service normalisation cha
   assert.equal(altered.action, undefined);
 });
 
-
-test("speech output uses only a matching system voice when the local service is down", async () => {
-  const {speakTransferReply} = await import("../vitruvius_hoard/transfer_assistant/voice.js");
-  const originalFetch = globalThis.fetch;
-  const fallback = [], started = [], spoken = [];
-  globalThis.fetch = async () => ({ok: false});
-  const voices = [{lang: "es-ES", localService: false}, {lang: "en-IE", localService: true}];
-  globalThis.window = {speechSynthesis: {
-    getVoices: () => voices,
-    speak: utterance => { spoken.push(utterance); utterance.onstart(); utterance.onend(); },
-  }};
-  globalThis.SpeechSynthesisUtterance = class {
-    constructor(text) { this.text = text; }
-  };
-  const options = {
-    locale: "es-ES", signal: new AbortController().signal,
-    onFallback: available => fallback.push(available), onStart: provider => started.push(provider),
-  };
-  try {
-    await speakTransferReply("Hola", options);
-    assert.deepEqual(fallback, [false]);
-    assert.deepEqual(spoken, []);
-    const systemVoice = {lang: "es-ES", localService: true};
-    voices.push(systemVoice);
-    await speakTransferReply("Hola", options);
-    assert.deepEqual(fallback, [false,true]);
-    assert.equal(spoken[0].voice, systemVoice);
-    assert.deepEqual(started, ["system"]);
-  } finally {
-    globalThis.fetch = originalFetch;
-    delete globalThis.window;
-    delete globalThis.SpeechSynthesisUtterance;
-  }
-});
 
 test("collects an amount introduced by de before the recipient", () => {
   const [turn] = conversation("Haz una transferencia de 50 euros a Marta");
@@ -356,9 +322,25 @@ test("shared transcription supplies vocabulary and gives final text to dictation
   assert.deepEqual(partial, {text, provider: "shared"});
   assert.equal(requests.length, 1);
   const reply = await transcribeTransferSpeech(clip, {...options, partial: false});
-  assert.deepEqual(reply, {text, provider: "shared", interpretation: final});
+  assert.equal(reply.text, text);
+  assert.equal(reply.provider, "shared");
+  assert.deepEqual(reply.interpretation, final);
+  assert.ok(reply.transcriptionMs >= 0 && reply.understandingMs >= 0);
   const fallback = new URL(requests[1].url, "http://127.0.0.1");
   assert.match(fallback.searchParams.get("initial_prompt"), /Cuenta diaria.*Marta Vidal/u);
   assert.deepEqual(JSON.parse(requests[2].body).vocabulary.slice(0, 2), ["Cuenta diaria", "Ahorro"]);
   assert.equal(JSON.parse(requests[2].body).text, text);
+});
+
+test("disabled or unavailable shared voice leaves the reply in writing", async ({mock}) => {
+  let status = 409;
+  mock.method(globalThis, "fetch", async () => Response.json({}, {status}));
+  const events = [];
+  for (status of [409, 503]) {
+    await speakTransferReply("Transferencia cancelada.", {
+      locale: "es-ES", signal: new AbortController().signal,
+      onFallback: () => events.push("written"), onStart: () => events.push("voice"),
+    });
+  }
+  assert.deepEqual(events, ["written", "written"]);
 });

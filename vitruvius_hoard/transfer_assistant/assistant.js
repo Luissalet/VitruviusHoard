@@ -1,5 +1,5 @@
 import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
-import {hasLocalTransferVoice, speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
+import {speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 
 const COPY = {
@@ -10,16 +10,17 @@ const COPY = {
     getting_mic: "Solicitando acceso al micrófono…", recording: "Escuchando…", transcribing: "Transcribiendo…",
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
-    tts_unavailable: "No hay una voz local en castellano. Puedes leer la respuesta.",
+    written_replies: "Respuestas por escrito.",
     dictation_common: "Dictado mediante el servicio común de Cyrano.",
     dictation_app: "Dictado mediante la app de Cyrano.",
     dictation_fallback: "Cyrano no responde. Se usa el análisis local de la página.",
-    tts_fallback: "Voz del sistema.",
     empty: "No se ha entendido la frase. Prueba de nuevo o escríbela.",
     data: "No se han podido cargar las cuentas y los contactos. Vuelve a enviar el mensaje.",
     executing: "Confirmando la transferencia…", success: "Transferencia simulada realizada.",
-    rejected: "No se ha podido confirmar la transferencia. Puedes corregir los datos o confirmar de nuevo.",
-    balance: "Saldo insuficiente. Indica otro importe u otra cuenta.",
+    rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
+    balance: "El saldo es insuficiente para este importe.",
+    trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta"],
+    local_parser: "Análisis local", text_only: "Respuesta escrita",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
@@ -29,16 +30,17 @@ const COPY = {
     getting_mic: "Requesting microphone access…", recording: "Listening…", transcribing: "Transcribing…",
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
-    tts_unavailable: "No local English voice is available. You can read the reply.",
+    written_replies: "Written replies.",
     dictation_common: "Dictation via the shared Cyrano service.",
     dictation_app: "Dictation via the Cyrano app.",
     dictation_fallback: "Cyrano is unavailable. This page is interpreting your input locally.",
-    tts_fallback: "System voice.",
     empty: "The speech was unclear. Try again or type your reply.",
     data: "Accounts and contacts could not load. Send the message again.",
     executing: "Confirming the transfer…", success: "Simulated transfer complete.",
-    rejected: "The transfer could not be confirmed. You can correct the details or confirm again.",
-    balance: "Insufficient funds. Enter another amount or choose another account.",
+    rejected: "Review the details and try confirming the transfer again.",
+    balance: "The balance is too low for this amount.",
+    trace: "How this reply was processed", stages: ["Transcribes", "Interprets", "Speaks", "Executes"],
+    local_parser: "Local parser", text_only: "Written reply",
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
 };
@@ -142,7 +144,24 @@ export function mountTransferAssistant(root, options = {}) {
   const voiceStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const dictationStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const transcript = add(root, "p", {class: "transfer-assistant__transcript", hidden: ""});
+  const trace = add(root, "details", {class: "transfer-assistant__trace", hidden: ""});
+  add(trace, "summary", {}, copy.trace);
+  const traceList = add(trace, "ul");
+  let traceTurn = 0;
+  const units = new Intl.NumberFormat(locale, {style: "unit", unit: "millisecond", maximumFractionDigits: 0});
+  const traceRows = new Map();
   const provisional = lang === "es" ? "Transcripción provisional" : "Partial transcript";
+
+  function track(turn, step, provider, elapsed) {
+    if (turn !== traceTurn) return;
+    let row = traceRows.get(step);
+    if (!row) {
+      row = add(traceList, "li");
+      traceRows.set(step, row);
+    }
+    row.textContent = [copy.stages[step], provider, Number.isFinite(elapsed) && units.format(elapsed)].filter(Boolean).join(" · ");
+    trace.hidden = false;
+  }
 
   function show(element, text = "") {
     element.textContent = text;
@@ -229,15 +248,19 @@ export function mountTransferAssistant(root, options = {}) {
     speech = undefined;
   }
 
-  function read(text, timing) {
+  function read(text, timing, turn = traceTurn) {
     stopPlayback();
     speech = new AbortController();
     const replyAt = performance.now();
     void speakTransferReply(text, {
       locale, signal: speech.signal,
-      onFallback: hasVoice => show(voiceStatus, hasVoice ? copy.tts_fallback : copy.tts_unavailable),
+      onFallback: () => {
+        show(voiceStatus, copy.written_replies);
+        track(turn, 2, copy.text_only, performance.now() - replyAt);
+      },
       onStart: provider => {
-        if (provider === "shared") show(voiceStatus);
+        show(voiceStatus);
+        track(turn, 2, "Prospero", performance.now() - replyAt);
         if (timing) {
           const round = Math.round;
           root.dispatchEvent(new CustomEvent("transfer-assistant:latency", {
@@ -254,7 +277,7 @@ export function mountTransferAssistant(root, options = {}) {
           }));
         }
       },
-    }).catch(() => show(voiceStatus, copy.tts_unavailable));
+    });
   }
 
   let turnQueue = Promise.resolve();
@@ -280,16 +303,27 @@ export function mountTransferAssistant(root, options = {}) {
       try { await refreshData(); }
       catch { response.textContent = copy.data; return false; }
     }
-    if (!spoken && !recipientChoice && !isTransferCommand(text)) {
+    const understandingAt = performance.now();
+    const command = isTransferCommand(text);
+    if (!spoken && !recipientChoice && !command) {
       interpretation = await understandText(text, state, context, locale);
       showDictation(interpretation?.dictation_route);
     }
     if (version !== formVersion || sending) return false;
+    const currentTrace = ++traceTurn;
+    traceList.replaceChildren();
+    traceRows.clear();
+    trace.hidden = true;
+    if (spoken && timing) track(currentTrace, 0, "Funes / Talos", timing.transcriptionMs);
     const previous = state.slots;
     const previousPhase = state.phase;
     const previousNext = state.next;
     const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
     const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation, recipientChoice});
+    if (!command && !recipientChoice) {
+      track(currentTrace, 1, interpretation ? "Cyrano" : copy.local_parser,
+        timing?.understandingMs ?? performance.now() - understandingAt);
+    }
     state = turn.state;
     if (turn.message) message = turn.message;
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
@@ -298,7 +332,7 @@ export function mountTransferAssistant(root, options = {}) {
       const fill = changed || previousPhase !== state.phase || previousNext !== state.next ? reflect() : null;
       waitingForForm = Boolean(fill && state.phase === "ready");
       paint();
-      if (turn.message) read(turn.message, timing);
+      if (turn.message) read(turn.message, timing, currentTrace);
       if (waitingForForm) {
         try { await fill; }
         finally { waitingForForm = false; paint(); }
@@ -310,6 +344,7 @@ export function mountTransferAssistant(root, options = {}) {
     message = copy.executing;
     paint();
     const key = requestKey ??= crypto.randomUUID();
+    const executionAt = performance.now();
     try {
       const receipt = await execute(turn.action, key);
       state = {...initialTransfer(), phase: "complete"};
@@ -329,10 +364,11 @@ export function mountTransferAssistant(root, options = {}) {
         message = copy.rejected;
       }
     } finally {
+      track(currentTrace, 3, "Vitruvius", performance.now() - executionAt);
       sending = false;
       paint();
     }
-    read(message, timing);
+    read(message, timing, currentTrace);
     return true;
   }
 
@@ -343,7 +379,7 @@ export function mountTransferAssistant(root, options = {}) {
         showDictation(available.dictation_route);
         sttWarning = available.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
-        show(voiceStatus, available.tts ? "" : hasLocalTransferVoice(locale) ? copy.tts_fallback : copy.tts_unavailable);
+        show(voiceStatus, available.tts ? "" : copy.written_replies);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;
@@ -379,7 +415,10 @@ export function mountTransferAssistant(root, options = {}) {
       if (result.interpretation && result.interpretation.is_final !== true) return;
       showDictation(result.interpretation?.dictation_route);
       show(transcript, result.text);
-      if (result.text) void submit(result.text, {spoken: true, timing: {...timing, inputProvider: result.provider}, interpretation: result.interpretation});
+      if (result.text) void submit(result.text, {spoken: true, timing: {
+        ...timing, inputProvider: result.provider, transcriptionMs: result.transcriptionMs,
+        understandingMs: result.understandingMs,
+      }, interpretation: result.interpretation});
       else show(captureStatus, copy.empty);
     },
   });

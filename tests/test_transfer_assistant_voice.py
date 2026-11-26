@@ -164,10 +164,19 @@ def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch)
         assert result[0] == status and payload(result)["code"] == code
 
 
+def test_disabled_voice_generation_preserves_expected_conflict(monkeypatch):
+    monkeypatch.setattr(voice.fam_media, "speak_bytes",
+                        lambda *_a, **_kw: {"ok": False, "error": "generation is OFF"})
+    reply = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"Hola"}')
+    assert reply[0] == 409 and payload(reply)["code"] == "tts_disabled"
+
+
 def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch):
     def speak(text, **arguments):
         assert text == "¿Confirmas la transferencia?"
         assert arguments["lang"] == "es" and arguments["local_fallback"] is False
+        assert arguments["engine"] == "piper" and arguments["voice"] == voice.SPANISH_TTS_VOICE
+        assert arguments["timeout_s"] >= 8
         return {"ok": True, "data": b"RIFF synthetic WAV"}
 
     monkeypatch.setattr(voice.fam_media, "speak_bytes", speak)

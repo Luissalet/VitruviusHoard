@@ -74,11 +74,14 @@ function audioBase64(blob) {
 }
 
 export async function transcribeTransferSpeech(blob, {partial, signal, state, context, locale, dictation}) {
+  const started = performance.now();
   if (dictation && !partial) {
     const audio = {mime_type: blob.type, data_base64: await audioBase64(blob)};
     try {
       const result = await understand({...descriptor(state, context, locale), audio}, signal);
-      return {text: result.raw_transcript.trim(), interpretation: result, provider: "dictation"};
+      const {transcription, rules, validation} = result.timings_ms || {};
+      return {text: result.raw_transcript.trim(), interpretation: result, provider: "dictation",
+        transcriptionMs: transcription, understandingMs: Number.isFinite(rules) ? rules + (validation || 0) : undefined};
     } catch {
       signal.throwIfAborted();
     }
@@ -90,21 +93,13 @@ export async function transcribeTransferSpeech(blob, {partial, signal, state, co
   if (!response.ok) throw new Error("stt_unavailable");
   const text = (await response.json()).text.trim();
   if (partial || !text) return {text, provider: "shared"};
+  const transcribed = performance.now();
   const interpretation = await understandText(text, state, context, locale, signal);
   signal.throwIfAborted();
-  return {text, interpretation, provider: "shared"};
+  return {text, interpretation, provider: "shared",
+    transcriptionMs: transcribed - started, understandingMs: performance.now() - transcribed};
 }
 
-
-function localVoice(locale) {
-  const voices = window.speechSynthesis?.getVoices().filter(voice =>
-    voice.localService === true && voice.lang.slice(0, 2).toLowerCase() === locale.slice(0, 2)) || [];
-  return voices.find(voice => voice.lang.toLowerCase() === locale.toLowerCase()) || voices[0];
-}
-
-export function hasLocalTransferVoice(locale) {
-  return Boolean(localVoice(locale));
-}
 
 export async function speakTransferReply(text, {locale, signal, onFallback, onStart}) {
   try {
@@ -112,7 +107,7 @@ export async function speakTransferReply(text, {locale, signal, onFallback, onSt
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text, language: locale.slice(0, 2)}),
-      signal: AbortSignal.any([signal, AbortSignal.timeout(9000)]),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(14000)]),
     });
     if (!response.ok) throw new Error("tts_unavailable");
     const url = URL.createObjectURL(await response.blob());
@@ -133,26 +128,7 @@ export async function speakTransferReply(text, {locale, signal, onFallback, onSt
       throw error;
     }
     if (!signal.aborted) onStart("shared");
-    return;
   } catch {
-    if (signal.aborted) return;
-  }
-  const synth = window.speechSynthesis;
-  const voice = localVoice(locale);
-  onFallback(Boolean(voice));
-  if (voice) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-    utterance.onstart = () => { if (!signal.aborted) onStart("system"); };
-    const stop = () => synth.cancel();
-    const done = () => signal.removeEventListener("abort", stop);
-    utterance.onend = done;
-    utterance.onerror = () => {
-      done();
-      if (!signal.aborted) onFallback(false);
-    };
-    signal.addEventListener("abort", stop, {once: true});
-    synth.speak(utterance);
+    if (!signal.aborted) onFallback();
   }
 }
