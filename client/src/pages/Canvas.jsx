@@ -4,7 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
-import { PreviewFrames, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
+import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
 
 const MODE_TEXT = {
@@ -162,7 +162,7 @@ export default function Canvas({ param }) {
           <span className="help" role="status">{modes.length === 1 ? (es ? "Esta vista previa solo admite navegar." : "This preview only supports navigating.") : es ? MODE_TEXT[mode][2] : MODE_TEXT[mode][3]}</span>
         </div>
         <div className="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start">
-          <PreviewFrames frames={frames} frameRef={attachFrame} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
+          <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
           <section className="min-w-0 flex flex-col gap-3" aria-label={es ? "Selección" : "Selection"}>
             <PreviewSelection project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} />
           </section>
