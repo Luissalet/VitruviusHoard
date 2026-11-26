@@ -95,7 +95,16 @@
     return found.length === 1 ? found[0] : null;
   }
 
-  const core = {selectorFor, describeElement, resolveElement, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  // Who may talk to the inspector: only the frame's parent window, from the origin fixed at the start (the browser's
+  // ancestor origin, or else the origin of the first hello). Returns the origin to keep, or null to ignore the message.
+  function gate(known, event, parentWindow) {
+    const data = event && event.data;
+    if (!event || event.source !== parentWindow || !data || data.hoardDock !== 1 || typeof data.type !== 'string' || !data.type.startsWith('inspect/')) return null;
+    if (known === null) return data.type === 'inspect/hello' ? event.origin : null;
+    return event.origin === known ? known : null;
+  }
+
+  const core = {selectorFor, describeElement, resolveElement, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -264,12 +273,10 @@
   }
 
   window.addEventListener('message', event => {
-    if (event.source !== window.parent) return;
+    const accepted = gate(hostOrigin, event, window.parent);
+    if (accepted === null) return;
+    hostOrigin = accepted;
     const data = event.data;
-    if (!data || data.hoardDock !== 1 || typeof data.type !== 'string' || !data.type.startsWith('inspect/')) return;
-    // The origin is fixed once: by the browser (ancestorOrigins) or by the first hello. Later messages from any other origin are ignored.
-    if (hostOrigin === null) { if (data.type !== 'inspect/hello') return; hostOrigin = event.origin; }
-    else if (event.origin !== hostOrigin) return;
     if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/mode') setMode(data.on);
     else if (data.type === 'inspect/clear') { selected = []; schedule(); report(); }

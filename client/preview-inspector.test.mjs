@@ -8,7 +8,7 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, resolveElement, escapeCss } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, resolveElement, gate, escapeCss } = context.VitruviusInspectorCore;
 
 function node(tagName, attrs = {}, children = [], text = "") {
   const element = { tagName: tagName.toUpperCase(), attrs, children, parentElement: null, textContent: text, getAttribute: (name) => (name in attrs ? attrs[name] : null) };
@@ -129,4 +129,17 @@ test("without a source position the tag and text must still match, and ambiguity
   const twins = { tag: "li", text: "Second", selector: "li", own_vsrc: false };
   assert.equal(resolveElement(twins, listPage(["a", "b", "c"]).all), null, "two lookalikes are ambiguous");
   assert.equal(resolveElement(null, page2.all), null);
+});
+
+test("the inspector listens only to its parent, from an origin fixed once", () => {
+  const parent = {};
+  const message = (type, origin, source = parent) => ({ source, origin, data: { hoardDock: 1, type } });
+  // nothing is known yet: only a hello from the parent fixes the origin
+  assert.equal(gate(null, message("inspect/mode", "http://a.test"), parent), null);
+  assert.equal(gate(null, message("inspect/hello", "http://a.test", {}), parent), null, "not the parent window");
+  assert.equal(gate(null, message("inspect/hello", "http://a.test"), parent), "http://a.test");
+  // once fixed (by the browser or by the first hello) another origin is ignored, even from the parent window
+  assert.equal(gate("http://a.test", message("inspect/mode", "http://a.test"), parent), "http://a.test");
+  assert.equal(gate("http://a.test", message("inspect/hello", "http://evil.test"), parent), null);
+  assert.equal(gate("http://a.test", { source: parent, origin: "http://a.test", data: { hoardDock: 1, type: "dock/ready" } }, parent), null, "not an inspect/ message");
 });
