@@ -1453,6 +1453,196 @@
     "module": "design"
   },
   {
+    "name": "app_project_edit_source",
+    "description": "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "AppSourceAttributeChange": {
+          "properties": {
+            "kind": {
+              "const": "attribute",
+              "title": "Kind",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "New literal attribute value. Null removes the attribute.",
+              "title": "Value"
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "value"
+          ],
+          "title": "AppSourceAttributeChange",
+          "type": "object"
+        },
+        "AppSourceClassChange": {
+          "properties": {
+            "kind": {
+              "const": "class",
+              "title": "Kind",
+              "type": "string"
+            },
+            "operation": {
+              "enum": [
+                "add",
+                "remove"
+              ],
+              "title": "Operation",
+              "type": "string"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "operation",
+            "value"
+          ],
+          "title": "AppSourceClassChange",
+          "type": "object"
+        },
+        "AppSourceTextChange": {
+          "properties": {
+            "kind": {
+              "const": "text",
+              "title": "Kind",
+              "type": "string"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "title": "AppSourceTextChange",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "vsrc": {
+          "description": "The preview element's data-vsrc value (file:line:column).",
+          "title": "Vsrc",
+          "type": "string"
+        },
+        "tag": {
+          "description": "The selected HTML tag, such as h2 or button.",
+          "title": "Tag",
+          "type": "string"
+        },
+        "expected_revision": {
+          "description": "The revision displayed when the position was selected.",
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "change": {
+          "discriminator": {
+            "mapping": {
+              "attribute": "#/$defs/AppSourceAttributeChange",
+              "class": "#/$defs/AppSourceClassChange",
+              "text": "#/$defs/AppSourceTextChange"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AppSourceTextChange"
+            },
+            {
+              "$ref": "#/$defs/AppSourceAttributeChange"
+            },
+            {
+              "$ref": "#/$defs/AppSourceClassChange"
+            }
+          ],
+          "title": "Change"
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vsrc",
+        "tag",
+        "expected_revision",
+        "change"
+      ],
+      "title": "AppSourceEditArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_source_count",
+    "description": "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "vsrc": {
+          "title": "Vsrc",
+          "type": "string"
+        },
+        "path": {
+          "default": "/",
+          "description": "Page path and optional query in the running preview.",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vsrc"
+      ],
+      "title": "AppSourceCountArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_undo",
     "description": "Undo a project creation or source edit. Deshacer un alta o una edición.",
     "annotations": {

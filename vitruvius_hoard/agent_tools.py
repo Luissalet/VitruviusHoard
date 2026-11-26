@@ -208,6 +208,39 @@ class AppUpdateArgs(BaseModel):
     expected_revision: str
 
 
+class AppSourceTextChange(BaseModel):
+    kind: Literal["text"]
+    value: str
+
+
+class AppSourceAttributeChange(BaseModel):
+    kind: Literal["attribute"]
+    name: str
+    value: str | None = Field(description="New literal attribute value. Null removes the attribute.")
+
+
+class AppSourceClassChange(BaseModel):
+    kind: Literal["class"]
+    operation: Literal["add", "remove"]
+    value: str
+
+
+class AppSourceEditArgs(BaseModel):
+    id: str = ""
+    vsrc: str = Field(description="The preview element's data-vsrc value (file:line:column).")
+    tag: str = Field(description="The selected HTML tag, such as h2 or button.")
+    expected_revision: str = Field(description="The revision displayed when the position was selected.")
+    change: Annotated[AppSourceTextChange | AppSourceAttributeChange | AppSourceClassChange,
+                      Field(discriminator="kind")]
+    lang: Literal["en", "es"] = "en"
+
+
+class AppSourceCountArgs(BaseModel):
+    id: str = ""
+    vsrc: str
+    path: str = Field("/", description="Page path and optional query in the running preview.")
+
+
 class AppUndoArgs(AppIdArgs):
     expected_revision: str
     expected_updated_ts: float
@@ -649,6 +682,10 @@ TOOLS: list[Tool] = [
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), lambda services, args: services.app_projects.update(args.id, args.files, args.expected_revision), capped=False),
+    Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
+        AppSourceEditArgs, ann(False, False, True), lambda services, args: services.app_projects.edit_source(**args.model_dump()), capped=False),
+    Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
+        AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",

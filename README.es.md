@@ -42,7 +42,7 @@ La herramienta `render_preview` abre URL públicas o de bucle local y archivos H
 - Auditoría SEO y GEO de sitios con indexabilidad, cabeceras de seguridad, web vitals, acceso de rastreadores de IA y plan de acción por fases. Véase [docs/SITE-AUDIT.md](docs/SITE-AUDIT.md).
 
 ### Proyectos de aplicación e instrumentos
-- Proyectos de código de aplicación con plantillas, acciones tipadas, vistas previas locales propias con un modo Seleccionar que entrega al agente los elementos elegidos, comprobador funcional de páginas y exportación autónoma. Véase [docs/APP_PROJECTS.md](docs/APP_PROJECTS.md).
+- Proyectos de código de aplicación con plantillas, acciones tipadas, vistas previas locales propias con un modo Seleccionar que entrega al agente los elementos elegidos, comprobador funcional de páginas y exportación autónoma. Los elementos de la vista previa enlazan con su fuente HTML y admiten edición con comprobación de revisión y deshacer. Véase [docs/APP_PROJECTS.md](docs/APP_PROJECTS.md).
 - Fábrica de instrumentos: una especificación tipada de entradas, fórmulas y salidas se convierte en un proyecto de aplicación con pruebas generadas y una exportación autónoma solo con la biblioteca estándar, más un explicador. Véase [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Comprobador de protocolos: explora todos los entrelazados de un protocolo pequeño y acotado, comprueba invariantes e interbloqueos y devuelve el contraejemplo más corto con un archivo pytest que lo reproduce.
 

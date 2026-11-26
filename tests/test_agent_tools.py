@@ -48,6 +48,8 @@ def test_read_only_hints_correct():
     read_only_names.update({"benchmark_catalog", "benchmark_get", "benchmark_list", "benchmark_compare"})
     read_only_names.add("app_project_selection")
     write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
+    read_only_names.add("app_project_source_count")
+    write_names.add("app_project_edit_source")
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True
@@ -88,6 +90,8 @@ def test_every_arg_model_validates_empty_or_minimal(services):
                 args[field_name] = prop.get("minimum", 1)
             elif prop.get("type") == "array":
                 args[field_name] = []
+        if t.name == "app_project_edit_source":
+            args["change"] = {"kind": "text", "value": "Demo"}
         if t.name == 'motion_save':
             args['composition'] = {'title':'Demo','scenes':[{'name':'Demo','layers':[{'text':'Demo'}]}]}
         if t.name == 'diagram_render':
