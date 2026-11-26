@@ -187,6 +187,12 @@ Canvas style editing loads the declared tinycss2 dependency when needed. If it i
 
 The inspector uses the existing preview bridge and reported source revision. Canvas requests are `dock/commit` for styles and `dock/text` for text. The host validates the sender and returns `inspect/canvas-edit-result` to the same frame. The overlay lives in the inspector's shadow tree and stays out of standalone exports.
 
+### Canvas screen
+
+The Canvas screen (`#/canvas/<project>`) shows one project's preview across the page, with a mode toolbar and a side panel. It uses the same preview, live refresh and App Dock frame bridge as Applications (`client/src/canvas/projectPreview.jsx`), so agent tools reach the preview in the same way from both screens. The toolbar always offers Navigate. Select, Comment and Handles appear when the inspector inside the preview reports them in `dock/inspector-ready`, and each mode change is sent to the inspector as `inspect/mode`. Esc returns to Navigate. The side panel lists the selected elements, with source position and the number of elements they affect, and the open comments when this build stores comments.
+
+While the Canvas screen is open, Vitruvius reports it to the Dock host through `HoardApp.setContext`: `view: "canvas"`, `focus` with the project, and a `summary` of at most 400 characters naming the revision, the mode, the selected elements with their source positions and the open comments. When Vitruvius is docked in Faustus and opened at `#/canvas/<project>`, that summary reaches the turn context through the Dock bridge. Agents use the project tools for the complete selection and comments.
+
 ## Booking pages
 
 Use `design_brief` to choose the direction, then call `app_project_create` with `template: "booking"`. Supply `items` with a stable lowercase `id`, `title`, `category` and optional `description` for each entry. A text value can be shared or supplied as an `{es, en}` pair. Set `lang: "es"` for Spanish on first load, with `description_es` for the introductory text and `description` for its English version. The site preserves the active category when switching languages.
