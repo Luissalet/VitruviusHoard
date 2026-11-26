@@ -23,7 +23,7 @@ export const SPOKEN_PHRASES = {
   confirmar: "Revisa los datos y dime si la envío.",
   "sin-confirmacion": "Sin tu confirmación no envío nada.",
   hecho: "Hecho. La transferencia está enviada.",
-  cancelado: "De acuerdo. La cancelo y no se envía nada.",
+  cancelado: "Transferencia cancelada. No se envía nada.",
   anulada: "La transferencia se ha anulado.",
   "no-entendido": "No te he entendido. ¿Puedes repetirlo?",
   escuchando: "Te escucho.",
@@ -31,7 +31,7 @@ export const SPOKEN_PHRASES = {
   otra: "¿Quieres hacer otra transferencia?",
   "transcripcion-caida": "Ahora mismo no puedo escucharte. Puedes escribirlo.",
   "dictado-caido": "Te entiendo peor de lo normal. Revisa bien el formulario.",
-  "servicio-caido": "Algo no responde. Puedes seguir escribiendo.",
+  "servicio-caido": "Algo no responde. Escríbelo, por favor.",
   espera: "Sigo aquí cuando quieras.",
 };
 
