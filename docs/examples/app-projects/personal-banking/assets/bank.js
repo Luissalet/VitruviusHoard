@@ -147,6 +147,14 @@ function searchable(input, list, draw) {
   draw();
 }
 
+function matchesMove({concepto, contraparte, categoria}, query) {
+  const text = `${concepto || ''} ${contraparte || ''}`;
+  const storedCategory = categoria || '';
+  const visibleCategory = bankLabel(storedCategory);
+  return `${text} ${visibleCategory}`.toLowerCase().includes(query)
+    || (visibleCategory !== storedCategory && `${text} ${storedCategory}`.toLowerCase().includes(query));
+}
+
 async function accountPage() {
   const root = document.querySelector('[data-account-page]');
   if (!root) return;
@@ -175,7 +183,7 @@ async function accountPage() {
     const search = document.getElementById('acc-search');
     searchable(search, list, () => {
       const q = search.value.trim().toLowerCase();
-      const shown = q ? mine.filter(m => `${m.concepto} ${m.contraparte} ${m.categoria}`.toLowerCase().includes(q)) : mine;
+      const shown = q ? mine.filter(m => matchesMove(m, q)) : mine;
       renderMoves(list, shown, accounts, {showAccount: false,
         empty: q ? `<div class="state"><strong>${t('Sin resultados', 'No results')}</strong>${t('Ningún movimiento coincide con', 'No transactions match')} «${esc(search.value.trim())}».</div>` : null});
     });
@@ -193,7 +201,7 @@ async function movesPage() {
     const search = document.getElementById('moves-search');
     const draw = () => {
       const q = search.value.trim().toLowerCase();
-      const shown = moves.filter(m => (!filter.value || m.cuenta === filter.value) && (!q || `${m.concepto} ${m.contraparte} ${m.categoria}`.toLowerCase().includes(q)));
+      const shown = moves.filter(m => (!filter.value || m.cuenta === filter.value) && (!q || matchesMove(m, q)));
       renderMoves(list, shown, accounts, {empty: `<div class="state"><strong>${t('Sin resultados', 'No results')}</strong>${t('Prueba con otro texto o con todas las cuentas.', 'Try a different search or select all accounts.')}</div>`});
     };
     filter.addEventListener('change', draw);
