@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal, Any, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, FiniteFloat, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .transfer_assistant import assistant_assets
 from .app_projects import templates as app_templates
+from .preview_inspector import read_selection
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -203,10 +204,31 @@ class AppIdArgs(BaseModel):
     revision: Optional[str] = None
 
 
+class CanvasActor(BaseModel):
+    id: str = Field("agent", min_length=1, max_length=80)
+    name: str | None = Field(None, max_length=80)
+    color: str | None = Field(None, max_length=64)
+
+
+class CanvasBox(BaseModel):
+    x: FiniteFloat
+    y: FiniteFloat
+    w: FiniteFloat = Field(gt=0)
+    h: FiniteFloat = Field(gt=0)
+
+
+class CanvasTarget(BaseModel):
+    vsrc: str | None = Field(None, max_length=512, description="Source position in the displayed revision.")
+    selector: str | None = Field(None, max_length=512, description="Stable CSS selector in the preview.")
+    box: CanvasBox | None = Field(None, description="Optional document-relative selection box (x, y, w, h).")
+
+
 class AppUpdateArgs(BaseModel):
     id: str = ""
     files: dict[str, str]
     expected_revision: str
+    actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
+    target: CanvasTarget | None = Field(None, description="Optional visible target for the edit.")
 
 
 class AppSourceTextChange(BaseModel):
@@ -234,6 +256,8 @@ class AppSourceEditArgs(BaseModel):
     change: Annotated[AppSourceTextChange | AppSourceAttributeChange | AppSourceClassChange,
                       Field(discriminator="kind")]
     lang: Literal["en", "es"] = "en"
+    actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
+    target: CanvasTarget | None = Field(None, description="Optional selector and box to disambiguate repeated source positions.")
 
 
 class AppSourceCountArgs(BaseModel):
@@ -245,6 +269,10 @@ class AppSourceCountArgs(BaseModel):
 class AppUndoArgs(AppIdArgs):
     expected_revision: str
     expected_updated_ts: float
+
+
+class AppSelectionArgs(AppIdArgs):
+    clips: bool = Field(False, description="Include each element's clip as a data URL (large); by default only its size.")
 
 
 class AppPreviewArgs(AppIdArgs):
@@ -259,12 +287,6 @@ class AppRenderArgs(AppIdArgs):
     widths: Optional[list[int]] = None
 
 
-class CanvasActor(BaseModel):
-    id: str = Field("agent", min_length=1, max_length=80)
-    name: str | None = Field(None, max_length=80)
-    color: str | None = Field(None, max_length=64)
-
-
 class CanvasViewArgs(BaseModel):
     id: str = Field(..., description="Application project ID.")
     scope: Literal["screen", "page"] = "screen"
@@ -277,6 +299,7 @@ class CanvasActArgs(BaseModel):
     action: Literal["click", "fill", "select", "navigate", "scroll", "highlight", "wait"]
     args: dict = Field(default_factory=dict, description="App Dock arguments for the chosen action, e.g. ref, text or value.")
     actor: CanvasActor = Field(default_factory=CanvasActor, description="Agent identity used for the visible cursor.")
+    target: CanvasTarget | None = Field(None, description="Optional selection to locate click, fill or select actions.")
 
 
 class AppCallArgs(BaseModel):
@@ -616,6 +639,34 @@ def run_vitruvius_status(services: Services, args: Empty) -> dict:
     return services.status()
 
 
+def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return projects.update(**args.model_dump(exclude_none=True, exclude={"actor"}),
+                           actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
+
+
+def run_app_project_edit_source(services: Services, args: AppSourceEditArgs) -> dict:
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return projects.edit_source(
+        **args.model_dump(exclude={"actor", "target"}),
+        actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+        target=args.target.model_dump(exclude_none=True) if args.target else None,
+    )
+
+
+def run_app_project_canvas_act(services: Services, args: CanvasActArgs) -> dict:
+    presence = None
+    if args.action in {"click", "fill", "select"}:
+        presence = {"box": None, **(args.target.model_dump(exclude_none=True) if args.target else {})}
+        for key in ("ref", "text", "label"):
+            if key in args.args:
+                presence[key] = args.args[key]
+    return services.app_projects.canvas.call(args.id, "app_" + args.action, args.args,
+                                             args.actor.model_dump(exclude_none=True), target=presence)
+
+
 TOOLS: list[Tool] = [
     Tool("design_search",
         "Search the design library: rules, skills, styles, motion recipes with citations. Busca criterio de diseño.\n"
@@ -708,23 +759,27 @@ TOOLS: list[Tool] = [
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
-        AppUpdateArgs, ann(False, False, True), lambda services, args: services.app_projects.update(args.id, args.files, args.expected_revision), capped=False),
+        AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
     Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
-        AppSourceEditArgs, ann(False, False, True), lambda services, args: services.app_projects.edit_source(**args.model_dump()), capped=False),
+        AppSourceEditArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
+    Tool("app_project_selection",
+        "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\n"
+        "Each item has its source position (file, line), generated-by marker, text, HTML, box, styles, revision and a clip of the element: it is what \"this\" means. "
+        "`expired` lists chosen elements the served revision no longer has: do not act on them. "
+        "Sinónimos: elemento seleccionado, esto, lienzo.",
+        AppSelectionArgs, ann(True), lambda services, args: read_selection(services, args.id, args.revision, args.clips), capped=False),
     Tool("app_project_canvas_view", "Read the project's open preview and control refs. Leer el lienzo abierto.",
         CanvasViewArgs, ann(True),
         lambda services, args: services.app_projects.canvas.call(
             args.id, "app_read", {"scope": args.scope, "max_chars": args.max_chars}, args.actor.model_dump(exclude_none=True))),
     Tool("app_project_canvas_act", "Act on the open preview with a named cursor. Actuar en el lienzo abierto.",
-        CanvasActArgs, ann(False, True, False),
-        lambda services, args: services.app_projects.canvas.call(
-            args.id, "app_" + args.action, args.args, args.actor.model_dump(exclude_none=True))),
+        CanvasActArgs, ann(False, True, False), run_app_project_canvas_act),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",

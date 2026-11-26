@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
+import PreviewSelection from "../components/PreviewSelection.jsx";
 import { useProjectCanvas } from "./projectCanvas.js";
 import { useProjectLivePreview } from "./projectLivePreview.js";
 
@@ -172,6 +173,7 @@ export default function Projects({ param }) {
             className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white",
               ...(pending ? { position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" } : {}) }} />)}
         </div>}
+        <PreviewSelection project={project} preview={preview} frameRef={previewFrame} frameKey={previewFrames[0]?.key} es={es} notify={notify} />
         <div className="panel">
           <h3 className="font-semibold">{es ? "Archivos de la aplicación" : "Application files"}</h3>
           <label className="label mt-3">{es ? "Archivo" : "File"}<select aria-label={es ? "Archivo" : "File"} className="field" value={file} onChange={(event) => setFile(event.target.value)}>{Array.from(new Set([...Object.keys(project.files), ...draftPaths])).sort().map((path) => <option key={path} value={path}>{path}{drafts[draftPrefix + path] !== undefined ? " *" : ""}</option>)}</select></label>

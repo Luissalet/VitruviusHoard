@@ -31,7 +31,8 @@ export function useProjectCanvas(frameRef, projectId, previewUrl, revision, loca
       const message = event.data;
       if (event.source !== frame.contentWindow || event.origin !== origin || message?.hoardDock !== 1) return;
       if (message.type === "dock/ready" && !events) {
-        events = new EventSource(route + "/events");
+        const query = revision ? "?revision=" + encodeURIComponent(revision) : "";
+        events = new EventSource(route + "/events" + query);
         events.addEventListener("ready", (event) => {
           pending.clear();
           session = JSON.parse(event.data);

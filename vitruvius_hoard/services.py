@@ -27,6 +27,7 @@ from . import waivers as waivers_mod
 from .browser import BrowserWorker, loopback_preview
 from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
+from .preview_inspector import PreviewSelections
 from .app_runtime import validate_request_key
 from .instruments import Instruments
 from .config import Config
@@ -83,6 +84,7 @@ class Services:
         self.db = Database(config.db_path)
 
         self.app_projects = AppProjects(config.data_dir, host_port=config.port)
+        self.preview_selections = PreviewSelections()
         self.alternatives = AlternativeStudies(self)
         self.instruments = Instruments(self.app_projects)
         self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")
