@@ -3,7 +3,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
@@ -212,6 +212,25 @@ def project_source_count(request: Request, id: str, vsrc: str, path: str = "/"):
 @router.post("/{id}/preview")
 def project_preview(request: Request, id: str, body: AppPreviewArgs):
     return execute(lambda: services(request).app_projects.stop(id) if body.operation == "stop" else services(request).app_projects.preview(id, body.revision))
+
+
+@router.get("/{id}/preview/open")
+def project_preview_open(request: Request, id: str, path: str = "/", lang: str = "en"):
+    es = lang.lower().startswith("es")
+    headers = {"Cache-Control": "no-store"}
+    if not path.startswith("/") or path.startswith("//") or "\\" in path or any(ord(char) < 32 for char in path):
+        message = "Indica una ruta de la aplicación, como /transferir." if es else "Enter an application path, such as /transferir."
+        return PlainTextResponse(message, status_code=400, headers=headers)
+    try:
+        url = services(request).app_projects.running_preview_url(id)
+    except (LookupError, ValueError):
+        message = "No se encuentra el proyecto." if es else "Application project not found."
+        return PlainTextResponse(message, status_code=404, headers=headers)
+    if not url:
+        message = ("La vista previa está detenida. Ábrela desde Aplicaciones y vuelve a cargar este enlace."
+                   if es else "The preview is stopped. Start it in Applications and reload this link.")
+        return PlainTextResponse(message, status_code=503, headers=headers)
+    return RedirectResponse(url + path, status_code=307, headers=headers)
 
 
 @router.post("/{id}/export")

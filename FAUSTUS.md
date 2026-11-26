@@ -2,6 +2,8 @@
 
 ## App project canvas
 
+`app_project_preview` returns the current preview `url` and the stable `open_path` relative to the Design mount. Use `/design` plus `open_path` on the workbench host for a reusable browser link. Opening that link resolves an already running preview. Start and stop remain explicit tool operations.
+
 Use `app_project_canvas_view` to read the project preview open in Applications and `app_project_canvas_act` to interact through its controls with a named cursor. With no open canvas, the tools report how to open it in Applications. The same bridge runs inside the project frame when Vitruvius is docked. For an annotated element, use `app_project_source_count` to check how many elements share its source and `app_project_edit_source` with the served revision to edit literal text, attributes or classes by position. The named cursor travels before the write and the open preview briefly outlines the result. The edit returns an undo call. The agent can declare an actor with its ID, name and color once per project. Subsequent canvas actions, source edits and edits through `app_project_canvas_edit` use that actor when the call identifies the same caller. Pass the selection target to identify the destination. Standalone exports run their saved source without preview markup or scripts. See [the canvas contract](docs/APP_CANVAS.md) and [the source editing workflow](docs/APP_PROJECTS.md).
 
 ## App project data

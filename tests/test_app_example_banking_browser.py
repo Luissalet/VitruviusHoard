@@ -1,4 +1,4 @@
-"""The banking example in a browser: a confirmation runs exactly the reviewed transfer and expires on edits.
+"""The banking example in a browser: transaction search and confirmation of reviewed transfers.
 
 The example runs on the project runtime. The shared transfer assistant is replaced by a stand-in module that lets the
 test play its draft, readiness and confirmation through the same options the real panel uses."""
@@ -61,7 +61,7 @@ def page(bank):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as playwright:
         browser = None
-        for options in ({}, {"channel": "chrome"}):
+        for options in ({"channel": "chrome"}, {}):
             try:
                 browser = playwright.chromium.launch(headless=True, **options)
                 break
@@ -70,6 +70,7 @@ def page(bank):
         if browser is None:
             pytest.skip("no headless browser")
         page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.route("**/*", lambda route: route.continue_() if route.request.url.startswith(bank + "/") else route.abort())
         posts = []
         page.on("request", lambda r: posts.append(json.loads(r.post_data or "{}")) if r.method == "POST" and "/api/actions/transferir" in r.url else None)
         page.goto(bank + "/transferir")
@@ -82,6 +83,65 @@ def page(bank):
 def balances(page):
     rows = page.evaluate("async () => (await (await fetch('/api/collections/cuentas')).json()).records")
     return {row["id"]: row["saldo_cent"] for row in rows}
+
+
+@pytest.mark.parametrize(("lang", "category", "account"), [
+    ("es", "Supermercado", "Cuenta diaria"),
+    ("en", "Groceries", "Everyday account"),
+])
+def test_transaction_search_uses_displayed_categories_on_both_pages(page, bank, lang, category, account):
+    from playwright.sync_api import expect
+
+    page.set_viewport_size({"width": 390, "height": 844})
+    for path, search_id, grocery_ids in (
+        ("/movimientos", "#moves-search", ["m001", "m016"]),
+        ("/cuentas/cuenta-diaria", "#acc-search", ["m001"]),
+    ):
+        page.goto(f"{bank}{path}?lang={lang}")
+        rows = page.locator(".move")
+        expect(rows.first).to_be_visible()
+        search = page.locator(search_id)
+        search.fill(f"  {category.swapcase()} ")
+        expect(rows).to_have_count(len(grocery_ids))
+        assert rows.evaluate_all("(rows) => rows.map(row => row.dataset.move)") == grocery_ids
+        assert rows.locator(".cat").evaluate_all("(icons) => icons.map(icon => icon.title)") == [category] * len(grocery_ids)
+        if search_id == "#moves-search":
+            page.locator("#moves-account").select_option(label=account)
+            expect(rows).to_have_count(1)
+            expect(rows.first).to_have_attribute("data-move", "m001")
+        for term, expected_id in (("Compra semanal", "m001"), ("Las Eras", "m001"), ("Restaurantes", "m004")):
+            search.fill(term)
+            expect(rows).to_have_count(1)
+            expect(rows.first).to_have_attribute("data-move", expected_id)
+
+
+def test_mobile_assistant_keeps_the_transfer_and_receipt_accessible_in_english(page, bank):
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(bank + "/transferir?lang=en")
+    page.wait_for_function("() => window.teselaTransfer && window.standInPanel")
+    assert page.locator("html").get_attribute("lang") == "en"
+    assert page.get_by_role("heading", name="New transfer").is_visible()
+    page.get_by_role("link", name="Open the assistant").click()
+    panel = page.get_by_role("complementary", name="Boltagon, voice assistant")
+    assert panel.is_visible()
+    form_box = page.locator("#transfer-form").bounding_box()
+    assert form_box["y"] + form_box["height"] <= panel.bounding_box()["y"]
+    page.select_option("#contacto", "javier-navarro")
+    page.fill("#importe", "1,234.56")
+    page.fill("#concepto", "Dinner")
+    page.get_by_role("button", name="Review transfer").click()
+    page.get_by_role("button", name="Confirm and send").click()
+    page.get_by_role("heading", name="Transfer sent").wait_for()
+    print_button = page.get_by_role("button", name="Print receipt")
+    print_button.click(trial=True)
+    page.get_by_role("link", name="New transfer", exact=True).click(trial=True)
+    page.get_by_role("button", name="Reverse transfer").click()
+    page.get_by_text("Transfer reversed.", exact=False).wait_for()
+    page.get_by_role("button", name="Close assistant").click()
+    assert not panel.is_visible()
+    assert page.get_by_role("link", name="Open the assistant").evaluate("(link) => link === document.activeElement")
+    page.get_by_role("link", name="Español").click()
+    page.get_by_role("heading", name="Nueva transferencia").wait_for()
 
 
 def read_by_panel(page):

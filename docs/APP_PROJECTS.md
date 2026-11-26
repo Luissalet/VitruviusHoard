@@ -90,6 +90,8 @@ For step-by-step transfer entry by text and local microphone, see the [transfer 
 
 `app_project_preview` starts an owned hidden Python process on a free loopback port, or stops that project's process. It reuses a healthy process for the same revision. When changing revisions, it starts the captured source and switches the proxy after the new runtime is ready. The preview keeps the same loopback URL until stopped and works in the workbench iframe or an independent browser tab. Previews stop when Vitruvius shuts down, while records and source remain saved.
 
+In Applications, **Open preview** starts the saved revision in the workbench. **Open in tab** opens that running preview at the full width of the browser. Copy the button's link to reuse it across preview restarts. The link is `/design/api/app-projects/{id}/preview/open` on the workbench host. An optional URL-encoded `path` query parameter opens a page such as `/transferir?lang=en`; `lang=es` on the stable link selects Spanish for its own error message. The link redirects to the current preview origin with a non-cached 307. It returns 503 with instructions while the preview is stopped and 404 for an archived or unknown project. The `app_project_preview` start result supplies `open_path`, relative to the Design mount, alongside the current `url`.
+
 The Applications page connects the App Dock bridge to the visible preview. Agents can read the open page with `app_project_canvas_view` and point at or operate its controls with `app_project_canvas_act`. See [the canvas tool and frame contract](APP_CANVAS.md).
 
 For single-record-type projects, `app_project_call` provides `list`, `get`, `create`, `update` and `delete`. Their standalone application exposes the following routes.

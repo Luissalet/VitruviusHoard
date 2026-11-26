@@ -854,7 +854,7 @@ TOOLS: list[Tool] = [
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
     Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
-    Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
+    Tool("app_project_preview", "Start or stop the project's local preview. The start result includes its stable open_path. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_selection",
         "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\n"

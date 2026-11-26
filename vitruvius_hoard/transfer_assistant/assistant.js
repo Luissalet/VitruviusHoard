@@ -4,15 +4,14 @@ import {mountDictationMicrophone} from "./microphone.js";
 
 const COPY = {
   es: {
-    title: "Asistente de transferencias", start: "¿A quién quieres hacer una transferencia simulada?",
+    title: "Boltagon · Asistente de transferencias", start: "¿A quién quieres hacer una transferencia simulada?",
     input: "Escribe lo que quieres hacer", placeholder: "Escribe un mensaje", send: "Enviar", mic: "Hablar", stop: "Terminar",
     listen: "Escuchar respuesta", confirm: "Confirmar transferencia", cancel: "Cancelar",
     getting_mic: "Solicitando acceso al micrófono…", recording: "Escuchando…", transcribing: "Transcribiendo…",
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
     written_replies: "Respuestas por escrito.",
-    dictation_common: name => `Dictado mediante el servicio común de ${name}.`,
-    dictation_app: name => `Dictado mediante la app de ${name}.`,
+    dictation_remote: name => `Lo entiende ${name}.`,
     dictation_fallback: name => `${name} no responde. Se usa el análisis local de la página.`,
     empty: "No se ha entendido la frase. Prueba de nuevo o escríbela.",
     data: "No se han podido cargar las cuentas y los contactos. Vuelve a enviar el mensaje.",
@@ -24,15 +23,14 @@ const COPY = {
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
-    title: "Transfer assistant", start: "Who would you like to make a simulated transfer to?",
+    title: "Boltagon · Transfer assistant", start: "Who would you like to make a simulated transfer to?",
     input: "Type what you want to do", placeholder: "Type a message", send: "Send", mic: "Speak", stop: "Finish",
     listen: "Read reply aloud", confirm: "Confirm transfer", cancel: "Cancel",
     getting_mic: "Requesting microphone access…", recording: "Listening…", transcribing: "Transcribing…",
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
     written_replies: "Written replies.",
-    dictation_common: name => `Dictation via the shared ${name} service.`,
-    dictation_app: name => `Dictation via the ${name} app.`,
+    dictation_remote: name => `Interpreted by ${name}.`,
     dictation_fallback: name => `${name} is unavailable. This page is interpreting your input locally.`,
     empty: "The speech was unclear. Try again or type your reply.",
     data: "Accounts and contacts could not load. Send the message again.",
@@ -44,6 +42,11 @@ const COPY = {
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
 };
+
+function dictationLabel(name = "") {
+  const label = name.replace(/['’]s Hoard$/iu, "").trim();
+  return !label || label.toLowerCase() === "cyrano" ? "Boltagon" : label;
+}
 
 async function json(path, options) {
   const response = await fetch(path, options);
@@ -110,7 +113,7 @@ export function mountTransferAssistant(root, options = {}) {
   let message = copy.start;
   let phraseId = "saludo";
   let voicePhrases;
-  let dictationName = "cyrano";
+  let dictationName = "Boltagon";
   let speech;
   let requestKey;
   let mic;
@@ -142,6 +145,7 @@ export function mountTransferAssistant(root, options = {}) {
   const controls = add(root, "div", {class: "transfer-assistant__controls"});
   const microphone = add(controls, "button", {type: "button", "aria-pressed": "false"}, copy.mic);
   const listen = add(controls, "button", {type: "button"}, copy.listen);
+  listen.disabled = lang !== "es";
   const confirm = add(controls, "button", {type: "button", class: "transfer-assistant__primary", hidden: ""}, copy.confirm);
   const cancel = add(controls, "button", {type: "button", hidden: ""}, copy.cancel);
   const captureStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
@@ -173,8 +177,9 @@ export function mountTransferAssistant(root, options = {}) {
   }
 
   function showDictation(route, name) {
-    dictationName = name || dictationName;
-    show(dictationStatus, (copy["dictation_" + route] || copy.dictation_fallback)(dictationName));
+    if (name) dictationName = dictationLabel(name);
+    const label = route === "app" || route === "common" ? copy.dictation_remote : copy.dictation_fallback;
+    show(dictationStatus, label(dictationName));
   }
 
   function paint() {
@@ -334,8 +339,7 @@ export function mountTransferAssistant(root, options = {}) {
     const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
     const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation, recipientChoice});
     if (!command && !recipientChoice) {
-      const name = interpretation?.dictation_name || dictationName;
-      const label = name.replace(/['’]s Hoard$/iu, "").trimEnd() || name;
+      const label = dictationLabel(interpretation?.dictation_name || dictationName);
       track(currentTrace, 1, interpretation ? label : copy.local_parser,
         timing?.understandingMs ?? performance.now() - understandingAt);
     }
@@ -401,7 +405,7 @@ export function mountTransferAssistant(root, options = {}) {
         showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
-        show(voiceStatus, available?.tts ? "" : copy.written_replies);
+        show(voiceStatus, lang === "es" && available?.tts ? "" : copy.written_replies);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;

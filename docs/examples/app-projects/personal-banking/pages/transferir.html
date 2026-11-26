@@ -1,44 +1,46 @@
 <section class="page-head">
-  <h1>Nueva transferencia</h1>
-  <p class="lede">Envía dinero a un contacto o a cualquier IBAN. Antes de enviarla verás un resumen para confirmar.</p>
+  <h1 data-en="New transfer">Nueva transferencia</h1>
+  <p class="lede" data-en="Send money to a contact or any IBAN. You’ll see a summary to review before confirming.">Envía dinero a un contacto o a cualquier IBAN. Antes de enviarla verás un resumen para confirmar.</p>
 </section>
 <div class="transfer-layout" data-transfer-scope>
   <form class="panel transfer" id="transfer-form" data-voice-form="transfer" data-step="datos" novalidate>
     <p class="state error" id="transfer-load-error" role="alert" hidden></p>
-    <ol class="steps" aria-label="Pasos"><li data-step="datos" aria-current="step">Datos</li><li data-step="confirmar">Confirmar</li><li data-step="justificante">Justificante</li></ol>
+    <ol class="steps" aria-label="Pasos" data-en-label="Steps"><li data-step="datos" aria-current="step" data-en="Details">Datos</li><li data-step="confirmar" data-en="Confirm">Confirmar</li><li data-step="justificante" data-en="Receipt">Justificante</li></ol>
     <div data-pane="datos">
-      <div class="field"><label for="origen">Desde</label><select id="origen" name="origen" data-voice-field="origen" data-transfer-slot="source"></select><p class="hint" id="origen-hint"></p></div>
-      <fieldset class="field seg"><legend>Para</legend>
+      <div class="field"><label for="origen" data-en="From">Desde</label><select id="origen" name="origen" data-voice-field="origen" data-transfer-slot="source"></select><p class="hint" id="origen-hint"></p></div>
+      <fieldset class="field seg"><legend data-en="To">Para</legend>
         <div class="seg-ctl" role="radiogroup">
-          <label><input type="radio" name="modo" value="contacto" id="modo-contacto" checked data-voice-field="modo"><span>Un contacto</span></label>
-          <label><input type="radio" name="modo" value="iban" id="modo-iban" data-voice-field="modo"><span>Otro IBAN</span></label>
-          <label><input type="radio" name="modo" value="propia" id="modo-propia" data-voice-field="modo"><span>Mis cuentas</span></label>
+          <label><input type="radio" name="modo" value="contacto" id="modo-contacto" checked data-voice-field="modo"><span data-en="A contact">Un contacto</span></label>
+          <label><input type="radio" name="modo" value="iban" id="modo-iban" data-voice-field="modo"><span data-en="Another IBAN">Otro IBAN</span></label>
+          <label><input type="radio" name="modo" value="propia" id="modo-propia" data-voice-field="modo"><span data-en="My accounts">Mis cuentas</span></label>
         </div>
       </fieldset>
-      <div class="field" data-when="contacto"><label for="contacto">Contacto</label><select id="contacto" name="contacto" data-voice-field="contacto" data-transfer-slot="recipient"></select><p class="hint mono" id="contacto-iban"></p><p class="error-text" id="contacto-error"></p></div>
+      <div class="field" data-when="contacto"><label for="contacto" data-en="Contact">Contacto</label><select id="contacto" name="contacto" data-voice-field="contacto" data-transfer-slot="recipient"></select><p class="hint mono" id="contacto-iban"></p><p class="error-text" id="contacto-error"></p></div>
       <div data-when="iban" hidden>
-        <div class="field"><label for="beneficiario">Titular</label><input id="beneficiario" name="beneficiario" autocomplete="off" placeholder="Nombre y apellidos" data-voice-field="beneficiario"><p class="error-text" id="beneficiario-error"></p></div>
+        <div class="field"><label for="beneficiario" data-en="Account holder">Titular</label><input id="beneficiario" name="beneficiario" autocomplete="off" placeholder="Nombre y apellidos" data-en-placeholder="Full name" data-voice-field="beneficiario"><p class="error-text" id="beneficiario-error"></p></div>
         <div class="field"><label for="iban">IBAN</label><input id="iban" name="iban" class="mono" inputmode="text" autocomplete="off" placeholder="ES00 0000 0000 0000 0000 0000" data-voice-field="iban" data-transfer-slot="iban"><p class="error-text" id="iban-error"></p></div>
       </div>
-      <div class="field" data-when="propia" hidden><label for="destino">Cuenta de destino</label><select id="destino" name="destino" data-voice-field="destino"></select></div>
-      <div class="field"><label for="importe">Importe</label><div class="money"><input id="importe" name="importe" inputmode="decimal" autocomplete="off" placeholder="0,00" data-voice-field="importe" data-transfer-slot="amountCents"><span aria-hidden="true">€</span></div><p class="error-text" id="importe-error"></p></div>
-      <div class="field"><label for="concepto">Concepto</label><input id="concepto" name="concepto" maxlength="140" autocomplete="off" placeholder="Por ejemplo: cena del viernes" data-voice-field="concepto" data-transfer-slot="concept"><p class="error-text" id="concepto-error"></p></div>
-      <div class="form-actions"><button class="btn btn-primary" type="submit" id="transfer-review">Revisar transferencia</button></div>
+      <div class="field" data-when="propia" hidden><label for="destino" data-en="Destination account">Cuenta de destino</label><select id="destino" name="destino" data-voice-field="destino"></select></div>
+      <div class="field"><label for="importe" data-en="Amount">Importe</label><div class="money"><input id="importe" name="importe" inputmode="decimal" autocomplete="off" placeholder="0,00" data-en-placeholder="0.00" data-voice-field="importe" data-transfer-slot="amountCents"><span aria-hidden="true">€</span></div><p class="error-text" id="importe-error"></p></div>
+      <div class="field"><label for="concepto" data-en="Reference">Concepto</label><input id="concepto" name="concepto" maxlength="140" autocomplete="off" placeholder="Por ejemplo: cena del viernes" data-en-placeholder="For example: Friday dinner" data-voice-field="concepto" data-transfer-slot="concept"><p class="error-text" id="concepto-error"></p></div>
+      <div class="form-actions"><button class="btn btn-primary" type="submit" id="transfer-review" data-en="Review transfer">Revisar transferencia</button></div>
     </div>
     <div data-pane="confirmar" hidden>
       <dl class="summary" id="transfer-summary"></dl>
       <p class="error-text" id="transfer-error" role="alert"></p>
-      <div class="form-actions"><button class="btn" type="button" id="transfer-back">Cambiar datos</button><button class="btn btn-primary" type="button" id="transfer-confirm">Confirmar y enviar</button></div>
+      <div class="form-actions"><button class="btn" type="button" id="transfer-back" data-en="Edit details">Cambiar datos</button><button class="btn btn-primary" type="button" id="transfer-confirm" data-en="Confirm and send">Confirmar y enviar</button></div>
     </div>
     <div data-pane="justificante" hidden>
       <div class="receipt" id="transfer-receipt" tabindex="-1"></div>
-      <div class="form-actions"><button class="btn" type="button" id="transfer-undo" hidden>Anular transferencia</button><button class="btn" type="button" id="receipt-print">Imprimir justificante</button><a class="btn btn-primary" href="/transferir" id="transfer-new">Nueva transferencia</a></div>
+      <div class="form-actions"><button class="btn" type="button" id="transfer-undo" data-en="Reverse transfer" hidden>Anular transferencia</button><button class="btn" type="button" id="receipt-print" data-en="Print receipt">Imprimir justificante</button><a class="btn btn-primary" href="/transferir" id="transfer-new" data-en="New transfer">Nueva transferencia</a></div>
     </div>
   </form>
-  <aside class="panel voice-slot" id="voz" data-voice-slot aria-label="Asistente de voz">
-    <button class="voice-close" type="button" id="voice-close" aria-label="Cerrar asistente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    <div id="voz-asistente" data-transfer-assistant="manual"></div>
-    <p class="voice-foot">Habla o escribe. Lo que entiende aparece en el formulario; nada se envía sin tu confirmación.</p>
+  <aside class="panel voice-slot" id="voz" data-voice-slot tabindex="-1" aria-label="Boltagon, asistente de voz" data-en-label="Boltagon, voice assistant">
+    <button class="voice-close" type="button" id="voice-close" aria-label="Cerrar asistente" data-en-label="Close assistant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="voice-content">
+      <div id="voz-asistente" data-transfer-assistant="manual"></div>
+      <p class="voice-foot" data-en="Speak or type. The assistant fills in the form for you. Confirm to send the transfer.">Habla o escribe. Lo que entiende aparece en el formulario; nada se envía sin tu confirmación.</p>
+    </div>
   </aside>
 </div>
 <script type="module" src="/assets/transfer.js"></script>

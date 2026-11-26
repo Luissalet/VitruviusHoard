@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Tesela · Banca personal</title>
-<meta name="description" content="Banca personal de prueba con datos simulados: cuentas, saldos, movimientos, transferencias y contactos.">
+<title data-en="Tesela · Personal banking">Tesela · Banca personal</title>
+<meta name="description" content="Banca personal de prueba con datos simulados: cuentas, saldos, movimientos, transferencias y contactos." data-en-content="A personal banking demo with simulated accounts, balances, transactions, transfers and contacts.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -14,31 +14,32 @@
 <script>try{const t=localStorage.getItem('tesela-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
-<a class="skip" href="#main">Saltar al contenido</a>
+<a class="skip" href="#main" data-en="Skip to content">Saltar al contenido</a>
 <header class="topbar">
-  <a class="brand" href="/" aria-label="Tesela, inicio">
+  <a class="brand" href="/" aria-label="Tesela, inicio" data-en-label="Tesela, home">
     <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2" opacity=".55"/><rect x="2" y="13" width="9" height="9" rx="2" opacity=".55"/><rect x="13" y="13" width="9" height="9" rx="4.5"/></svg>
     <span>Tesela</span>
   </a>
-  <nav class="mainnav" aria-label="Secciones">
-    <a href="/" data-nav="/">Resumen</a>
-    <a href="/transferir" data-nav="/transferir">Transferir</a>
-    <a href="/contactos" data-nav="/contactos">Contactos</a>
-    <a href="/movimientos" data-nav="/movimientos">Movimientos</a>
+  <nav class="mainnav" aria-label="Secciones" data-en-label="Sections">
+    <a href="/" data-nav="/" data-en="Overview">Resumen</a>
+    <a href="/transferir" data-nav="/transferir" data-en="Transfer">Transferir</a>
+    <a href="/contactos" data-nav="/contactos" data-en="Contacts">Contactos</a>
+    <a href="/movimientos" data-nav="/movimientos" data-en="Transactions">Movimientos</a>
   </nav>
   <div class="topbar-tools">
-    <span class="sim-chip" title="Banco, personas, cuentas e importes son inventados">Datos simulados</span>
-    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar entre tema claro y oscuro">
+    <span class="sim-chip" title="Banco, personas, cuentas e importes son inventados" data-en="Simulated data" data-en-title="The bank, people, accounts and amounts are fictional">Datos simulados</span>
+    <a class="voice-fab" id="voice-fab" href="/transferir#asistente" aria-label="Abrir el asistente" data-en-label="Open the assistant">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span class="voice-fab-label" data-en="Assistant">Asistente</span>
+    </a>
+    <a id="language-switch" class="icon-btn language-switch" href="?lang=en" lang="en" hreflang="en" aria-label="English">EN</a>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar entre tema claro y oscuro" data-en-label="Switch between light and dark themes">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
     </button>
   </div>
 </header>
 <main id="main">{{content}}</main>
-<a class="voice-fab" id="voice-fab" href="/transferir#asistente" aria-controls="voz" aria-expanded="false">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-  <span class="voice-fab-label">Asistente</span>
-</a>
-<footer class="foot"><p id="status" role="status" aria-live="polite"></p><p class="foot-note">Tesela es un banco ficticio. Ninguna cuenta, persona ni importe es real; aquí no se piden ni se guardan credenciales.</p></footer>
+<footer class="foot"><p id="status" role="status" aria-live="polite"></p><p class="foot-note" data-en="Tesela is a fictional bank. All accounts, people and amounts are simulated. This app never asks for or stores credentials.">Tesela es un banco ficticio. Ninguna cuenta, persona ni importe es real; aquí no se piden ni se guardan credenciales.</p></footer>
 <script type="module" src="/assets/bank.js"></script>
 </body>
 </html>

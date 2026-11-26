@@ -166,6 +166,32 @@ def test_native_api_and_tools(client):
     assert client.post(f"/api/app-projects/{id}/preview", json={"operation": "stop"}).json()["state"] == "stopped"
 
 
+def test_stable_preview_link_follows_the_running_project(client):
+    project = client.post("/api/app-projects", json={"name": "Preview link"}).json()
+    base = f"/api/app-projects/{project['id']}/preview"
+    stable = base + "/open"
+
+    stopped = client.get(stable, params={"lang": "es"}, follow_redirects=False)
+    assert stopped.status_code == 503 and "vista previa está detenida" in stopped.text
+    assert stopped.headers["cache-control"] == "no-store"
+    assert client.get("/api/app-projects/0000000000000000/preview/open").status_code == 404
+
+    def start_and_resolve():
+        running = client.post(base, json={"operation": "start"}).json()
+        assert running["open_path"] == stable
+        response = client.get(stable, params={"path": "/records?q=hola%20mundo"}, follow_redirects=False)
+        assert response.status_code == 307 and response.headers["cache-control"] == "no-store"
+        assert response.headers["location"] == running["url"] + "/records?q=hola%20mundo"
+        return running
+
+    first = start_and_resolve()
+    for invalid in ("https://example.test", "//example.test", "/\\example.test"):
+        assert client.get(stable, params={"path": invalid}, follow_redirects=False).status_code == 400
+    client.post(base, json={"operation": "stop"})
+    assert "The preview is stopped" in client.get(stable, follow_redirects=False).text
+    assert start_and_resolve()["session"] != first["session"]
+
+
 def test_app_render_retains_source_context(services):
     project = services.app_projects.create("Context board")
     try:
