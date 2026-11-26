@@ -15,6 +15,7 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
   const state = useRef({ mode, items });
   state.current = { mode, items };
   const origin = useRef(null);
+  const page = useRef(null); // the page path the selection was made on: a selection belongs to one page
   const projectId = project?.id;
   const running = preview?.state === "running" && Boolean(preview?.url);
 
@@ -47,23 +48,29 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
       if (event.data.type === "dock/inspector-ready") {
         // A reloaded page forgets: give it back the selection and the mode this page still holds.
         const held = state.current;
-        if (!selection.length && held.items.length) send("inspect/restore", { selectors: selectorsOf(held.items) });
+        const samePage = page.current === null || page.current === event.data.page;
+        page.current = event.data.page ?? null;
+        if (!samePage && held.items.length) { setItems([]); store([]); }
+        else if (!selection.length && held.items.length) send("inspect/restore", { selectors: selectorsOf(held.items) });
         if (held.mode && !pageMode) send("inspect/mode", { on: true });
-        if (selection.length) { setItems(selection); store(selection); }
+        if (selection.length && samePage) { setItems(selection); store(selection); }
         return;
       }
+      page.current = event.data.page ?? page.current;
       setMode(Boolean(pageMode)); setItems(selection); store(selection);
     };
     window.addEventListener("message", onMessage);
-    frame.addEventListener("load", hello);
-    hello();
+    frame.addEventListener("load", hello); // before it loads, the frame is still the empty document of this page: nothing to greet
     return () => { window.removeEventListener("message", onMessage); frame.removeEventListener("load", hello); };
   }, [running, preview?.url, projectId]);
 
   const toggle = () => { const next = !state.current.mode; setMode(next); send("inspect/mode", { on: next }); };
   useEffect(() => {
     if (!running) return undefined;
-    const onKey = (event) => { if (event.altKey && event.shiftKey && event.code === "KeyS") { event.preventDefault(); toggle(); } };
+    const onKey = (event) => {
+      if (event.altKey && event.shiftKey && event.code === "KeyS") { event.preventDefault(); toggle(); }
+      else if (event.key === "Escape" && state.current.mode) toggle(); // Esc leaves the mode from this page too, not only from inside the frame
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [running]);
@@ -78,7 +85,7 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
     </div>
     {items.length > 0 && <ul className="flex flex-wrap gap-2" aria-label={es ? "Elementos seleccionados" : "Selected elements"}>{items.map((item, index) => <li key={item.selector + index} className="chip chip-wrap chip-accent" style={{ alignItems: "flex-start" }}>
       <span><strong>{chipText(item, index)}</strong>{sourceText(item, es) && <><br /><span>{sourceText(item, es)}</span></>}{affectsText(item, es) && <><br /><span>{affectsText(item, es)}</span></>}</span>
-      <button type="button" className="underline" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send("inspect/remove", { index }); const next = items.filter((_, at) => at !== index); setItems(next); store(next); }}>×</button>
+      <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send("inspect/remove", { index }); const next = items.filter((_, at) => at !== index); setItems(next); store(next); }}>×</button>
     </li>)}</ul>}
   </div>;
 }

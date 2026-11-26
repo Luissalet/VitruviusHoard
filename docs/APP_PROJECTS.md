@@ -30,6 +30,23 @@ Inputs are checked against the declared field types and choices; text stays lite
 
 `design_critique` and `page_assay` can also open a loopback preview by URL. Assay uses the page in place so its relative assets remain available. Loopback assay reads the preview. Use the publication's synthetic form check to verify an inbox write. Set `VITRUVIUS_BROWSER_CHANNEL=chrome` to prefer the installed Chrome channel, for example on a machine with more than one supported channel.
 
+## Selecting elements on the preview
+
+With the preview open, **Select** (button, or `Alt+Shift+S`) turns on a selection mode over the framed page. Hovering outlines the element under the pointer with its tag and classes, and tints its margin, border and padding from `getComputedStyle`; a click selects it, `Shift`+click adds or removes one, `Tab`/`Enter` choose by keyboard, `Esc` leaves the mode. Outside the mode the page is used normally, and the overlay has no transitions under `prefers-reduced-motion`. The chips below the preview list what is selected (tag, class, text, source position, and "affects N elements" when several served elements share one source position); each chip has a remove button, and **Clear all** empties the list.
+
+Each selected element is described by a stable selector (`data-vid`, then `id`, then the shortest unique `tag:nth-of-type()` path), its visible text (up to 200 characters), its box in page coordinates, tag and classes, a few computed styles, `same_vsrc_count`, and its source position when the page carries one: `data-vsrc="file:line:column"`, or the position of the `{{marker}}` that generated it (`data-vgen`). A page without annotations still selects; the item then says it has no source position.
+
+The selection reaches the agent two ways: the copilot turn context carries a short summary of it, and the read-only tool `app_project_selection` (`id`) returns the full list of the open preview, so "change this" needs no description. An empty list says nothing is selected. The list is kept in memory per project, is replaced on every change, and is emptied when the preview stops or another project opens. It belongs to one page: following a link to another page clears it, while a reload of the same page (or a page that replaces its elements) keeps it.
+
+The script is `vitruvius_hoard/preview_inspector.js` (also served at `/api/app-projects/preview-inspector.js`; `preview_inspector.inspector_script()` returns its text). It is loaded only into the owned preview, next to the App Dock bridge, by whatever injects scripts into the preview pages; it is never part of an export, and `server.py` does not reference it. It has no dependencies and no vendored code.
+
+Messages use the bridge's envelope, `{hoardDock: 1, type, ...}`, and only travel between the preview frame and the Vitruvius page that frames it (the host checks source window and origin):
+
+- page → host: `dock/inspector-ready {mode, page, selection}`, and `dock/select {mode, page, selection}` after every change. `selection` is the whole list; each item is `{vsrc, vgen, selector, tag, classes, text, box: {x, y, w, h}, computed, same_vsrc_count}`.
+- host → page: `inspect/hello`, `inspect/mode {on}`, `inspect/clear`, `inspect/remove {index}`, `inspect/restore {selectors}`.
+
+`GET`/`PUT /api/app-projects/<id>/selection` read and store the list (the Vitruvius page stores it; the tool reads it).
+
 ## Booking pages
 
 Use `design_brief` to choose the direction, then call `app_project_create` with `template: "booking"`. Supply `items` with a stable lowercase `id`, `title`, `category` and optional `description` for each entry. A text value can be shared or supplied as an `{es, en}` pair. Set `lang: "es"` for Spanish on first load, with `description_es` for the introductory text and `description` for its English version. The site preserves the active category when switching languages.

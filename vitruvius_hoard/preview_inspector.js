@@ -92,10 +92,13 @@
   let selected = []; // elements, in the order they were chosen
   let hovered = null;
   let focusIndex = -1;
-  let layer; let root; let frame = 0;
+  const picked = new Map(); // element -> selector, so a page that re-renders can be followed
+  let layer; let root; let frame = 0; let watcher = 0;
 
   const post = (type, fields = {}) => { if (hostOrigin !== null) window.parent.postMessage({hoardDock: 1, type, ...fields}, hostOrigin); };
-  const report = () => post('dock/select', {mode, selection: selected.map(element => describeElement(element, env))});
+  const pageId = () => location.pathname + location.search;
+  const describe = element => { const item = describeElement(element, env); picked.set(element, item.selector); return item; };
+  const report = () => post('dock/select', {mode, page: pageId(), selection: selected.map(describe)});
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
   const candidates = () => [...document.body.querySelectorAll('*')].filter(element => !isOwn(element)
     && !['script', 'style', 'link', 'meta', 'head', 'noscript', 'template'].includes(tagOf(element))
@@ -138,7 +141,6 @@
       const label = tagOf(hovered) + (hovered.classList && hovered.classList.length ? '.' + [...hovered.classList].slice(0, 3).join('.') : '');
       html += `<div class="tag" style="left:${Math.max(0, r.left)}px;top:${r.top > 22 ? r.top - 20 : r.top + 2}px">${label.replace(/[<>&]/g, '')}</div>`;
     }
-    selected = selected.filter(element => element.isConnected);
     selected.forEach((element, index) => {
       const r = element.getBoundingClientRect();
       html += `<div class="box picked" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
@@ -147,6 +149,20 @@
     stage.innerHTML = html;
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
+  // When the page replaces elements (a live refresh), selected ones that left the document are looked up again by
+  // their selector, or dropped; the host is told only when the selection really changed.
+  function follow() {
+    watcher = 0;
+    if (!selected.some(element => !element.isConnected)) return;
+    const next = [];
+    for (const element of selected) {
+      let found = element;
+      if (!element.isConnected) { try { found = document.querySelector(picked.get(element) || ''); } catch (_) { found = null; } }
+      if (found && !next.includes(found)) next.push(found);
+    }
+    selected = next; schedule(); report();
+  }
+  new MutationObserver(() => { if (selected.length && !watcher) watcher = requestAnimationFrame(follow); }).observe(document.documentElement, {childList: true, subtree: true});
 
   function elementAt(event) {
     const hit = document.elementsFromPoint ? document.elementsFromPoint(event.clientX, event.clientY).find(element => !isOwn(element)) : event.target;
@@ -200,7 +216,7 @@
     const data = event.data;
     if (!data || data.hoardDock !== 1 || typeof data.type !== 'string' || !data.type.startsWith('inspect/')) return;
     hostOrigin = event.origin;
-    if (data.type === 'inspect/hello') post('dock/inspector-ready', {mode, selection: selected.map(element => describeElement(element, env))});
+    if (data.type === 'inspect/hello') post('dock/inspector-ready', {mode, page: pageId(), selection: selected.map(describe)});
     else if (data.type === 'inspect/mode') setMode(data.on);
     else if (data.type === 'inspect/clear') { selected = []; schedule(); report(); }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }
@@ -213,5 +229,5 @@
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', schedule);
   window.__vitruviusInspector = {version: 1, core};
-  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', {mode, selection: []}); } } catch (_) { /* the host will say hello */ }
+  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', {mode, page: pageId(), selection: []}); } } catch (_) { /* the host will say hello */ }
 })();
