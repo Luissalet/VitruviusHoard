@@ -1,0 +1,239 @@
+// Tesela transfer flow: data → confirm → receipt, through the project's atomic action `transferir`.
+// Voice/assistant anchors: every field has data-voice-field; window.teselaTransfer exposes the same steps a person takes.
+import {euros, groupIban, maskIban, loadBank, esc} from './bank.js';
+
+const form = document.getElementById('transfer-form');
+const $ = (id) => document.getElementById(id);
+let accounts = [];
+let contacts = [];
+let pending = null;
+
+/** Parses "1.234,56", "1234.56", "50" or "50,5" into integer cents; NaN when it is not an amount. */
+export function parseCents(text) {
+  let s = String(text ?? '').trim().replace(/\s|€/g, '');
+  if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  return Math.round(Number(s) * 100);
+}
+/** ISO 13616 check: country, check digits and mod 97 (Spain: 24 characters). */
+export function validIban(raw) {
+  const s = String(raw ?? '').replace(/\s+/g, '').toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(s)) return false;
+  if (s.startsWith('ES') && s.length !== 24) return false;
+  let rest = 0;
+  for (const ch of s.slice(4) + s.slice(0, 4)) {
+    for (const d of /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55)) rest = (rest * 10 + Number(d)) % 97;
+  }
+  return rest === 1;
+}
+/** Contacts whose name or alias contains every word given (accent-insensitive). Two matches mean the assistant must ask which. */
+export function findContacts(text) {
+  const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const words = norm(text).split(/\s+/).filter(Boolean);
+  return contacts.filter(c => words.every(w => norm(`${c.nombre} ${c.alias || ''}`).includes(w)));
+}
+const ERRORS = {insufficient_balance: 'Saldo insuficiente', ambiguous_reference: 'Hay más de una cuenta con ese IBAN', different_values: 'El origen y el destino son la misma cuenta',
+  not_found: 'No se encuentra la cuenta o el contacto', conflict: 'La operación ya no se puede repetir'};
+
+function fillSelects() {
+  const chosen = $('origen').value;
+  $('origen').innerHTML = accounts.map(a => `<option value="${esc(a.id)}">${esc(a.nombre)} · ${euros(a.disponible_cent)} disponibles</option>`).join('');
+  if (chosen) $('origen').value = chosen;
+  const contact = $('contacto').value;
+  $('contacto').innerHTML = '<option value="">Elige un contacto</option>' + contacts.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}${c.nota ? ' · ' + esc(c.nota) : ''}</option>`).join('');
+  if (contact) $('contacto').value = contact;
+  syncDestino(); syncContactIban();
+}
+function syncDestino() {
+  const from = $('origen').value;
+  const current = $('destino').value;
+  $('destino').innerHTML = accounts.filter(a => a.id !== from).map(a => `<option value="${esc(a.id)}">${esc(a.nombre)} · ${esc(maskIban(a.iban))}</option>`).join('');
+  if ([...$('destino').options].some(o => o.value === current)) $('destino').value = current;
+  const a = accounts.find(x => x.id === from);
+  $('origen-hint').textContent = a ? `${a.tipo} · ${maskIban(a.iban)}` : '';
+}
+const mode = () => form.querySelector('input[name="modo"]:checked')?.value || 'contacto';
+function syncMode() { for (const el of form.querySelectorAll('[data-when]')) el.hidden = el.dataset.when !== mode(); }
+function syncContactIban() {
+  const c = contacts.find(x => x.id === $('contacto').value);
+  $('contacto-iban').textContent = c ? groupIban(c.iban) : '';
+}
+
+/** Current form values, as an assistant would read them. importe is in cents. */
+export function fields() {
+  return {origen: $('origen').value, modo: mode(), contacto: $('contacto').value, beneficiario: $('beneficiario').value.trim(),
+    iban: $('iban').value.replace(/\s+/g, '').toUpperCase(), destino: $('destino').value, importe_cent: parseCents($('importe').value), concepto: $('concepto').value.trim()};
+}
+/** Field name → message for everything missing or wrong. Empty object = ready to review. */
+export function problems(v = fields()) {
+  const out = {};
+  const from = accounts.find(a => a.id === v.origen);
+  if (!from) out.origen = 'Elige la cuenta de origen.';
+  if (v.modo === 'contacto' && !v.contacto) out.contacto = 'Elige a quién envías el dinero.';
+  if (v.modo === 'iban') {
+    if (!v.beneficiario) out.beneficiario = 'Escribe el nombre del titular.';
+    if (!v.iban) out.iban = 'Escribe el IBAN de destino.';
+    else if (!validIban(v.iban)) out.iban = 'Este IBAN no es válido: revisa los dígitos.';
+    else if (from && from.iban === v.iban) out.iban = 'Es el IBAN de la cuenta de origen.';
+  }
+  if (v.modo === 'propia' && (!v.destino || v.destino === v.origen)) out.destino = 'Elige otra de tus cuentas.';
+  if (!Number.isFinite(v.importe_cent) || v.importe_cent <= 0) out.importe = 'Escribe un importe mayor que cero, por ejemplo 25,50.';
+  else if (from && v.importe_cent > from.disponible_cent) out.importe = `Saldo insuficiente: en ${from.nombre} hay ${euros(from.disponible_cent)} disponibles.`;
+  if (!v.concepto) out.concepto = 'Escribe un concepto.';
+  return out;
+}
+function showProblems(list) {
+  for (const name of ['contacto', 'beneficiario', 'iban', 'importe', 'concepto']) {
+    const el = $(name + '-error'); if (el) el.textContent = list[name] || '';
+    $(name)?.setAttribute('aria-invalid', list[name] ? 'true' : 'false');
+  }
+}
+function step(name) {
+  for (const pane of form.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== name;
+  for (const li of form.querySelectorAll('[data-step]')) {
+    if (li.dataset.step === name) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+  }
+  form.dataset.step = name;
+  document.dispatchEvent(new CustomEvent('tesela:transfer-step', {detail: {step: name, transfer: pending}}));
+}
+function recipient(v) {
+  if (v.modo === 'contacto') { const c = contacts.find(x => x.id === v.contacto); return {nombre: c.nombre, iban: c.iban}; }
+  if (v.modo === 'propia') { const a = accounts.find(x => x.id === v.destino); return {nombre: a.nombre, iban: a.iban, cuenta: a.id}; }
+  const own = accounts.find(a => a.iban === v.iban);
+  return {nombre: v.beneficiario, iban: v.iban, cuenta: own?.id};
+}
+
+/** Moves to the confirmation step when everything is valid; returns the problems otherwise. */
+export function review() {
+  const v = fields();
+  const list = problems(v);
+  showProblems(list);
+  if (Object.keys(list).length) return {ok: false, problems: list};
+  const from = accounts.find(a => a.id === v.origen);
+  pending = {...v, origen_nombre: from.nombre, origen_iban: from.iban, para: recipient(v), key: crypto.randomUUID()};
+  $('transfer-summary').innerHTML = `
+    <div><dt>Desde</dt><dd>${esc(from.nombre)}<span class="mono">${esc(maskIban(from.iban))}</span></dd></div>
+    <div><dt>Para</dt><dd>${esc(pending.para.nombre)}<span class="mono">${esc(groupIban(pending.para.iban))}</span></dd></div>
+    <div class="big"><dt>Importe</dt><dd>${euros(v.importe_cent)}</dd></div>
+    <div><dt>Concepto</dt><dd>${esc(v.concepto)}</dd></div>
+    <div><dt>Saldo después</dt><dd>${euros(from.saldo_cent - v.importe_cent)}</dd></div>
+    <div><dt>Llega</dt><dd>${pending.para.cuenta ? 'Al momento, entre tus cuentas' : 'Hoy, transferencia inmediata'}</dd></div>`;
+  $('transfer-error').textContent = '';
+  step('confirmar');
+  $('transfer-confirm').focus();
+  return {ok: true, transfer: pending};
+}
+
+async function post(url, body, key) {
+  const headers = {'Content-Type': 'application/json'};
+  if (key) headers['Idempotency-Key'] = key;
+  const response = await fetch(url, {method: 'POST', headers, body: JSON.stringify(body ?? {})});
+  const answer = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(ERRORS[answer.code] || answer.error || `Respuesta ${response.status}`), {code: answer.code});
+  return answer;
+}
+
+/** Sends the reviewed transfer with one call to the atomic action and shows the receipt. The same review retried keeps one charge. */
+export async function confirm() {
+  if (!pending) return {ok: false, problems: {transferencia: 'Revisa la transferencia antes de confirmarla.'}};
+  const button = $('transfer-confirm');
+  button.disabled = true; button.textContent = 'Enviando…';
+  const t = pending;
+  const input = {origen: t.origen, importe_cent: t.importe_cent, concepto: t.concepto, fecha: new Date().toLocaleDateString('sv-SE')};
+  if (t.modo === 'contacto') input.contacto = t.contacto;
+  else if (t.modo === 'propia') input.destino = t.destino;
+  else { input.iban = t.iban; input.beneficiario = t.beneficiario; }
+  try {
+    const result = await post('/api/actions/transferir', input, t.key);
+    const ref = 'TSL-' + input.fecha.replace(/-/g, '') + '-' + String(result.undo_token || t.key).replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase();
+    const now = new Intl.DateTimeFormat('es-ES', {dateStyle: 'long', timeStyle: 'short'}).format(new Date());
+    $('transfer-receipt').innerHTML = `<div class="receipt-ok" aria-hidden="true">✓</div><h2>Transferencia enviada</h2>
+      <p class="receipt-amount">${euros(t.importe_cent)}</p>
+      <dl class="summary">
+        <div><dt>Para</dt><dd>${esc(t.para.nombre)}<span class="mono">${esc(groupIban(t.para.iban))}</span></dd></div>
+        <div><dt>Desde</dt><dd>${esc(t.origen_nombre)}<span class="mono">${esc(groupIban(t.origen_iban))}</span></dd></div>
+        <div><dt>Concepto</dt><dd>${esc(t.concepto)}</dd></div>
+        <div><dt>Fecha</dt><dd>${esc(now)}</dd></div>
+        <div><dt>Referencia</dt><dd class="mono" id="receipt-ref">${esc(ref)}</dd></div>
+      </dl><p class="hint">Justificante de una operación simulada: no se ha movido dinero real.</p>
+      <p class="error-text" id="undo-status" role="status"></p>`;
+    const undo = $('transfer-undo');
+    undo.hidden = !result.undo_token;
+    undo.dataset.token = result.undo_token || '';
+    const done = {...t, referencia: ref, undo_token: result.undo_token};
+    pending = null;
+    step('justificante');
+    $('transfer-receipt').focus();
+    await refresh();
+    return {ok: true, transfer: done, receipt: result};
+  } catch (error) {
+    $('transfer-error').textContent = `No se ha enviado: ${error.message}.`;
+    if (error.code === 'insufficient_balance') await refresh();
+    return {ok: false, problems: {transferencia: error.message}, code: error.code};
+  } finally {
+    button.disabled = false; button.textContent = 'Confirmar y enviar';
+  }
+}
+
+/** Reverses the last sent transfer through its receipt (refused when newer movements depend on it). */
+export async function undoLast() {
+  const undo = $('transfer-undo');
+  const token = undo.dataset.token;
+  if (!token) return {ok: false};
+  undo.disabled = true;
+  try {
+    await post(`/api/action-receipts/${encodeURIComponent(token)}/undo`);
+    $('undo-status').textContent = 'Transferencia anulada: el dinero ha vuelto a la cuenta de origen.';
+    $('undo-status').classList.add('ok');
+    undo.hidden = true;
+    await refresh();
+    return {ok: true};
+  } catch (error) {
+    $('undo-status').textContent = `No se ha podido anular: ${error.message}.`;
+    return {ok: false, code: error.code};
+  } finally { undo.disabled = false; }
+}
+
+/** Sets any of origen, modo, contacto, beneficiario, iban, destino, importe (text or cents via importe_cent), concepto. Returns what is still missing. */
+export function set(values = {}) {
+  if (form.dataset.step !== 'datos') step('datos');
+  if (values.origen) { $('origen').value = values.origen; syncDestino(); }
+  const m = values.modo || (values.contacto ? 'contacto' : values.iban || values.beneficiario ? 'iban' : values.destino ? 'propia' : null);
+  if (m) { const r = form.querySelector(`input[name="modo"][value="${m}"]`); if (r) r.checked = true; syncMode(); }
+  if (values.contacto) { $('contacto').value = values.contacto; syncContactIban(); }
+  if (values.destino) $('destino').value = values.destino;
+  for (const name of ['beneficiario', 'iban', 'concepto']) if (values[name] != null) $(name).value = values[name];
+  if (values.importe_cent != null) $('importe').value = euros(values.importe_cent).replace(/ €$/, '');
+  else if (values.importe != null) $('importe').value = values.importe;
+  return problems();
+}
+export function reset() { form.reset(); pending = null; syncMode(); syncDestino(); syncContactIban(); showProblems({}); step('datos'); }
+
+async function refresh() {
+  try { ({accounts, contacts} = await loadBank()); $('transfer-load-error').hidden = true; }
+  catch (error) { $('transfer-load-error').hidden = false; $('transfer-load-error').textContent = `No se han podido cargar tus cuentas: ${error.message}.`; }
+  fillSelects();
+}
+
+if (form) {
+  syncMode();
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'modo') syncMode();
+    if (e.target.id === 'origen') syncDestino();
+    if (e.target.id === 'contacto') syncContactIban();
+  });
+  form.addEventListener('submit', (e) => { e.preventDefault(); review(); });
+  $('transfer-back').addEventListener('click', () => { step('datos'); $('importe').focus(); });
+  $('transfer-confirm').addEventListener('click', confirm);
+  $('transfer-undo').addEventListener('click', undoLast);
+  $('receipt-print').addEventListener('click', () => print());
+  await refresh();
+  const q = new URLSearchParams(location.search);
+  const pre = Object.fromEntries(['origen', 'modo', 'contacto', 'beneficiario', 'iban', 'destino', 'importe', 'concepto'].filter(k => q.get(k)).map(k => [k, q.get(k)]));
+  if (Object.keys(pre).length) set(pre);
+  window.teselaTransfer = {fields, problems, set, review, confirm, undo: undoLast, reset, findContacts, validIban, parseCents,
+    accounts: () => accounts, contacts: () => contacts};
+  document.dispatchEvent(new CustomEvent('tesela:transfer-ready'));
+}
