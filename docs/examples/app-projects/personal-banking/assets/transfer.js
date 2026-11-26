@@ -115,7 +115,7 @@ export function review({focus = true, via = 'formulario'} = {}) {
   showProblems(list);
   if (Object.keys(list).length) return {ok: false, problems: list};
   const from = accounts.find(a => a.id === v.origen);
-  pending = {...v, origen_nombre: from.nombre, origen_iban: from.iban, para: recipient(v), key: crypto.randomUUID()};
+  pending = {...v, origen_nombre: from.nombre, origen_iban: from.iban, para: recipient(v), key: crypto.randomUUID(), via};
   $('transfer-summary').innerHTML = `
     <div><dt>Desde</dt><dd>${esc(from.nombre)}<span class="mono">${esc(maskIban(from.iban))}</span></dd></div>
     <div><dt>Para</dt><dd>${esc(pending.para.nombre)}<span class="mono">${esc(groupIban(pending.para.iban))}</span></dd></div>
@@ -143,9 +143,16 @@ async function post(url, body, key) {
 /** Sends the reviewed transfer with one call to the atomic action and shows the receipt. The same review retried keeps one charge. */
 export async function confirm() {
   if (!pending) return {ok: false, problems: {transferencia: 'Revisa la transferencia antes de confirmarla.'}};
-  // A draft the assistant read is confirmed through the assistant, so voice and button share one execution and key.
-  if (voice?.ready()) { await voice.api.submit('confirmo'); return {ok: form.dataset.step === 'justificante', via: 'voz'}; }
+  // The confirmation runs exactly the reviewed draft. Only when the assistant read that same draft does it go
+  // through the assistant, so a spoken and a clicked confirmation share one execution and one key.
+  if (pending.via === 'voz' && voice?.matches(pending)) { await voice.api.submit('confirmo'); return {ok: form.dataset.step === 'justificante', via: 'voz'}; }
   try { return {ok: true, ...(await send(pending, pending.key))}; } catch (error) { return {ok: false, problems: {transferencia: error.message}, code: error.code}; }
+}
+
+/** Drops the reviewed draft: a confirmation needs a new review after any edit. */
+function expire() {
+  pending = null;
+  form.dataset.via = 'formulario';
 }
 
 /** Calls the atomic action once for a reviewed transfer and shows the receipt; throws with the action's code. */
@@ -246,10 +253,19 @@ function markMissing(state) {
   }
 }
 
+/** True when the assistant's draft and a set of form values describe the same transfer. */
+function sameDraft(d, v) {
+  if (!d || !d.recipient) return false;
+  const to = d.recipient.id ? v.modo === 'contacto' && v.contacto === d.recipient.id
+    : v.modo === 'iban' && v.iban === String(d.recipient.iban || '').replace(/\s+/g, '').toUpperCase();
+  return to && v.origen === d.source && v.importe_cent === d.amountCents && v.concepto === String(d.concept || '').trim();
+}
+
 function mountVoice() {
   const root = document.getElementById('voz-asistente');
   if (!root) return null;
   let last = '';
+  let draft = null;
   const api = mountTransferAssistant(root, {
     language: 'es',
     loadContext: async () => {
@@ -263,15 +279,21 @@ function mountVoice() {
       };
     },
     execute: async (draft, key) => {
+      if (!sameDraft(draft, fields())) throw Object.assign(new Error('Has cambiado el formulario: revisa la transferencia y confírmala desde el formulario'), {code: 'draft_changed'});
       const checked = review({focus: false, via: 'voz'});
       if (!checked.ok) throw Object.assign(new Error(Object.values(checked.problems)[0]), {code: 'invalid_input'});
       return (await send(checked.transfer, key)).receipt;
     },
     onDraft: (state) => {
       const r = state.slots.recipient;
+      const before = draft?.recipient;
+      draft = state.slots;
+      // Follow the recipient only when the assistant changes it: a later turn (such as the confirmation) must not undo
+      // a mode the person chose in the form.
+      const changedRecipient = r && (r.id || r.iban) !== (before?.id || before?.iban);
       const wanted = r ? (r.id ? 'contacto' : 'iban') : null;
-      if (wanted && mode() !== wanted) { form.querySelector(`input[name="modo"][value="${wanted}"]`).checked = true; syncMode(); }
-      if (wanted === 'iban') $('beneficiario').value = r.name || '';
+      if (changedRecipient && mode() !== wanted) { form.querySelector(`input[name="modo"][value="${wanted}"]`).checked = true; syncMode(); }
+      if (changedRecipient && wanted === 'iban') $('beneficiario').value = r.name || '';
       markMissing(state);
       if (state.phase !== 'ready' && form.dataset.step === 'confirmar' && form.dataset.via === 'voz') step('datos');
     },
@@ -283,18 +305,22 @@ function mountVoice() {
     last = phase;
     if (phase !== 'ready') return;
     let tries = 0;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const show = () => {
       if (root.dataset.transferPhase !== 'ready') return;
-      if (review({focus: false, via: 'voz'}).ok) $('transfer-summary').scrollIntoView({block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
-      else if (++tries < 12) setTimeout(show, 80);
+      // Wait while a field is still marked as just changed, so the last fill is seen before the summary replaces it.
+      if (form.querySelector('[data-transfer-changed]') && ++tries < 40) { setTimeout(show, 80); return; }
+      if (!review({focus: false, via: 'voz'}).ok) { if (++tries < 40) setTimeout(show, 80); return; }
+      if (matchMedia('(max-width: 900px)').matches) document.dispatchEvent(new CustomEvent('tesela:voice-sheet', {detail: {open: false}}));
+      requestAnimationFrame(() => $('transfer-confirm').scrollIntoView({block: 'end', behavior: reduce ? 'auto' : 'smooth'}));
     };
-    setTimeout(show, 60);
+    setTimeout(show, reduce ? 300 : 700);
   }).observe(root, {attributes: true, attributeFilter: ['data-transfer-phase']});
   // A field the assistant changes scrolls into the visible part of the page (above the sheet on a phone).
   new MutationObserver((records) => {
     for (const rec of records) if (rec.target.hasAttribute('data-transfer-changed')) rec.target.scrollIntoView({block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
   }).observe(form, {attributes: true, subtree: true, attributeFilter: ['data-transfer-changed']});
-  return {api, ready: () => root.dataset.transferPhase === 'ready'};
+  return {api, ready: () => root.dataset.transferPhase === 'ready', matches: (t) => root.dataset.transferPhase === 'ready' && sameDraft(draft, t)};
 }
 
 if (form) {
@@ -309,7 +335,8 @@ if (form) {
     const cents = parseCents($('importe').value);
     if (Number.isFinite(cents) && cents > 0) $('importe').value = amountText(cents);
   });
-  $('transfer-back').addEventListener('click', () => { step('datos'); $('importe').focus(); });
+  $('transfer-back').addEventListener('click', () => { expire(); step('datos'); $('importe').focus(); });
+  for (const type of ['input', 'change']) form.addEventListener(type, (e) => { if (e.isTrusted && e.target.closest('[data-pane="datos"]')) expire(); });
   $('transfer-confirm').addEventListener('click', confirm);
   $('transfer-undo').addEventListener('click', undoLast);
   $('receipt-print').addEventListener('click', () => print());

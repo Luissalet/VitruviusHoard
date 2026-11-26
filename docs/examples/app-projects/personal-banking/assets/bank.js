@@ -226,6 +226,7 @@ function voiceControl() {
     else { panel.scrollIntoView({block: 'nearest'}); panel.querySelector('input')?.focus(); }
   });
   document.getElementById('voice-close')?.addEventListener('click', () => { open(false); fab.focus(); });
+  document.addEventListener('tesela:voice-sheet', (e) => open(Boolean(e.detail?.open)));
   if (location.hash === '#asistente') {
     if (matchMedia('(max-width: 900px)').matches) open(true);
     else setTimeout(() => panel.querySelector('input')?.focus({preventScroll: true}), 120);

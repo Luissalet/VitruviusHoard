@@ -283,6 +283,7 @@ p.state.error { margin: 0 0 16px; padding: 12px 16px; background: var(--danger-s
   body[data-voice-open] .voice-fab { display: none; }
   body[data-voice-open] main { padding-bottom: 50vh; }
   body[data-voice-open] [data-transfer-slot], body[data-voice-open] #transfer-summary { scroll-margin-bottom: calc(44vh + 96px); scroll-margin-top: 84px; }
+  #transfer-confirm { scroll-margin-bottom: 148px; }
   .voice-slot .transfer-assistant { gap: .5rem; }
   .voice-slot .transfer-assistant__title { font-size: 1rem; padding-right: 44px; }
   .voice-slot .transfer-assistant__reply { font-size: .95rem; padding: 8px 12px; }

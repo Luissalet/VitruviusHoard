@@ -34,6 +34,8 @@ def test_example_declares_pages_and_valid_seed_data(store):
     rows = accounts(store)
     contacts = store.list("contactos")
     assert all(mod97(row["iban"]) for row in [*rows.values(), *contacts])
+    # Invented entity codes, absent from the Bank of Spain list of institutions.
+    assert {row["iban"][4:8] for row in [*rows.values(), *contacts]} == {"2471", "9471", "9472"}
     assert sum(1 for c in contacts if c["nombre"].startswith("María ")) == 2
     assert sum(row["saldo_cent"] for row in rows.values()) == 1556801
     assert all(row["disponible_cent"] == row["saldo_cent"] + row["limite_cent"] for row in rows.values())
