@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, FiniteFloat, model_validator
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .app_projects import templates as app_templates
+from .preview_inspector import read_selection
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -266,6 +267,10 @@ class AppSourceCountArgs(BaseModel):
 class AppUndoArgs(AppIdArgs):
     expected_revision: str
     expected_updated_ts: float
+
+
+class AppSelectionArgs(AppIdArgs):
+    clips: bool = Field(False, description="Include each element's clip as a data URL (large); by default only its size.")
 
 
 class AppPreviewArgs(AppIdArgs):
@@ -755,6 +760,12 @@ TOOLS: list[Tool] = [
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
+    Tool("app_project_selection",
+        "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\n"
+        "Each item has its source position (file, line), generated-by marker, text, HTML, box, styles, revision and a clip of the element: it is what \"this\" means. "
+        "`expired` lists chosen elements the served revision no longer has: do not act on them. "
+        "Sinónimos: elemento seleccionado, esto, lienzo.",
+        AppSelectionArgs, ann(True), lambda services, args: read_selection(services, args.id, args.revision, args.clips), capped=False),
     Tool("app_project_canvas_view", "Read the project's open preview and control refs. Leer el lienzo abierto.",
         CanvasViewArgs, ann(True),
         lambda services, args: services.app_projects.canvas.call(

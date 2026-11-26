@@ -3,7 +3,8 @@ import asyncio
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
 from .deps import services
@@ -11,6 +12,7 @@ from ..agent_tools import (
     AppCallArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
+from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
 
 router = APIRouter(prefix="/api/app-projects")
 
@@ -20,6 +22,8 @@ def execute(operation):
         return operation()
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
+    except StaleSelection as error:
+        raise HTTPException(409, str(error)) from error
     except (ValueError, OSError) as error:
         raise HTTPException(400, str(error)) from error
 
@@ -27,6 +31,26 @@ def execute(operation):
 @router.get("/templates")
 def template_list():
     return {"templates": templates()}
+
+
+class SelectionBody(BaseModel):
+    selection: list = []
+    revision: str | None = None
+
+
+@router.get("/preview-inspector.js")
+def preview_inspector():
+    return Response(inspector_script(), media_type="text/javascript", headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+
+@router.get("/{id}/selection")
+def selection_get(request: Request, id: str, revision: str | None = None):
+    return execute(lambda: read_selection(services(request), id, revision))
+
+
+@router.put("/{id}/selection")
+def selection_put(request: Request, id: str, body: SelectionBody):
+    return execute(lambda: write_selection(services(request), id, body.selection, body.revision))
 
 
 @router.get("")

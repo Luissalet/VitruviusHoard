@@ -16,7 +16,7 @@ async function request(method, path, { params, body } = {}) {
   } catch {
     data = { error: text };
   }
-  if (!response.ok) throw new Error((data && data.error) || `Error ${response.status}`);
+  if (!response.ok) throw Object.assign(new Error((data && data.error) || `Error ${response.status}`), { status: response.status });
   if (data?.download_url?.startsWith('/api/')) data.download_url='/design'+data.download_url;
   if (path.startsWith('/design/api/diagrams') && data?.files) data.files=Object.fromEntries(Object.entries(data.files).map(([k,v])=>[k,typeof v==='string'&&v.startsWith('/api/')?'/design'+v:v]));
   return data;
@@ -148,6 +148,8 @@ export const api = {
   appProjectPreview: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/preview`, { body }),
   appProjectExport: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/export`, { body }),
   appProjectRender: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/render`, { body }),
+  appProjectSelection: (id) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}/selection`),
+  appProjectSelectionSet: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}/selection`, { body }),
   referenceCollections: () => request("GET", "/design/api/reference-collections"),
   referenceImportCollection: (body) => request("POST", "/design/api/reference-collections/import", { body }),
   designPatterns: () => request("GET", "/design/api/design-patterns"),

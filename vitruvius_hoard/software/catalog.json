@@ -2012,6 +2012,40 @@
     "module": "design"
   },
   {
+    "name": "app_project_selection",
+    "description": "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\nEach item has its source position (file, line), generated-by marker, text, box and styles: it is what \"this\" means. Sinónimos: elemento seleccionado, esto, lienzo.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        }
+      },
+      "title": "AppIdArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_canvas_view",
     "description": "Read the project's open preview and control refs. Leer el lienzo abierto.",
     "annotations": {
