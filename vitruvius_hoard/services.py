@@ -29,6 +29,7 @@ from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
 from .preview_inspector import PreviewSelections
 from .app_runtime import validate_request_key
+from .preview_comments import PreviewComments
 from .instruments import Instruments
 from .config import Config
 from .db import Database
@@ -85,6 +86,7 @@ class Services:
 
         self.app_projects = AppProjects(config.data_dir, host_port=config.port)
         self.preview_selections = PreviewSelections()
+        self.preview_comments = PreviewComments(self.app_projects)
         self.alternatives = AlternativeStudies(self)
         self.instruments = Instruments(self.app_projects)
         self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")

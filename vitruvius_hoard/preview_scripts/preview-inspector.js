@@ -1,7 +1,10 @@
 // Vitruvius preview inspector. Loaded only into the owned preview of an application project (never into an export).
 // A person turns "select" mode on; hovering outlines the element under the pointer, a click selects it, Shift+click
 // adds or removes one, Esc leaves the mode. Every change posts the whole selection to the host page (the frame
-// parent) as {hoardDock: 1, type: 'dock/select', selection, mode}. Plain script: no build step, no dependencies.
+// parent) as {hoardDock: 1, type: 'dock/select', selection, mode}. A second mode, comment, picks one element for a note
+// ('dock/comment-target', with the served revision and a crop of the element) and paints the pins the host sends
+// ('inspect/pins') on the elements they were made on, reporting which of them it still finds ('dock/comment-anchors').
+// Plain script: no build step, no dependencies.
 (() => {
   'use strict';
   const MAX_TEXT = 200;
@@ -133,6 +136,46 @@
     return null;
   }
 
+  // Attributes that tell two look-alike elements apart (a link's address, an id): recorded with a comment and checked again.
+  const IDENTITY_ATTRS = ['id', 'href', 'data-vid', 'name', 'src', 'for'];
+  const MAX_PINS = 300; // the same limit per page as the server keeps (preview_comments.MAX_PER_PAGE)
+  // A long attribute (an address of hundreds of characters) is kept as its start plus a hash of the whole, so two values that
+  // differ only late are told apart and the stored value stays short. Recording and comparing both go through here.
+  function compactAttr(value) {
+    const text = String(value);
+    if (text.length <= 200) return text;
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 0x01000193) >>> 0; }
+    return `${text.slice(0, 160)}#${text.length}:${hash.toString(16)}`;
+  }
+  function identityAttrs(element) {
+    const found = {};
+    for (const name of IDENTITY_ATTRS) { const value = attrOf(element, name); if (value) found[name] = compactAttr(value); }
+    return found;
+  }
+  // Where a pinned comment's element is now. A pin names the element by its tag, its visible text and the attributes above;
+  // an explicit attribute that changed means another element, whatever the text says. On the revision the pin was made on a
+  // unique source position is enough; on any other revision source positions mean other lines, so the tag, a non-empty
+  // text (or an identity attribute) and, when several look alike, the place among the siblings must single one out.
+  // Otherwise the pin has no anchor: it is never moved to a neighbour. `all(selector)` lists the matching elements.
+  function locatePin(pin, all, pageRevision) {
+    const lost = {state: 'lost', element: null};
+    const attrs = pin.attrs && typeof pin.attrs === 'object' ? pin.attrs : {};
+    const attrsOk = element => IDENTITY_ATTRS.every(name => !attrs[name] || compactAttr(attrOf(element, name)) === attrs[name]);
+    const quote = value => String(value).replace(/["\\]/g, '\\$&');
+    try {
+      if (pin.revision && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) {
+        const here = all(`[data-vsrc="${quote(pin.vsrc)}"]`).filter(element => tagOf(element) === pin.tag && attrsOk(element));
+        if (here.length === 1) return {state: 'ok', element: here[0]};
+      }
+      if (!pin.text && !Object.keys(attrs).length) return lost;
+      let pick = all(String(pin.tag)).filter(element => tagOf(element) === pin.tag && textOf(element) === (pin.text || '') && attrsOk(element));
+      if (pick.length > 1 && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === pin.vsrc);
+      if (pick.length > 1 && typeof pin.parent === 'string') pick = pick.filter(element => { const at = relationOf(element); return at.parent === pin.parent && at.index === pin.index; });
+      return pick.length === 1 ? {state: 'ok', element: pick[0]} : lost;
+    } catch (_) { return lost; }
+  }
+
   // Who may talk to the inspector: only the frame's parent window, from the origin fixed at the start (the browser's
   // ancestor origin, or else the origin of the first hello). Returns the origin to keep, or null to ignore the message.
   function gate(known, event, parentWindow) {
@@ -142,7 +185,7 @@
     return event.origin === known ? known : null;
   }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -158,6 +201,10 @@
   let hostOrigin = null; // the origin of the page that frames this one: fixed by the browser, or by the first hello
   let hostLanguage;
   let mode = false;
+  let commenting = false;
+  let pins = []; // comments pinned on this page: {id, n, status, selector, vsrc, own_vsrc, tag, text, revision}
+  let draft = null; // the element a new comment is being written on
+  let flash = ''; let flashTimer = 0; let anchorKey = '';
   let selected = []; // elements, in the order they were chosen
   let hovered = null;
   let focusIndex = -1;
@@ -170,6 +217,7 @@
 
   const post = (type, fields = {}) => { if (hostOrigin !== null) window.parent.postMessage({hoardDock: 1, type, ...fields}, hostOrigin); };
   const pageId = () => location.pathname + location.search;
+  const sessionId = () => { const meta = document.querySelector('meta[name="vitruvius-preview-session"]'); return (meta && meta.content) || null; };
   const revision = () => { const meta = document.querySelector('meta[name="vitruvius-preview-revision"]'); return (meta && meta.content) || null; };
   const describe = element => {
     const item = {...describeElement(element, env), revision: revision()};
@@ -180,7 +228,8 @@
     return item;
   };
   // Live cards first, then the expired ones: they stay in the list, flagged, until the person removes them.
-  const snapshot = () => ({mode, page: pageId(), revision: revision(), selection: [...selected.map(describe), ...expired]});
+  const active = () => mode || commenting;
+  const snapshot = () => ({mode, comment_mode: commenting, page: pageId(), revision: revision(), selection: [...selected.map(describe), ...expired]});
   // A clip of the element (an SVG foreignObject drawn to a canvas), made once, off the report path; the list is reported again when it is ready.
   let clipTimer = 0;
   function wantClip(element) {
@@ -293,6 +342,12 @@
       .tag{position:absolute;max-width:60vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 11px/1.4 system-ui,sans-serif;
         background:#1a73e8;color:#fff;padding:1px 6px;border-radius:3px}
       .badge{position:absolute;min-width:18px;height:18px;border-radius:9px;background:#e8441a;color:#fff;font:700 11px/18px system-ui,sans-serif;text-align:center}
+      .pin{position:absolute;pointer-events:auto;cursor:pointer;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border:2px solid #fff;border-radius:10px;
+        font:700 11px/16px system-ui,sans-serif;color:#fff;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.45)}
+      .pin.s-pending{background:#b45309}.pin.s-seen{background:#1a73e8;box-shadow:0 0 0 2px #1a73e8,0 1px 3px rgba(0,0,0,.45)}
+      .pin.s-answered{background:#7b3fc4}.pin.s-resolved{background:#2e7d32}.pin.s-dismissed{background:#6b7280}
+      .pin.flash{outline:3px solid #111;outline-offset:2px}
+      .draft{outline:2px dashed #b45309;outline-offset:-1px;background:rgba(180,83,9,.10)}
       .fade{transition:opacity .12s} @media (prefers-reduced-motion:reduce){.fade{transition:none}}
     </style><div id="stage" aria-hidden="true"></div>`;
     document.documentElement.appendChild(layer);
@@ -881,7 +936,7 @@
     if (!layer) return;
     const stage = root.getElementById('stage');
     let html = '';
-    if (mode && hovered && hovered.isConnected) {
+    if (active() && hovered && hovered.isConnected) {
       const r = hovered.getBoundingClientRect(); const s = getComputedStyle(hovered);
       const m = ['Top', 'Right', 'Bottom', 'Left'].map(side => px(s['margin' + side]));
       const p = ['Top', 'Right', 'Bottom', 'Left'].map(side => px(s['padding' + side]));
@@ -897,7 +952,25 @@
       html += `<div class="box picked" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
       html += `<div class="badge" style="left:${Math.max(0, r.left - 6)}px;top:${Math.max(0, r.top - 9)}px">${index + 1}</div>`;
     });
+    if (draft && draft.isConnected) {
+      const r = draft.getBoundingClientRect();
+      html += `<div class="box draft" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
+    }
+    const anchors = []; const slots = new Map(); const now = revision();
+    for (const pin of pins) {
+      const found = locatePin(pin, all, now);
+      if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
+      const r = found.element.getBoundingClientRect();
+      const slot = slots.get(found.element) || 0; slots.set(found.element, slot + 1);
+      anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null,
+        box: {x: Math.round(r.left + window.scrollX), y: Math.round(r.top + window.scrollY), w: Math.round(r.width), h: Math.round(r.height)}});
+      if (!r.width && !r.height) continue;
+      const glyph = {resolved: '\u2713', answered: '?', dismissed: '\u00d7'}[pin.status] || '';
+      html += `<button type="button" class="pin s-${pin.status}${flash === pin.id ? ' flash' : ''}" data-pin="${pin.id}" style="left:${Math.max(0, r.right - 12 - slot * 24)}px;top:${Math.max(0, r.top - 10)}px" aria-label="${pin.n} ${pin.status}">${pin.n}${glyph}</button>`;
+    }
     stage.innerHTML = html;
+    const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || ''])]);
+    if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
     paintEdits();
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
@@ -920,9 +993,11 @@
   // or a selected element that left the document settles the selection.
   new MutationObserver(() => {
     if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
-    if (selected.length && !watcher) watcher = requestAnimationFrame(() => {
+    if ((selected.length || pins.length || draft) && !watcher) watcher = requestAnimationFrame(() => {
       watcher = 0;
-      if (selected.some(element => !element.isConnected) || revision() !== lastRevision) settle();
+      if (draft && !draft.isConnected) draft = null;
+      if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
+      if (pins.length || draft) schedule();
     });
   }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
 
@@ -941,17 +1016,30 @@
 
   const swallow = event => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.(); };
   function onMove(event) {
-    if (!mode || edits?.hit(event)) return;
+    if (!active() || (mode && edits?.hit(event))) return;
     const element = elementAt(event);
     if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); }
   }
+  const pinOf = event => { const path = event.composedPath ? event.composedPath() : []; const pin = path.find(node => node && node.dataset && node.dataset.pin); return pin ? pin.dataset.pin : null; };
+  // The crop is the clip the selection already makes (captureClip); a page that cannot draw it gives none, and the comment is kept anyway.
+  async function pickForComment(element) {
+    draft = element; hovered = null; schedule();
+    const item = {...describeElement(element, env), revision: revision()};
+    let clip = null;
+    try { clip = await captureClip(element); } catch (_) { clip = null; }
+    if (draft === element) post('dock/comment-target', {page: pageId(), revision: item.revision, element: item, crop: clip ? clip.data_url : null, attrs: identityAttrs(element)});
+  }
   function onClick(event) {
-    if (!mode || edits?.hit(event)) return;
+    const pin = pinOf(event);
+    if (pin) { swallow(event); post('dock/comment-focus', {page: pageId(), revision: revision(), id: pin}); return; }
+    if (!active() || (mode && edits?.hit(event))) return;
     swallow(event);
+    if (commenting) { const target = elementAt(event); if (target) pickForComment(target); return; }
     if (event.detail <= 1) choose(elementAt(event), event.shiftKey);
   }
   function onBlock(event) {
-    if (!mode) return;
+    if (!active() || pinOf(event)) return;
+    if (commenting) { event.preventDefault(); event.stopPropagation(); return; }
     const hitOverlay = edits?.hit(event);
     if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
       const element = edits?.doubleClick(event, hitOverlay);
@@ -963,24 +1051,28 @@
   }
   function onKey(event) {
     if (event.altKey && event.shiftKey && event.code === 'KeyS') { event.preventDefault(); setMode(!mode); return; }
-    if (!mode || (edits?.hit(event) && (event.key !== 'Escape' || edits.editing()))) return;
-    if (event.altKey && event.key === 'Enter' && selected.length === 1 && edits) {
+    if (event.altKey && event.shiftKey && event.code === 'KeyC') { event.preventDefault(); setMode(!commenting, 'comment'); return; }
+    if (!active() || (mode && edits?.hit(event) && (event.key !== 'Escape' || edits.editing()))) return;
+    if (mode && event.altKey && event.key === 'Enter' && selected.length === 1 && edits) {
       swallow(event); edits.focus(); return;
     }
-    if (event.key === 'Escape') { swallow(event); setMode(false); return; }
+    if (event.key === 'Escape') { swallow(event); setMode(false, commenting ? 'comment' : 'select'); return; }
     if (event.key === 'Tab') {
       swallow(event);
       const list = candidates(); if (!list.length) return;
       focusIndex = (focusIndex + (event.shiftKey ? -1 : 1) + list.length) % list.length;
       hovered = list[focusIndex]; hovered.scrollIntoView?.({block: 'nearest', behavior: reduced() ? 'auto' : 'smooth'}); schedule();
-    } else if (event.key === 'Enter' && hovered) { swallow(event); choose(hovered, event.shiftKey); }
+    } else if (event.key === 'Enter' && hovered) { swallow(event); if (commenting) pickForComment(hovered); else choose(hovered, event.shiftKey); }
   }
 
-  function setMode(on) {
-    mode = Boolean(on);
+  // Select and Comment exclude each other: turning one on turns the other off.
+  function setMode(on, kind = 'select') {
+    if (kind === 'comment') { commenting = Boolean(on); if (commenting) mode = false; } else { mode = Boolean(on); if (mode) commenting = false; }
     ensureLayer();
-    if (!mode) { hovered = null; edits?.cancel(); }
-    setCursor(mode);
+    if (!active()) hovered = null;
+    if (!mode) edits?.cancel();
+    if (!commenting) draft = null;
+    setCursor(active());
     schedule(); report();
   }
 
@@ -1007,7 +1099,22 @@
       hostLanguage = data.lang;
       edits?.setLanguage(hostLanguage);
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
-    else if (data.type === 'inspect/mode') setMode(data.on);
+    else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select');
+    else if (data.type === 'inspect/pins') {
+      const states = ['pending', 'seen', 'answered', 'resolved', 'dismissed']; const text = value => (typeof value === 'string' ? value : '');
+      pins = (Array.isArray(data.pins) ? data.pins : []).slice(0, MAX_PINS).filter(pin => pin && typeof pin.id === 'string' && Number.isInteger(pin.n))
+        .map(pin => ({id: pin.id, n: pin.n, status: states.includes(pin.status) ? pin.status : 'pending', selector: text(pin.selector), vsrc: text(pin.vsrc),
+          own_vsrc: pin.own_vsrc === true, tag: text(pin.tag), text: text(pin.text), revision: text(pin.revision),
+          attrs: pin.attrs && typeof pin.attrs === 'object' ? Object.fromEntries(IDENTITY_ATTRS.filter(name => typeof pin.attrs[name] === 'string').map(name => [name, pin.attrs[name]])) : {},
+          parent: typeof pin.parent === 'string' ? pin.parent : undefined, index: Number.isInteger(pin.index) ? pin.index : 0}));
+      ensureLayer(); anchorKey = ''; schedule();
+    }
+    else if (data.type === 'inspect/draft-clear') { draft = null; schedule(); }
+    else if (data.type === 'inspect/pin-focus') {
+      const pin = pins.find(entry => entry.id === data.id);
+      const found = pin && locatePin(pin, all, revision());
+      if (found && found.element) { found.element.scrollIntoView?.({block: 'center', behavior: reduced() ? 'auto' : 'smooth'}); flash = pin.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash = ''; schedule(); }, 1600); schedule(); }
+    }
     else if (data.type === 'inspect/clear') { selected = []; expired = []; schedule(); report(); }
     else if (data.type === 'inspect/dismiss') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < expired.length) { expired.splice(at, 1); report(); } }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }

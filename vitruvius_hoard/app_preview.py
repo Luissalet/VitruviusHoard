@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import threading
+import uuid
 from contextlib import closing
 from html import escape
 from html.parser import HTMLParser
@@ -33,7 +34,7 @@ class _DocumentEnds(HTMLParser):
             self.body_end = self.getpos()
 
 
-def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "") -> str:
+def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", session: str = "") -> str:
     parser = _DocumentEnds()
     try:
         parser.feed(source)
@@ -53,6 +54,8 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "") ->
     includes = "".join(f'<script defer src="{SCRIPT_ROOT}{name}"></script>' for name in scripts)
     if revision:
         meta = f'<meta name="vitruvius-preview-revision" content="{escape(revision, quote=True)}">'
+        if session:  # which opening of the preview this page came from: it outlives the live refresh, a stop and a new start changes it
+            meta += f'<meta name="vitruvius-preview-session" content="{escape(session, quote=True)}">'
         head = index(parser.head_end)
         if head < body:
             return source[:head] + meta + source[head:body] + includes + source[body:]
@@ -63,6 +66,7 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "") ->
 class PreviewProxy:
     def __init__(self, host_port: int):
         self.backend: tuple[int, str] | None = None
+        self.session = uuid.uuid4().hex[:16]  # one per opening of the preview (the proxy lives until it is stopped)
         scripts = {"app-bridge.js": BRIDGE_JS.encode("utf-8")}
         for name in PREVIEW_SCRIPTS:
             path = SCRIPT_DIR / name
@@ -132,7 +136,7 @@ class PreviewProxy:
                 if self.command == "GET" and response.headers.get_content_type() == "text/html":
                     charset = response.headers.get_content_charset() or "utf-8"
                     try:
-                        payload = inject_scripts(payload.decode(charset), tuple(scripts), revision).encode(charset)
+                        payload = inject_scripts(payload.decode(charset), tuple(scripts), revision, proxy.session).encode(charset)
                     except (UnicodeError, LookupError):
                         pass
                 extra = [(key, value) for key, value in response.headers.items() if key.lower() in {
@@ -140,6 +144,7 @@ class PreviewProxy:
                     "x-frame-options", "set-cookie",
                 }]
                 extra.append(("X-Vitruvius-Revision", revision))
+                extra.append(("X-Vitruvius-Session", proxy.session))
                 if location := response.headers.get("Location"):
                     location = re.sub(rf"^http://127\.0\.0\.1:{backend_port}(?=/|$)", proxy.url, location)
                     extra.append(("Location", location))

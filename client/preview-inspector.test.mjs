@@ -184,3 +184,57 @@ test("the inspector listens only to its parent, from an origin fixed once", () =
   assert.equal(gate("http://a.test", message("inspect/hello", "http://evil.test"), parent), null);
   assert.equal(gate("http://a.test", { source: parent, origin: "http://a.test", data: { hoardDock: 1, type: "dock/ready" } }, parent), null, "not an inspect/ message");
 });
+
+test("a pinned comment keeps its identity: attributes first, then source position or tag and text, never a look-alike", () => {
+  const { locatePin } = context.VitruviusInspectorCore;
+  const el = (tag, attrs, text, parent = null) => { const e = node(tag, attrs, [], text); if (parent) { parent.children.push(e); e.parentElement = parent; } return e; };
+  const lookup = (table) => (selector) => { if (!(selector in table)) throw new Error("bad selector"); return table[selector]; };
+  const vs = (v) => `[data-vsrc="${v}"]`;
+  const pin = { selector: vs("pages/index.html:2:10"), vsrc: "pages/index.html:2:10", own_vsrc: true, tag: "a", text: "Details", revision: "r1", attrs: { id: "details-archive", href: "/records?view=archive" } };
+  const archive = el("a", { "data-vsrc": "pages/index.html:2:10", id: "details-archive", href: "/records?view=archive" }, "Details");
+  const current = el("a", { "data-vsrc": "pages/index.html:2:10", id: "details-current", href: "/records?view=current" }, "Details");
+  // same revision: the unique source position with the same attributes
+  assert.equal(locatePin(pin, lookup({ [vs("pages/index.html:2:10")]: [archive] }), "r1").element, archive);
+  // the link was replaced by another with the same text and another id and address: no anchor, in any revision
+  const sameRevision = locatePin(pin, lookup({ [vs("pages/index.html:2:10")]: [current], a: [current] }), "r1");
+  assert.equal(sameRevision.state, "lost"); assert.equal(sameRevision.element, null);
+  assert.equal(locatePin(pin, lookup({ a: [current] }), "r2").state, "lost");
+  // another revision, the same link moved: found by tag, text and attributes
+  const moved = el("a", { "data-vsrc": "pages/index.html:9:3", id: "details-archive", href: "/records?view=archive" }, "Details");
+  assert.equal(locatePin(pin, lookup({ a: [current, moved] }), "r2").element, moved);
+  // without attributes: tag and text decide on another revision; a changed text or an ambiguous one is no anchor
+  const plain = { selector: "h1", vsrc: "pages/index.html:1:1", own_vsrc: true, tag: "h1", text: "Original heading", revision: "r1" };
+  const heading = el("h1", { "data-vsrc": "pages/index.html:7:10" }, "Different heading");
+  assert.equal(locatePin(plain, lookup({ h1: [heading] }), "r2").state, "lost");
+  const same = el("h1", { "data-vsrc": "pages/index.html:3:3" }, "Original heading");
+  assert.equal(locatePin(plain, lookup({ h1: [heading, same] }), "r2").element, same);
+  assert.equal(locatePin(plain, lookup({ h1: [same, el("h1", {}, "Original heading")] }), "r2").state, "lost");
+  assert.equal(locatePin({ ...plain, text: "" }, lookup({ h1: [same] }), "r2").state, "lost");
+  // a repeated element is told apart by its place among the siblings
+  const list = node("ul", { "data-vsrc": "pages/index.html:3:1" }, [], "");
+  const first = el("li", {}, "Row", list); const second = el("li", {}, "Row", list);
+  const rowPin = { selector: "li", tag: "li", text: "Row", revision: "r1", own_vsrc: false, parent: "ul|pages/index.html:3:1", index: 1 };
+  assert.equal(locatePin(rowPin, lookup({ li: [first, second] }), "r2").element, second);
+});
+
+test("the identity attributes of an element are the ones that tell look-alikes apart", () => {
+  const { identityAttrs } = context.VitruviusInspectorCore;
+  const found = identityAttrs(node("a", { id: "x", href: "/y", class: "btn", "data-vsrc": "p:1:1" }, [], "T"));
+  assert.equal(found.id, "x"); assert.equal(found.href, "/y"); assert.equal(found.class, undefined); assert.equal(found["data-vsrc"], undefined);
+});
+
+test("a very long address keeps its pin, and an address that differs only late is another link", () => {
+  const { locatePin, identityAttrs, compactAttr } = context.VitruviusInspectorCore;
+  const base = "/records?view=archive&" + "filter=".padEnd(300, "x");
+  const link = (href) => node("a", { id: "long", href }, [], "Details");
+  const original = link(base + "&tail=1");
+  assert.equal(base.length + 7 > 300, true);
+  const recorded = identityAttrs(original);
+  assert.equal(recorded.href.length < 220, true, "the stored value stays short");
+  assert.equal(compactAttr("short"), "short");
+  const pin = { selector: "#long", tag: "a", text: "Details", revision: "r1", own_vsrc: false, attrs: recorded };
+  const lookup = (table) => (selector) => { if (!(selector in table)) throw new Error("bad selector"); return table[selector]; };
+  assert.equal(locatePin(pin, lookup({ a: [original] }), "r1").element, original, "the intact link is found again");
+  const later = link(base + "&tail=2");
+  assert.equal(locatePin(pin, lookup({ a: [later] }), "r1").state, "lost", "a link that differs only after character 300 is not the same");
+});

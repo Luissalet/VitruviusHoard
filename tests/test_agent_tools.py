@@ -46,7 +46,8 @@ def test_read_only_hints_correct():
                   "visual_parity", "visual_parity_delete", "design_gallery_ingest",
                   "remake_start", "remake_continue", "remake_stop", "remake_delete"}
     read_only_names.update({"benchmark_catalog", "benchmark_get", "benchmark_list", "benchmark_compare"})
-    read_only_names.add("app_project_selection")
+    read_only_names.update({"app_project_selection", "app_project_comments"})
+    write_names.update({"app_project_comment_ack", "app_project_comment_resolve", "app_project_comment_reply", "app_project_comment_dismiss", "app_project_comment_undo"})
     write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
     read_only_names.add("app_project_source_count")
     write_names.update({"app_project_edit_source", "app_project_canvas_edit"})

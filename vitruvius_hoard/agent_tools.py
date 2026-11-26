@@ -11,6 +11,7 @@ from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_to
 from .services import Services
 from .app_projects import templates as app_templates
 from .preview_inspector import read_selection
+from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -290,6 +291,40 @@ class AppSourceCountArgs(BaseModel):
     id: str = ""
     vsrc: str
     path: str = Field("/", description="Page path and optional query in the running preview.")
+
+
+class AppCommentListArgs(BaseModel):
+    id: str = ""
+    status: Literal["open", "pending", "seen", "answered", "resolved", "dismissed", "lost", "all"] = "open"
+
+
+class AppCommentAckArgs(BaseModel):
+    id: str = ""
+    comment_ids: list[str] = Field(max_length=50)
+
+
+class AppCommentTextArgs(BaseModel):
+    id: str = ""
+    comment_id: str
+    text: str = Field(min_length=1, max_length=1200)
+
+
+class AppCommentResolveArgs(BaseModel):
+    id: str = ""
+    comment_id: str
+    summary: str = Field(min_length=1, max_length=1200)
+    revision: Optional[str] = None
+
+
+class AppCommentDismissArgs(BaseModel):
+    id: str = ""
+    comment_id: str
+    reason: str = Field(default="", max_length=1200)
+
+
+class AppCommentUndoArgs(BaseModel):
+    id: str = ""
+    comment_id: str
 
 
 class AppUndoArgs(AppIdArgs):
@@ -806,6 +841,31 @@ TOOLS: list[Tool] = [
             args.id, "app_read", {"scope": args.scope, "max_chars": args.max_chars}, args.actor.model_dump(exclude_none=True))),
     Tool("app_project_canvas_act", "Act on the open preview with a named cursor. Actuar en el lienzo abierto.",
         CanvasActArgs, ann(False, True, False), run_app_project_canvas_act),
+    Tool("app_project_comments",
+        "List the comments the person pinned on the application preview. Listar comentarios de la vista previa.\n"
+        "Default status \"open\" is what waits for you (pending and seen). Each comment has its note, the element it is pinned to (source position, "
+        "selector, box), the revision it was made on (`stale` when the project moved on) and `anchor.state` (\"lost\" when the element is gone). "
+        "Sinónimos: comentarios anclados, pendientes del lienzo, notas.",
+        AppCommentListArgs, ann(True), lambda services, args: list_comments(services, args.id, args.status), capped=False),
+    Tool("app_project_comment_ack",
+        "Mark pending comments as seen by you. Reconocer comentarios de la vista previa.\n"
+        "Do this first: resolve, reply and dismiss only work on seen comments; a batch is all or nothing. Undo with app_project_comment_undo.",
+        AppCommentAckArgs, ann(False, False, True), lambda services, args: acknowledge_comments(services, args.id, args.comment_ids), capped=False),
+    Tool("app_project_comment_resolve",
+        "Resolve a comment with a summary of what you changed. Resolver comentario de la vista previa.\n"
+        "Needs the comment seen (app_project_comment_ack). The summary is shown next to the pin; the comment records the project revision that holds the change. Undo with app_project_comment_undo.",
+        AppCommentResolveArgs, ann(False, False, True), lambda services, args: resolve_comment(services, args.id, args.comment_id, args.summary, args.revision), capped=False),
+    Tool("app_project_comment_reply",
+        "Answer a comment with a question instead of a change. Contestar comentario de la vista previa.\n"
+        "Needs the comment seen. The person replies and it becomes pending again. Undo with app_project_comment_undo.",
+        AppCommentTextArgs, ann(False, False, True), lambda services, args: reply_to_comment(services, args.id, args.comment_id, args.text), capped=False),
+    Tool("app_project_comment_dismiss",
+        "Dismiss a comment that needs no change, with the reason. Descartar comentario de la vista previa.\n"
+        "Needs the comment seen. Nothing is deleted: it stays listed as dismissed and can be reopened. Undo with app_project_comment_undo.",
+        AppCommentDismissArgs, ann(False, False, True), lambda services, args: dismiss_comment(services, args.id, args.comment_id, args.reason), capped=False),
+    Tool("app_project_comment_undo",
+        "Undo the last step of a comment. Deshacer el último paso de un comentario de la vista previa.",
+        AppCommentUndoArgs, ann(False, False, False), lambda services, args: undo_comment(services, args.id, args.comment_id), capped=False),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
