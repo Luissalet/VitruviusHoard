@@ -11,16 +11,16 @@ const COPY = {
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
     written_replies: "Respuestas por escrito.",
-    dictation_common: "Dictado mediante el servicio común de Cyrano.",
-    dictation_app: "Dictado mediante la app de Cyrano.",
-    dictation_fallback: "Cyrano no responde. Se usa el análisis local de la página.",
+    dictation_common: name => `Dictado mediante el servicio común de ${name}.`,
+    dictation_app: name => `Dictado mediante la app de ${name}.`,
+    dictation_fallback: name => `${name} no responde. Se usa el análisis local de la página.`,
     empty: "No se ha entendido la frase. Prueba de nuevo o escríbela.",
     data: "No se han podido cargar las cuentas y los contactos. Vuelve a enviar el mensaje.",
     executing: "Confirmando la transferencia…", success: "Transferencia simulada realizada.",
     rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
     balance: "El saldo es insuficiente para este importe.",
     trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta"],
-    local_parser: "Análisis local", text_only: "Respuesta escrita", natural_voice: "Caché de voz natural (Cyrano/Prospero mañana)",
+    local_parser: "Análisis local", text_only: "Respuesta escrita", natural_voice: "Caché de voz natural",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
@@ -31,9 +31,9 @@ const COPY = {
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
     written_replies: "Written replies.",
-    dictation_common: "Dictation via the shared Cyrano service.",
-    dictation_app: "Dictation via the Cyrano app.",
-    dictation_fallback: "Cyrano is unavailable. This page is interpreting your input locally.",
+    dictation_common: name => `Dictation via the shared ${name} service.`,
+    dictation_app: name => `Dictation via the ${name} app.`,
+    dictation_fallback: name => `${name} is unavailable. This page is interpreting your input locally.`,
     empty: "The speech was unclear. Try again or type your reply.",
     data: "Accounts and contacts could not load. Send the message again.",
     executing: "Confirming the transfer…", success: "Simulated transfer complete.",
@@ -110,6 +110,7 @@ export function mountTransferAssistant(root, options = {}) {
   let message = copy.start;
   let phraseId = "saludo";
   let voicePhrases;
+  let dictationName = "cyrano";
   let speech;
   let requestKey;
   let mic;
@@ -171,8 +172,9 @@ export function mountTransferAssistant(root, options = {}) {
     element.hidden = !text;
   }
 
-  function showDictation(route) {
-    show(dictationStatus, copy["dictation_" + route] || copy.dictation_fallback);
+  function showDictation(route, name) {
+    dictationName = name || dictationName;
+    show(dictationStatus, (copy["dictation_" + route] || copy.dictation_fallback)(dictationName));
   }
 
   function paint() {
@@ -318,21 +320,23 @@ export function mountTransferAssistant(root, options = {}) {
     const command = isTransferCommand(text);
     if (!spoken && !recipientChoice && !command) {
       interpretation = await understandText(text, state, context, locale);
-      showDictation(interpretation?.dictation_route);
+      showDictation(interpretation?.dictation_route, interpretation?.dictation_name);
     }
     if (version !== formVersion || sending) return false;
     const currentTrace = ++traceTurn;
     traceList.replaceChildren();
     traceRows.clear();
     trace.hidden = true;
-    if (spoken && timing) track(currentTrace, 0, "Funes / Talos", timing.transcriptionMs);
+    if (spoken && timing) track(currentTrace, 0, timing.transcriptionProvider, timing.transcriptionMs);
     const previous = state.slots;
     const previousPhase = state.phase;
     const previousNext = state.next;
     const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
     const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation, recipientChoice});
     if (!command && !recipientChoice) {
-      track(currentTrace, 1, interpretation ? "Cyrano" : copy.local_parser,
+      const name = interpretation?.dictation_name || dictationName;
+      const label = name.replace(/['’]s Hoard$/iu, "").trimEnd() || name;
+      track(currentTrace, 1, interpretation ? label : copy.local_parser,
         timing?.understandingMs ?? performance.now() - understandingAt);
     }
     state = turn.state;
@@ -394,7 +398,7 @@ export function mountTransferAssistant(root, options = {}) {
       voiceCheck = voiceAvailability().catch(() => null).then(available => {
         dictation = Boolean(available?.dictation);
         voicePhrases = available ? available.voice_phrases || {} : undefined;
-        showDictation(available?.dictation_route);
+        showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
         show(voiceStatus, available?.tts ? "" : copy.written_replies);
@@ -415,7 +419,7 @@ export function mountTransferAssistant(root, options = {}) {
     language: locale,
     finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
-    request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale, dictation}),
+    request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale}),
     beforeStart: async () => {
       stopPlayback();
       show(transcript);
@@ -431,10 +435,11 @@ export function mountTransferAssistant(root, options = {}) {
     onPartial: result => show(transcript, provisional + " · " + result.text),
     onFinal: (result, timing) => {
       if (result.interpretation && result.interpretation.is_final !== true) return;
-      showDictation(result.interpretation?.dictation_route);
+      showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {
-        ...timing, inputProvider: result.provider, transcriptionMs: result.transcriptionMs,
+        ...timing, inputProvider: result.provider, transcriptionProvider: result.transcriptionProvider,
+        transcriptionMs: result.transcriptionMs,
         understandingMs: result.understandingMs,
       }, interpretation: result.interpretation});
       else show(captureStatus, copy.empty);
