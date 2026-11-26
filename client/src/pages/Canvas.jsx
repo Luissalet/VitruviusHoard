@@ -150,9 +150,9 @@ export default function Canvas({ param }) {
         </div>
         <div className="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start">
           <PreviewFrames frames={frames} frameRef={attachFrame} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
-          <aside className="flex flex-col gap-3" aria-label={es ? "Selección" : "Selection"}>
+          <section className="min-w-0 flex flex-col gap-3" aria-label={es ? "Selección" : "Selection"}>
             <PreviewSelection project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} />
-          </aside>
+          </section>
         </div>
       </>}
   </div>;
