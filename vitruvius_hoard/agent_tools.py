@@ -194,6 +194,7 @@ class AppCreateArgs(BaseModel):
     items: Optional[list[dict]] = Field(None, description="Booking entries with stable id, title, category and optional description. Text can be an es/en pair.")
     lang: Literal["es", "en"] = "en"
     description_es: Optional[str] = None
+    files: Optional[dict[str, str]] = Field(None, description="Custom UTF-8 source files. Omit server.py to use the built-in runtime.")
 
 
 class AppIdArgs(BaseModel):
@@ -279,10 +280,14 @@ class CanvasActArgs(BaseModel):
 
 class AppCallArgs(BaseModel):
     id: str = ""
-    operation: Literal["list", "get", "create", "update", "delete"]
+    operation: Literal["list", "get", "create", "update", "delete", "schema", "invoke", "undo_action"]
     data: Optional[dict] = None
     record_id: Optional[str] = None
     query: str = ""
+    collection: Optional[str] = Field(None, description="Collection for list or get in a v2 project.")
+    action: Optional[str] = Field(None, description="Declared action name for invoke. Pass its typed input in data.")
+    request_key: Optional[str] = Field(None, description="Reuse this key with the same input when retrying invoke.")
+    undo_token: Optional[str] = Field(None, description="Receipt token for undo_action.")
 
 
 class GalleriesArgs(BaseModel):
@@ -721,8 +726,8 @@ TOOLS: list[Tool] = [
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
         AppRenderArgs, ann(False, False, True), lambda services, args: services.app_project_render(args.id, args.revision, args.widths)),
-    Tool("app_project_call", "Use a project's typed record API: list, get, create, update or delete. Operar datos de aplicación.",
-        AppCallArgs, ann(False, True, True), lambda services, args: services.app_project_call(args.id, args.operation, args.data, args.record_id, args.query)),
+    Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
+        AppCallArgs, ann(False, True, False), lambda services, args: services.app_project_call(**args.model_dump())),
     Tool("reference_collections", "List imported local reference collections and their counts. Colecciones de referencias.",
         Empty, ann(True), lambda services, args: {"collections": services.reference_collections()}),
     Tool("reference_import_collection", "Import a local snapshot collection into the gallery. Importar colección local.\nRetains provenance and reuses identical versions; no source HTML is executed.",

@@ -52,6 +52,10 @@ def _literal(value):
     return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
+def _standalone_runtime():
+    return Path(__file__).with_name("app_runtime.py").read_text(encoding="utf-8")
+
+
 def starter_files(name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
                   description_es=None):
     selected = next((row for row in templates() if row["id"] == template), None)
@@ -127,7 +131,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 '''
     files = {
         "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n",
-        "server.py": Path(__file__).with_name("app_runtime.py").read_text(encoding="utf-8"),
+        "server.py": _standalone_runtime(),
         "layout.html": '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{name}}</title><link rel="stylesheet" href="/assets/style.css"></head><body><header><strong>{{name}}</strong><nav aria-label="Application"><a href="/">Overview</a><a href="/records">Records</a></nav></header><main>{{content}}</main><footer><p id="status" role="status" aria-live="polite"></p></footer><script type="module" src="/assets/client.js"></script></body></html>',
         "pages/index.html": '<h1>{{name}}</h1><p>{{description}}</p><section><h2>Overview</h2><p>{{count}} records in this application.</p><a href="/records">Manage records</a></section><section><h2>Current records</h2><div class="table-wrap">{{table}}</div></section>',
         "pages/records/index.html": '<h1>Records</h1><form class="search" action="/records" method="get"><label>Search records<input name="q" value="{{query}}" type="search"></label><button type="submit">Search</button></form><section><h2>Add a record</h2>{{form}}</section><section><h2>Saved records</h2><div class="table-wrap">{{table}}</div></section>',
@@ -270,9 +274,12 @@ class AppProjects:
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
-               description_es=None):
-        project = self.create_from_files(name, template, starter_files(name, template, description, accent, fields,
-                                                                       items, lang, description_es))
+               description_es=None, files=None):
+        if files is None:
+            files = starter_files(name, template, description, accent, fields, items, lang, description_es)
+        elif "server.py" not in files:
+            files = {**files, "server.py": _standalone_runtime()}
+        project = self.create_from_files(name, template, files)
         return {**project, "undo": self._undo_call(project)}
 
     @staticmethod
@@ -287,7 +294,6 @@ class AppProjects:
         with self.lock:
             id = uuid.uuid4().hex[:16]
             root = self.root / id
-            root.mkdir()
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
             return self._save(root, index, files)
 

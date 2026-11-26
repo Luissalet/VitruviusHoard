@@ -1354,6 +1354,22 @@
           ],
           "default": null,
           "title": "Description Es"
+        },
+        "files": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom UTF-8 source files. Omit server.py to use the built-in runtime.",
+          "title": "Files"
         }
       },
       "required": [
@@ -1997,11 +2013,11 @@
   },
   {
     "name": "app_project_call",
-    "description": "Use a project's typed record API: list, get, create, update or delete. Operar datos de aplicación.",
+    "description": "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false
     },
     "inputSchema": {
@@ -2017,7 +2033,10 @@
             "get",
             "create",
             "update",
-            "delete"
+            "delete",
+            "schema",
+            "invoke",
+            "undo_action"
           ],
           "title": "Operation",
           "type": "string"
@@ -2051,6 +2070,58 @@
           "default": "",
           "title": "Query",
           "type": "string"
+        },
+        "collection": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Collection for list or get in a v2 project.",
+          "title": "Collection"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Declared action name for invoke. Pass its typed input in data.",
+          "title": "Action"
+        },
+        "request_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reuse this key with the same input when retrying invoke.",
+          "title": "Request Key"
+        },
+        "undo_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Receipt token for undo_action.",
+          "title": "Undo Token"
         }
       },
       "required": [
