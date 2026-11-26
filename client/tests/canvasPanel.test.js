@@ -30,17 +30,16 @@ test("only the visible preview frame, from its own origin, is heard", () => {
   assert.equal(isCanvasMessage({ ...ok, data: { ...ok.data, hoardDock: 2 } }, frame, "http://127.0.0.1:5001"), false);
 });
 
-test("the Dock context carries the project, revision, selection and open comments in short form", () => {
+test("the Dock context fits what the host keeps: focus and a short summary with selection and comments", () => {
   assert.deepEqual(canvasContext({}), { view: "canvas" });
   const context = canvasContext({
     project: { id: "p1", name: "Board" }, revision: "r2", mode: "select",
-    selection: [{ selector: "main > h1", tag: "h1", vsrc: "pages/index.html:3:1", text: "x".repeat(120), same_vsrc_count: 3, html: "<h1>…</h1>" }],
-    comments: [{ id: "c1", n: 1, status: "pending", note: "Bigger", element: { vsrc: "pages/index.html:5:3" } }, { id: "c2", n: 2, status: "resolved", note: "Done" }],
+    selection: [{ selector: "main > h1", tag: "h1", vsrc: "pages/index.html:3:1", text: "Current records", same_vsrc_count: 3, html: "<h1>…</h1>" }],
+    comments: [{ id: "c1", n: 1, status: "pending", note: "Bigger" }, { id: "c2", n: 2, status: "resolved", note: "Done" }],
   });
-  assert.equal(context.view, "canvas");
-  assert.equal(context.focus.id, "p1");
-  assert.equal(context.focus.revision, "r2");
-  assert.deepEqual(context.focus.selection, [{ selector: "main > h1", tag: "h1", source: "pages/index.html:3:1", text: "x".repeat(80), affects: 3 }]);
-  assert.deepEqual(context.focus.comments, [{ id: "c1", n: 1, status: "pending", note: "Bigger", source: "pages/index.html:5:3" }]);
-  assert.equal(context.summary, "Board · 1 selected · 1 open comments");
+  assert.deepEqual(context.focus, { kind: "app_project", id: "p1", label: "Board" });
+  assert.equal(context.summary, 'Board @r2 · mode select · selected 1: h1 "Current records" pages/index.html:3:1 x3 · open comments 1: #1 Bigger');
+  const many = canvasContext({ project: { id: "p1", name: "Board" }, selection: Array.from({ length: 30 }, () => ({ tag: "p", text: "y".repeat(60), vsrc: "pages/index.html:10:2" })),
+    comments: Array.from({ length: 9 }, (_, n) => ({ n, status: "pending", note: "z".repeat(90) })) });
+  assert.ok(many.summary.length <= 400);
 });

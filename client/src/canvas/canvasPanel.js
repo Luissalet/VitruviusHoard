@@ -48,26 +48,26 @@ export function elementLabel(item) {
 }
 
 /**
- * The screen context the Dock bridge sends to the host (Faustus) with each change: the project, the revision the
- * preview shows, the person's selection and the open comments. Small on purpose: tools return the full detail.
+ * The screen context the Dock bridge sends to the host (Faustus) with each change. The host keeps `focus` as
+ * `{kind, id, label}` and `summary` up to 400 characters, so the selection and the open comments travel as short text
+ * in `summary`: element, source position and revision. The agent reads the full detail with the project tools.
  */
-export function canvasContext({ project, revision, mode, selection = [], comments = [] }, limit = 12) {
+export function canvasContext({ project, revision, mode, selection = [], comments = [] }, max = 400) {
   if (!project) return { view: "canvas" };
-  const picked = selection.slice(0, limit).map((item) => ({
-    ...(item.selector ? { selector: item.selector } : {}), tag: item.tag,
-    ...(item.vsrc ? { source: item.vsrc } : {}), ...(item.vgen ? { generated_by: `{{${item.vgen}}}` } : {}),
-    ...(item.text ? { text: String(item.text).slice(0, 80) } : {}), ...(item.same_vsrc_count > 1 ? { affects: item.same_vsrc_count } : {}),
-  }));
-  const open = comments.filter((comment) => ["pending", "seen", "answered"].includes(comment.status)).slice(0, limit)
-    .map((comment) => ({ id: comment.id, n: comment.n, status: comment.status, note: String(comment.note || "").slice(0, 200),
-      ...(comment.vsrc || comment.element?.vsrc ? { source: comment.vsrc || comment.element.vsrc } : {}) }));
-  const parts = [`${project.name}`];
-  if (picked.length) parts.push(`${selection.length} selected`);
-  if (open.length) parts.push(`${open.length} open comments`);
+  const open = comments.filter((comment) => ["pending", "seen", "answered"].includes(comment.status));
+  const parts = [`${project.name}${revision ? ` @${String(revision).slice(0, 12)}` : ""}`];
+  if (mode && mode !== "navigate") parts.push(`mode ${mode}`);
+  if (selection.length) parts.push(`selected ${selection.length}: ` + selection.slice(0, 4).map((item) => {
+    const where = item.vsrc || (item.vgen ? `{{${item.vgen}}}` : item.selector || "");
+    const text = item.text ? ` "${String(item.text).slice(0, 30)}"` : "";
+    return `${item.tag || "element"}${text}${where ? ` ${where}` : ""}${item.same_vsrc_count > 1 ? ` x${item.same_vsrc_count}` : ""}`;
+  }).join("; "));
+  if (open.length) parts.push(`open comments ${open.length}: ` + open.slice(0, 3).map((comment) =>
+    `#${comment.n} ${String(comment.note || "").slice(0, 40)}`).join("; "));
+  const summary = parts.join(" · ");
   return {
     view: "canvas",
-    focus: { kind: "app_project", id: project.id, label: project.name, revision: revision || null, mode,
-      selection: picked, comments: open },
-    summary: parts.join(" · "),
+    focus: { kind: "app_project", id: project.id, label: project.name },
+    summary: summary.length > max ? summary.slice(0, max - 1) + "…" : summary,
   };
 }
