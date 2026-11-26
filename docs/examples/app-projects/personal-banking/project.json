@@ -1,0 +1,617 @@
+{
+  "format": "vitruvius-app/v2",
+  "name": "Tesela · Banca personal",
+  "description": "Banca personal con datos simulados: cuentas, saldos, movimientos, transferencias y contactos.",
+  "collections": {
+    "cuentas": {
+      "fields": [
+        {
+          "name": "nombre",
+          "label": "Nombre",
+          "type": "text"
+        },
+        {
+          "name": "tipo",
+          "label": "Tipo",
+          "type": "text"
+        },
+        {
+          "name": "iban",
+          "label": "IBAN",
+          "type": "text",
+          "format": "iban"
+        },
+        {
+          "name": "saldo_cent",
+          "label": "Saldo (céntimos)",
+          "type": "integer"
+        },
+        {
+          "name": "limite_cent",
+          "label": "Límite de crédito (céntimos)",
+          "type": "integer",
+          "min": 0
+        },
+        {
+          "name": "disponible_cent",
+          "label": "Disponible (céntimos)",
+          "type": "integer",
+          "min": 0
+        },
+        {
+          "name": "orden",
+          "label": "Orden",
+          "type": "integer"
+        }
+      ],
+      "records": [
+        {
+          "id": "cuenta-diaria",
+          "nombre": "Cuenta diaria",
+          "tipo": "Cuenta corriente",
+          "iban": "ES3024710310150001845219",
+          "saldo_cent": 238417,
+          "limite_cent": 0,
+          "disponible_cent": 238417,
+          "orden": 1
+        },
+        {
+          "id": "cuenta-ahorro",
+          "nombre": "Ahorro",
+          "tipo": "Cuenta de ahorro",
+          "iban": "ES8924710310170007312046",
+          "saldo_cent": 1265000,
+          "limite_cent": 0,
+          "disponible_cent": 1265000,
+          "orden": 2
+        },
+        {
+          "id": "cuenta-compartida",
+          "nombre": "Casa compartida",
+          "tipo": "Cuenta compartida",
+          "iban": "ES2724710310180005590781",
+          "saldo_cent": 84632,
+          "limite_cent": 0,
+          "disponible_cent": 84632,
+          "orden": 3
+        },
+        {
+          "id": "tarjeta",
+          "nombre": "Tarjeta Tesela",
+          "tipo": "Tarjeta de crédito",
+          "iban": "ES3824710310150009904417",
+          "saldo_cent": -31248,
+          "limite_cent": 150000,
+          "disponible_cent": 118752,
+          "orden": 4
+        }
+      ]
+    },
+    "contactos": {
+      "fields": [
+        {
+          "name": "nombre",
+          "label": "Nombre",
+          "type": "text"
+        },
+        {
+          "name": "alias",
+          "label": "Alias",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "iban",
+          "label": "IBAN",
+          "type": "text",
+          "format": "iban"
+        },
+        {
+          "name": "nota",
+          "label": "Nota",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "records": [
+        {
+          "id": "maria-ortega",
+          "nombre": "María Ortega Ruiz",
+          "alias": "María O.",
+          "iban": "ES5594714402990012938471",
+          "nota": "Hermana"
+        },
+        {
+          "id": "maria-lozano",
+          "nombre": "María Lozano Pérez",
+          "alias": "María L.",
+          "iban": "ES0594721150040040021736",
+          "nota": "Compañera de trabajo"
+        },
+        {
+          "id": "javier-navarro",
+          "nombre": "Javier Navarro Gil",
+          "alias": "Javier",
+          "iban": "ES1524710518520002217784",
+          "nota": "Comparte la cuenta de casa"
+        },
+        {
+          "id": "lucia-ferrer",
+          "nombre": "Lucía Ferrer Soler",
+          "alias": "Lucía",
+          "iban": "ES4194712209120076543210",
+          "nota": "Amiga"
+        },
+        {
+          "id": "andres-molina",
+          "nombre": "Andrés Molina Vidal",
+          "alias": "Andrés",
+          "iban": "ES6894720021810031127745",
+          "nota": "Clases de guitarra"
+        },
+        {
+          "id": "comunidad-olmo",
+          "nombre": "Comunidad de propietarios Olmo 14",
+          "alias": "Comunidad",
+          "iban": "ES9724710310150000140014",
+          "nota": "Cuota mensual"
+        }
+      ]
+    },
+    "movimientos": {
+      "fields": [
+        {
+          "name": "cuenta",
+          "label": "Cuenta",
+          "type": "ref",
+          "collection": "cuentas"
+        },
+        {
+          "name": "fecha",
+          "label": "Fecha",
+          "type": "text"
+        },
+        {
+          "name": "concepto",
+          "label": "Concepto",
+          "type": "text"
+        },
+        {
+          "name": "contraparte",
+          "label": "Contraparte",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "importe_cent",
+          "label": "Importe (céntimos)",
+          "type": "integer"
+        },
+        {
+          "name": "categoria",
+          "label": "Categoría",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "records": [
+        {
+          "id": "m001",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-25",
+          "concepto": "Compra semanal",
+          "contraparte": "Supermercado Las Eras",
+          "importe_cent": -6430,
+          "categoria": "Supermercado"
+        },
+        {
+          "id": "m002",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-24",
+          "concepto": "Recibo de luz de noviembre",
+          "contraparte": "Eléctrica del Valle",
+          "importe_cent": -5812,
+          "categoria": "Hogar"
+        },
+        {
+          "id": "m003",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-23",
+          "concepto": "Cena del viernes",
+          "contraparte": "Lucía Ferrer Soler",
+          "importe_cent": 2500,
+          "categoria": "Transferencia"
+        },
+        {
+          "id": "m004",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-22",
+          "concepto": "Desayuno",
+          "contraparte": "Café Molino",
+          "importe_cent": -680,
+          "categoria": "Restaurantes"
+        },
+        {
+          "id": "m005",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-21",
+          "concepto": "Abono mensual de transporte",
+          "contraparte": "Transporte metropolitano",
+          "importe_cent": -5460,
+          "categoria": "Transporte"
+        },
+        {
+          "id": "m006",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-20",
+          "concepto": "Traspaso a Ahorro",
+          "contraparte": "Ahorro",
+          "importe_cent": -30000,
+          "categoria": "Ahorro"
+        },
+        {
+          "id": "m007",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-18",
+          "concepto": "Farmacia",
+          "contraparte": "Farmacia Plaza Mayor",
+          "importe_cent": -1245,
+          "categoria": "Salud"
+        },
+        {
+          "id": "m008",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-15",
+          "concepto": "Suscripción de música",
+          "contraparte": "Sonora",
+          "importe_cent": -1099,
+          "categoria": "Suscripciones"
+        },
+        {
+          "id": "m009",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-12",
+          "concepto": "Entradas de cine",
+          "contraparte": "Cines Avenida",
+          "importe_cent": -1800,
+          "categoria": "Ocio"
+        },
+        {
+          "id": "m010",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-11-10",
+          "concepto": "Regalo de cumpleaños",
+          "contraparte": "María Ortega Ruiz",
+          "importe_cent": -4000,
+          "categoria": "Transferencia"
+        },
+        {
+          "id": "m011",
+          "cuenta": "cuenta-diaria",
+          "fecha": "2026-10-31",
+          "concepto": "Nómina de octubre",
+          "contraparte": "Estudio Arce",
+          "importe_cent": 214000,
+          "categoria": "Nómina"
+        },
+        {
+          "id": "m012",
+          "cuenta": "cuenta-ahorro",
+          "fecha": "2026-11-20",
+          "concepto": "Traspaso desde Cuenta diaria",
+          "contraparte": "Cuenta diaria",
+          "importe_cent": 30000,
+          "categoria": "Ahorro"
+        },
+        {
+          "id": "m013",
+          "cuenta": "cuenta-ahorro",
+          "fecha": "2026-11-01",
+          "concepto": "Intereses",
+          "contraparte": "Tesela",
+          "importe_cent": 842,
+          "categoria": "Ahorro"
+        },
+        {
+          "id": "m014",
+          "cuenta": "cuenta-compartida",
+          "fecha": "2026-11-23",
+          "concepto": "Cuota de comunidad",
+          "contraparte": "Comunidad de propietarios Olmo 14",
+          "importe_cent": -7500,
+          "categoria": "Hogar"
+        },
+        {
+          "id": "m015",
+          "cuenta": "cuenta-compartida",
+          "fecha": "2026-11-19",
+          "concepto": "Aportación de noviembre",
+          "contraparte": "Javier Navarro Gil",
+          "importe_cent": 40000,
+          "categoria": "Transferencia"
+        },
+        {
+          "id": "m016",
+          "cuenta": "cuenta-compartida",
+          "fecha": "2026-11-16",
+          "concepto": "Compra en el mercado",
+          "contraparte": "Mercado Central",
+          "importe_cent": -9218,
+          "categoria": "Supermercado"
+        },
+        {
+          "id": "m017",
+          "cuenta": "cuenta-compartida",
+          "fecha": "2026-11-05",
+          "concepto": "Internet y fijo",
+          "contraparte": "Red Hogar",
+          "importe_cent": -3990,
+          "categoria": "Hogar"
+        },
+        {
+          "id": "m018",
+          "cuenta": "tarjeta",
+          "fecha": "2026-11-24",
+          "concepto": "Libros",
+          "contraparte": "Librería Margen",
+          "importe_cent": -2790,
+          "categoria": "Ocio"
+        },
+        {
+          "id": "m019",
+          "cuenta": "tarjeta",
+          "fecha": "2026-11-19",
+          "concepto": "Combustible",
+          "contraparte": "Gasolinera Ruta 6",
+          "importe_cent": -6105,
+          "categoria": "Transporte"
+        },
+        {
+          "id": "m020",
+          "cuenta": "tarjeta",
+          "fecha": "2026-11-14",
+          "concepto": "Comida con amigos",
+          "contraparte": "Restaurante La Alacena",
+          "importe_cent": -4860,
+          "categoria": "Restaurantes"
+        }
+      ]
+    }
+  },
+  "actions": {
+    "transferir": {
+      "label": "Transferir",
+      "confirmable_by_voice": true,
+      "input": [
+        {
+          "name": "origen",
+          "label": "Desde",
+          "type": "ref",
+          "collection": "cuentas"
+        },
+        {
+          "name": "contacto",
+          "label": "Contacto",
+          "type": "ref",
+          "collection": "contactos",
+          "required": false
+        },
+        {
+          "name": "destino",
+          "label": "Cuenta propia de destino",
+          "type": "ref",
+          "collection": "cuentas",
+          "required": false
+        },
+        {
+          "name": "iban",
+          "label": "IBAN de destino",
+          "type": "text",
+          "format": "iban",
+          "required": false
+        },
+        {
+          "name": "beneficiario",
+          "label": "Titular",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "importe_cent",
+          "label": "Importe (céntimos)",
+          "type": "integer",
+          "min": 1
+        },
+        {
+          "name": "concepto",
+          "label": "Concepto",
+          "type": "text"
+        },
+        {
+          "name": "fecha",
+          "label": "Fecha",
+          "type": "text"
+        }
+      ],
+      "exactly_one": [
+        "contacto",
+        "destino",
+        "iban"
+      ],
+      "lookups": {
+        "desde": {
+          "collection": "cuentas",
+          "field": "id",
+          "equals": {
+            "input": "origen"
+          }
+        },
+        "persona": {
+          "collection": "contactos",
+          "field": "id",
+          "equals": {
+            "input": "contacto"
+          }
+        },
+        "propia_por_iban": {
+          "collection": "cuentas",
+          "field": "iban",
+          "equals": {
+            "input": "iban"
+          }
+        },
+        "hacia": {
+          "collection": "cuentas",
+          "field": "id",
+          "equals": {
+            "coalesce": [
+              {
+                "input": "destino"
+              },
+              {
+                "record": "propia_por_iban",
+                "field": "id"
+              }
+            ]
+          }
+        }
+      },
+      "different": [
+        {
+          "input": "origen"
+        },
+        {
+          "record": "hacia",
+          "field": "id"
+        }
+      ],
+      "effects": [
+        {
+          "op": "adjust",
+          "collection": "cuentas",
+          "id": {
+            "input": "origen"
+          },
+          "field": "disponible_cent",
+          "amount": {
+            "negate": {
+              "input": "importe_cent"
+            }
+          }
+        },
+        {
+          "op": "adjust",
+          "collection": "cuentas",
+          "id": {
+            "input": "origen"
+          },
+          "field": "saldo_cent",
+          "amount": {
+            "negate": {
+              "input": "importe_cent"
+            }
+          }
+        },
+        {
+          "op": "create",
+          "collection": "movimientos",
+          "values": {
+            "cuenta": {
+              "input": "origen"
+            },
+            "fecha": {
+              "input": "fecha"
+            },
+            "concepto": {
+              "input": "concepto"
+            },
+            "contraparte": {
+              "coalesce": [
+                {
+                  "record": "persona",
+                  "field": "nombre"
+                },
+                {
+                  "record": "hacia",
+                  "field": "nombre"
+                },
+                {
+                  "input": "beneficiario"
+                },
+                {
+                  "input": "iban"
+                }
+              ]
+            },
+            "importe_cent": {
+              "negate": {
+                "input": "importe_cent"
+              }
+            },
+            "categoria": "Transferencia"
+          }
+        },
+        {
+          "op": "adjust",
+          "when": {
+            "record": "hacia",
+            "field": "id"
+          },
+          "collection": "cuentas",
+          "id": {
+            "record": "hacia",
+            "field": "id"
+          },
+          "field": "disponible_cent",
+          "amount": {
+            "input": "importe_cent"
+          }
+        },
+        {
+          "op": "adjust",
+          "when": {
+            "record": "hacia",
+            "field": "id"
+          },
+          "collection": "cuentas",
+          "id": {
+            "record": "hacia",
+            "field": "id"
+          },
+          "field": "saldo_cent",
+          "amount": {
+            "input": "importe_cent"
+          }
+        },
+        {
+          "op": "create",
+          "when": {
+            "record": "hacia",
+            "field": "id"
+          },
+          "collection": "movimientos",
+          "values": {
+            "cuenta": {
+              "record": "hacia",
+              "field": "id"
+            },
+            "fecha": {
+              "input": "fecha"
+            },
+            "concepto": {
+              "input": "concepto"
+            },
+            "contraparte": {
+              "record": "desde",
+              "field": "nombre"
+            },
+            "importe_cent": {
+              "input": "importe_cent"
+            },
+            "categoria": "Transferencia"
+          }
+        }
+      ]
+    }
+  }
+}
