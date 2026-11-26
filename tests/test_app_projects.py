@@ -8,6 +8,8 @@ import zipfile
 
 import pytest
 
+from vitruvius_hoard.app_preview import SCRIPT_ROOT
+from vitruvius_hoard.hoard_link.app_bridge import BRIDGE_JS
 from vitruvius_hoard.app_projects import AppProjects, starter_files
 from vitruvius_hoard.app_runtime import Records, make_server
 
@@ -31,6 +33,12 @@ def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):
         record = json.loads(raw)
         _, page = request(url + "/records/" + record["id"])
         assert b"Widget &lt;script&gt;" in page and b"Save changes" in page
+        assert page.count((SCRIPT_ROOT + "app-bridge.js").encode()) == 1
+        _, script = request(url + SCRIPT_ROOT + "app-bridge.js")
+        assert script == BRIDGE_JS.encode("utf-8")
+        _, css = request(url + "/assets/style.css")
+        assert css == original["files"]["assets/style.css"].encode("utf-8")
+        assert SCRIPT_ROOT.encode() not in css
         with pytest.raises(urllib.error.HTTPError) as error:
             request(url + "/actions/create", "POST", {"name": "Bad", "quantity": "2", "location": "Shelf"})
         assert error.value.code == 400
@@ -40,18 +48,25 @@ def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):
         assert projects.get(id, original["revision"])["files"] == original["files"]
         assert projects.status(id)["revision"] == original["revision"]
         preview = projects.preview(id)
+        assert preview["url"] == url
         _, raw = request(preview["url"] + "/api/records")
         assert json.loads(raw)["records"][0]["quantity"] == 3
         exported = projects.export(id, include_data=True)
         extracted = tmp_path / "standalone"
         with zipfile.ZipFile(exported["path"]) as archive:
+            assert all("app-bridge" not in name and "preview-inspector" not in name for name in archive.namelist())
+            for name in archive.namelist():
+                assert SCRIPT_ROOT.encode() not in archive.read(name)
             archive.extractall(extracted)
             for path, text in changed["files"].items():
                 assert archive.read(path) == text.encode("utf-8")
         # Execute the extracted source itself with isolated import paths.
         ready = extracted / "ready.json"
         log = (extracted / "output.log").open("wb")
-        process = subprocess.Popen([sys.executable, "-I", "server.py", "--port", "0", "--ready-file", str(ready)], cwd=extracted, stdout=log, stderr=log)
+        process = subprocess.Popen(
+            [sys.executable, "-I", "server.py", "--port", "0", "--ready-file", str(ready)],
+            cwd=extracted, stdout=log, stderr=log, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         try:
             import time
             deadline = time.monotonic() + 10
@@ -61,12 +76,36 @@ def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):
             independent = json.loads(ready.read_text())["url"]
             _, page = request(independent + "/")
             assert b"Revised page" in page and b"Widget &lt;script&gt;" in page
+            assert SCRIPT_ROOT.encode() not in page
+            with pytest.raises(urllib.error.HTTPError) as error:
+                request(independent + SCRIPT_ROOT + "app-bridge.js")
+            assert error.value.code == 404
             _, raw = request(independent + "/api/records")
             assert json.loads(raw)["records"][0]["quantity"] == 3
         finally:
             process.terminate(); process.wait(timeout=5); log.close()
         projects.stop(id)
         assert projects.status(id)["state"] == "stopped"
+    finally:
+        projects.close()
+
+
+def test_failed_revision_keeps_the_visible_runtime(tmp_path):
+    projects = AppProjects(tmp_path)
+    try:
+        original = projects.create("Before a failed start")
+        id = original["id"]
+        preview, runtime_url = projects.preview_runtime(id)
+        assert runtime_url != preview["url"]
+        _, direct = request(runtime_url + "/")
+        assert SCRIPT_ROOT.encode() not in direct
+        projects.update(id, {"server.py": "raise RuntimeError('broken')"}, original["revision"])
+
+        with pytest.raises(ValueError, match="Application did not start"):
+            projects.preview(id)
+        assert projects.status(id) == preview
+        _, health = request(preview["url"] + "/api/health")
+        assert json.loads(health)["revision"] == original["revision"]
     finally:
         projects.close()
 

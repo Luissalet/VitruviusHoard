@@ -15,7 +15,10 @@ import uuid
 import zipfile
 from contextlib import closing
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
 
+from .app_canvas import CanvasSessions
+from .app_preview import PreviewProxy
 from .app_runtime import validate_spec
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
@@ -135,11 +138,14 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, host_port=5191):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.processes = {}
+        self.proxies = {}
+        self.host_port = host_port
+        self.canvas = CanvasSessions()
 
     def _directory(self, id):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
@@ -266,16 +272,29 @@ class AppProjects:
         return {"state": "running" if alive else "stopped", "revision": item["revision"], "url": item["url"] if alive else None,
                 "pid": item["process"].pid if alive else None}
 
+    @staticmethod
+    def _close_process(item):
+        process = item["process"]
+        try:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+        finally:
+            item["log"].close()
+
     def stop(self, id):
         with self.lock:
             item = self.processes.pop(id, None)
+            self.canvas.detach_project(id)
+            proxy = self.proxies.pop(id, None)
+            if proxy:
+                proxy.close()
             if item:
-                process = item["process"]
-                if process.poll() is None:
-                    process.terminate()
-                    try: process.wait(timeout=5)
-                    except subprocess.TimeoutExpired: process.kill(); process.wait()
-                item["log"].close()
+                self._close_process(item)
             return {"state": "stopped"}
 
     def preview(self, id, revision=None):
@@ -285,30 +304,57 @@ class AppProjects:
             status = self.status(id)
             if status["state"] == "running" and status["revision"] == selected:
                 return status
-            self.stop(id)
             root = self._directory(id)
             run = root / "runs" / uuid.uuid4().hex
             run.mkdir(parents=True)
             ready = run / "ready.json"
-            log = (run / "output.log").open("wb")
+            output = run / "output.log"
             # One captured source dictionary owns both the process and its receipt.
             source = run / "source"
             for name, content in project["files"].items():
                 path = source / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content.encode("utf-8"))
-            process = subprocess.Popen([sys.executable, "-u", str(source / "server.py"), "--port", "0", "--database", str(root / "data" / "app.db"), "--ready-file", str(ready), "--revision", selected],
-                                       cwd=source, stdout=log, stderr=log, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            self.processes[id] = {"process": process, "log": log, "revision": selected, "url": None}
-            deadline = time.monotonic() + 15
-            while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
-                time.sleep(.02)
-            if not ready.exists():
-                self.stop(id)
-                raise ValueError("Application did not start: " + (run / "output.log").read_text(encoding="utf-8", errors="replace"))
-            receipt = json.loads(ready.read_text(encoding="utf-8"))
-            self.processes[id]["url"] = receipt["url"]
+            log = output.open("wb")
+            try:
+                process = subprocess.Popen(
+                    [sys.executable, "-u", str(source / "server.py"), "--port", "0", "--database",
+                     str(root / "data" / "app.db"), "--ready-file", str(ready), "--revision", selected],
+                    cwd=source, stdout=log, stderr=log, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            except OSError:
+                log.close()
+                raise
+            candidate = {"process": process, "log": log, "revision": selected}
+            try:
+                deadline = time.monotonic() + 15
+                while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
+                    time.sleep(.02)
+                if not ready.exists() or process.poll() is not None:
+                    raise ValueError("Application did not start: " + output.read_text(encoding="utf-8", errors="replace"))
+                receipt = urlsplit(json.loads(ready.read_text(encoding="utf-8"))["url"])
+                if receipt.scheme != "http" or receipt.hostname != "127.0.0.1" or not receipt.port:
+                    raise ValueError("Invalid preview process address")
+                proxy = self.proxies.get(id)
+                if proxy is None:
+                    proxy = self.proxies[id] = PreviewProxy(self.host_port)
+            except Exception:
+                self._close_process(candidate)
+                raise
+            previous = self.processes.get(id)
+            candidate["url"] = proxy.url
+            candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
+            proxy.backend = (receipt.port, selected)
+            self.processes[id] = candidate
+            if previous:
+                self._close_process(previous)
             return self.status(id)
+
+    def preview_runtime(self, id, revision=None):
+        """Pin server-side reads and captures to the requested runtime."""
+        with self.lock:
+            status = self.preview(id, revision)
+            return status, self.processes[id]["runtime_url"]
 
     def export(self, id, revision=None, include_data=False):
         with self.lock:
