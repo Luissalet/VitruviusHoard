@@ -1425,6 +1425,123 @@
       "openWorldHint": false
     },
     "inputSchema": {
+      "$defs": {
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        },
+        "CanvasBox": {
+          "properties": {
+            "x": {
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "title": "Y",
+              "type": "number"
+            },
+            "w": {
+              "exclusiveMinimum": 0,
+              "title": "W",
+              "type": "number"
+            },
+            "h": {
+              "exclusiveMinimum": 0,
+              "title": "H",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "title": "CanvasBox",
+          "type": "object"
+        },
+        "CanvasTarget": {
+          "properties": {
+            "vsrc": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Source position in the displayed revision.",
+              "title": "Vsrc"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Stable CSS selector in the preview.",
+              "title": "Selector"
+            },
+            "box": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CanvasBox"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Optional document-relative selection box (x, y, w, h)."
+            }
+          },
+          "title": "CanvasTarget",
+          "type": "object"
+        }
+      },
       "properties": {
         "id": {
           "default": "",
@@ -1441,6 +1558,30 @@
         "expected_revision": {
           "title": "Expected Revision",
           "type": "string"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasActor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agent identity for the preview cursor."
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional visible target for the edit."
         }
       },
       "required": [
@@ -1541,6 +1682,121 @@
           ],
           "title": "AppSourceTextChange",
           "type": "object"
+        },
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        },
+        "CanvasBox": {
+          "properties": {
+            "x": {
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "title": "Y",
+              "type": "number"
+            },
+            "w": {
+              "exclusiveMinimum": 0,
+              "title": "W",
+              "type": "number"
+            },
+            "h": {
+              "exclusiveMinimum": 0,
+              "title": "H",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "title": "CanvasBox",
+          "type": "object"
+        },
+        "CanvasTarget": {
+          "properties": {
+            "vsrc": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Source position in the displayed revision.",
+              "title": "Vsrc"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Stable CSS selector in the preview.",
+              "title": "Selector"
+            },
+            "box": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CanvasBox"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Optional document-relative selection box (x, y, w, h)."
+            }
+          },
+          "title": "CanvasTarget",
+          "type": "object"
         }
       },
       "properties": {
@@ -1594,6 +1850,30 @@
           ],
           "title": "Lang",
           "type": "string"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasActor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agent identity for the preview cursor."
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional selector and box to disambiguate repeated source positions."
         }
       },
       "required": [
@@ -1866,6 +2146,82 @@
           },
           "title": "CanvasActor",
           "type": "object"
+        },
+        "CanvasBox": {
+          "properties": {
+            "x": {
+              "title": "X",
+              "type": "number"
+            },
+            "y": {
+              "title": "Y",
+              "type": "number"
+            },
+            "w": {
+              "exclusiveMinimum": 0,
+              "title": "W",
+              "type": "number"
+            },
+            "h": {
+              "exclusiveMinimum": 0,
+              "title": "H",
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "title": "CanvasBox",
+          "type": "object"
+        },
+        "CanvasTarget": {
+          "properties": {
+            "vsrc": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Source position in the displayed revision.",
+              "title": "Vsrc"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Stable CSS selector in the preview.",
+              "title": "Selector"
+            },
+            "box": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CanvasBox"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Optional document-relative selection box (x, y, w, h)."
+            }
+          },
+          "title": "CanvasTarget",
+          "type": "object"
         }
       },
       "properties": {
@@ -1896,6 +2252,18 @@
         "actor": {
           "$ref": "#/$defs/CanvasActor",
           "description": "Agent identity used for the visible cursor."
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional selection to locate click, fill or select actions."
         }
       },
       "required": [

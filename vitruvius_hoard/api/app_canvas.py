@@ -45,7 +45,7 @@ async def canvas_events(request: Request, id: str):
             yield f"event: ready\ndata: {json.dumps(session.id)}\n\n"
             while True:
                 try:
-                    event = await asyncio.wait_for(session.events.get(), 10)
+                    event = await asyncio.wait_for(session.next_event(), 10)
                 except TimeoutError:
                     yield ": heartbeat\n\n"
                     continue
@@ -60,7 +60,7 @@ async def canvas_events(request: Request, id: str):
 
 
 @router.post("/result", status_code=204)
-def canvas_result(request: Request, id: str, body: CanvasResult):
+async def canvas_result(request: Request, id: str, body: CanvasResult):
     _require_same_origin_page(request)
     result = {"ok": body.ok, "result" if body.ok else "error": body.result if body.ok else body.error}
     if not services(request).app_projects.canvas.resolve(id, body.session, body.id, result):

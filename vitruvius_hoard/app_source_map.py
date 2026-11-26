@@ -162,6 +162,18 @@ def render_template(root, path, values):
     return _apply(source, edits)
 
 
+def first_changed_source(filename, old, new):
+    """Find the first edited opening tag or owning literal text node in the old HTML."""
+    offset = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), min(len(old), len(new)))
+    parsed = _HTML(old)
+    for tag in reversed(parsed.tags):
+        if tag.start <= offset < tag.start + len(tag.raw) or any(
+            start <= offset <= end for start, end in tag.text
+        ):
+            return parsed.location(filename, tag.start)
+    return None
+
+
 def source_count(rendered, vsrc):
     """Count actual markup attributes, excluding strings in comments and raw text."""
     return sum(next((value for name, value in tag.attrs if name == "data-vsrc"), None) == vsrc
