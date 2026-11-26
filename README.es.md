@@ -46,6 +46,7 @@ La herramienta `render_preview` abre URL públicas o de bucle local y archivos H
 - Las aplicaciones personalizadas permiten declarar varias colecciones tipadas, relaciones y acciones atómicas con deshacer en SQLite. Su API está disponible en la vista previa, la exportación autónoma y las herramientas del agente.
 - La vista previa abierta se actualiza al editar o deshacer cambios en el código y resalta brevemente los elementos modificados. El cursor con nombre del agente se desplaza al elemento antes de editarlo. Con el movimiento reducido, solo se muestra el resalte.
 - **Abrir en pestaña**, en Aplicaciones, muestra la vista previa activa a todo el ancho del navegador. El enlace del proyecto resuelve el puerto vigente tras cada reinicio.
+- El asistente de transferencias muestra la respuesta al momento y la lee completa por bloques en el idioma elegido, con una voz por conversación. [Asistente de transferencias](docs/APP_TRANSFER_ASSISTANT.md)
 - Fábrica de instrumentos: una especificación tipada de entradas, fórmulas y salidas se convierte en un proyecto de aplicación con pruebas generadas y una exportación autónoma solo con la biblioteca estándar, más un explicador. Véase [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Comprobador de protocolos: explora todos los entrelazados de un protocolo pequeño y acotado, comprueba invariantes e interbloqueos y devuelve el contraejemplo más corto con un archivo pytest que lo reproduce.
 

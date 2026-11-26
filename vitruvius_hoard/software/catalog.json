@@ -1249,7 +1249,7 @@
   },
   {
     "name": "app_transfer_assistant_assets",
-    "description": "Read editable source files for a transfer assistant panel. Leer el código del asistente de transferencias.",
+    "description": "Read transfer assistant assets with streamed voice. Leer recursos del asistente con voz por bloques.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -2306,7 +2306,7 @@
   },
   {
     "name": "app_project_preview",
-    "description": "Start or stop the project's local preview. The start result includes its stable open_path. Previsualizar aplicación.",
+    "description": "Start or stop the local preview. Start returns its stable open_path. Previsualizar aplicación.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,

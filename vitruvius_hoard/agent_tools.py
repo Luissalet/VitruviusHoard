@@ -832,7 +832,7 @@ TOOLS: list[Tool] = [
         "Delete a generated design system (only when the user asks). Eliminar design system.\n"
         "Sinónimos: borrar tokens, eliminar sistema de diseño.",
         TokensDeleteArgs, ann(False, True, True), run_tokens_delete),
-    Tool("app_transfer_assistant_assets", "Read editable source files for a transfer assistant panel. Leer el código del asistente de transferencias.",
+    Tool("app_transfer_assistant_assets", "Read transfer assistant assets with streamed voice. Leer recursos del asistente con voz por bloques.",
         Empty, ann(True), lambda services, args: assistant_assets(), capped=False),
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
@@ -854,7 +854,7 @@ TOOLS: list[Tool] = [
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
     Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
-    Tool("app_project_preview", "Start or stop the project's local preview. The start result includes its stable open_path. Previsualizar aplicación.",
+    Tool("app_project_preview", "Start or stop the local preview. Start returns its stable open_path. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_selection",
         "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\n"

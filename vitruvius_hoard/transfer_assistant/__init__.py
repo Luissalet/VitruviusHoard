@@ -5,7 +5,7 @@ from importlib.resources import files
 
 ASSET_ROOT = "assets/transfer-assistant/"
 ENTRY = ASSET_ROOT + "assistant.js"
-ASSETS = ("assistant.js", "dialogue.js", "voice.js", "microphone.js", "assistant.css")
+ASSETS = ("assistant.js", "dialogue.js", "voice.js", "reply_audio.js", "microphone.js", "assistant.css")
 
 
 def assistant_assets():
