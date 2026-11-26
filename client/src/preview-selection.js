@@ -42,7 +42,7 @@ export function copilotSelection(items, limit = 8) {
     ...(item.vsrc ? { source: item.vsrc } : {}), ...(item.vgen ? { generated_by: `{{${item.vgen}}}` } : {}),
     ...(item.text ? { text: item.text.slice(0, 120) } : {}), ...(item.same_vsrc_count > 1 ? { affects: item.same_vsrc_count } : {}),
     ...(item.revision ? { revision: item.revision } : {}), ...(item.expired ? { expired: true } : {}),
-    ...(item.box ? { box: item.box } : {}), ...(item.clip ? { clip: { mime: item.clip.mime, w: item.clip.w, h: item.clip.h, bytes: item.clip.bytes } } : {}),
+    ...(item.box ? { box: item.box } : {}), ...(item.clip ? { clip: { mime: item.clip.mime, w: item.clip.w, h: item.clip.h, bytes: item.clip.bytes, omitted: item.clip.omitted || [] } } : {}),
     ...(item.html ? { html: item.html.slice(0, 300) } : {}),
     ...(item.computed ? { styles: Object.fromEntries(["color", "backgroundColor", "fontSize", "fontWeight", "margin", "padding", "display"].filter((key) => item.computed[key]).map((key) => [key, item.computed[key]])) } : {}),
   }));
@@ -50,6 +50,6 @@ export function copilotSelection(items, limit = 8) {
 
 /** What a freshly loaded page needs to find the same elements again: identity, not position alone. */
 export function identitiesOf(items) {
-  return items.map(({ selector, tag, text, vsrc, own_vsrc, parent, index, near, revision, expired, classes, vgen, box }) => (
-    { selector, tag, text, vsrc, own_vsrc, parent, index, near, revision, expired, classes, vgen, box })).filter((item) => item.selector);
+  return items.map(({ selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box }) => (
+    { selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box })).filter((item) => item.selector);
 }

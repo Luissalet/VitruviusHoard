@@ -46,7 +46,9 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     const frame = frameRef.current;
     if (!running || !frame) return undefined;
     const hello = () => send("inspect/hello");
-    if (lastFrame.current !== frameKey) { lastFrame.current = frameKey; hello(); } // the new frame has already loaded: greet it now
+    // A swapped-in frame has already loaded: greet it now. The first frame is greeted by its own load event instead.
+    if (lastFrame.current !== undefined && frameKey !== undefined && lastFrame.current !== frameKey) hello();
+    lastFrame.current = frameKey;
     const onMessage = (event) => {
       const current = frameRef.current;
       if (!isInspectorMessage(event, current?.contentWindow, current && originOf(current))) return;

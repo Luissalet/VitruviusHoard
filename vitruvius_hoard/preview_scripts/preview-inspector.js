@@ -76,11 +76,23 @@
       box: {x: Math.round(box.left + scroll.x), y: Math.round(box.top + scroll.y), w: Math.round(box.width), h: Math.round(box.height)},
       computed,
       ...relationOf(element),
+      anchor: anchorOf(element),
       same_vsrc_count: vsrc ? count(`[data-vsrc="${String(vsrc).replace(/["\\]/g, '\\$&')}"]`) : 0,
     };
   }
 
   const textOf = element => compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT);
+  // What the element itself declares as its identity: data-vid and id are strong (unique in a document), href and name tell
+  // lookalike links and fields apart.
+  function anchorOf(element) {
+    const anchor = {};
+    for (const [key, name] of [['vid', 'data-vid'], ['id', 'id'], ['href', 'href'], ['name', 'name']]) {
+      const value = attrOf(element, name);
+      if (value) anchor[key] = String(value).slice(0, 200);
+    }
+    return anchor;
+  }
+  const sameAnchor = (item, element) => Object.entries(item.anchor || {}).every(([key, value]) => key === 'vid' || key === 'id' || attrOf(element, key === 'vid' ? 'data-vid' : key) === value);
   // Where an element sits among its siblings: its parent (tag and source position) and its index there.
   function relationOf(element) {
     const parent = element.parentElement;
@@ -97,8 +109,16 @@
   // selection is reported as expired, never handed to a neighbour. `all(selector)` lists matching elements.
   function reconcile(item, all) {
     if (!item || typeof item !== 'object' || !item.tag) return null;
+    // A data-vid or an id is the element's own name: the element that still has it is the same element, whatever its text or
+    // position became; when nothing has it any more, the element is gone.
+    const named = item.anchor && (item.anchor.vid ? ['data-vid', item.anchor.vid] : item.anchor.id ? ['id', item.anchor.id] : null);
+    if (named) {
+      let byName;
+      try { byName = all(`[${named[0]}="${String(named[1]).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag); } catch (_) { return null; }
+      return byName.length === 1 ? byName[0] : null;
+    }
     let alike;
-    try { alike = all(String(item.tag)).filter(element => tagOf(element) === item.tag && textOf(element) === item.text); } catch (_) { return null; }
+    try { alike = all(String(item.tag)).filter(element => tagOf(element) === item.tag && textOf(element) === item.text && sameAnchor(item, element)); } catch (_) { return null; }
     let pick = alike;
     if (pick.length > 1 && item.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === item.vsrc);
     if (pick.length > 1) pick = pick.filter(element => { const at = relationOf(element); return at.parent === item.parent && at.index === item.index; });
@@ -106,7 +126,7 @@
     if (alike.length > 0) return null; // several look alike and nothing singles one out
     if (item.own_vsrc && item.vsrc) {
       let here;
-      try { here = all(`[data-vsrc="${String(item.vsrc).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag); } catch (_) { return null; }
+      try { here = all(`[data-vsrc="${String(item.vsrc).replace(/["\\]/g, '\\$&')}"]`).filter(element => tagOf(element) === item.tag && sameAnchor(item, element)); } catch (_) { return null; }
       // An edit keeps the place; text that used to belong to a neighbour means the content moved, not that this was edited.
       if (here.length === 1) { const at = relationOf(here[0]); if (at.parent === item.parent && at.index === item.index && !(item.near || []).includes(textOf(here[0]).slice(0, 80))) return here[0]; }
     }
@@ -122,7 +142,7 @@
     return event.origin === known ? known : null;
   }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, textOf, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -169,6 +189,20 @@
   const CLIP_STYLES = ['display', 'position', 'box-sizing', 'width', 'height', 'margin', 'padding', 'border', 'border-radius', 'color', 'background-color', 'background-image', 'font-family', 'font-size', 'font-weight',
     'font-style', 'line-height', 'letter-spacing', 'text-align', 'text-decoration', 'text-transform', 'white-space', 'flex', 'flex-direction', 'justify-content', 'align-items', 'gap', 'grid-template-columns',
     'overflow', 'opacity', 'list-style', 'vertical-align', 'border-collapse', 'min-width', 'max-width', 'object-fit'];
+  // Pixels of an element the page has already loaded (an <img>, a <canvas>), or null when the browser will not give them
+  // (a cross-origin image taints the canvas). A clip is an SVG image and cannot load anything itself, so every picture
+  // in it travels inline, or is left out and named in the card.
+  function pixelsOf(source, width, height) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.min(800, Math.round(width))); canvas.height = Math.max(1, Math.min(800, Math.round(height)));
+      canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/png');
+    } catch (_) { return null; }
+  }
+  function loadImage(url) {
+    return new Promise(resolve => { const image = new Image(); image.onload = () => resolve(image); image.onerror = () => resolve(null); image.src = url; });
+  }
   async function captureClip(element) {
     const r = element.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0)) return null;
@@ -177,12 +211,45 @@
     const clone = element.cloneNode(true);
     const originals = [element, ...element.querySelectorAll('*')].slice(0, 80);
     const copies = [clone, ...clone.querySelectorAll('*')];
-    originals.forEach((original, index) => {
-      const target = copies[index]; if (!target || !target.setAttribute) return;
+    const omitted = [];
+    const leaveOut = (original, target, why) => {
+      omitted.push(`${tagOf(original)} ${(original.currentSrc || original.getAttribute('src') || '').slice(0, 80)}: ${why}`.trim());
+      const box = original.getBoundingClientRect();
+      const hole = document.createElement('span');
+      hole.setAttribute('style', `display:inline-block;width:${Math.round(box.width)}px;height:${Math.round(box.height)}px`);
+      if (target !== clone) target.replaceWith(hole);
+    };
+    for (let index = 0; index < originals.length; index++) {
+      const original = originals[index]; const target = copies[index];
+      if (!target || !target.setAttribute) continue;
       const computed = getComputedStyle(original);
-      target.setAttribute('style', CLIP_STYLES.map(name => `${name}:${computed.getPropertyValue(name)}`).join(';') + ';margin:0');
+      let style = CLIP_STYLES.map(name => `${name}:${computed.getPropertyValue(name)}`).join(';') + ';margin:0';
       target.removeAttribute('data-vsrc'); target.removeAttribute('data-vgen');
-    });
+      const kind = tagOf(original);
+      if (kind === 'img' || kind === 'canvas') {
+        const box = original.getBoundingClientRect();
+        const loaded = kind === 'canvas' || (original.complete && original.naturalWidth > 0);
+        const data = loaded ? pixelsOf(original, kind === 'canvas' ? original.width : original.naturalWidth || box.width, kind === 'canvas' ? original.height : original.naturalHeight || box.height) : null;
+        if (data) {
+          const picture = document.createElement('img');
+          picture.setAttribute('src', data); picture.setAttribute('alt', original.getAttribute('alt') || '');
+          picture.setAttribute('style', style + `;width:${Math.round(box.width)}px;height:${Math.round(box.height)}px`);
+          if (target !== clone) target.replaceWith(picture);
+          continue;
+        }
+        leaveOut(original, target, loaded ? 'not readable (another origin)' : 'not loaded');
+        continue;
+      }
+      const background = computed.getPropertyValue('background-image');
+      if (background && background !== 'none' && background.includes('url(')) {
+        const url = (background.match(/url\(["']?([^"')]+)["']?\)/) || [])[1];
+        const picture = url ? await loadImage(url) : null;
+        const data = picture ? pixelsOf(picture, picture.naturalWidth || 1, picture.naturalHeight || 1) : null;
+        if (data) style = style.replace(/background-image:[^;]*/, `background-image:url("${data}")`);
+        else { style = style.replace(/background-image:[^;]*/, 'background-image:none'); omitted.push(`${kind} background ${String(url || '').slice(0, 80)}: not readable`); }
+      }
+      target.setAttribute('style', style);
+    }
     copies.slice(80).forEach(extra => extra.remove());
     const markup = new XMLSerializer().serializeToString(clone);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${Math.ceil(r.width)} ${Math.ceil(r.height)}"><foreignObject x="0" y="0" width="${Math.ceil(r.width)}" height="${Math.ceil(r.height)}">${markup}</foreignObject></svg>`;
@@ -192,7 +259,7 @@
     const context = canvas.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, w, h); context.drawImage(image, 0, 0, w, h);
     let data = canvas.toDataURL('image/png');
     if (data.length > 150000) data = canvas.toDataURL('image/jpeg', 0.6);
-    return data.length <= 150000 ? {mime: data.slice(5, data.indexOf(';')), w, h, bytes: Math.round(data.length * 0.75), data_url: data} : null;
+    return data.length <= 150000 ? {mime: data.slice(5, data.indexOf(';')), w, h, bytes: Math.round(data.length * 0.75), omitted: omitted.slice(0, 8), data_url: data} : null;
   }
   // The App Dock context of the page (when the bridge is present) names the selection, so the agent's turn carries it.
   function publishContext(items) {
@@ -200,7 +267,7 @@
     if (!app || typeof app.setContext !== 'function') return;
     const summary = items.length ? 'Selected on the preview: ' + items.map((item, index) => (item.expired ? '(expired) ' : '') + `${index + 1}. ${item.tag}${item.classes[0] ? '.' + item.classes[0] : ''} "${item.text.slice(0, 40)}"${item.vsrc ? ' (' + item.vsrc + ')' : ''}`).join('; ') : '';
     // The whole card travels in `view` (the clip as its description only: its pixels stay in the preview's report).
-    const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes}} : {})}));
+    const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
   const report = () => { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
@@ -337,7 +404,7 @@
       if (!item || typeof item !== 'object') continue;
       const element = item.expired ? null : reconcile(item, all);
       if (element && !found.includes(element)) { found.push(element); picked.set(element, {...describeElement(element, env), revision: revision()}); }
-      else if (!element) lost.push({tag: item.tag, text: item.text, selector: item.selector, vsrc: item.vsrc || null, own_vsrc: Boolean(item.own_vsrc), index: item.index, parent: item.parent, revision: item.revision || null, classes: Array.isArray(item.classes) ? item.classes : [], html: '', box: item.box || {x: 0, y: 0, w: 0, h: 0}, computed: {}, same_vsrc_count: 0, vgen: item.vgen || null, expired: true});
+      else if (!element) lost.push({tag: item.tag, text: item.text, selector: item.selector, vsrc: item.vsrc || null, own_vsrc: Boolean(item.own_vsrc), index: item.index, parent: item.parent, anchor: item.anchor && typeof item.anchor === 'object' ? item.anchor : {}, revision: item.revision || null, classes: Array.isArray(item.classes) ? item.classes : [], html: '', box: item.box || {x: 0, y: 0, w: 0, h: 0}, computed: {}, same_vsrc_count: 0, vgen: item.vgen || null, expired: true});
     }
     selected = found; expired = lost; ensureLayer(); schedule(); report();
   }
