@@ -188,7 +188,11 @@ def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch
     monkeypatch.setattr(voice.fam_media, "speak_bytes", speak)
     body = json.dumps({"text": "¿Confirmas la transferencia?", "language": "es", "phrase_id": "confirmar"}).encode()
     assert voice.TransferVoice().handle("POST", "speak", "", "application/json", body) == (200, b"RIFF synthetic WAV", "audio/wav")
-    unknown = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"variable","phrase_id":"confirmar"}')
+    by_id = b'{"language":"es","phrase_id":"confirmar"}'
+    assert voice.TransferVoice().handle("POST", "speak", "", "application/json", by_id) == (200, b"RIFF synthetic WAV", "audio/wav")
+    legacy_request = b'{"text":"Confirma esta transferencia de 40 euros","phrase_id":"confirmar"}'
+    assert voice.TransferVoice().handle("POST", "speak", "", "application/json", legacy_request) == (200, b"RIFF synthetic WAV", "audio/wav")
+    unknown = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"variable","phrase_id":"unknown"}')
     assert unknown[0] == 404
 
 
@@ -213,7 +217,9 @@ def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypa
         return relay.handle("POST", "speak", "", "application/json", body)
 
     assert speak("confirmar", text) == (200, wav, "audio/wav; source=cache-natural")
-    assert speak("confirmar", "Transfiere dinero a María")[0] == 404
+    by_id = b'{"language":"es","phrase_id":"confirmar"}'
+    assert relay.handle("POST", "speak", "", "application/json", by_id) == (200, wav, "audio/wav; source=cache-natural")
+    assert speak("confirmar", "Transfiere dinero a María") == (200, wav, "audio/wav; source=cache-natural")
     assert speak("../confirmar", text)[0] == 404
     assert speak("saludo", "Dime")[0] == 404
     monkeypatch.setattr(voice, "VOICE_MODE", "off")

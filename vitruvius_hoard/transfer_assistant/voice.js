@@ -101,12 +101,12 @@ export async function transcribeTransferSpeech(blob, {partial, signal, state, co
 }
 
 
-export async function speakTransferReply(text, {phraseId, locale, signal, onFallback, onStart}) {
+export async function speakTransferReply(phraseId, {locale, signal, onFallback, onStart}) {
   try {
     const response = await fetch(API + "/speak", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({text, phrase_id: phraseId, language: locale.slice(0, 2)}),
+      body: JSON.stringify({phrase_id: phraseId, language: locale.slice(0, 2)}),
       signal: AbortSignal.any([signal, AbortSignal.timeout(14000)]),
     });
     if (!response.ok) throw new Error("tts_unavailable");

@@ -1,4 +1,5 @@
 const SLOTS = ["recipient", "amountCents", "concept", "source"];
+export const PROMPT_PHRASES = {recipient: "pide-destino", amountCents: "pide-importe", concept: "pide-concepto", source: "pide-origen"};
 
 const COPY = {
   es: {
@@ -316,13 +317,13 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
   const raw = text.trim();
   if (state.phase === "executing") return {state};
   if (CANCEL.test(raw)) {
-    if (state.phase === "complete") return {state, message: copy.completed};
-    return {state: {...initialTransfer(), phase: "cancelled"}, message: copy.cancelled};
+    if (state.phase === "complete") return {state, message: copy.completed, phraseId: "otra"};
+    return {state: {...initialTransfer(), phase: "cancelled"}, message: copy.cancelled, phraseId: "cancelado"};
   }
 
   if (CONFIRM.test(raw)) {
     if (state.phase === "ready" && allowConfirm) return {state: {...state, phase: "executing"}, action: {...state.slots}};
-    if (state.phase === "ready") return {state, message: state.summary};
+    if (state.phase === "ready") return {state, message: state.summary, phraseId: "confirmar"};
     return {state, message: copy[state.next] || copy.start, phraseId: "sin-confirmacion"};
   }
 
@@ -332,7 +333,9 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
   let issue;
   if (recipientChoice) {
     const selected = candidates.find(item => (item.id || item.iban) === recipientChoice);
-    if (!selected) return {state, message: candidates.length ? copy.ambiguous(candidates.map(item => item.name)) : copy.start};
+    if (!selected) return candidates.length
+      ? {state, message: copy.ambiguous(candidates.map(item => item.name)), phraseId: "ambiguo-contacto"}
+      : {state, message: copy.start, phraseId: "pide-destino"};
     slots.recipient = selected;
     candidates = [];
   } else if (interpretation?.is_final === true) {
@@ -393,23 +396,25 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
 
   const progress = {slots, candidates, phase: "collecting", next: null};
   if (candidates.length) {
-    return {state: {...progress, next: "recipient"}, message: copy.ambiguous(candidates.map(item => item.name))};
+    return {state: {...progress, next: "recipient"}, message: copy.ambiguous(candidates.map(item => item.name)), phraseId: "ambiguo-contacto"};
   }
   const missing = SLOTS.find(key => slots[key] === undefined);
   if (missing) {
     const currentIssue = issue?.[0] === missing ? issue : null;
-    return {state: {...progress, next: missing}, message: currentIssue ? currentIssue[1] : copy[missing], phraseId: currentIssue?.[2]};
+    return {state: {...progress, next: missing}, message: currentIssue ? currentIssue[1] : copy[missing],
+      phraseId: currentIssue?.[2] || PROMPT_PHRASES[missing]};
   }
 
   const account = accounts.find(item => item.id === slots.source);
   if (!account) {
     delete slots.source;
-    return {state: {...progress, next: "source"}, message: copy.unknownSource};
+    return {state: {...progress, next: "source"}, message: copy.unknownSource, phraseId: "pide-origen"};
   }
   const currency = new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-IE", {style: "currency", currency: "EUR", useGrouping: "always"});
   if (Number.isSafeInteger(account.balanceCents) && account.balanceCents < slots.amountCents) {
-    return {state: {...progress, phase: "insufficient", next: "amountCents"}, message: copy.insufficient(account.name, currency.format(account.balanceCents / 100))};
+    return {state: {...progress, phase: "insufficient", next: "amountCents"},
+      message: copy.insufficient(account.name, currency.format(account.balanceCents / 100)), phraseId: "saldo-insuficiente"};
   }
   const summary = copy.summary(currency.format(slots.amountCents / 100), slots.recipient.name, account.name, slots.concept);
-  return {state: {...progress, phase: "ready", summary}, message: summary};
+  return {state: {...progress, phase: "ready", summary}, message: summary, phraseId: "confirmar"};
 }
