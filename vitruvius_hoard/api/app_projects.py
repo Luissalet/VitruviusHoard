@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -123,8 +123,8 @@ def comment_undo(request: Request, id: str, comment_id: str):
 
 
 @router.get("")
-def project_list(request: Request):
-    return {"projects": services(request).app_projects.list()}
+def project_list(request: Request, archived: bool = False):
+    return {"projects": services(request).app_projects.list(archived)}
 
 
 @router.post("", status_code=201)
@@ -171,7 +171,7 @@ async def revision_stream(projects, id, baseline):
                 cursor, latest = sequence, change["revision"]
                 yield _encode_revision(change)
         except LookupError:
-            # Undoing creation archives the project and closes its stream.
+            # An archived project closes its stream.
             return
 
 
@@ -187,6 +187,11 @@ def project_events(request: Request, id: str, revision: str | None = None):
 @router.put("/{id}")
 def project_update(request: Request, id: str, body: AppUpdateArgs):
     return execute(lambda: services(request).app_projects.update(id, body.files, body.expected_revision))
+
+
+@router.post("/{id}/archive")
+def project_archive(request: Request, id: str, body: AppArchiveArgs):
+    return execute(lambda: services(request).app_projects.archive(id, **body.model_dump(exclude={"id"})))
 
 
 @router.post("/{id}/source-edit")

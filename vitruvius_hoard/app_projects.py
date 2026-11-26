@@ -25,6 +25,7 @@ from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
 from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
+from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
 from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
 
@@ -164,33 +165,81 @@ class AppProjects:
         self.canvas = CanvasSessions()
         self.revision_events = RevisionEvents()
 
-    def _directory(self, id):
+    @staticmethod
+    def _archived(root, index):
+        # Earlier creation undos left an empty marker. An explicit index state takes precedence.
+        return index["archived"] if "archived" in index else (root / "archived").exists()
+
+    def _load_index(self, id, *, include_archived=False):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
             raise ValueError("Invalid project id")
-        path = self.root / id
-        if not (path / "project-index.json").is_file() or (path / "archived").exists():
+        root = self.root / id
+        try:
+            index = json.loads((root / "project-index.json").read_text(encoding="utf-8"))
+        except FileNotFoundError as error:
+            raise LookupError("Application project not found") from error
+        if not include_archived and self._archived(root, index):
             raise LookupError("Application project not found")
-        return path
+        return root, index
+
+    def _directory(self, id):
+        return self._load_index(id)[0]
 
     def get(self, id, revision=None):
         with self.lock:
-            root = self._directory(id)
-            index = json.loads((root / "project-index.json").read_text(encoding="utf-8"))
+            root, index = self._load_index(id)
             selected = revision or index["revision"]
             if selected not in index["revisions"]:
                 raise LookupError("Project revision not found")
             snapshot = json.loads((root / "revisions" / selected / "snapshot.json").read_text(encoding="utf-8"))
             return {**index, "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
 
-    def list(self):
+    def list(self, archived=False):
         with self.lock:
             result = []
             for path in sorted(self.root.glob("*/project-index.json")):
-                if (path.parent / "archived").exists():
-                    continue
                 item = json.loads(path.read_text(encoding="utf-8"))
-                result.append({**item, "preview": self.status(item["id"])})
+                if self._archived(path.parent, item) == archived:
+                    metadata = {**item, "archived": True} if archived else item
+                    result.append({**metadata, "preview": self.status(item["id"])})
             return sorted(result, key=lambda item: item["updated_ts"], reverse=True)
+
+    def _set_archived(self, root, index, archived):
+        id = index["id"]
+        if archived:
+            self.stop(id)
+        updated = {**index, "archived": archived, "updated_ts": max(time.time(), index["updated_ts"] + 0.000001)}
+        write_json_atomic(root / "project-index.json", updated)
+        if archived:
+            self.revision_events.close_project(id)
+        return updated
+
+    def archive(self, id, expected_revision, confirm=False, operation="archive", expected_updated_ts=None, lang="en"):
+        es = lang == "es"
+        if operation not in ("archive", "restore"):
+            raise ValueError("Choose archive or restore.")
+        if confirm is not True:
+            raise AppError("confirm_required",
+                           "Confirma que quieres cambiar el estado del proyecto." if es else "Confirm the project state change.")
+        archived = operation == "archive"
+        with self.lock:
+            root, index = self._load_index(id, include_archived=True)
+            if (index["revision"] != expected_revision
+                    or expected_updated_ts is not None and index["updated_ts"] != expected_updated_ts):
+                raise AppError("conflict",
+                               "La versión o el estado del proyecto ha cambiado. Vuelve a cargarlo."
+                               if es else "The project revision or state changed. Reload the project.")
+            changed = self._archived(root, index) != archived
+            if changed:
+                index = self._set_archived(root, index, archived)
+            result = {"id": id, "revision": index["revision"], "archived": archived,
+                      "updated_ts": index["updated_ts"], "changed": changed}
+            if changed:
+                result["undo"] = {"tool": "app_project_archive", "arguments": {
+                    "id": id, "expected_revision": index["revision"], "expected_updated_ts": index["updated_ts"],
+                    "operation": "restore" if archived else "archive", "confirm": True, "lang": lang,
+                }}
+            return result
 
     def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None):
         with self.lock:
@@ -399,9 +448,7 @@ class AppProjects:
             if revision is None:
                 if current["revisions"] != [expected_revision]:
                     raise ValueError("The application has retained edits")
-                self.stop(id)
-                (root / "archived").touch()
-                self.revision_events.close_project(id)
+                self._set_archived(root, self._index(current), True)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
             saved = self._save(root, self._index(current), previous["files"])
