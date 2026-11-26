@@ -224,6 +224,26 @@ class AppRenderArgs(AppIdArgs):
     widths: Optional[list[int]] = None
 
 
+class CanvasActor(BaseModel):
+    id: str = Field("agent", min_length=1, max_length=80)
+    name: str | None = Field(None, max_length=80)
+    color: str | None = Field(None, max_length=64)
+
+
+class CanvasViewArgs(BaseModel):
+    id: str = Field(..., description="Application project ID.")
+    scope: Literal["screen", "page"] = "screen"
+    max_chars: int = Field(6000, ge=1, le=12000)
+    actor: CanvasActor = Field(default_factory=CanvasActor, description="Agent identity used for the visible cursor.")
+
+
+class CanvasActArgs(BaseModel):
+    id: str = Field(..., description="Application project ID.")
+    action: Literal["click", "fill", "select", "navigate", "scroll", "highlight", "wait"]
+    args: dict = Field(default_factory=dict, description="App Dock arguments for the chosen action, e.g. ref, text or value.")
+    actor: CanvasActor = Field(default_factory=CanvasActor, description="Agent identity used for the visible cursor.")
+
+
 class AppCallArgs(BaseModel):
     id: str = ""
     operation: Literal["list", "get", "create", "update", "delete"]
@@ -652,6 +672,14 @@ TOOLS: list[Tool] = [
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
+    Tool("app_project_canvas_view", "Read the project's open preview and control refs. Leer el lienzo abierto.",
+        CanvasViewArgs, ann(True),
+        lambda services, args: services.app_projects.canvas.call(
+            args.id, "app_read", {"scope": args.scope, "max_chars": args.max_chars}, args.actor.model_dump(exclude_none=True))),
+    Tool("app_project_canvas_act", "Act on the open preview with a named cursor. Actuar en el lienzo abierto.",
+        CanvasActArgs, ann(False, True, False),
+        lambda services, args: services.app_projects.canvas.call(
+            args.id, "app_" + args.action, args.args, args.actor.model_dump(exclude_none=True))),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
