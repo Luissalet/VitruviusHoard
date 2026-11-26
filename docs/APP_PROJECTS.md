@@ -38,7 +38,7 @@ Each selected element is described by a stable selector (`data-vid`, then `id`, 
 
 The selection reaches the agent two ways: the copilot turn context carries a short summary of it, and the read-only tool `app_project_selection` (`id`) returns the full list of the open preview, so "change this" needs no description. An empty list says nothing is selected. The list is kept in memory per project, is replaced on every change, and is emptied when the preview stops or another project opens. It belongs to one page: following a link to another page clears it, while a reload of the same page (or a page that replaces its elements) keeps it.
 
-The script is `vitruvius_hoard/preview_inspector.js` (also served at `/api/app-projects/preview-inspector.js`; `preview_inspector.inspector_script()` returns its text). It is loaded only into the owned preview, next to the App Dock bridge, by whatever injects scripts into the preview pages; it is never part of an export, and `server.py` does not reference it. It has no dependencies and no vendored code.
+The script is `vitruvius_hoard/preview_scripts/preview-inspector.js` (also served at `/api/app-projects/preview-inspector.js`; `preview_inspector.inspector_script()` returns its text). It is loaded only into the owned preview, next to the App Dock bridge, by whatever injects scripts into the preview pages; it is never part of an export, and `server.py` does not reference it. It has no dependencies and no vendored code.
 
 Messages use the bridge's envelope, `{hoardDock: 1, type, ...}`, and only travel between the preview frame and the Vitruvius page that frames it (the host checks source window and origin):
 

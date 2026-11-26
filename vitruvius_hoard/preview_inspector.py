@@ -1,6 +1,6 @@
 """Elements a person selected on an application preview, kept for the agent.
 
-The inspector script (``preview_inspector.js``) runs inside the owned preview and reports each element it
+The inspector script (``preview_scripts/preview-inspector.js``) runs inside the owned preview and reports each element it
 selected to the Vitruvius page that frames it. That page stores the list here, so an agent can read "this" without
 the person describing it. The list is advisory: it is per project, in memory, and replaced on every report.
 """
@@ -12,7 +12,7 @@ from pathlib import Path
 
 MAX_SELECTION = 24
 MAX_TEXT = 200
-_SCRIPT = Path(__file__).with_name("preview_inspector.js")
+_SCRIPT = Path(__file__).with_name("preview_scripts") / "preview-inspector.js"
 _BOX = ("x", "y", "w", "h")
 
 

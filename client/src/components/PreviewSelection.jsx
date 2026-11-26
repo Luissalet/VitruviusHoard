@@ -14,14 +14,16 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
   const [connected, setConnected] = useState(false);
   const state = useRef({ mode, items });
   state.current = { mode, items };
-  const origin = useRef(null);
   const page = useRef(null); // the page path the selection was made on: a selection belongs to one page
   const projectId = project?.id;
   const running = preview?.state === "running" && Boolean(preview?.url);
 
+  // The frame is read on every use: a live refresh may swap the iframe element or its address under this component.
+  const originOf = (frame) => { try { return new URL(frame.src, window.location.href).origin; } catch { return null; } };
   const send = (type, fields = {}) => {
     const frame = frameRef.current;
-    if (frame?.contentWindow && origin.current) frame.contentWindow.postMessage({ hoardDock: 1, type, ...fields }, origin.current);
+    const target = frame && originOf(frame);
+    if (frame?.contentWindow && target) frame.contentWindow.postMessage({ hoardDock: 1, type, ...fields }, target);
   };
   const revision = useRef(preview?.revision);
   revision.current = preview?.revision;
@@ -38,11 +40,11 @@ export default function PreviewSelection({ project, preview, frameRef, es, notif
 
   useEffect(() => {
     const frame = frameRef.current;
-    if (!running || !frame) { origin.current = null; return undefined; }
-    try { origin.current = new URL(frame.src, window.location.href).origin; } catch { origin.current = null; return undefined; }
+    if (!running || !frame) return undefined;
     const hello = () => send("inspect/hello");
     const onMessage = (event) => {
-      if (!isInspectorMessage(event, frame.contentWindow, origin.current)) return;
+      const current = frameRef.current;
+      if (!isInspectorMessage(event, current?.contentWindow, current && originOf(current))) return;
       setConnected(true);
       const { selection, mode: pageMode } = event.data;
       if (event.data.type === "dock/inspector-ready") {

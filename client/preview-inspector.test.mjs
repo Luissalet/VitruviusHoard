@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 // The inspector is a plain script for the preview page: load its pure core under a flag, with a tiny fake DOM.
-const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_inspector.js", import.meta.url), "utf8");
+const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/preview-inspector.js", import.meta.url), "utf8");
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);

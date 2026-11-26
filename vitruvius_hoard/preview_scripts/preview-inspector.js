@@ -229,5 +229,5 @@
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', schedule);
   window.__vitruviusInspector = {version: 1, core};
-  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', {mode, page: pageId(), selection: []}); } } catch (_) { /* the host will say hello */ }
+  try { const ancestor = (location.ancestorOrigins && location.ancestorOrigins[0]) || (document.referrer ? new URL(document.referrer).origin : null); if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', {mode, page: pageId(), selection: []}); } } catch (_) { /* the host will say hello */ }
 })();
