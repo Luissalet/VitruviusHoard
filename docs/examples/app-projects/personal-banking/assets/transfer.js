@@ -115,7 +115,7 @@ export function review({focus = true, via = 'formulario'} = {}) {
   showProblems(list);
   if (Object.keys(list).length) return {ok: false, problems: list};
   const from = accounts.find(a => a.id === v.origen);
-  pending = {...v, origen_nombre: from.nombre, origen_iban: from.iban, para: recipient(v), key: crypto.randomUUID(), via};
+  pending = Object.freeze({...v, origen_nombre: from.nombre, origen_iban: from.iban, para: Object.freeze(recipient(v)), key: crypto.randomUUID(), via, huella: fingerprint(v)});
   $('transfer-summary').innerHTML = `
     <div><dt>Desde</dt><dd>${esc(from.nombre)}<span class="mono">${esc(maskIban(from.iban))}</span></dd></div>
     <div><dt>Para</dt><dd>${esc(pending.para.nombre)}<span class="mono">${esc(groupIban(pending.para.iban))}</span></dd></div>
@@ -149,6 +149,16 @@ export async function confirm() {
   try { return {ok: true, ...(await send(pending, pending.key))}; } catch (error) { return {ok: false, problems: {transferencia: error.message}, code: error.code}; }
 }
 
+/** The action input for a set of form values (without the date): exactly what a confirmation sends. */
+function actionInput(v) {
+  const input = {origen: v.origen, importe_cent: v.importe_cent, concepto: v.concepto};
+  if (v.modo === 'contacto') input.contacto = v.contacto;
+  else if (v.modo === 'propia') input.destino = v.destino;
+  else { input.iban = v.iban; input.beneficiario = v.beneficiario; }
+  return input;
+}
+const fingerprint = (v) => JSON.stringify(Object.entries(actionInput(v)).sort(([a], [b]) => a.localeCompare(b)));
+
 /** Drops the reviewed draft: a confirmation needs a new review after any edit. */
 function expire() {
   pending = null;
@@ -157,12 +167,13 @@ function expire() {
 
 /** Calls the atomic action once for a reviewed transfer and shows the receipt; throws with the action's code. */
 async function send(t, key) {
+  if (!t || t !== pending || fingerprint(t) !== t.huella || fingerprint(fields()) !== t.huella) {
+    expire();
+    throw Object.assign(new Error('Los datos han cambiado desde la revisión: revisa la transferencia de nuevo'), {code: 'draft_changed'});
+  }
   const button = $('transfer-confirm');
   button.disabled = true; button.textContent = 'Enviando…';
-  const input = {origen: t.origen, importe_cent: t.importe_cent, concepto: t.concepto, fecha: new Date().toLocaleDateString('sv-SE')};
-  if (t.modo === 'contacto') input.contacto = t.contacto;
-  else if (t.modo === 'propia') input.destino = t.destino;
-  else { input.iban = t.iban; input.beneficiario = t.beneficiario; }
+  const input = {...actionInput(t), fecha: new Date().toLocaleDateString('sv-SE')};
   try {
     const result = await post('/api/actions/transferir', input, key);
     const ref = 'TSL-' + input.fecha.replace(/-/g, '') + '-' + String(result.undo_token || t.key).replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase();
@@ -217,6 +228,7 @@ export async function undoLast() {
 
 /** Sets any of origen, modo, contacto, beneficiario, iban, destino, importe (text or cents via importe_cent), concepto. Returns what is still missing. */
 export function set(values = {}) {
+  expire();
   if (form.dataset.step !== 'datos') step('datos');
   if (values.origen) { $('origen').value = values.origen; syncDestino(); }
   const m = values.modo || (values.contacto ? 'contacto' : values.iban || values.beneficiario ? 'iban' : values.destino ? 'propia' : null);
@@ -257,7 +269,7 @@ function markMissing(state) {
 function sameDraft(d, v) {
   if (!d || !d.recipient) return false;
   const to = d.recipient.id ? v.modo === 'contacto' && v.contacto === d.recipient.id
-    : v.modo === 'iban' && v.iban === String(d.recipient.iban || '').replace(/\s+/g, '').toUpperCase();
+    : v.modo === 'iban' && v.iban === String(d.recipient.iban || '').replace(/\s+/g, '').toUpperCase() && v.beneficiario === String(d.recipient.name || '').trim();
   return to && v.origen === d.source && v.importe_cent === d.amountCents && v.concepto === String(d.concept || '').trim();
 }
 
@@ -280,10 +292,12 @@ function mountVoice() {
       };
     },
     execute: async (draft, key) => {
-      if (!sameDraft(draft, fields())) throw Object.assign(new Error('Has cambiado el formulario: revisa la transferencia y confírmala desde el formulario'), {code: 'draft_changed'});
-      const checked = review({focus: false, via: 'voz'});
-      if (!checked.ok) throw Object.assign(new Error(Object.values(checked.problems)[0]), {code: 'invalid_input'});
-      return (await send(checked.transfer, key)).receipt;
+      if (!pending || pending.via !== 'voz' || form.dataset.step !== 'confirmar' || !sameDraft(draft, pending)) {
+        expire();
+        if (sameDraft(draft, fields())) scheduleReview();
+        throw Object.assign(new Error('Revisa la transferencia en el formulario antes de confirmarla'), {code: 'draft_changed'});
+      }
+      return (await send(pending, key)).receipt;
     },
     onDraft: (state) => {
       const r = state.slots.recipient;
@@ -291,13 +305,14 @@ function mountVoice() {
       draft = state.slots;
       // Follow the recipient only when the assistant changes it: a later turn (such as the confirmation) must not undo
       // a mode the person chose in the form.
-      const changedRecipient = r && (r.id || r.iban) !== (before?.id || before?.iban);
+      const who = (x) => x ? (x.id || `${x.iban}|${x.name || ''}`) : '';
+      const changedRecipient = r && who(r) !== who(before);
       const wanted = r ? (r.id ? 'contacto' : 'iban') : null;
       if (changedRecipient && mode() !== wanted) { form.querySelector(`input[name="modo"][value="${wanted}"]`).checked = true; syncMode(); }
       if (changedRecipient && wanted === 'iban') $('beneficiario').value = r.name || '';
       markMissing(state);
       if (state.phase === 'ready' && root.dataset.transferPhase === 'ready' && !(pending && sameDraft(state.slots, pending))) scheduleReview();
-      if (state.phase !== 'ready' && form.dataset.step === 'confirmar' && form.dataset.via === 'voz') step('datos');
+      if (!['ready', 'executing'].includes(state.phase) && form.dataset.step === 'confirmar' && form.dataset.via === 'voz') { expire(); step('datos'); }
     },
   });
   // When the panel reaches its review, or corrects a draft it already reviewed, the form shows the same data in its
@@ -343,7 +358,7 @@ if (form) {
     if (Number.isFinite(cents) && cents > 0) $('importe').value = amountText(cents);
   });
   $('transfer-back').addEventListener('click', () => { expire(); step('datos'); $('importe').focus(); });
-  for (const type of ['input', 'change']) form.addEventListener(type, (e) => { if (e.isTrusted && e.target.closest('[data-pane="datos"]')) expire(); });
+  for (const type of ['input', 'change']) form.addEventListener(type, (e) => { if (e.target.closest('[data-pane="datos"]')) expire(); });
   $('transfer-confirm').addEventListener('click', confirm);
   $('transfer-undo').addEventListener('click', undoLast);
   $('receipt-print').addEventListener('click', () => print());

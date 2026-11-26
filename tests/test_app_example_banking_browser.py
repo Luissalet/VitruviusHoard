@@ -17,6 +17,15 @@ STAND_IN = """
 export function mountTransferAssistant(root, options) {
   root.dataset.transferPhase = 'collecting';
   const panel = {options, draft: null,
+    async correct(slots, fills) {
+      for (const [id, value] of Object.entries(fills)) {
+        const field = document.getElementById(id);
+        field.value = value;
+        field.dispatchEvent(new Event('input', {bubbles: true}));
+        field.dispatchEvent(new Event('change', {bubbles: true}));
+      }
+      await panel.ready(slots);
+    },
     async ready(slots) { panel.draft = slots; options.onDraft?.({slots, phase: 'ready', candidates: [], next: null}); root.dataset.transferPhase = 'ready'; },
     async submit(text) {
       if (text !== 'confirmo' || root.dataset.transferPhase !== 'ready') return false;
@@ -151,3 +160,90 @@ def test_a_correction_while_ready_updates_the_form_summary(page):
     page.click("#transfer-confirm")
     page.wait_for_selector("#receipt-ref")
     assert [(post.get("contacto"), post["importe_cent"]) for post in page.posts] == [("lucia-ferrer", 6000)]
+
+
+# ---------- Matrix: every field changed after the review, by hand and by the assistant ----------
+EXTERNAL_IBAN = "ES6694720100261234567890"
+BASE_CONTACT = {"source": "cuenta-diaria", "recipient": {"id": "maria-ortega", "name": "María Ortega Ruiz"}, "amountCents": 1250, "concept": "entradas de cine"}
+BASE_IBAN = {"source": "cuenta-diaria", "recipient": {"iban": EXTERNAL_IBAN, "name": "Elena Prieto Gil"}, "amountCents": 1250, "concept": "entradas de cine"}
+
+
+def form_values(draft):
+    r = draft["recipient"]
+    values = {"origen": draft["source"], "importe": f"{draft['amountCents'] // 100},{draft['amountCents'] % 100:02d}", "concepto": draft["concept"]}
+    values.update({"contacto": r["id"]} if "id" in r else {"modo-iban": True, "iban": r["iban"], "beneficiario": r["name"]})
+    return values
+
+
+def prepare(page, draft):
+    """The assistant reads a draft, the form fills and the confirmation step shows it."""
+    page.evaluate("""async (draft) => {
+      const r = draft.recipient;
+      window.teselaTransfer.set(r.id ? {contacto: r.id, origen: draft.source, importe_cent: draft.amountCents, concepto: draft.concept}
+        : {iban: r.iban, beneficiario: r.name, origen: draft.source, importe_cent: draft.amountCents, concepto: draft.concept});
+      await window.standInPanel.ready(draft);
+    }""", draft)
+    page.wait_for_function("() => document.getElementById('transfer-form').dataset.step === 'confirmar'")
+    page.wait_for_timeout(1200)  # the review scheduled when the panel became ready has run
+
+
+# field → (start draft, manual change, assistant correction (slots, fills), expected POST subset, text expected in summary and receipt)
+CASES = {
+    "origen": (BASE_CONTACT, lambda p: p.select_option("#origen", "cuenta-ahorro"),
+               ({**BASE_CONTACT, "source": "cuenta-ahorro"}, {"origen": "cuenta-ahorro"}), {"origen": "cuenta-ahorro"}, "Ahorro"),
+    "destino": (BASE_CONTACT, lambda p: (p.check("#modo-propia", force=True), p.select_option("#destino", "cuenta-compartida")),
+                ({**BASE_CONTACT, "recipient": {"id": "lucia-ferrer", "name": "Lucía Ferrer Soler"}}, {"contacto": "lucia-ferrer"}),
+                None, None),
+    "titular": (BASE_IBAN, lambda p: p.fill("#beneficiario", "Titular cambiado"),
+                ({**BASE_IBAN, "recipient": {"iban": EXTERNAL_IBAN, "name": "Titular cambiado"}}, {}),
+                {"iban": EXTERNAL_IBAN, "beneficiario": "Titular cambiado"}, "Titular cambiado"),
+    "iban": (BASE_IBAN, lambda p: p.fill("#iban", "ES1524710518520002217784"),
+             ({**BASE_IBAN, "recipient": {"iban": "ES1524710518520002217784", "name": "Elena Prieto Gil"}}, {"iban": "ES1524710518520002217784"}),
+             {"iban": "ES1524710518520002217784"}, "ES15 2471 0518 5200 0221 7784"),
+    "importe": (BASE_CONTACT, lambda p: p.fill("#importe", "30"),
+                ({**BASE_CONTACT, "amountCents": 3000}, {"importe": "30,00"}), {"importe_cent": 3000}, "30,00"),
+    "concepto": (BASE_CONTACT, lambda p: p.fill("#concepto", "Cena del viernes"),
+                 ({**BASE_CONTACT, "concept": "Cena del viernes"}, {"concepto": "Cena del viernes"}), {"concepto": "Cena del viernes"}, "Cena del viernes"),
+}
+# the destination differs by path: by hand it becomes an own account, by the assistant another contact
+DESTINO = {"manual": ({"destino": "cuenta-compartida"}, "Casa compartida"), "asistente": ({"contacto": "lucia-ferrer"}, "Lucía Ferrer Soler")}
+
+
+def check_sent(page, expected, text):
+    page.wait_for_selector("#receipt-ref")
+    post, = page.posts
+    assert {key: post.get(key) for key in expected} == expected
+    receipt = page.inner_text("#transfer-receipt")
+    assert text in receipt
+
+
+@pytest.mark.parametrize("path", ["manual", "asistente"])
+@pytest.mark.parametrize("field", list(CASES))
+def test_every_field_changed_after_review_is_reviewed_again_and_sent_as_shown(page, field, path):
+    start, manual, (slots, fills), expected, text = CASES[field]
+    if field == "destino":
+        expected, text = DESTINO[path]
+    prepare(page, start)
+    if path == "manual":
+        page.click("#transfer-back")
+        manual(page)
+        # The review expired: neither the form nor the panel can send without a new review.
+        assert page.evaluate("async () => (await window.teselaTransfer.confirm()).ok") is False
+        page.evaluate("() => window.standInPanel.submit('confirmo')")
+        assert page.posts == []
+        page.click("#transfer-review")
+    else:
+        page.evaluate("async ([slots, fills]) => window.standInPanel.correct(slots, fills)", [slots, fills])
+    page.wait_for_function("(text) => document.getElementById('transfer-form').dataset.step === 'confirmar' && document.getElementById('transfer-summary').innerText.includes(text)", arg=text)
+    assert page.posts == []
+    page.click("#transfer-confirm")
+    check_sent(page, expected, text)
+
+
+def test_holder_changed_after_review_cannot_be_confirmed_from_the_panel(page):
+    prepare(page, BASE_IBAN)
+    page.click("#transfer-back")
+    page.fill("#beneficiario", "Titular cambiado")
+    page.evaluate("() => window.standInPanel.submit('confirmo')")
+    assert page.evaluate("() => window.standInPanel.rejected") == "draft_changed"
+    assert page.posts == []
