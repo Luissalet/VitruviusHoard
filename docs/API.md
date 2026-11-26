@@ -203,7 +203,7 @@ Response (a "critique" object):
 
 ```json
 {
-  "score": 7.8, "heuristic_score": 8.5, "vision_model": "qwen2.5-vl-7b-instruct",
+  "score": 7.8, "heuristic_score": 8.33, "vision_model": "qwen2.5-vl-7b-instruct",
   "findings": [{"check_id": "motion.no-reduced-motion", "area": "motion", "severity": "warn",
                "title": "No prefers-reduced-motion support", "detail": "...", "evidence": null,
                "fix": "Add an @media (prefers-reduced-motion: reduce) block..."},
@@ -216,6 +216,16 @@ Response (a "critique" object):
 ```
 
 `404` if the render id is unknown.
+
+Lint's `score` and critique's `heuristic_score` use `10 / (1 + P / 10)`, rounded to two decimals. `P` sums
+the weights of open findings. Errors weigh 4, warnings 1.5, advisories 0.5 and unrecognised severities 1.
+One error carries more weight than two warnings. A waived finding contributes zero. A clean result scores 10,
+a penalty of 10 scores 5, and larger penalties approach zero gradually. Fixing a finding or lowering its
+severity raises the unrounded score. Very small changes can tie at the displayed precision.
+
+Critique scores the combined findings after deduplication and waivers. Without a model rating its `score` equals
+`heuristic_score`. With a model rating it averages the two. Use `gate.state` for shipping. Floor findings and
+unwaived Reflex findings block shipping, and Finish findings are advisory.
 
 ### `POST /api/lint`
 
@@ -231,7 +241,7 @@ Response (a "lint result" object):
 {"findings": [{"check_id": "a11y.missing-alt", "area": "a11y", "severity": "error",
               "title": "Images missing alt text", "detail": "2 image(s) have no alt attribute.", "evidence": 2,
               "fix": "Add descriptive alt text to every meaningful image (alt=\"\" for decorative ones)."}],
- "score": 8.5, "counts": {"info": 1, "warn": 2, "error": 1}}
+ "score": 7.14, "counts": {"info": 0, "warn": 0, "error": 1}}
 ```
 
 ### `POST /api/renders/compare`
