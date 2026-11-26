@@ -136,6 +136,7 @@
     scroll: {get x() { return window.scrollX; }, get y() { return window.scrollY; }},
   };
   let hostOrigin = null; // the origin of the page that frames this one: fixed by the browser, or by the first hello
+  let hostLanguage;
   let mode = false;
   let selected = []; // elements, in the order they were chosen
   let hovered = null;
@@ -145,7 +146,7 @@
   let expired = []; // chosen elements that are no longer the same element on the revision now served
   let lastRevision;
   let cursorSheet;
-  let layer; let root; let frame = 0; let watcher = 0;
+  let layer; let root; let edits; let frame = 0; let watcher = 0;
 
   const post = (type, fields = {}) => { if (hostOrigin !== null) window.parent.postMessage({hoardDock: 1, type, ...fields}, hostOrigin); };
   const pageId = () => location.pathname + location.search;
@@ -203,7 +204,7 @@
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
-  const report = () => { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
+  const report = () => { paintEdits(); const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
   const candidates = () => [...document.body.querySelectorAll('*')].filter(element => !isOwn(element)
     && !['script', 'style', 'link', 'meta', 'head', 'noscript', 'template'].includes(tagOf(element))
@@ -213,7 +214,6 @@
     if (layer) return;
     layer = document.createElement('vitruvius-inspector-layer');
     layer.setAttribute('data-vitruvius-inspector-layer', '');
-    layer.setAttribute('aria-hidden', 'true');
     layer.setAttribute('style', LAYER_STYLE);
     root = layer.attachShadow({mode: 'open'});
     root.innerHTML = `<style>
@@ -225,8 +225,10 @@
         background:#1a73e8;color:#fff;padding:1px 6px;border-radius:3px}
       .badge{position:absolute;min-width:18px;height:18px;border-radius:9px;background:#e8441a;color:#fff;font:700 11px/18px system-ui,sans-serif;text-align:center}
       .fade{transition:opacity .12s} @media (prefers-reduced-motion:reduce){.fade{transition:none}}
-    </style><div id="stage"></div>`;
+    </style><div id="stage" aria-hidden="true"></div>`;
     document.documentElement.appendChild(layer);
+    edits = installCanvasEdits(root, post, schedule);
+    edits?.setLanguage(hostLanguage);
     // Project CSS must not hide or move the layer: inline !important wins over any stylesheet rule, and the layer is
     // put back (or its style restored) if the page removes or rewrites it.
     new MutationObserver(() => { if (layer.getAttribute('style') !== LAYER_STYLE) layer.setAttribute('style', LAYER_STYLE); }).observe(layer, {attributes: true, attributeFilter: ['style', 'class', 'hidden']});
@@ -240,6 +242,545 @@
       const others = document.adoptedStyleSheets.filter(sheet => sheet !== cursorSheet);
       document.adoptedStyleSheets = on ? [...others, cursorSheet] : others;
     } catch (_) { /* a browser without adopted stylesheets keeps its normal cursor */ }
+  }
+
+  function installCanvasEdits(root, post, redraw) {
+    const meta = document.querySelector('meta[name="vitruvius-preview-revision"]');
+    if (!meta) return null;
+    const style = document.createElement('style');
+    style.textContent = [
+      '.canvas-control{pointer-events:auto;box-sizing:border-box;font:600 13px/1.35 system-ui,sans-serif}',
+      '.canvas-handle{position:absolute;z-index:1;width:22px;height:22px;padding:0;display:grid;place-items:center;',
+      'border:0;background:none;color:#20458f;transform:translate(-50%,-50%);touch-action:none}',
+      '.canvas-handle::before{content:"";width:8px;height:8px;border:2px solid #fff;background:currentColor;',
+      'border-radius:2px;box-shadow:0 0 0 1px currentColor;box-sizing:content-box}',
+      '.canvas-handle[data-kind=padding]{color:#246d51} .canvas-handle[data-kind=margin]{color:#a44d21}',
+      '.canvas-handle[data-kind=padding]::before{border-radius:50%;width:5px;height:5px}',
+      '.canvas-handle[data-kind=margin]::before{transform:rotate(45deg);width:5px;height:5px}',
+      '.canvas-handle:focus-visible,.canvas-action:focus-visible,.canvas-text:focus-visible{outline:2px solid #20458f;outline-offset:2px}',
+      '.canvas-handle:hover::before,.canvas-handle:focus-visible::before{border-color:#dbe8ff}',
+      '.canvas-tip,.canvas-panel,.canvas-text{position:absolute;z-index:2;border:1px solid #9cb1d5;',
+      'border-radius:6px;background:#f7f9ff;color:#182946;box-shadow:0 3px 12px #18294626}',
+      '.canvas-tip{padding:4px 8px;font:600 12px/1.3 system-ui,sans-serif;pointer-events:none;max-width:calc(100vw - 16px)}',
+      '.canvas-panel{width:max-content;max-width:min(310px,calc(100vw - 16px));padding:10px;',
+      'display:flex;gap:8px;align-items:center;flex-wrap:wrap}',
+      '.canvas-panel[hidden],.canvas-tip[hidden],.canvas-handle[hidden],.canvas-text[hidden]{display:none}',
+      '.canvas-panel-message{width:100%;overflow-wrap:anywhere}',
+      '.canvas-guide{position:absolute;box-sizing:border-box;pointer-events:none;color:#20458f}',
+      '.canvas-guide[data-axis=x]{border-left:1px dashed currentColor} .canvas-guide[data-axis=y]{border-top:1px dashed currentColor}',
+      '.canvas-action{min-height:32px;padding:4px 9px;border:1px solid #9cb1d5;border-radius:4px;color:#182946;background:#fff;font:inherit}',
+      '.canvas-action[data-apply]{color:#fff;background:#20458f;border-color:#20458f}',
+      '.canvas-text{padding:4px 6px;resize:none;overflow:hidden;min-height:30px}',
+    ].join('');
+    root.append(style);
+
+    const names = {
+      en: {
+        width: 'Width', height: 'Height', margin: 'Margin', padding: 'Padding',
+        top: 'top', right: 'right', bottom: 'bottom', left: 'left',
+        text: 'Edit text', apply: 'Apply', cancel: 'Cancel', saving: 'Saving…',
+        saved: 'Revision saved', unchanged: 'No change', missing: 'Select the element in the current preview.',
+        timeout: 'The edit could not be confirmed. Check the current revision.',
+        count: count => count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements',
+      },
+      es: {
+        width: 'Ancho', height: 'Alto', margin: 'Margen', padding: 'Relleno',
+        top: 'superior', right: 'derecho', bottom: 'inferior', left: 'izquierdo',
+        text: 'Editar texto', apply: 'Aplicar', cancel: 'Cancelar', saving: 'Guardando…',
+        saved: 'Versión guardada', unchanged: 'Sin cambios', missing: 'Selecciona el elemento en la vista previa actual.',
+        timeout: 'No se ha podido confirmar la edición. Comprueba la revisión actual.',
+        count: count => count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos',
+      },
+    };
+    let lang = document.documentElement.lang.startsWith('es') ? 'es' : 'en';
+    const copy = () => names[lang];
+    const stage = document.createElement('div');
+    stage.dataset.canvasEdits = '';
+    root.append(stage);
+    const button = (className) => {
+      const node = document.createElement('button');
+      node.type = 'button';
+      node.className = 'canvas-control ' + className;
+      return node;
+    };
+    const directions = { top: [0, 1], right: [1, 0], bottom: [0, 1], left: [1, 0] };
+    const properties = ['width', 'height', ...['margin', 'padding'].flatMap(kind =>
+      Object.keys(directions).map(side => kind + '-' + side))];
+    const handles = properties.map(property => {
+      const [kind, side] = property.split('-');
+      const node = button('canvas-handle');
+      node.hidden = true;
+      node.dataset.property = property;
+      node.dataset.kind = kind;
+      node.style.cursor = kind === 'width' || side === 'left' || side === 'right' ? 'ew-resize' : 'ns-resize';
+      stage.append(node);
+      return node;
+    });
+    const tip = document.createElement('div');
+    tip.className = 'canvas-tip';
+    tip.role = 'status';
+    tip.hidden = true;
+    const panel = document.createElement('div');
+    panel.className = 'canvas-control canvas-panel';
+    panel.setAttribute('role', 'group');
+    panel.hidden = true;
+    const message = document.createElement('div');
+    message.className = 'canvas-panel-message';
+    message.role = 'status';
+    const applyButton = button('canvas-action');
+    applyButton.dataset.apply = '';
+    const cancelButton = button('canvas-action');
+    panel.append(message, applyButton, cancelButton);
+    const input = document.createElement('textarea');
+    input.rows = 1;
+    input.wrap = 'off';
+    input.className = 'canvas-control canvas-text';
+    input.hidden = true;
+    const guide = document.createElement('div');
+    guide.className = 'canvas-guide';
+    guide.hidden = true;
+    guide.setAttribute('aria-hidden', 'true');
+    stage.append(guide, tip, panel, input);
+
+    let selected = null;
+    let scale = [];
+    let scaleKey = '';
+    let gesture = null;
+    let editor = null;
+    let confirmation = null;
+    let saving = false;
+    let waitingFor = null;
+    let tipTimer = 0;
+    const pending = new Map();
+    const labels = property => property.split('-').map(word => copy()[word]).join(' ');
+    const trim = value => value.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, '');
+    const textNodes = element => [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && trim(node.data));
+    const source = element => element && !element.closest('[data-vgen]') && element.getAttribute('data-vsrc');
+    const position = (node, x, y) => {
+      node.style.left = Math.round(x) + 'px';
+      node.style.top = Math.round(y) + 'px';
+    };
+    const bounded = (value, extent, padding) => Math.max(padding, Math.min(value, extent - padding));
+
+    function anchor(node, rect) {
+      const width = node.offsetWidth;
+      const height = node.offsetHeight;
+      const x = Math.max(8, Math.min(rect.left, innerWidth - width - 8));
+      const y = rect.bottom + height + 8 <= innerHeight
+        ? Math.max(8, rect.bottom + 4)
+        : Math.max(8, rect.top - height - 4);
+      position(node, x, y);
+    }
+
+    function announce(text, rect = selected?.getBoundingClientRect(), sticky = false) {
+      clearTimeout(tipTimer);
+      tip.hidden = !text;
+      tip.textContent = text || '';
+      if (text) {
+        anchor(tip, rect || { left: 8, top: 8, bottom: 8 });
+        if (!sticky) tipTimer = setTimeout(() => { tip.hidden = true; }, 3300);
+      }
+    }
+
+    function argumentsFor(element, change) {
+      return {
+        vsrc: source(element), tag: tagOf(element), expected_revision: meta.content, change,
+        path: location.pathname + location.search,
+        root_font_px: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
+      };
+    }
+
+    function request(args, operation, expectedCount) {
+      const request = crypto.randomUUID();
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(request);
+          reject(new Error(copy().timeout));
+        }, 7000);
+        pending.set(request, data => {
+          clearTimeout(timer);
+          if (data.error) reject(new Error(data.error));
+          else resolve(data.result);
+        });
+        post(args.change.kind === 'style' ? 'dock/commit' : 'dock/text',
+          { request, args: { ...args, operation, expected_count: expectedCount } });
+      });
+    }
+
+    function emitGesture(current, phase) {
+      post('dock/gesture', {
+        vsrc: source(current.element), revision: current.revision, path: current.path,
+        property: current.property, value: current.value, phase,
+      });
+    }
+
+    function restoreGesture(phase = 'cancel') {
+      if (!gesture) return null;
+      const current = gesture;
+      gesture = null;
+      guide.hidden = true;
+      emitGesture(current, phase);
+      const { element, property, originalStyle, appliedStyle, originalValue, originalPriority } = current;
+      if (appliedStyle !== undefined && element.getAttribute('style') === appliedStyle) {
+        if (originalStyle === null) element.removeAttribute('style');
+        else element.setAttribute('style', originalStyle);
+      } else if (appliedStyle !== undefined && element.style.getPropertyValue(property) === current.value + 'px') {
+        if (originalValue) element.style.setProperty(property, originalValue, originalPriority);
+        else element.style.removeProperty(property);
+      }
+      if (current.pointer !== null && current.handle.hasPointerCapture(current.pointer)) {
+        current.handle.releasePointerCapture(current.pointer);
+      }
+      redraw();
+      return current;
+    }
+
+    function closeEditor(focus = false) {
+      if (!editor) return null;
+      const current = editor;
+      editor = null;
+      input.hidden = true;
+      if (focus) handles[0].focus({ preventScroll: true });
+      return current;
+    }
+
+    function closePanel(focus = true) {
+      if (!confirmation) return;
+      const previous = confirmation.focus;
+      confirmation = null;
+      panel.hidden = true;
+      if (focus && previous?.isConnected && !previous.hidden) previous.focus({ preventScroll: true });
+    }
+
+    async function save(args, handle) {
+      if (saving || waitingFor) return;
+      saving = true;
+      announce(copy().saving, undefined, true);
+      try {
+        const plan = await request(args, 'plan');
+        if (args.expected_revision !== meta.content) throw new Error(copy().missing);
+        if (plan.confirmation_required || visibleCount(args, plan) > 1) {
+          ask(args, plan, handle);
+        } else {
+          await apply(args, undefined, handle);
+        }
+      } catch (error) {
+        announce(error.message);
+      } finally {
+        saving = false;
+      }
+    }
+
+    function visibleCount(args, plan) {
+      if (plan.target.kind === 'class') {
+        try { return Math.max(plan.affects, document.querySelectorAll(plan.target.selector).length); } catch { return plan.affects; }
+      }
+      return Math.max(plan.affects, [...document.querySelectorAll('[data-vsrc]')].filter(node => source(node) === args.vsrc).length);
+    }
+
+    function ask(args, plan, focus) {
+      announce('');
+      confirmation = { args, count: plan.affects, focus };
+      message.textContent = copy().count(visibleCount(args, plan));
+      panel.setAttribute('aria-label', message.textContent);
+      applyButton.textContent = copy().apply;
+      cancelButton.textContent = copy().cancel;
+      panel.hidden = false;
+      const rect = selected?.getBoundingClientRect() || { left: 8, top: 8, bottom: 8 };
+      anchor(panel, rect);
+      applyButton.focus({ preventScroll: true });
+    }
+
+    async function apply(args, count, focus) {
+      const result = await request(args, 'apply', count);
+      if (result.confirmation_required) {
+        ask(args, result, focus);
+        return;
+      }
+      if (result.changed) {
+        // The host's revision stream owns rendering the new revision.
+        if (meta.content === args.expected_revision) waitingFor = result.revision;
+        announce(copy().saved);
+      } else {
+        announce(copy().unchanged);
+      }
+    }
+
+    applyButton.addEventListener('click', async () => {
+      if (!confirmation || saving) return;
+      const { args, count, focus } = confirmation;
+      closePanel();
+      saving = true;
+      announce(copy().saving, undefined, true);
+      try {
+        await apply(args, count, focus);
+      } catch (error) {
+        announce(error.message);
+      } finally {
+        saving = false;
+      }
+    });
+    cancelButton.addEventListener('click', () => closePanel());
+    panel.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); closePanel(); }
+    });
+
+    function locateHandles(element) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > innerHeight
+        || rect.right < 0 || rect.left > innerWidth) return false;
+      const computed = getComputedStyle(element);
+      for (const handle of handles) {
+        const { property, kind } = handle.dataset;
+        const side = property.split('-')[1];
+        let x = rect.left + rect.width / 2;
+        let y = rect.top + rect.height / 2;
+        if (kind === 'width') x = rect.right;
+        else if (kind === 'height') y = rect.bottom;
+        else {
+          const horizontal = side === 'left' || side === 'right';
+          const near = side === 'top' || side === 'left';
+          const axis = horizontal ? rect.width : rect.height;
+          const spacing = Math.abs(parseFloat(computed.getPropertyValue(property)) || 0);
+          const gap = kind === 'padding' ? -Math.min(axis / 2, Math.max(8, spacing)) : Math.max(12, Math.min(26, spacing));
+          const fraction = kind === 'padding' ? .72 : .28;
+          x = horizontal ? (near ? rect.left - gap : rect.right + gap) : rect.left + rect.width * fraction;
+          y = horizontal ? rect.top + rect.height * fraction : (near ? rect.top - gap : rect.bottom + gap);
+        }
+        handle.hidden = false;
+        position(handle, bounded(x, innerWidth, 11), bounded(y, innerHeight, 11));
+        const label = labels(property);
+        handle.setAttribute('aria-label', label);
+        handle.title = label;
+      }
+      return true;
+    }
+
+    const observer = new ResizeObserver(redraw);
+    function paint(element) {
+      const next = source(element) && element.isConnected ? element : null;
+      if (next !== selected) {
+        observer.disconnect();
+        restoreGesture();
+        closeEditor();
+        closePanel(false);
+        selected = next;
+        if (next) observer.observe(next);
+      }
+      if (waitingFor && waitingFor === meta.content) waitingFor = null;
+      if (!next || !locateHandles(next)) {
+        for (const handle of handles) handle.hidden = true;
+        return;
+      }
+      if (confirmation) anchor(panel, next.getBoundingClientRect());
+      const key = [meta.content, source(next), location.pathname, location.search].join('|');
+      if (key !== scaleKey) {
+        scale = [];
+        scaleKey = key;
+        request(argumentsFor(next, { kind: 'style', property: 'width', pixels: 0 }), 'plan')
+          .then(plan => { if (scaleKey === key) scale = plan.scale; }).catch(() => {});
+      }
+    }
+
+    function begin(handle, element, pointer) {
+      if (!element || !source(element) || saving || confirmation || editor || waitingFor) return null;
+      restoreGesture();
+      const { property } = handle.dataset;
+      const computed = getComputedStyle(element).getPropertyValue(property);
+      const size = (property === 'width' ? element.offsetWidth : element.offsetHeight) || 0;
+      const base = parseFloat(computed);
+      const start = Number.isFinite(base) ? base : property === 'width' || property === 'height' ? size : 0;
+      gesture = {
+        element, handle, pointer, property, start, value: start,
+        revision: meta.content, path: location.pathname + location.search,
+        originalStyle: element.getAttribute('style'),
+        originalValue: element.style.getPropertyValue(property),
+        originalPriority: element.style.getPropertyPriority(property),
+      };
+      emitGesture(gesture, 'start');
+      return gesture;
+    }
+
+    function drawGuide(property, rect, pixels) {
+      const [kind, side] = property.split('-');
+      const horizontal = kind === 'width' || side === 'left' || side === 'right';
+      const near = side === 'top' || side === 'left';
+      const inset = kind === 'margin' ? -pixels : kind === 'padding' ? pixels : 0;
+      const along = horizontal ? (near ? rect.left + inset : rect.right - inset)
+        : (near ? rect.top + inset : rect.bottom - inset);
+      guide.dataset.axis = horizontal ? 'x' : 'y';
+      position(guide, horizontal ? along : rect.left, horizontal ? rect.top : along);
+      guide.style.width = (horizontal ? 0 : rect.width) + 'px';
+      guide.style.height = (horizontal ? rect.height : 0) + 'px';
+      guide.hidden = false;
+    }
+
+    function feedback(current, pixels, snap) {
+      const minimum = current.property.startsWith('margin-') ? -100000 : 0;
+      const value = Math.min(100000, Math.max(minimum, pixels));
+      const nearby = snap ? scale.filter(token => token.pixels >= minimum && Math.abs(token.pixels - value) <= 3)
+        .reduce((best, token) => !best || Math.abs(token.pixels - value) < Math.abs(best.pixels - value) ? token : best, null) : null;
+      current.value = nearby ? nearby.pixels : Math.round(value * 10000) / 10000;
+      current.element.style.setProperty(current.property, current.value + 'px', 'important');
+      current.appliedStyle = current.element.getAttribute('style');
+      redraw();
+      emitGesture(current, 'move');
+      const rect = current.element.getBoundingClientRect();
+      if (nearby) drawGuide(current.property, rect, current.value);
+      else guide.hidden = true;
+      const text = labels(current.property) + ' ' + current.value + ' px' + (nearby ? ' · ' + nearby.name : '');
+      announce(text, rect, true);
+    }
+
+    function complete() {
+      const current = restoreGesture('end');
+      announce('');
+      if (!current || current.start === current.value) return;
+      if (current.revision !== meta.content || current.path !== location.pathname + location.search || !current.element.isConnected) {
+        announce(copy().missing);
+        return;
+      }
+      void save(argumentsFor(current.element, { kind: 'style', property: current.property, pixels: current.value }), current.handle);
+    }
+
+    for (const handle of handles) {
+      handle.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || !begin(handle, selected, event.pointerId)) return;
+        event.preventDefault();
+        handle.focus({ preventScroll: true });
+        handle.setPointerCapture(event.pointerId);
+        gesture.x = event.clientX;
+        gesture.y = event.clientY;
+      });
+      handle.addEventListener('pointermove', event => {
+        if (gesture?.pointer !== event.pointerId) return;
+        const [kind, side] = gesture.property.split('-');
+        const [horizontal] = directions[side] || [kind === 'width' ? 1 : 0];
+        const delta = horizontal ? event.clientX - gesture.x : event.clientY - gesture.y;
+        const near = side === 'left' || side === 'top';
+        const sign = (kind === 'margin' && near) || (kind === 'padding' && !near) ? -1 : 1;
+        if (delta || gesture.appliedStyle !== undefined) feedback(gesture, gesture.start + delta * sign, !event.altKey);
+      });
+      handle.addEventListener('pointerup', event => { if (gesture?.pointer === event.pointerId) complete(); });
+      const lost = event => {
+        if (gesture?.pointer === event.pointerId) { restoreGesture(); announce(''); }
+      };
+      handle.addEventListener('pointercancel', lost);
+      handle.addEventListener('lostpointercapture', lost);
+      handle.addEventListener('keydown', event => {
+        const horizontal = ['width', 'margin-left', 'margin-right', 'padding-left', 'padding-right'].includes(handle.dataset.property);
+        const grow = horizontal ? 'ArrowRight' : 'ArrowDown';
+        const shrink = horizontal ? 'ArrowLeft' : 'ArrowUp';
+        if (event.key === grow || event.key === shrink) {
+          event.preventDefault();
+          const current = gesture?.handle === handle ? gesture : begin(handle, selected, null);
+          if (current && current.pointer === null) feedback(current, current.value + (event.key === grow ? 1 : -1) * (event.shiftKey ? 10 : 1), false);
+        } else if (gesture?.handle === handle && event.key === 'Enter') {
+          event.preventDefault();
+          complete();
+        } else if (gesture?.handle === handle && event.key === 'Escape') {
+          event.preventDefault();
+          restoreGesture(); announce('');
+        }
+      });
+      handle.addEventListener('blur', () => {
+        if (gesture?.handle === handle && gesture.pointer === null) { restoreGesture(); announce(''); }
+      });
+    }
+
+    async function editNode(node) {
+      const element = node?.parentElement;
+      if (!source(element) || saving || confirmation || waitingFor || editor) return false;
+      const index = textNodes(element).indexOf(node);
+      if (index < 0) return false;
+      const original = trim(node.data);
+      const args = argumentsFor(element, { kind: 'text', original, value: original, index });
+      saving = true;
+      try {
+        await request(args, 'plan');
+        if (!node.isConnected || args.expected_revision !== meta.content) throw new Error(copy().missing);
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        const computed = getComputedStyle(element);
+        editor = { args, rect };
+        input.value = original;
+        input.setAttribute('aria-label', copy().text);
+        input.style.fontSize = computed.fontSize;
+        input.style.fontFamily = computed.fontFamily;
+        input.style.fontWeight = computed.fontWeight;
+        input.style.width = Math.min(innerWidth - 16, Math.max(rect.width + 16, 172)) + 'px';
+        input.style.height = Math.max(30, (parseFloat(computed.fontSize) || 16) * 1.35 + 10) + 'px';
+        input.hidden = false;
+        sizeEditor();
+        input.focus({ preventScroll: true });
+        input.select();
+      } catch (error) {
+        announce(error.message, element.getBoundingClientRect());
+      } finally {
+        saving = false;
+      }
+      return true;
+    }
+
+    function sizeEditor() {
+      if (!editor) return;
+      const width = Math.min(innerWidth - 16, Math.max(input.offsetWidth, input.scrollWidth + 2));
+      input.style.width = width + 'px';
+      const { rect } = editor;
+      position(input, Math.max(8, Math.min(rect.left, innerWidth - width - 8)),
+        Math.max(0, Math.min(rect.top - 4, innerHeight - input.offsetHeight - 8)));
+    }
+
+    input.addEventListener('input', sizeEditor);
+    input.addEventListener('keydown', event => {
+      if (event.isComposing || !editor) return;
+      if (event.key === 'Escape') { event.preventDefault(); closeEditor(true); }
+      else if (event.key === 'Enter') {
+        event.preventDefault();
+        const { args } = closeEditor(true);
+        const value = trim(input.value);
+        if (value !== args.change.original) void save({ ...args, change: { ...args.change, value } }, handles[0]);
+      }
+    });
+    input.addEventListener('blur', () => closeEditor());
+    new MutationObserver(() => {
+      const interrupted = gesture || editor || confirmation;
+      restoreGesture(); closeEditor(); closePanel(false); waitingFor = null; redraw();
+      if (interrupted) announce(copy().missing);
+    }).observe(meta, { attributes: true, attributeFilter: ['content'] });
+
+    return {
+      paint,
+      hit: event => event.composedPath().includes(stage),
+      editing: () => Boolean(gesture || editor || confirmation),
+      cancel: () => { restoreGesture(); closeEditor(); closePanel(false); },
+      focus: () => handles.find(handle => !handle.hidden)?.focus({ preventScroll: true }),
+      doubleClick: event => {
+        const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+        const node = caret?.offsetNode || document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer;
+        if (!node || node.nodeType !== Node.TEXT_NODE || !source(node.parentElement) || !trim(node.data)) return null;
+        // Only edit the actual run of text the pointer hit, not the nearest line in a paragraph.
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        if (![...range.getClientRects()].some(rect => event.clientX >= rect.left && event.clientX <= rect.right
+          && event.clientY >= rect.top && event.clientY <= rect.bottom)) return null;
+        void editNode(node);
+        return node.parentElement;
+      },
+      setLanguage: value => { if (value) { lang = value === 'es' ? 'es' : 'en'; redraw(); } },
+      message: data => {
+        if (data.type === 'inspect/canvas-edit-result' && pending.has(data.request)) {
+          const callback = pending.get(data.request);
+          pending.delete(data.request);
+          callback(data);
+        }
+      },
+    };
+  }
+
+  function paintEdits() {
+    edits?.paint(mode && selected.length === 1 ? selected[0] : null);
   }
 
   const px = value => (parseFloat(value) || 0);
@@ -265,6 +806,7 @@
       html += `<div class="badge" style="left:${Math.max(0, r.left - 6)}px;top:${Math.max(0, r.top - 9)}px">${index + 1}</div>`;
     });
     stage.innerHTML = html;
+    paintEdits();
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
   // After a change of the served revision, or when the page replaced a selected element, each chosen element is matched
@@ -306,12 +848,31 @@
   }
 
   const swallow = event => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.(); };
-  function onMove(event) { if (!mode) return; const element = elementAt(event); if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); } }
-  function onClick(event) { if (!mode) return; swallow(event); choose(elementAt(event), event.shiftKey); }
-  function onBlock(event) { if (mode) { event.preventDefault(); event.stopPropagation(); } }
+  function onMove(event) {
+    if (!mode || edits?.hit(event)) return;
+    const element = elementAt(event);
+    if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); }
+  }
+  function onClick(event) {
+    if (!mode || edits?.hit(event)) return;
+    swallow(event);
+    if (event.detail <= 1) choose(elementAt(event), event.shiftKey);
+  }
+  function onBlock(event) {
+    if (!mode || edits?.hit(event)) return;
+    if (event.type === 'dblclick') {
+      const element = edits?.doubleClick(event);
+      if (element) { selected = [element]; schedule(); report(); }
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
   function onKey(event) {
     if (event.altKey && event.shiftKey && event.code === 'KeyS') { event.preventDefault(); setMode(!mode); return; }
-    if (!mode) return;
+    if (!mode || (edits?.hit(event) && (event.key !== 'Escape' || edits.editing()))) return;
+    if (event.altKey && event.key === 'Enter' && selected.length === 1 && edits) {
+      swallow(event); edits.focus(); return;
+    }
     if (event.key === 'Escape') { swallow(event); setMode(false); return; }
     if (event.key === 'Tab') {
       swallow(event);
@@ -324,7 +885,7 @@
   function setMode(on) {
     mode = Boolean(on);
     ensureLayer();
-    if (!mode) hovered = null;
+    if (!mode) { hovered = null; edits?.cancel(); }
     setCursor(mode);
     schedule(); report();
   }
@@ -347,7 +908,11 @@
     if (accepted === null) return;
     hostOrigin = accepted;
     const data = event.data;
-    if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
+    edits?.message(data);
+    if (data.type === 'inspect/edits-config') {
+      hostLanguage = data.lang;
+      edits?.setLanguage(hostLanguage);
+    } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/mode') setMode(data.on);
     else if (data.type === 'inspect/clear') { selected = []; expired = []; schedule(); report(); }
     else if (data.type === 'inspect/dismiss') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < expired.length) { expired.splice(at, 1); report(); } }

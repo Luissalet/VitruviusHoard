@@ -4,6 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
+import { usePreviewEdits } from "../preview-edits.js";
 import { useProjectCanvas } from "./projectCanvas.js";
 import { useProjectLivePreview } from "./projectLivePreview.js";
 
@@ -67,6 +68,7 @@ export default function Projects({ param }) {
   const previewFrames = useProjectLivePreview(project?.id === param ? param : null, preview, project?.revision, previewFrame, syncRevision,
     () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."));
   const visiblePreview = previewFrames[0];
+  usePreviewEdits(project?.id === param ? param : null, visiblePreview?.state === "running", previewFrame, lang);
   useProjectCanvas(previewFrame, project?.id === param ? param : null,
     visiblePreview?.state === "running" ? visiblePreview.url : null, visiblePreview?.revision, lang);
   useEffect(() => { loadList(); api.appTemplates().then((data) => setTemplates(data.templates)).catch((error) => notify(error.message)); }, []);
