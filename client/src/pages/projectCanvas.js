@@ -40,7 +40,7 @@ export function useProjectCanvas(frameRef, projectId, previewUrl, revision, loca
         events.addEventListener("call", (event) => {
           if (!session) return;
           const call = JSON.parse(event.data);
-          pending.add(call.id);
+          if (call.id) pending.add(call.id);
           send(call);
         });
         events.onerror = () => { session = undefined; pending.clear(); };

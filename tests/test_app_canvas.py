@@ -91,6 +91,34 @@ def test_cross_origin_relay_prohibited(client):
 
 
 @pytest.mark.asyncio
+async def test_actor_profile_follows_a_caller_across_canvas_sessions():
+    canvas = CanvasSessions()
+    session = canvas.attach("project", "before")
+    declared = {"id": "foreman", "name": "Foreman", "color": "#5b42d3"}
+    caller = "preview-foreman"
+    other_caller = "preview-designer"
+
+    assert canvas.actor_for("project", caller, declared) == declared
+    other = canvas.actor_for("project", other_caller, {})
+    assert other["id"] == other["name"] == other_caller
+    assert other["color"] != declared["color"]
+    assert canvas.actor_for("project", caller, {}) == declared
+
+    canvas.detach(session)
+    session = canvas.attach("project", "after")
+    assert canvas.actor_for("project", caller, {}) == declared
+    assert canvas.actor_for("project", other_caller, {}) == other
+    assert canvas.actor_for("separate", caller, {})["id"] == caller
+
+    alias = canvas.actor_for("project", other_caller, {"id": "designer", "name": "Designer"})
+    assert alias == {"id": "designer", "name": "Designer", "color": other["color"]}
+    retired = await asyncio.wait_for(session.next_event(), 1)
+    assert retired == {"hoardDock": 1, "type": "dock/cursor", "state": "gone", "actor": {"id": other_caller}}
+    assert canvas.actor_for("project", other_caller, {}) == alias
+    assert canvas.actor_for("project", caller, {}) == declared
+
+
+@pytest.mark.asyncio
 async def test_presence_is_project_scoped_and_keeps_separate_agents():
     canvas = CanvasSessions()
     first = canvas.attach("project")

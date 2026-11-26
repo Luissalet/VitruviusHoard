@@ -222,7 +222,7 @@ class Runtime:
     def status(self):
         return {"modules": [m.status() for m in self.modules.values()]}
 
-    async def call(self, name, arguments, *, admitted=False):
+    async def call(self, name, arguments, *, admitted=False, agent=''):
         import httpx
         catalog = json.loads(Path(__file__).with_name('catalog.json').read_text(encoding='utf8'))
         entry = next((row for row in catalog if row['name'] == name), None)
@@ -237,6 +237,8 @@ class Runtime:
             token = (profile()/owner.name/'mcp-token').read_text(encoding='utf8').strip()
             path = '/api/agent/' + name if owner.name == 'babel' else '/api/agent/call'
             payload = arguments if owner.name == 'babel' else {'tool' if owner.name=='theseus' else 'name':name, 'arguments':arguments}
+            if agent:
+                payload['agent'] = agent
             from .native import port
             from .global_models import global_job
             with global_job():

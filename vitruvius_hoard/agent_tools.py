@@ -286,6 +286,7 @@ class AppCanvasEditArgs(BaseModel):
     expected_count: int | None = Field(None, ge=1, description="Confirm the affected element count returned by plan.")
     root_font_px: float = Field(16, gt=0, le=1000, description="Computed root font size for matching rem tokens.")
     lang: Literal["en", "es"] = "en"
+    actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
 
 
 class AppSourceCountArgs(BaseModel):
@@ -718,6 +719,14 @@ def run_app_project_edit_source(services: Services, args: AppSourceEditArgs) -> 
     )
 
 
+def run_app_project_canvas_edit(services: Services, args: AppCanvasEditArgs) -> dict:
+    projects = services.app_projects
+    if args.operation == "apply":
+        projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return projects.canvas_edit(**args.model_dump(exclude={"actor"}),
+                                actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
+
+
 def run_app_project_canvas_act(services: Services, args: CanvasActArgs) -> dict:
     presence = None
     if args.action in {"click", "fill", "select"}:
@@ -825,7 +834,7 @@ TOOLS: list[Tool] = [
     Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
         AppSourceEditArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
     Tool("app_project_canvas_edit", "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
-        AppCanvasEditArgs, ann(False, False, True), lambda services, args: services.app_projects.canvas_edit(**args.model_dump())),
+        AppCanvasEditArgs, ann(False, False, True), run_app_project_canvas_edit),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",

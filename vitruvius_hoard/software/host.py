@@ -7,6 +7,7 @@ from fastapi import FastAPI,Request,HTTPException
 from fastapi.responses import FileResponse,JSONResponse
 from fastapi.staticfiles import StaticFiles
 from jsonschema import validate, ValidationError
+from ..app_canvas import ACTOR_TOOLS
 from .runtime import Runtime,profile,token_path,ROOT,NativeError
 from .cancellation import owned
 
@@ -65,7 +66,7 @@ def create_app(runtime=None):
     from .native import port
     install_guard(app,port_getter=port,allowed_env='VITRUVIUS_ALLOWED_HOSTS')
 
-    async def execute(name,args):
+    async def execute(name,args, *, agent=''):
         entry=next((t for t in catalog() if t['name']==name),None)
         if not entry:
             raise ValueError('Unknown tool')
@@ -107,6 +108,8 @@ def create_app(runtime=None):
                 for owner in owners:
                     owner.active-=1
                     if not owner.active: owner.idle.set()
+        if agent:
+            return await runtime.call(name, args, agent=agent)
         return await runtime.call(name,args)
     app.state.execute=execute
 
@@ -129,14 +132,12 @@ def create_app(runtime=None):
                 raise HTTPException(401,'Invalid bridge token')
         body = await request.json()
         name, arguments = body['name'], body.get('arguments', {})
-        if request.url.path == '/api/agent/call' and name in {
-            'app_project_update', 'app_project_edit_source', 'app_project_canvas_view', 'app_project_canvas_act',
-        } and isinstance(arguments, dict) and arguments.get('actor') is None:
+        agent = ''
+        if request.url.path == '/api/agent/call' and name in ACTOR_TOOLS:
             from ..hoard_link.agent_journal import clean_identity
-            agent = clean_identity(request.headers.get('x-agent-id')) or clean_identity(body.get('agent'))
-            if agent:
-                arguments = {**arguments, 'actor': {'id': agent}}
-        return await execute(name, arguments)
+            agent = (clean_identity(request.headers.get('x-agent-id')) or clean_identity(body.get('agent'))
+                     or clean_identity(body.get('caller')))
+        return await execute(name, arguments, agent=agent)
     @app.exception_handler(ValueError)
     @app.exception_handler(LookupError)
     @app.exception_handler(ValidationError)

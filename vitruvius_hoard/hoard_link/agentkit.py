@@ -542,6 +542,7 @@ def make_agent_router(*, tools_fn: Callable[..., Sequence[Mapping[str, Any]]], c
             return JSONResponse({"error": "Invalid MCP token.", "code": "unauthorized"}, status_code=401)
         agent = access.agent or agent_journal.clean_identity(request.headers.get("x-agent-id")) \
             or agent_journal.clean_identity(body.agent) or agent_journal.clean_identity(body.caller)
+        request.state.agent_id = agent
         session = agent_journal.clean_identity(request.headers.get("x-agent-session"), 120) \
             or agent_journal.clean_identity(body.session_alias, 120) or agent_journal.clean_identity(body.session, 120)
         arguments = dict(body.arguments or {})
