@@ -46,6 +46,7 @@ The `render_preview` tool opens public or loopback URLs and local HTML files wit
 
 ### Application projects and instruments
 - Application-source projects with templates, typed actions, owned local previews, a functional page checker and standalone export. See [docs/APP_PROJECTS.md](docs/APP_PROJECTS.md).
+- An open application preview follows source edits and undo in real time, briefly outlining the changed elements.
 - Instrument factory: a typed spec of inputs, formulas and outputs becomes an app project with generated tests and a stdlib-only standalone export, plus an explainer. See [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Protocol checker: explores every interleaving of a small bounded protocol, checks invariants and deadlocks, and returns the shortest counterexample with a reproducing pytest file.
 

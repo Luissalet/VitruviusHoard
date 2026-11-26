@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
+import { useProjectLivePreview } from "./projectLivePreview.js";
 
 export default function Projects({ param }) {
   const { lang, notify } = useApp();
@@ -17,6 +18,7 @@ export default function Projects({ param }) {
   const [drafts, setDrafts] = useState({});
   const [newFile, setNewFile] = useState("");
   const [preview, setPreview] = useState(null);
+  const previewFrame = useRef(null);
   const [bundle, setBundle] = useState(null);
   const [includeData, setIncludeData] = useState(false);
   const [busy, setBusy] = useState("");
@@ -28,11 +30,11 @@ export default function Projects({ param }) {
   const createDraft = useRef({ name, description });
   createDraft.current = { name, description };
   const activeView = useRef({ revision: null, file });
-  activeView.current = { revision: project?.selected_revision, file };
   const draftPrefix = project ? `${project.id}:${project.selected_revision}:` : "";
   const draftKey = draftPrefix + file;
   const source = project ? drafts[draftKey] ?? project.files[file] ?? "" : "";
   const draftPaths = Object.keys(drafts).filter((key) => key.startsWith(draftPrefix)).map((key) => key.slice(draftPrefix.length));
+  activeView.current = { revision: project?.selected_revision, file, dirty: !!draftPaths.length };
   useCopilotForm("app-create-draft", { initial: { name: "", description: "", template: "work-board" }, current: { name, description, template } });
   useCopilotForm("app-source-draft", { objectId: project?.id, initial: { file, source: project?.files[file] ?? "" }, current: { file, source, revision: project?.selected_revision } });
   useCopilotObjects(project ? [{ kind: "app_project", id: project.id }] : []);
@@ -42,9 +44,27 @@ export default function Projects({ param }) {
     try {
       const data = await api.appProject(id, revision);
       if (sequence !== loadSequence.current || currentId.current !== id) return;
-      setProject(data); setPreview(data.preview);
+      setProject(data);
+      setPreview((current) => current?.state === "running" && data.preview.state === "running" ? current : data.preview);
     } catch (error) { if (sequence === loadSequence.current) notify(error.message); }
   };
+  const syncRevision = async () => {
+    const id = project.id;
+    const sequence = loadSequence.current;
+    try {
+      const data = await api.appProject(id);
+      if (sequence !== loadSequence.current || currentId.current !== id) return;
+      setProject((current) => {
+        if (!current || current.id !== id) return current;
+        if (current.selected_revision === current.revision && !activeView.current.dirty) return data;
+        return { ...data, selected_revision: current.selected_revision, files: current.files, source_sha256: current.source_sha256 };
+      });
+      loadList();
+    } catch (error) { if (sequence === loadSequence.current && currentId.current === id) notify(error.message); }
+  };
+  const previewFrames = useProjectLivePreview(project?.id === param ? param : null, preview, project?.revision, previewFrame, syncRevision,
+    () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."));
+  const visiblePreview = previewFrames[0] || preview;
   useEffect(() => { loadList(); api.appTemplates().then((data) => setTemplates(data.templates)).catch((error) => notify(error.message)); }, []);
   useEffect(() => {
     loadSequence.current++;
@@ -139,9 +159,15 @@ export default function Projects({ param }) {
             {preview?.state === "running" && <button className="btn" disabled={!!busy} onClick={() => run("stop")}>{es ? "Detener vista previa" : "Stop preview"}</button>}
             <button className="btn" disabled={!!busy} onClick={capture}>{busy === "render" ? (es ? "Capturando…" : "Capturing…") : (es ? "Capturar para revisión" : "Capture for review")}</button>
           </div>
-          {preview?.state === "running" && <p className="help mt-3">{preview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={preview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
+          {preview?.state === "running" && <p className="help mt-3">{visiblePreview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={visiblePreview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
         </div>
-        {preview?.state === "running" && <iframe title={es ? "Vista previa de aplicación" : "Application preview"} src={preview.url} className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white" }} />}
+        {preview?.state === "running" && <div className="relative" style={{ height: 560 }}>
+          {previewFrames.map(({ key, src, pending, onLoad }) => <iframe key={key} ref={pending ? null : previewFrame}
+            title={es ? "Vista previa de aplicación" : "Application preview"} src={src} onLoad={onLoad}
+            referrerPolicy="origin" aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
+            className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white",
+              ...(pending ? { position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" } : {}) }} />)}
+        </div>}
         <div className="panel">
           <h3 className="font-semibold">{es ? "Archivos de la aplicación" : "Application files"}</h3>
           <label className="label mt-3">{es ? "Archivo" : "File"}<select aria-label={es ? "Archivo" : "File"} className="field" value={file} onChange={(event) => setFile(event.target.value)}>{Array.from(new Set([...Object.keys(project.files), ...draftPaths])).sort().map((path) => <option key={path} value={path}>{path}{drafts[draftPrefix + path] !== undefined ? " *" : ""}</option>)}</select></label>
