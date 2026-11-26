@@ -11,6 +11,7 @@ import Settings from "./pages/Settings.jsx";
 import Motion from "./pages/Motion.jsx";
 import Diagrams from "./pages/Diagrams.jsx";
 import Projects from "./pages/Projects.jsx";
+import Canvas from "./pages/Canvas.jsx";
 import Audit from "./pages/Audit.jsx";
 import Marks from "./pages/Marks.jsx";
 import Protocols from "./pages/Protocols.jsx";
@@ -32,6 +33,7 @@ const PAGES = [
   { path: "diagrams", key: "nav_diagrams", icon: "M3 4h6v5H3zM15 4h6v5h-6zM9 15h6v5H9zM6 9v3h12V9M12 12v3", component: Diagrams },
   { path: "gallery", key: "nav_gallery", icon: "M4 5h16v14H4zM4 15l4-4 3 3 5-5 4 4", component: Gallery },
   { path: "projects", key: "nav_projects", icon: "M3 5h18v14H3zM3 9h18M7 13h4M7 16h7", component: Projects },
+  { path: "canvas", key: "nav_canvas", icon: "M3 4h18v13H3zM8 21h8M12 17v4M14 8l3 3-3 3", component: Canvas },
   { path: "settings", key: "nav_settings", icon: "M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-1-3-2 .3-1.4-1.4.3-2-3-1-1 2h-2l-1-2-3 1 .3 2L6.8 7.3 5 7 4 10l2 1v2l-2 1 1 3 2-.3 1.4 1.4-.3 2 3 1 1-2h2l1 2 3-1-.3-2 1.4-1.4 2 .3 1-3-2-1z", component: Settings },
 ];
 

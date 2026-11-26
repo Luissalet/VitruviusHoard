@@ -4,9 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
-import { usePreviewEdits } from "../preview-edits.js";
-import { useProjectCanvas } from "./projectCanvas.js";
-import { useProjectLivePreview } from "./projectLivePreview.js";
+import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 
 export default function Projects({ param }) {
   const { lang, notify } = useApp();
@@ -23,7 +21,6 @@ export default function Projects({ param }) {
   const [drafts, setDrafts] = useState({});
   const [newFile, setNewFile] = useState("");
   const [preview, setPreview] = useState(null);
-  const previewFrame = useRef(null);
   const [bundle, setBundle] = useState(null);
   const [includeData, setIncludeData] = useState(false);
   const [busy, setBusy] = useState("");
@@ -77,12 +74,10 @@ export default function Projects({ param }) {
       loadList();
     } catch (error) { if (sequence === loadSequence.current && currentId.current === id) notify(error.message); }
   };
-  const previewFrames = useProjectLivePreview(project?.id === param ? param : null, preview, project?.revision, previewFrame, syncRevision,
-    () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."));
-  const visiblePreview = previewFrames[0];
-  usePreviewEdits(project?.id === param ? param : null, visiblePreview?.state === "running", previewFrame, lang);
-  useProjectCanvas(previewFrame, project?.id === param ? param : null,
-    visiblePreview?.state === "running" ? visiblePreview.url : null, visiblePreview?.revision, lang);
+  const { frameRef: previewFrame, attachFrame, frames: previewFrames, visible: visiblePreview } = useProjectPreviewCanvas({
+    projectId: project?.id === param ? param : null, preview, baseline: project?.revision, lang, onRevision: syncRevision,
+    onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
+  });
   useEffect(() => { loadList(); api.appTemplates().then((data) => setTemplates(data.templates)).catch((error) => notify(error.message)); }, []);
   useEffect(() => {
     loadSequence.current++;
@@ -245,14 +240,7 @@ export default function Projects({ param }) {
           </div>}
           {preview?.state === "running" && visiblePreview && <p className="help mt-3">{visiblePreview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={visiblePreview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
         </div>
-        {preview?.state === "running" && <div className="relative" style={{ height: 560 }}>
-          {previewFrames.map(({ key, src, pending, onLoad }) => <iframe key={key} ref={pending ? null : previewFrame}
-            title={es ? "Vista previa de aplicación" : "Application preview"} src={src} onLoad={onLoad}
-            referrerPolicy="origin" allow={Object.hasOwn(project.files, "assets/transfer-assistant/assistant.js") ? "microphone 'src'" : undefined}
-            aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
-            className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white",
-              ...(pending ? { position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" } : {}) }} />)}
-        </div>}
+        {preview?.state === "running" && <PreviewFrames frames={previewFrames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} />}
         <PreviewSelection project={project} preview={preview} frameRef={previewFrame} frameKey={previewFrames[0]?.key} es={es} notify={notify} />
         <div className="panel">
           <h3 className="font-semibold">{es ? "Archivos de la aplicación" : "Application files"}</h3>
