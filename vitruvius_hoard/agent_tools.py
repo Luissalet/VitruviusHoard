@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, model_validator
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .app_projects import templates as app_templates
+from .preview_inspector import read_selection
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
 AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
@@ -652,6 +653,11 @@ TOOLS: list[Tool] = [
         AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
     Tool("app_project_preview", "Start or stop this project's owned local preview. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
+    Tool("app_project_selection",
+        "Read the elements the person selected on the application preview. Leer la selección de la vista previa.\n"
+        "Each item has its source position (file, line), generated-by marker, text, box and styles: it is what \"this\" means. "
+        "Sinónimos: elemento seleccionado, esto, lienzo.",
+        AppIdArgs, ann(True), lambda services, args: read_selection(services, args.id, args.revision), capped=False),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",

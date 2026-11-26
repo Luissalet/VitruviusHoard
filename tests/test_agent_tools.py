@@ -46,6 +46,7 @@ def test_read_only_hints_correct():
                   "visual_parity", "visual_parity_delete", "design_gallery_ingest",
                   "remake_start", "remake_continue", "remake_stop", "remake_delete"}
     read_only_names.update({"benchmark_catalog", "benchmark_get", "benchmark_list", "benchmark_compare"})
+    read_only_names.add("app_project_selection")
     write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
