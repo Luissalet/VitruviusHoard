@@ -119,13 +119,13 @@ export function mountTransferAssistant(root, options = {}) {
   let cursorSequence = 0;
   let sending = false;
   let waitingForForm = false;
+  const cursorActor = {id: "transfer-assistant", name: copy.title};
   const managed = new Set();
   const marks = new WeakMap();
 
   root.classList.add("transfer-assistant");
   add(root, "h2", {class: "transfer-assistant__title"}, copy.title);
   const response = add(root, "p", {class: "transfer-assistant__reply", role: "status"}, message);
-  const fixedReply = add(root, "p", {class: "transfer-assistant__note", hidden: ""});
   const candidates = add(root, "div", {class: "transfer-assistant__choices"});
   const fields = add(root, "dl", {class: "transfer-assistant__slots"});
   const entries = copy.fields.map(name => {
@@ -175,15 +175,13 @@ export function mountTransferAssistant(root, options = {}) {
     show(dictationStatus, copy["dictation_" + route] || copy.dictation_fallback);
   }
 
-  function showFixed() {
-    const fixed = lang === "es" && voicePhrases?.[phraseId];
-    show(fixedReply, fixed && fixed !== message ? fixed : "");
-  }
-
   function paint() {
-    root.dataset.transferPhase = waitingForForm ? "collecting" : state.phase;
+    const phase = waitingForForm ? "collecting" : state.phase;
+    if (["ready", "executing", "complete", "cancelled"].includes(phase)) {
+      window.HoardApp?.clearPoint?.(cursorActor);
+    }
+    root.dataset.transferPhase = phase;
     response.textContent = message;
-    showFixed();
     const {slots} = state;
     const source = context?.accounts.find(item => item.id === slots.source);
     const values = [slots.recipient?.name, slots.amountCents && currency.format(slots.amountCents / 100), slots.concept, source?.name];
@@ -211,6 +209,7 @@ export function mountTransferAssistant(root, options = {}) {
     const snapshot = state;
     const current = snapshot.slots;
     const hasSlots = Object.keys(current).length > 0;
+    const showCursor = !["complete", "cancelled"].includes(snapshot.phase);
     options.onDraft?.(snapshot);
     const scope = root.closest("[data-transfer-scope]") || document;
     const fields = [...scope.querySelectorAll("[data-transfer-slot]")];
@@ -222,9 +221,9 @@ export function mountTransferAssistant(root, options = {}) {
       if (after === undefined && !managed.has(field)) continue;
       if (after !== undefined) managed.add(field);
       if (String(field.value) === String(after ?? "")) continue;
-      if (field.getClientRects().length) {
+      if (showCursor && field.getClientRects().length) {
         try {
-          await window.HoardApp?.pointTo?.(field, {id: "transfer-assistant", name: copy.title}, {scroll: true});
+          await window.HoardApp?.pointTo?.(field, cursorActor, {scroll: true, presence: true, expiryMs: 2500});
         } catch (error) {
           console.warn("Transfer assistant could not move the preview cursor", error);
         }
@@ -395,7 +394,6 @@ export function mountTransferAssistant(root, options = {}) {
       voiceCheck = voiceAvailability().catch(() => null).then(available => {
         dictation = Boolean(available?.dictation);
         voicePhrases = available ? available.voice_phrases || {} : undefined;
-        showFixed();
         showDictation(available?.dictation_route);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);

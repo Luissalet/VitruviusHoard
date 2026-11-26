@@ -22,7 +22,9 @@ The panel displays each reply immediately. Set `VITRUVIUS_TRANSFER_VOICE_MODE` t
 
 Open **How this reply was processed** to see which services handled the latest turn, how long the recorded steps took and when the page fell back to local parsing or written replies.
 
-Each dialogue reply declares its spoken phrase ID. The panel displays the full confirmation or balance message and sends only the fixed phrase ID for playback. The preview resolves that ID through `frases.json`; confirmation and revised summaries use `confirmar`, a low balance uses `saldo-insuficiente`, and a completed transfer uses `hecho`.
+Each dialogue reply declares its spoken phrase ID. The panel displays the full written message once and sends the fixed phrase ID for playback. The preview resolves that ID through `frases.json`. Confirmation and revised summaries use `confirmar`, a low balance uses `saldo-insuficiente`, and a completed transfer uses `hecho`.
+
+The preview cursor points to each field as the assistant fills it, expires 2.5 seconds after the move, and clears when the draft reaches review. With reduced motion enabled the fields still fill and scroll into view without a cursor.
 
 The `transfer-assistant:latency` event reports the input and output provider and milliseconds from the detected speech end to capture stop and final text, from final text to reply, from reply to audio and from speech end to audio playback. The event is local to the page. The preview does not save audio in the project. The microphone control source is shared with the local dictation service so its controls, pause detection and cancellation match across consumers.
 
