@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import threading
 import uuid
-from contextlib import closing
+from contextlib import closing, suppress
 from html import escape
 from html.parser import HTMLParser
 from http.client import HTTPConnection, HTTPException
@@ -15,7 +15,8 @@ from urllib.parse import urlsplit
 
 from .hoard_link.app_bridge import BRIDGE_JS
 from .hoard_link.guard import DEV_ORIGINS, check_request
-from .transfer_assistant.voice import TransferVoice, VOICE_PREFIX
+from .transfer_assistant.reply import NDJSON, ReplyError
+from .transfer_assistant.voice import TransferVoice, VOICE_PREFIX, _json
 
 SCRIPT_ROOT = "/__vitruvius_preview__/"
 # Additional preview-only scripts live alongside the application package.
@@ -69,7 +70,7 @@ class PreviewProxy:
         self.backend: tuple[int, str] | None = None
         self.session = uuid.uuid4().hex[:16]  # one per opening of the preview (the proxy lives until it is stopped)
         self.voice_revision = ""
-        voice = TransferVoice()
+        voice = self.voice = TransferVoice()
         scripts = {"app-bridge.js": BRIDGE_JS.encode("utf-8")}
         for name in PREVIEW_SCRIPTS:
             path = SCRIPT_DIR / name
@@ -93,6 +94,27 @@ class PreviewProxy:
                     self.send_header(key, value)
                 self.end_headers()
                 self.wfile.write(body)
+
+            def stream_reply(self, body):
+                started = False
+                try:
+                    with voice.reply(body) as reply:
+                        self.send_response(200)
+                        self.send_header("Content-Type", NDJSON)
+                        self.send_header("X-Content-Type-Options", "nosniff")
+                        self.send_header("Cache-Control", "no-store")
+                        self.send_header("X-Transfer-Voice-Engine", reply.engine)
+                        self.send_header("X-Transfer-Voice-Job", reply.job_id)
+                        started = True
+                        self.end_headers()
+                        for chunk in reply.chunks:
+                            self.wfile.write(chunk)
+                except ReplyError as error:
+                    if not started:
+                        with suppress(OSError):  # an aborted request may have disconnected before the reply
+                            self.respond(*_json(error.status, code=error.code))
+                except OSError:
+                    pass  # the browser can leave while synthesis is still running
 
             def forward(self):
                 headers = {key.lower(): value for key, value in self.headers.items()}
@@ -123,6 +145,8 @@ class PreviewProxy:
                     except ValueError:
                         return self.respond(413, b'{"code":"invalid_voice_size"}', "application/json")
                     body = self.rfile.read(size) if size else b""
+                    if self.command == "POST" and route == "reply":
+                        return self.stream_reply(body)
                     return self.respond(*voice.handle(self.command, route, parts.query,
                                                       headers.get("content-type", ""), body))
                 if path.startswith(SCRIPT_ROOT) and self.command == "GET":
@@ -179,6 +203,7 @@ class PreviewProxy:
 
     def close(self) -> None:
         self.backend = None
+        self.voice.replies.close()
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()

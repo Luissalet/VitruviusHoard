@@ -49,6 +49,7 @@ The `render_preview` tool opens public or loopback URLs and local HTML files wit
 - Custom applications can declare multiple typed collections, relationships and atomic SQLite actions with undo. Their data API is available to the preview, the standalone export and the agent.
 - An open application preview follows source edits and undo in real time, briefly outlining the changed elements. The agent's named cursor travels to the target before an edit. With reduced motion, the outline appears on its own.
 - **Open in tab** in Applications opens the running preview at the browser’s full width. Its project link resolves the current preview port after a restart.
+- The optional transfer assistant streams its full replies in the selected language, with immediate text and one voice per conversation. [Transfer assistant](docs/APP_TRANSFER_ASSISTANT.md)
 - Instrument factory: a typed spec of inputs, formulas and outputs becomes an app project with generated tests and a stdlib-only standalone export, plus an explainer. See [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Protocol checker: explores every interleaving of a small bounded protocol, checks invariants and deadlocks, and returns the shortest counterexample with a reproducing pytest file.
 

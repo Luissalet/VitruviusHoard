@@ -1,6 +1,7 @@
-import {initialTransfer, isTransferCommand, PROMPT_PHRASES, transferTurn} from "./dialogue.js";
-import {speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
+import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
+import {transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
+import {createTransferReplyVoice} from "./reply_audio.js";
 
 const COPY = {
   es: {
@@ -11,15 +12,16 @@ const COPY = {
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
     written_replies: "Respuestas por escrito.",
+    written_pending: "Respuesta por escrito mientras se prepara el audio.",
     dictation_remote: name => `Lo entiende ${name}.`,
-    dictation_fallback: name => `${name} no responde. Se usa el análisis local de la página.`,
+    dictation_fallback: name => `El dictado de ${name} no responde. Se usa el análisis local de la página.`,
     empty: "No se ha entendido la frase. Prueba de nuevo o escríbela.",
     data: "No se han podido cargar las cuentas y los contactos. Vuelve a enviar el mensaje.",
     executing: "Confirmando la transferencia…", success: "Transferencia simulada realizada.",
     rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
     balance: "El saldo es insuficiente para este importe.",
     trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta"],
-    local_parser: "Análisis local", text_only: "Respuesta escrita", natural_voice: "Caché de voz natural",
+    local_parser: "Análisis local", text_only: "Respuesta escrita", voice_cache: "caché",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
@@ -30,15 +32,16 @@ const COPY = {
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
     written_replies: "Written replies.",
+    written_pending: "Written reply while audio is prepared.",
     dictation_remote: name => `Interpreted by ${name}.`,
-    dictation_fallback: name => `${name} is unavailable. This page is interpreting your input locally.`,
+    dictation_fallback: name => `${name} dictation is unavailable. This page is interpreting your input locally.`,
     empty: "The speech was unclear. Try again or type your reply.",
     data: "Accounts and contacts could not load. Send the message again.",
     executing: "Confirming the transfer…", success: "Simulated transfer complete.",
     rejected: "Review the details and try confirming the transfer again.",
     balance: "The balance is too low for this amount.",
     trace: "How this reply was processed", stages: ["Transcribes", "Interprets", "Speaks", "Executes"],
-    local_parser: "Local parser", text_only: "Written reply", natural_voice: "Natural voice cache",
+    local_parser: "Local parser", text_only: "Written reply", voice_cache: "cache",
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
 };
@@ -111,9 +114,10 @@ export function mountTransferAssistant(root, options = {}) {
   let context;
   let pendingData;
   let message = copy.start;
-  let phraseId = "saludo";
-  let voicePhrases;
+  let latestTurn = 0;
+  let replyTurn = latestTurn;
   let dictationName = "Boltagon";
+  const speaker = createTransferReplyVoice();
   let speech;
   let requestKey;
   let mic;
@@ -130,6 +134,7 @@ export function mountTransferAssistant(root, options = {}) {
   root.classList.add("transfer-assistant");
   add(root, "h2", {class: "transfer-assistant__title"}, copy.title);
   const response = add(root, "p", {class: "transfer-assistant__reply", role: "status"}, message);
+  const voiceStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const candidates = add(root, "div", {class: "transfer-assistant__choices"});
   const fields = add(root, "dl", {class: "transfer-assistant__slots"});
   const entries = copy.fields.map(name => {
@@ -145,11 +150,9 @@ export function mountTransferAssistant(root, options = {}) {
   const controls = add(root, "div", {class: "transfer-assistant__controls"});
   const microphone = add(controls, "button", {type: "button", "aria-pressed": "false"}, copy.mic);
   const listen = add(controls, "button", {type: "button"}, copy.listen);
-  listen.disabled = lang !== "es";
   const confirm = add(controls, "button", {type: "button", class: "transfer-assistant__primary", hidden: ""}, copy.confirm);
   const cancel = add(controls, "button", {type: "button", hidden: ""}, copy.cancel);
   const captureStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
-  const voiceStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const dictationStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const transcript = add(root, "p", {class: "transfer-assistant__transcript", hidden: ""});
   const trace = add(root, "details", {class: "transfer-assistant__trace", hidden: ""});
@@ -263,22 +266,29 @@ export function mountTransferAssistant(root, options = {}) {
     speech = undefined;
   }
 
-  async function read(id, timing, turn = traceTurn) {
+  function read(timing, turn = traceTurn) {
+    if (replyTurn !== latestTurn || document.hidden) return;
     stopPlayback();
     speech = new AbortController();
     const {signal} = speech;
     const replyAt = performance.now();
-    await voiceCheck;
-    if (lang !== "es" || !id || signal.aborted || (voicePhrases && !voicePhrases[id])) return;
-    void speakTransferReply(id, {
+    let audioAt;
+    show(voiceStatus);
+    void speaker.speak(message, {
       locale, signal,
-      onFallback: () => {
-        show(voiceStatus, copy.written_replies);
+      onPending: () => {
+        show(voiceStatus, copy.written_pending);
         track(turn, 2, copy.text_only, performance.now() - replyAt);
       },
-      onStart: provider => {
+      onFallback: () => {
+        show(voiceStatus, copy.written_replies);
+        if (audioAt === undefined) track(turn, 2, copy.text_only, performance.now() - replyAt);
+      },
+      onStart: engine => {
+        audioAt = performance.now();
+        const provider = "Boltagon · " + engine;
         show(voiceStatus);
-        track(turn, 2, provider === "cache-natural" ? copy.natural_voice : "Prospero", performance.now() - replyAt);
+        track(turn, 2, provider, audioAt - replyAt);
         if (timing) {
           const round = Math.round;
           root.dispatchEvent(new CustomEvent("transfer-assistant:latency", {
@@ -289,11 +299,14 @@ export function mountTransferAssistant(root, options = {}) {
               captureStopToTranscriptMs: round(timing.transcriptAt - timing.captureStoppedAt),
               speechEndToTranscriptMs: round(timing.transcriptAt - timing.speechEnd),
               transcriptToReplyMs: round(replyAt - timing.transcriptAt),
-              replyToAudioMs: round(performance.now() - replyAt),
-              speechEndToAudioMs: round(performance.now() - timing.speechEnd),
+              replyToAudioMs: round(audioAt - replyAt),
+              speechEndToAudioMs: round(audioAt - timing.speechEnd),
             },
           }));
         }
+      },
+      onEnd: receipt => {
+        if (receipt.cached) track(turn, 2, `Boltagon · ${receipt.engine_id} · ${copy.voice_cache}`, audioAt - replyAt);
       },
     });
   }
@@ -303,18 +316,21 @@ export function mountTransferAssistant(root, options = {}) {
 
   function submit(text, options = {}) {
     if (!text.trim() || sending) return Promise.resolve(false);
+    const turnId = ++latestTurn;
+    speaker.activate();
+    stopPlayback();
     const reviewed = state.phase === "ready" && !waitingForForm ? state.summary : undefined;
     const version = formVersion;
     if (!options.spoken) {
       mic?.cancel();
       show(transcript);
     }
-    const turn = turnQueue.then(() => handleTurn(text, options, version, reviewed));
+    const turn = turnQueue.then(() => handleTurn(text, options, {version, reviewed, turnId}));
     turnQueue = turn.catch(() => false);
     return turn;
   }
 
-  async function handleTurn(text, {spoken = false, timing, interpretation, recipientChoice}, version, reviewed) {
+  async function handleTurn(text, {spoken = false, timing, interpretation, recipientChoice}, {version, reviewed, turnId}) {
     if (version !== formVersion) return false;
     stopPlayback();
     if (!context) {
@@ -345,7 +361,8 @@ export function mountTransferAssistant(root, options = {}) {
     }
     state = turn.state;
     if (turn.message) {
-      ({message, phraseId} = turn);
+      message = turn.message;
+      replyTurn = turnId;
     }
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
     if (!turn.action) {
@@ -353,7 +370,7 @@ export function mountTransferAssistant(root, options = {}) {
       const fill = changed || previousPhase !== state.phase || previousNext !== state.next ? reflect() : null;
       waitingForForm = Boolean(fill && state.phase === "ready");
       paint();
-      if (turn.message) read(phraseId, timing, currentTrace);
+      if (turn.message) read(timing, currentTrace);
       if (waitingForForm) {
         try { await fill; }
         finally { waitingForForm = false; paint(); }
@@ -363,7 +380,7 @@ export function mountTransferAssistant(root, options = {}) {
 
     sending = true;
     message = copy.executing;
-    phraseId = "espera";
+    replyTurn = turnId;
     paint();
     const key = requestKey ??= crypto.randomUUID();
     const executionAt = performance.now();
@@ -373,27 +390,24 @@ export function mountTransferAssistant(root, options = {}) {
       requestKey = undefined;
       void reflect();
       message = copy.success;
-      phraseId = "hecho";
       root.dispatchEvent(new CustomEvent("transfer-assistant:receipt", {bubbles: true, detail: receipt}));
       void refreshData().catch(() => { context = undefined; });
     } catch (error) {
       if (error.code === "insufficient_balance") {
         state = {...state, phase: "insufficient", next: "amountCents"};
         message = copy.balance;
-        phraseId = "saldo-insuficiente";
         requestKey = undefined;
         void refreshData().catch(() => { context = undefined; });
       } else {
         state = {...state, phase: "ready"};
         message = copy.rejected;
-        phraseId = "servicio-caido";
       }
     } finally {
       track(currentTrace, 3, "Vitruvius", performance.now() - executionAt);
       sending = false;
       paint();
     }
-    read(phraseId, timing, currentTrace);
+    read(timing, currentTrace);
     return true;
   }
 
@@ -401,11 +415,9 @@ export function mountTransferAssistant(root, options = {}) {
     if (!voiceCheck) {
       voiceCheck = voiceAvailability().catch(() => null).then(available => {
         dictation = Boolean(available?.dictation);
-        voicePhrases = available ? available.voice_phrases || {} : undefined;
         showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
-        show(voiceStatus, lang === "es" && available?.tts ? "" : copy.written_replies);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;
@@ -418,13 +430,17 @@ export function mountTransferAssistant(root, options = {}) {
   });
   confirm.addEventListener("click", () => void submit(lang === "es" ? "confirmo" : "confirm"));
   cancel.addEventListener("click", () => void submit(lang === "es" ? "cancela" : "cancel"));
-  listen.addEventListener("click", () => read(phraseId));
+  listen.addEventListener("click", () => {
+    speaker.activate();
+    read();
+  });
   mic = mountDictationMicrophone(microphone, {
     language: locale,
     finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
     request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale}),
     beforeStart: async () => {
+      speaker.activate();
       stopPlayback();
       show(transcript);
       if (!dictation || sttWarning || voiceCheck) await checkVoice();
@@ -463,7 +479,7 @@ export function mountTransferAssistant(root, options = {}) {
     requestKey = undefined;
     stopPlayback();
     message = copy.start;
-    phraseId = PROMPT_PHRASES[slot];
+    replyTurn = latestTurn;
     paint();
   });
   window.addEventListener("pagehide", stopPlayback);
