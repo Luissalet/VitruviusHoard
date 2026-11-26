@@ -122,6 +122,16 @@
     return { applied: true, targets: { ...describe(touched), exact: true } };
   }
 
+  function stylesheetRules(rules, result = new Map()) {
+    for (const rule of rules) {
+      if (rule.selectorText) {
+        result.set(rule.selectorText, (result.get(rule.selectorText) || "") + rule.cssText);
+      }
+      if (rule.cssRules) stylesheetRules(rule.cssRules, result);
+    }
+    return result;
+  }
+
   async function refreshCss(change) {
     const paths = new Set(change.files.map((file) => file.replace(/^public\//, "")));
     const styles = [];
@@ -146,13 +156,21 @@
         node.after(next);
       })));
       if (!loaded.every(Boolean)) return { applied: false };
+      const selectors = new Set();
+      for (const { node, next } of staged) {
+        const oldRules = stylesheetRules(node.sheet?.cssRules || []);
+        const newRules = stylesheetRules(next.sheet?.cssRules || []);
+        for (const selector of new Set([...oldRules.keys(), ...newRules.keys()])) {
+          if (oldRules.get(selector) !== newRules.get(selector)) selectors.add(selector);
+        }
+      }
       for (const { node, next } of staged) {
         next.onload = next.onerror = null;
         if (node.hasAttribute("media")) next.setAttribute("media", node.getAttribute("media"));
         else next.removeAttribute("media");
         node.remove();
       }
-      return { applied: true };
+      return { applied: true, targets: { selectors: [...selectors] } };
     } finally {
       for (const { node, next } of staged) if (node.isConnected) next.remove();
     }

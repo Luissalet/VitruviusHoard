@@ -5,6 +5,7 @@ import asyncio
 import threading
 from contextlib import contextmanager
 from html.parser import HTMLParser
+from posixpath import normpath
 from urllib.parse import unquote, urlsplit
 
 
@@ -29,7 +30,7 @@ class StylesheetLinks(HTMLParser):
         except ValueError:
             return
         if not (url.scheme or url.netloc):
-            self.paths.add(unquote(url.path).removeprefix("./").lstrip("/"))
+            self.paths.add(normpath("/" + unquote(url.path).lstrip("/")).lstrip("/"))
 
 
 def _line_span(old, new):

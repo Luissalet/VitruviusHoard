@@ -107,20 +107,24 @@ export function useProjectLivePreview(id, initialPreview, baseline, activeFrame,
         post(frame, src, "canvas/changed", { ...detail, ...patch.targets });
       } else {
         // Keep the previous document visible until the replacement has loaded and restored its scroll.
-        const candidate = { ...next, key: ++frameKey, src };
-        const loaded = await loadFrame(setFrames, visible, candidate, signal);
-        if (signal.aborted) return;
-        if (!loaded) throw new Error("Preview did not finish loading");
-        if (state) {
-          const restored = await frameRequest(loaded, src, "canvas/restore", { scroll: state.scroll }, signal);
-          if (signal.aborted) return;
-          if (!restored || (restored.revision && restored.revision !== next.revision)) {
-            throw new Error("Preview did not confirm the expected revision");
+        const prepare = async (url, scroll) => {
+          const candidate = { ...next, key: ++frameKey, src: url };
+          const frame = await loadFrame(setFrames, visible, candidate, signal);
+          if (!frame || signal.aborted) return null;
+          if (state) {
+            const restored = await frameRequest(frame, url, "canvas/restore", { scroll }, signal);
+            if (!restored || (restored.revision && restored.revision !== next.revision)) return null;
           }
-        }
-        visible = candidate;
+          return { candidate, frame };
+        };
+        let ready = await prepare(src, state?.scroll);
+        const entry = previewNavigationUrl(next.url);
+        if (!ready && state && src !== entry && !signal.aborted) ready = await prepare(entry);
+        if (signal.aborted) return;
+        if (!ready) throw new Error("Preview did not finish loading");
+        visible = ready.candidate;
         setFrames([visible]);
-        post(loaded, src, "canvas/changed", detail);
+        post(ready.frame, visible.src, "canvas/changed", detail);
       }
       callback.current.onRevision?.(visible.revision);
     };
