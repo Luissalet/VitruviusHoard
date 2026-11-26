@@ -461,9 +461,20 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   const api = Object.assign(previous, {
     bridgeVersion: 1,
     registerTool,
-    pointTo(element, actor, options) {
+    pointTo(element, actor = {}, {presence = false, ...options} = {}) {
       if (!(element instanceof Element) || !element.getClientRects().length) return;
-      return cursorApi(cursorFor(actor), undefined, false).to(element, undefined, options);
+      if (presence && reduced()) return cursorApi(undefined, undefined, true).to(element, undefined, options);
+      const cursor = cursorFor(actor, presence);
+      cursor.active++;
+      clearTimeout(cursor.timer);
+      return cursorApi(cursor, undefined, presence).to(element, undefined, options)
+        .finally(() => releaseCursor(actor, cursor, presence));
+    },
+    clearPoint(actor) {
+      if (!actor?.id) return;
+      const id = String(actor.id);
+      const cursor = actors.get(id);
+      if (cursor) removeCursor(id, cursor);
     },
     setContext(value) { contextSource = value || {}; scheduleContext(); },
     onChanged(handler) {

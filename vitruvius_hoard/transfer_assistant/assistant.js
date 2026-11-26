@@ -119,6 +119,7 @@ export function mountTransferAssistant(root, options = {}) {
   let cursorSequence = 0;
   let sending = false;
   let waitingForForm = false;
+  const cursorActor = {id: "transfer-assistant", name: copy.title};
   const managed = new Set();
   const marks = new WeakMap();
 
@@ -181,7 +182,11 @@ export function mountTransferAssistant(root, options = {}) {
   }
 
   function paint() {
-    root.dataset.transferPhase = waitingForForm ? "collecting" : state.phase;
+    const phase = waitingForForm ? "collecting" : state.phase;
+    if (["ready", "executing", "complete", "cancelled"].includes(phase)) {
+      window.HoardApp?.clearPoint?.(cursorActor);
+    }
+    root.dataset.transferPhase = phase;
     response.textContent = message;
     showFixed();
     const {slots} = state;
@@ -211,6 +216,7 @@ export function mountTransferAssistant(root, options = {}) {
     const snapshot = state;
     const current = snapshot.slots;
     const hasSlots = Object.keys(current).length > 0;
+    const showCursor = !["complete", "cancelled"].includes(snapshot.phase);
     options.onDraft?.(snapshot);
     const scope = root.closest("[data-transfer-scope]") || document;
     const fields = [...scope.querySelectorAll("[data-transfer-slot]")];
@@ -222,9 +228,9 @@ export function mountTransferAssistant(root, options = {}) {
       if (after === undefined && !managed.has(field)) continue;
       if (after !== undefined) managed.add(field);
       if (String(field.value) === String(after ?? "")) continue;
-      if (field.getClientRects().length) {
+      if (showCursor && field.getClientRects().length) {
         try {
-          await window.HoardApp?.pointTo?.(field, {id: "transfer-assistant", name: copy.title}, {scroll: true});
+          await window.HoardApp?.pointTo?.(field, cursorActor, {scroll: true, presence: true});
         } catch (error) {
           console.warn("Transfer assistant could not move the preview cursor", error);
         }
