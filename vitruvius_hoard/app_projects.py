@@ -26,6 +26,7 @@ from .app_runtime import validate_spec
 from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
+from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
 
 # Previously shipped starter runtimes, normalized by starter_files' text read.
 # These copies predate the optional template hook.
@@ -496,6 +497,7 @@ class AppProjects:
             previous = self.processes.get(id)
             candidate["url"] = proxy.url
             candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
+            proxy.voice_revision = selected if TRANSFER_ASSISTANT_ENTRY in project["files"] else ""
             proxy.backend = (receipt.port, selected)
             self.processes[id] = candidate
             if previous:

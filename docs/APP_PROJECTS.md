@@ -76,6 +76,8 @@ These declarations run the fixed operations in order inside a single SQLite writ
 
 The native `POST /api/app-projects/{id}/call` accepts the same arguments as the tool. V2 runtime errors use an `error` message and a stable `code`. Custom pages can use relative API URLs and present translations based on those codes. V2 HTML templates provide `{{name}}`, `{{description}}`, `{{query}}`, `{{param_name}}` and `{{content}}`. Use a custom client to render or act on collections.
 
+For step-by-step transfer entry by text and local microphone, see the [transfer assistant](APP_TRANSFER_ASSISTANT.md).
+
 ## Preview, calls and inspection
 
 `app_project_preview` starts an owned hidden Python process on a free loopback port, or stops that project's process. It reuses a healthy process for the same revision. When changing revisions, it starts the captured source and switches the proxy after the new runtime is ready. The preview keeps the same loopback URL until stopped and works in the workbench iframe or an independent browser tab. Previews stop when Vitruvius shuts down, while records and source remain saved.
