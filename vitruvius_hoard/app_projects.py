@@ -14,14 +14,23 @@ import time
 import uuid
 import zipfile
 from contextlib import closing
+from http.client import HTTPConnection, HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
 from .app_preview import PreviewProxy
 from .app_runtime import validate_spec
+from .app_source_map import SourceMapError, edit_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
+
+# Previously shipped starter runtimes, normalized by starter_files' text read.
+# These copies predate the optional template hook.
+_LEGACY_STARTER_RUNTIMES = {
+    "29bbdc519e5e42838904793f190e085eca277bf4377b55219becb615cd205fd9",
+    "a8eb8d4b158b8147d374880480f02e74e1218c9b0e0a54e0ffaa5facca855ca9",
+}
 
 _TEMPLATES = [
     {"id": "work-board", "name": "Work board", "name_es": "Tablero de trabajo", "accent": "#355c7d", "fields": [
@@ -175,6 +184,54 @@ class AppProjects:
                 result.append({**item, "preview": self.status(item["id"])})
             return sorted(result, key=lambda item: item["updated_ts"], reverse=True)
 
+    def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en"):
+        with self.lock:
+            current = self.get(id)
+            if current["revision"] != expected_revision:
+                raise ValueError(
+                    "La revisión cambió. Abre la vista previa actual." if lang == "es"
+                    else "The revision changed. Open the current preview."
+                )
+            try:
+                filename, line, column = source_position(vsrc)
+                source = current["files"].get(filename)
+                if source is None:
+                    raise SourceMapError("The source file has changed. Open the current preview.",
+                                         "El fichero fuente ha cambiado. Abre la vista previa actual.")
+                updated = edit_source(source, line, column, tag, change)
+            except SourceMapError as error:
+                if lang == "es":
+                    raise ValueError(error.spanish) from error
+                raise
+            if updated == source:
+                return current
+            return self.update(id, {filename: updated}, expected_revision)
+
+    def source_count(self, id, vsrc, path="/"):
+        source_position(vsrc)
+        route = urlsplit(path)
+        if not path.startswith("/") or path.startswith("//") or route.netloc or route.fragment:
+            raise ValueError("Provide a page path in this preview, such as /records?q=search.")
+        with self.lock:
+            self._directory(id)
+            preview = self.status(id)
+            if preview["state"] != "running":
+                raise ValueError("Start this project's preview before counting served elements.")
+            origin = urlsplit(preview["url"])
+            if origin.scheme != "http" or origin.hostname != "127.0.0.1" or not origin.port:
+                raise ValueError("The project's preview did not provide a loopback address.")
+            with closing(HTTPConnection(origin.hostname, origin.port, timeout=5)) as connection:
+                try:
+                    connection.request("GET", path)
+                    response = connection.getresponse()
+                    if response.status != 200 or response.headers.get_content_type() != "text/html":
+                        raise ValueError("This preview path did not return an HTML page.")
+                    html = response.read().decode("utf-8")
+                except (OSError, HTTPException) as error:
+                    raise ValueError("The project's preview did not respond.") from error
+        return {"id": id, "revision": preview["revision"], "path": path, "vsrc": vsrc,
+                "same_vsrc_count": source_count(html, vsrc)}
+
     def _save(self, root, index, files):
         destinations = set()
         for name, source in files.items():
@@ -315,12 +372,19 @@ class AppProjects:
                 path = source / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content.encode("utf-8"))
+            server = source / "server.py"
+            renderer = Path(__file__).with_name("app_source_map.py")
+            command = [sys.executable, "-u", str(server), "--port", "0", "--database",
+                       str(root / "data" / "app.db"), "--ready-file", str(ready), "--revision", selected]
+            runtime_hash = hashlib.sha256(project["files"]["server.py"].encode("utf-8")).hexdigest()
+            if runtime_hash in _LEGACY_STARTER_RUNTIMES:
+                command.insert(2, str(renderer))
+            preview_env = {**os.environ, "VITRUVIUS_PREVIEW_SOURCE_MAP": str(renderer)}
             log = output.open("wb")
             try:
                 process = subprocess.Popen(
-                    [sys.executable, "-u", str(source / "server.py"), "--port", "0", "--database",
-                     str(root / "data" / "app.db"), "--ready-file", str(ready), "--revision", selected],
-                    cwd=source, stdout=log, stderr=log, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    command, cwd=source, env=preview_env, stdout=log, stderr=log,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
             except OSError:
                 log.close()

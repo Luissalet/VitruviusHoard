@@ -3,7 +3,9 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from .deps import services
-from ..agent_tools import AppCreateArgs, AppUpdateArgs, AppPreviewArgs, AppExportArgs, AppRenderArgs, AppCallArgs
+from ..agent_tools import (
+    AppCallArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
+)
 from ..app_projects import templates
 
 router = APIRouter(prefix="/api/app-projects")
@@ -41,6 +43,16 @@ def project_get(request: Request, id: str, revision: str | None = None):
 @router.put("/{id}")
 def project_update(request: Request, id: str, body: AppUpdateArgs):
     return execute(lambda: services(request).app_projects.update(id, body.files, body.expected_revision))
+
+
+@router.post("/{id}/source-edit")
+def project_edit_source(request: Request, id: str, body: AppSourceEditArgs):
+    return execute(lambda: services(request).app_projects.edit_source(id, **body.model_dump(exclude={"id"})))
+
+
+@router.get("/{id}/source-count")
+def project_source_count(request: Request, id: str, vsrc: str, path: str = "/"):
+    return execute(lambda: services(request).app_projects.source_count(id, vsrc, path))
 
 
 @router.post("/{id}/preview")
