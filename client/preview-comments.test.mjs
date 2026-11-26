@@ -29,25 +29,28 @@ test("comments without anchor stay in their own list, closed ones apart", () => 
   assert.deepEqual(closed.map((c) => c.id), ["c3"]);
 });
 
-test("the preview gets this page's pins with what it needs to find them", () => {
-  const list = [make("c1", 1, "pending"), make("c2", 2, "seen", { page: "/about", anchor: { state: "ok", vsrc: "pages/about.html:1:1" } }), make("c3", 3, "resolved", { anchor: { state: "ok", vsrc: "pages/index.html:9:1" } })];
+test("the preview gets this page's pins with the identity recorded when they were made", () => {
+  const made = { own_vsrc: true, element_text: "Taller", revision: "r1" };
+  const list = [make("c1", 1, "pending", made), make("c2", 2, "seen", { ...made, page: "/about" }), make("c3", 3, "resolved", { ...made, anchor: { state: "ok", vsrc: "pages/index.html:9:1" } })];
   assert.deepEqual(pinsFor(list, "/"), [
-    { id: "c1", n: 1, status: "pending", selector: "main > h1", vsrc: "pages/index.html:3:5" },
-    { id: "c3", n: 3, status: "resolved", selector: "main > h1", vsrc: "pages/index.html:9:1" },
+    { id: "c1", n: 1, status: "pending", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1" },
+    { id: "c3", n: 3, status: "resolved", selector: "main > h1", vsrc: "pages/index.html:3:5", own_vsrc: true, tag: "h1", text: "Taller", revision: "r1" },
   ]);
   assert.equal(pinsFor(list, "/nowhere").length, 0);
 });
 
-test("only anchors that differ from what is stored are sent back", () => {
-  const list = [make("c1", 1, "pending"), make("c2", 2, "pending", { anchor: { state: "lost" } })];
+test("only anchors that differ from what is stored, on that revision, are sent back", () => {
+  const stored = { state: "ok", vsrc: "pages/index.html:3:5", revision: "r1" };
+  const list = [make("c1", 1, "pending", { anchor: stored }), make("c2", 2, "pending", { anchor: { state: "lost", revision: "r1" } })];
   const reported = [
     { id: "c1", state: "ok", vsrc: "pages/index.html:3:5" }, // same
     { id: "c2", state: "lost" }, // same
     { id: "c1", state: "lost" }, { id: "c2", state: "ok", vsrc: "pages/index.html:4:1" }, // changed
     { id: "zz", state: "lost" }, { id: "c1", state: "maybe" },
   ];
-  assert.deepEqual(anchorChanges(list, reported).map((a) => a.id + ":" + a.state), ["c1:lost", "c2:ok"]);
-  assert.deepEqual(anchorChanges(list, null), []);
+  assert.deepEqual(anchorChanges(list, reported, "r1").map((a) => a.id + ":" + a.state), ["c1:lost", "c2:ok"]);
+  assert.equal(anchorChanges(list, [reported[0]], "r2").length, 1, "the same answer on another revision is news");
+  assert.deepEqual(anchorChanges(list, null, "r1"), []);
 });
 
 test("the copilot sees the comments waiting for the agent, briefly", () => {

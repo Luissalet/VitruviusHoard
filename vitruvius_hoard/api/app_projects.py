@@ -55,6 +55,7 @@ class CommentBody(BaseModel):
     revision: str | None = None
     page: str = "/"
     element: dict = {}
+    crop: str | None = None
 
 
 class CommentTextBody(BaseModel):
@@ -78,12 +79,18 @@ def comments_get(request: Request, id: str, status: str = "all"):
 
 @router.post("/{id}/comments")
 def comment_add(request: Request, id: str, body: CommentBody):
-    return execute(lambda: _comments(request, id).add(id, body.note, body.revision, body.page, body.element))
+    return execute(lambda: _comments(request, id).add(id, body.note, body.revision, body.page, body.element, body.crop))
 
 
 @router.put("/{id}/comments/anchors")
 def comment_anchors(request: Request, id: str, body: AnchorsBody):
     return execute(lambda: _comments(request, id).set_anchors(id, body.revision, body.anchors))
+
+
+@router.get("/{id}/comments/{comment_id}/crop")
+def comment_crop(request: Request, id: str, comment_id: str):
+    path = execute(lambda: _comments(request, id).crop(id, comment_id))
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.post("/{id}/comments/{comment_id}/respond")

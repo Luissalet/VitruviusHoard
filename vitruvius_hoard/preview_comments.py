@@ -1,37 +1,44 @@
 """Comments pinned on elements of an application preview, which the agent works through.
 
 A person turns on Comment in the preview bar, clicks an element and writes a note; the note becomes a pin on that
-element. The comment keeps where it was made (source position, selector, box, page) and the source revision the page
-was served from. It lives in the project's own data folder (``comments.json``, next to the revisions), never in the
-source files and never in an export.
+element. The comment keeps where it was made (source position, selector, box, page), the source revision the page was
+served from and, when the page could take one, a crop of the element as it looked then. It lives in the project's own
+data folder (``comments.json`` and ``comment-crops/``, next to the revisions), never in the source files and never in
+an export.
 
 Life cycle (who moves it):
 
     pending  --acknowledge (agent)-->  seen
-    pending|seen|answered  --resolve with a summary (agent)-->  resolved
-    pending|seen  --reply (agent)-->  answered        (a question or answer for the person)
-    pending|seen|answered  --dismiss (agent or person)-->  dismissed
+    seen  --resolve with a summary (agent)-->  resolved
+    seen  --reply (agent)-->  answered                (a question or answer for the person)
+    seen  --dismiss (agent)-->  dismissed
+    pending|seen|answered  --dismiss (person)-->  dismissed
     answered  --respond (person)-->  pending
     resolved|dismissed  --reopen (person)-->  pending
     any step  --undo-->  the state before it
 
-Every step is kept in the comment's ``history`` and can be undone, so nothing a tool writes is lost.
+The agent acknowledges a comment before it answers it, so the person always sees "seen" first. A batch of
+acknowledgements is all or nothing. Every step is kept in the comment's ``history`` and can be undone.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 import threading
 import time
 
 from .hoard_link.atomic import write_json_atomic
-from .preview_inspector import normalise
+from .preview_inspector import StaleSelection, normalise
 
 FORMAT = "vitruvius-preview-comments/v1"
 STATUSES = ("pending", "seen", "answered", "resolved", "dismissed")
 OPEN = ("pending", "seen")
-MAX_COMMENTS = 300
+MAX_COMMENTS = 1000
 MAX_NOTE = 2000
 MAX_SUMMARY = 1200
+MAX_CROP = 300_000
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _BOX = ("x", "y", "w", "h")
 _FIELDS = ("summary", "reply", "resolved_in")
 
@@ -81,11 +88,49 @@ class PreviewComments:
     def _current_revision(self, project_id):
         return self.app_projects.get(project_id)["revision"]
 
+    def _check_revision(self, project_id, revision, what):
+        """A revision a comment or anchor names must be one of this project and, while a preview runs, the one it serves."""
+        if not isinstance(revision, str) or not revision:
+            raise ValueError(f"{what} needs the source revision the preview was served from")
+        if revision not in self.app_projects.get(project_id)["revisions"]:
+            raise ValueError(f"Unknown revision {revision}: {what} must name a revision of this project")
+        status = self.app_projects.status(project_id)
+        if status.get("state") == "running" and status.get("revision") and status["revision"] != revision:
+            raise StaleSelection(f"The preview now serves revision {status['revision']}, not {revision}: pick the element again on the page that is shown")
+
     def _view(self, comment, current):
         item = {key: value for key, value in comment.items() if key != "history"}
         item["stale"] = comment["revision"] != current
+        item["has_crop"] = bool(comment.get("crop"))
         item["history"] = [dict(entry) for entry in comment["history"]]
         return item
+
+    # ---- the crop ------------------------------------------------------------------------------------------
+    def _crop_path(self, project_id, comment_id):
+        if not re.fullmatch(r"c\d+", comment_id):
+            raise LookupError("Comment not found")
+        return self.app_projects._directory(project_id) / "comment-crops" / f"{comment_id}.png"
+
+    def crop(self, project_id, comment_id):
+        """Path of the element's crop, taken when the comment was made."""
+        path = self._crop_path(project_id, comment_id)
+        if not path.is_file():
+            raise LookupError("This comment has no crop")
+        return path
+
+    @staticmethod
+    def _decode_crop(crop):
+        if crop in (None, ""):
+            return None
+        if not isinstance(crop, str) or not crop.startswith("data:image/png;base64,"):
+            raise ValueError("The crop must be a PNG data URL")
+        try:
+            data = base64.b64decode(crop.split(",", 1)[1], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("The crop is not valid base64") from error
+        if not data.startswith(PNG_MAGIC) or len(data) > MAX_CROP:
+            raise ValueError(f"The crop must be a PNG of at most {MAX_CROP} bytes")
+        return data
 
     # ---- reading -------------------------------------------------------------------------------------------
     def list(self, project_id, status="open"):
@@ -112,42 +157,47 @@ class PreviewComments:
         return result
 
     # ---- the person's side ---------------------------------------------------------------------------------
-    def add(self, project_id, note, revision, page, element):
+    def add(self, project_id, note, revision, page, element, crop=None):
         note = _text(note, MAX_NOTE)
         if not note:
             raise ValueError("A comment needs a note")
-        if not isinstance(revision, str) or not revision:
-            raise ValueError("A comment needs the source revision the preview was served from")
         [target] = normalise([element]) or [None]
         if target is None:
             raise ValueError("A comment needs the element it is pinned to")
+        png = self._decode_crop(crop)
         with self._lock:
             project = self.app_projects.get(project_id)
-            if revision not in project["revisions"]:
-                raise ValueError(f"Unknown revision {revision}: the comment must name a revision of this project")
+            self._check_revision(project_id, revision, "a comment")
             data = self._load(project_id)
             if len(data["comments"]) >= MAX_COMMENTS:
-                raise ValueError(f"A project keeps at most {MAX_COMMENTS} comments: dismiss or resolve some first")
+                raise ValueError(f"A project keeps at most {MAX_COMMENTS} comments")
             now = time.time()
             number = data["next"]
             comment = {
                 "id": f"c{number}", "n": number, "status": "pending", "note": note, "page": _page(page), "revision": revision,
                 "vsrc": target.get("vsrc"), "vgen": target.get("vgen"), "selector": target["selector"], "tag": target["tag"],
-                "classes": target["classes"], "element_text": target["text"], "box": target["box"],
+                "classes": target["classes"], "element_text": target["text"], "box": target["box"], "own_vsrc": bool(target.get("own_vsrc")),
+                "crop": {"revision": revision, "bytes": len(png)} if png else None,
                 "anchor": {"state": "ok", "revision": revision, "vsrc": target.get("vsrc"), "checked_ts": now},
                 "created_ts": now, "updated_ts": now, "summary": None, "reply": None, "resolved_in": None,
                 "history": [{"ts": now, "by": "person", "status": "pending", "text": note, "before": None}],
             }
             data["next"] = number + 1
             data["comments"].append(comment)
+            if png:
+                path = self._crop_path(project_id, comment["id"])
+                path.parent.mkdir(exist_ok=True)
+                path.write_bytes(png)
             self._save(project_id, data)
             return self._view(comment, project["revision"])
 
     def set_anchors(self, project_id, revision, anchors):
-        """The page says which pins it found on screen. A pin whose element is gone keeps its comment, flagged ``lost``."""
+        """The page says which pins it found on screen, and on which revision. A pin whose element is gone keeps its
+        comment, flagged ``lost``. A report for a revision the preview no longer serves is refused."""
         if not isinstance(anchors, list):
             raise ValueError("anchors must be a list")
         with self._lock:
+            self._check_revision(project_id, revision, "an anchor report")
             data = self._load(project_id)
             changed = 0
             for raw in anchors[:MAX_COMMENTS]:
@@ -159,8 +209,7 @@ class PreviewComments:
                     continue
                 before = comment.get("anchor") or {}
                 vsrc = _text(raw.get("vsrc"), 300) or None
-                anchor = {"state": raw["state"], "revision": revision if isinstance(revision, str) else before.get("revision"),
-                          "vsrc": vsrc if raw["state"] == "ok" else before.get("vsrc"), "checked_ts": time.time()}
+                anchor = {"state": raw["state"], "revision": revision, "vsrc": vsrc if raw["state"] == "ok" else before.get("vsrc"), "checked_ts": time.time()}
                 box = _box(raw.get("box")) if raw["state"] == "ok" and isinstance(raw.get("box"), dict) else comment["box"]
                 if (before.get("state"), before.get("revision"), before.get("vsrc")) != (anchor["state"], anchor["revision"], anchor["vsrc"]) or box != comment["box"]:
                     comment["anchor"], comment["box"] = anchor, box
@@ -170,6 +219,17 @@ class PreviewComments:
             return {"id": project_id, "changed": changed}
 
     # ---- steps ---------------------------------------------------------------------------------------------
+    def _check_step(self, comment, to, allowed):
+        if comment["status"] not in allowed:
+            raise ValueError(f"Comment {comment['id']} is {comment['status']}: it can go to {to} only from {', '.join(allowed)}")
+
+    def _move(self, comment, by, to, text, fields):
+        now = time.time()
+        before = {"status": comment["status"], **{key: comment.get(key) for key in _FIELDS}}
+        comment["history"].append({"ts": now, "by": by, "status": to, "text": text, "before": before})
+        comment["status"], comment["updated_ts"] = to, now
+        comment.update(fields or {})
+
     def _step(self, project_id, comment_id, by, to, allowed, text=None, fields=None, require_text=False):
         text = _text(text, MAX_SUMMARY)
         if require_text and not text:
@@ -177,42 +237,41 @@ class PreviewComments:
         with self._lock:
             data = self._load(project_id)
             comment = self._find(data, comment_id)
-            if comment["status"] not in allowed:
-                raise ValueError(f"Comment {comment_id} is {comment['status']}: it can go to {to} only from {', '.join(allowed)}")
-            now = time.time()
-            before = {"status": comment["status"], **{key: comment.get(key) for key in _FIELDS}}
-            comment["history"].append({"ts": now, "by": by, "status": to, "text": text, "before": before})
-            comment["status"], comment["updated_ts"] = to, now
-            comment.update(fields or {})
+            self._check_step(comment, to, allowed)
+            self._move(comment, by, to, text, fields)
             self._save(project_id, data)
             return self._view(comment, self._current_revision(project_id))
 
     def acknowledge(self, project_id, ids):
-        ids = [ids] if isinstance(ids, str) else list(ids or [])
+        """Mark comments seen, all or nothing: every id is checked before the first is written."""
+        ids = [ids] if isinstance(ids, str) else list(dict.fromkeys(ids or []))
         if not ids:
             raise ValueError("Name at least one comment id")
-        done = []
-        for comment_id in ids:
-            with self._lock:
-                data = self._load(project_id)
-                current = self._find(data, comment_id)["status"]
-            if current == "seen":
-                done.append(self._view(self._find(self._load(project_id), comment_id), self._current_revision(project_id)))
-            else:
-                done.append(self._step(project_id, comment_id, "agent", "seen", ("pending",)))
-        return {"id": project_id, "comments": done}
+        with self._lock:
+            data = self._load(project_id)
+            comments = [self._find(data, comment_id) for comment_id in ids]
+            for comment in comments:
+                self._check_step(comment, "seen", ("pending", "seen"))
+            for comment in comments:
+                if comment["status"] == "pending":
+                    self._move(comment, "agent", "seen", "", None)
+            self._save(project_id, data)
+            current = self._current_revision(project_id)
+            return {"id": project_id, "comments": [self._view(comment, current) for comment in comments]}
 
     def resolve(self, project_id, comment_id, summary, revision=None):
         """Resolved with a summary of what changed; ``revision`` is the project revision holding the change (default: the current one)."""
-        current = self._current_revision(project_id)
-        return self._step(project_id, comment_id, "agent", "resolved", ("pending", "seen", "answered"), summary,
-                          {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or current, "reply": None}, require_text=True)
+        if revision is not None and revision not in self.app_projects.get(project_id)["revisions"]:
+            raise ValueError(f"Unknown revision {revision}: a comment is resolved in a revision of this project")
+        return self._step(project_id, comment_id, "agent", "resolved", ("seen",), summary,
+                          {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or self._current_revision(project_id), "reply": None}, require_text=True)
 
     def reply(self, project_id, comment_id, text):
-        return self._step(project_id, comment_id, "agent", "answered", ("pending", "seen"), text, {"reply": _text(text, MAX_SUMMARY)}, require_text=True)
+        return self._step(project_id, comment_id, "agent", "answered", ("seen",), text, {"reply": _text(text, MAX_SUMMARY)}, require_text=True)
 
     def dismiss(self, project_id, comment_id, reason=None, by="agent"):
-        return self._step(project_id, comment_id, by, "dismissed", ("pending", "seen", "answered"), reason)
+        allowed = ("seen",) if by == "agent" else ("pending", "seen", "answered")
+        return self._step(project_id, comment_id, by, "dismissed", allowed, reason)
 
     def respond(self, project_id, comment_id, text):
         """The person answers the agent's question: the comment is pending again."""

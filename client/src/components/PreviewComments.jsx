@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { useCopilotForm } from "../copilot-hooks.js";
 import { anchorChanges, copilotComments, groupComments, pinsFor, sameComments, sourceLine, statusLabel, targetName } from "../preview-comments.js";
 
 const POLL_MS = 2500;
@@ -9,17 +8,21 @@ const POLL_MS = 2500;
  * Pinned comments of the application preview, shown inside the bar of `PreviewSelection` (which owns the frame, the mode
  * buttons and the message listener). The inspector inside the preview paints the pins and reports the element a person
  * picked in Comment mode; this component writes the note, keeps the list (polled, so the agent's steps show up) and
- * says which comments lost their element. `register.current` is the handler `PreviewSelection` calls with each message.
+ * says which comments lost their element. `register.current` is the handler `PreviewSelection` calls with each message;
+ * `served.current` is the revision the page says it serves (`previewRevision.current`, the one the preview was started on,
+ * stands in for a page that does not say), `onContext` receives what the copilot sees of the open comments.
+ * A draft keeps the revision its element was picked on: if the page moved on, it is dropped, never saved as the newer one.
  */
-export default function PreviewComments({ projectId, running, revision, es, notify, send, register, ready }) {
+export default function PreviewComments({ projectId, running, served, previewRevision, es, notify, send, register, ready, onContext }) {
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState(null); // {element, page}
   const [note, setNote] = useState("");
   const [replies, setReplies] = useState({});
   const [focusId, setFocusId] = useState(null);
   const [page, setPage] = useState(null);
-  const state = useRef({ comments, page });
-  state.current = { comments, page };
+  const state = useRef({ comments, page, draft });
+  state.current = { comments, page, draft };
+  const now = () => served.current || previewRevision.current || null;
 
   const apply = (list) => setComments((held) => (sameComments(held, list) ? held : list));
   const load = () => projectId && api.appProjectComments(projectId).then((data) => apply(data.comments)).catch(() => {});
@@ -40,10 +43,14 @@ export default function PreviewComments({ projectId, running, revision, es, noti
   useEffect(() => {
     register.current = (data) => {
       if (typeof data.page === "string") setPage(data.page);
-      if (data.type === "dock/comment-target" && data.element) { setDraft({ element: data.element, page: data.page || "/" }); setNote(""); }
+      const held = state.current.draft;
+      if (held && data.type !== "dock/comment-target" && now() && now() !== held.revision) dropDraft(true);
+      if (data.type === "dock/comment-target" && data.element) { setDraft({ element: data.element, page: data.page || "/", revision: data.revision || previewRevision.current || null, crop: data.crop || null }); setNote(""); }
       else if (data.type === "dock/comment-anchors" && Array.isArray(data.anchors)) {
-        const changed = anchorChanges(state.current.comments, data.anchors);
-        if (changed.length && projectId) api.appProjectCommentAnchors(projectId, { anchors: changed, revision: revision.current }).then(load).catch(() => {});
+        // The report names the revision the page itself serves; the server refuses one the preview no longer serves.
+        const reported = data.revision || previewRevision.current;
+        const changed = anchorChanges(state.current.comments, data.anchors, reported);
+        if (changed.length && projectId && reported) api.appProjectCommentAnchors(projectId, { anchors: changed, revision: reported }).then(load).catch(() => {});
       } else if (data.type === "dock/comment-focus") setFocusId(data.id);
     };
     return () => { register.current = null; };
@@ -54,16 +61,17 @@ export default function PreviewComments({ projectId, running, revision, es, noti
     document.getElementById(`preview-comment-${focusId}`)?.scrollIntoView?.({ block: "nearest" });
   }, [focusId, comments]);
 
-  const open = comments.filter((comment) => ["pending", "seen", "answered"].includes(comment.status));
-  useCopilotForm("app-preview-comments", { objectId: projectId, initial: { comments: [] }, current: { comments: copilotComments(open) } });
+  useEffect(() => { onContext(copilotComments(comments)); }, [comments]);
 
   const step = (comment, name, body) => api.appProjectCommentStep(projectId, comment.id, name, body)
     .then(() => { setReplies((held) => ({ ...held, [comment.id]: "" })); return load(); }).catch((error) => notify(error.message));
   const cancelDraft = () => { setDraft(null); setNote(""); send("inspect/draft-clear"); };
+  const dropDraft = (moved) => { if (moved) notify(es ? "La vista previa cambió de versión: elige el elemento otra vez." : "The preview moved to another revision: pick the element again."); cancelDraft(); };
   const save = () => {
     if (!draft || !note.trim()) return;
-    api.appProjectCommentAdd(projectId, { note: note.trim(), revision: revision.current, page: draft.page, element: draft.element })
-      .then(() => { cancelDraft(); return load(); }).catch((error) => notify(error.message));
+    if (!draft.revision || draft.revision !== now()) { dropDraft(true); return; }
+    api.appProjectCommentAdd(projectId, { note: note.trim(), revision: draft.revision, page: draft.page, element: draft.element, crop: draft.crop || undefined })
+      .then(() => { cancelDraft(); return load(); }).catch((error) => { notify(error.message); if (error.status === 409) cancelDraft(); });
   };
 
   const { anchored, lost, closed } = groupComments(comments);
@@ -77,6 +85,7 @@ export default function PreviewComments({ projectId, running, revision, es, noti
       {comment.stale && <span className="chip chip-wrap" title={comment.revision}>{es ? "hecho en una versión anterior" : "made on an earlier revision"}</span>}
     </div>
     <p>{comment.note}</p>
+    {comment.has_crop && <img src={`/design/api/app-projects/${projectId}/comments/${comment.id}/crop`} alt={es ? `Recorte de ${targetName(comment)} cuando se comentó` : `Crop of ${targetName(comment)} when it was commented`} style={{ maxWidth: 240, maxHeight: 120, objectFit: "contain", alignSelf: "flex-start", border: "1px solid var(--line)", background: "white" }} />}
     {comment.status === "resolved" && comment.summary && <p className="help"><strong>{es ? "Qué cambió: " : "What changed: "}</strong>{comment.summary}</p>}
     {comment.status === "answered" && comment.reply && <p className="help"><strong>{es ? "El agente dice: " : "The agent says: "}</strong>{comment.reply}</p>}
     {comment.status === "dismissed" && comment.history.at(-1)?.text && <p className="help"><strong>{es ? "Motivo: " : "Reason: "}</strong>{comment.history.at(-1).text}</p>}
@@ -96,6 +105,7 @@ export default function PreviewComments({ projectId, running, revision, es, noti
     {draft && <form className="panel flex flex-col gap-2" style={{ padding: 10 }} onSubmit={(event) => { event.preventDefault(); save(); }}>
       <strong>{es ? "Comentario sobre " : "Comment on "}{targetName(draft.element)}</strong>
       <span className="help">{draft.element.vsrc || (es ? "sin posición en el fuente" : "no source position")}</span>
+      {draft.crop && <img src={draft.crop} alt={es ? "Recorte del elemento" : "Crop of the element"} style={{ maxWidth: 240, maxHeight: 120, objectFit: "contain", alignSelf: "flex-start", border: "1px solid var(--line)", background: "white" }} />}
       <label className="label">{es ? "Nota para el agente" : "Note for the agent"}
         <textarea className="field" rows={3} autoFocus value={note} onChange={(event) => setNote(event.target.value)} />
       </label>

@@ -143,3 +143,28 @@ test("the inspector listens only to its parent, from an origin fixed once", () =
   assert.equal(gate("http://a.test", message("inspect/hello", "http://evil.test"), parent), null);
   assert.equal(gate("http://a.test", { source: parent, origin: "http://a.test", data: { hoardDock: 1, type: "dock/ready" } }, parent), null, "not an inspect/ message");
 });
+
+test("a pinned comment keeps its identity: same revision by source position, another revision only by tag and text, else no anchor", () => {
+  const { locatePin } = context.VitruviusInspectorCore;
+  const h = (vsrc, text) => node("h1", { "data-vsrc": vsrc }, [], text);
+  const lookup = (table) => (selector) => { if (!(selector in table)) throw new Error("bad selector"); return table[selector]; };
+  const pin = { selector: '[data-vsrc="pages/index.html:2:10"]', vsrc: "pages/index.html:2:10", own_vsrc: true, tag: "h1", text: "Original heading", revision: "r1" };
+  const original = h("pages/index.html:2:10", "Original heading");
+  const other = h("pages/index.html:7:10", "Different heading");
+  const found = locatePin(pin, lookup({ '[data-vsrc="pages/index.html:2:10"]': [original] }), "r1");
+  assert.equal(found.state, "ok"); assert.equal(found.element, original);
+  // same revision, the heading was replaced by a different one at another position: no anchor, nothing is moved
+  const replaced = locatePin(pin, lookup({ '[data-vsrc="pages/index.html:2:10"]': [] }), "r1");
+  assert.equal(replaced.state, "lost"); assert.equal(replaced.element, null);
+  // another revision: the same line now holds another element -> not the same (text differs) -> lost
+  const sameLineOtherElement = locatePin(pin, lookup({ '[data-vsrc="pages/index.html:2:10"]': [other], h1: [other] }), "r2");
+  assert.equal(sameLineOtherElement.state, "lost");
+  // another revision, the heading moved to another line but kept its text: found alone by tag and text
+  const moved = h("pages/index.html:9:3", "Original heading");
+  const refound = locatePin(pin, lookup({ '[data-vsrc="pages/index.html:2:10"]': [], h1: [moved, other] }), "r2");
+  assert.equal(refound.state, "ok"); assert.equal(refound.element, moved);
+  // ambiguous: two equal headings on another revision -> no anchor
+  assert.equal(locatePin(pin, lookup({ '[data-vsrc="pages/index.html:2:10"]': [], h1: [moved, h("pages/index.html:12:3", "Original heading")] }), "r2").state, "lost");
+  // no text to corroborate on another revision -> no anchor
+  assert.equal(locatePin({ ...pin, text: "" }, lookup({ h1: [moved] }), "r2").state, "lost");
+});

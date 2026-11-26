@@ -738,19 +738,19 @@ TOOLS: list[Tool] = [
         AppCommentListArgs, ann(True), lambda services, args: list_comments(services, args.id, args.status), capped=False),
     Tool("app_project_comment_ack",
         "Mark pending comments as seen by you. Reconocer comentarios de la vista previa.\n"
-        "The pins change to seen on the person's screen. Do this when you start working on them. Undo with app_project_comment_undo.",
+        "Do this first: resolve, reply and dismiss only work on seen comments; a batch is all or nothing. Undo with app_project_comment_undo.",
         AppCommentAckArgs, ann(False, False, True), lambda services, args: acknowledge_comments(services, args.id, args.comment_ids), capped=False),
     Tool("app_project_comment_resolve",
         "Resolve a comment with a summary of what you changed. Resolver comentario de la vista previa.\n"
-        "The summary is shown to the person next to the pin; the comment records the revision that holds the change. Undo with app_project_comment_undo.",
+        "Needs the comment seen (app_project_comment_ack). The summary is shown next to the pin; the comment records the project revision that holds the change. Undo with app_project_comment_undo.",
         AppCommentResolveArgs, ann(False, False, True), lambda services, args: resolve_comment(services, args.id, args.comment_id, args.summary, args.revision), capped=False),
     Tool("app_project_comment_reply",
         "Answer a comment with a question instead of a change. Contestar comentario de la vista previa.\n"
-        "The pin turns to answered; the person replies and it becomes pending again. Undo with app_project_comment_undo.",
+        "Needs the comment seen. The person replies and it becomes pending again. Undo with app_project_comment_undo.",
         AppCommentTextArgs, ann(False, False, True), lambda services, args: reply_to_comment(services, args.id, args.comment_id, args.text), capped=False),
     Tool("app_project_comment_dismiss",
         "Dismiss a comment that needs no change, with the reason. Descartar comentario de la vista previa.\n"
-        "Nothing is deleted: the comment stays listed as dismissed and can be reopened. Undo with app_project_comment_undo.",
+        "Needs the comment seen. Nothing is deleted: it stays listed as dismissed and can be reopened. Undo with app_project_comment_undo.",
         AppCommentDismissArgs, ann(False, False, True), lambda services, args: dismiss_comment(services, args.id, args.comment_id, args.reason), capped=False),
     Tool("app_project_comment_undo",
         "Undo the last step of a comment. Deshacer el último paso de un comentario de la vista previa.",

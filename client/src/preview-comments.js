@@ -37,20 +37,22 @@ export function groupComments(comments) {
   };
 }
 
-/** What the preview needs to paint a pin: only this page's comments, with the little they need to find their element. */
+/** What the preview needs to find a pin: the identity recorded when the comment was made (source position, selector, tag, text) and the revision it was made on. */
 export function pinsFor(comments, page) {
-  return comments.filter((comment) => comment.page === page)
-    .map((comment) => ({ id: comment.id, n: comment.n, status: comment.status, selector: comment.selector, vsrc: comment.anchor?.vsrc || comment.vsrc || "" }));
+  return comments.filter((comment) => comment.page === page).map((comment) => ({
+    id: comment.id, n: comment.n, status: comment.status, selector: comment.selector, vsrc: comment.vsrc || "", own_vsrc: Boolean(comment.own_vsrc),
+    tag: comment.tag || "", text: comment.element_text || "", revision: comment.revision || "",
+  }));
 }
 
-/** Anchors the page reported that differ from what is stored: the only ones worth sending. */
-export function anchorChanges(comments, anchors) {
+/** Anchors the page reported (on `revision`) that differ from what is stored: the only ones worth sending. */
+export function anchorChanges(comments, anchors, revision) {
   const byId = new Map(comments.map((comment) => [comment.id, comment]));
   return (Array.isArray(anchors) ? anchors : []).filter((anchor) => {
     const comment = byId.get(anchor.id);
     if (!comment || (anchor.state !== "ok" && anchor.state !== "lost")) return false;
     const stored = comment.anchor || {};
-    return stored.state !== anchor.state || (anchor.state === "ok" && (stored.vsrc || null) !== (anchor.vsrc || null));
+    return stored.state !== anchor.state || stored.revision !== revision || (anchor.state === "ok" && (stored.vsrc || null) !== (anchor.vsrc || null));
   });
 }
 

@@ -70,6 +70,7 @@ def test_the_life_cycle_pending_seen_resolved_with_a_summary(services, project):
 def test_the_agent_can_answer_and_the_person_replies_back_to_pending(services, project):
     store = services.preview_comments
     add(services, project)
+    store.acknowledge(project["id"], ["c1"])
     answered = store.reply(project["id"], "c1", "Bigger than the heading in the header?")
     assert answered["status"] == "answered" and answered["reply"].startswith("Bigger")
     assert store.list(project["id"])["count"] == 0  # waiting for the person, not for the agent
@@ -83,6 +84,7 @@ def test_dismissed_and_resolved_comments_stay_listed_and_can_be_reopened(service
     store = services.preview_comments
     add(services, project)
     add(services, project, "Second")
+    store.acknowledge(project["id"], ["c1", "c2"])
     store.dismiss(project["id"], "c1", "Already so in the print styles")
     store.resolve(project["id"], "c2", "Done")
     assert store.list(project["id"], "all")["counts"] == {"pending": 0, "seen": 0, "answered": 0, "resolved": 1, "dismissed": 1, "lost": 0}
@@ -102,6 +104,7 @@ def test_undo_restores_the_state_before_the_last_step_and_not_the_creation(servi
     assert restored["status"] == "pending" and restored["summary"] is None and len(restored["history"]) == 1
     with pytest.raises(ValueError, match="Nothing to undo"):
         store.undo(project["id"], "c1")
+    store.acknowledge(project["id"], ["c1"])
     store.reply(project["id"], "c1", "Which one?")
     store.respond(project["id"], "c1", "This one")
     assert store.undo(project["id"], "c1")["status"] == "answered"
@@ -128,6 +131,7 @@ def test_a_comment_made_on_an_older_revision_says_it_is_stale(services, project)
     newer = services.app_projects.update(project["id"], {"pages/index.html": "<h1>Changed</h1>\n"}, project["revision"])
     comment = services.preview_comments.list(project["id"])["comments"][0]
     assert comment["revision"] == project["revision"] != newer["revision"] and comment["stale"] is True
+    services.preview_comments.acknowledge(project["id"], ["c1"])
     assert services.preview_comments.resolve(project["id"], "c1", "Done")["resolved_in"] == newer["revision"]
 
 
@@ -201,6 +205,7 @@ def test_api_covers_what_the_person_does(client):
     assert created.status_code == 200 and created.json()["id"] == "c1"
     assert client.post(base, json={**body, "note": ""}).status_code == 400
     assert client.post(base, json={**body, "revision": "r-nope"}).status_code == 400
+    client.svc.preview_comments.acknowledge(project["id"], ["c1"])
     client.svc.preview_comments.reply(project["id"], "c1", "How tight?")
     assert client.post(f"{base}/c1/respond", json={"text": "8px"}).json()["status"] == "pending"
     assert client.post(f"{base}/c1/dismiss", json={"text": "changed my mind"}).json()["status"] == "dismissed"
@@ -211,3 +216,97 @@ def test_api_covers_what_the_person_does(client):
     assert client.get(base, params={"status": "bogus"}).status_code == 400
     assert client.post(f"{base}/c7/undo").status_code == 404
     assert client.get("/api/app-projects/" + "0" * 16 + "/comments").status_code == 404
+
+
+def test_the_agent_cannot_skip_seen_and_only_the_person_dismisses_what_is_not_seen(services, project):
+    store, pid = services.preview_comments, project["id"]
+    add(services, project)
+    for step in (lambda: store.resolve(pid, "c1", "Done"), lambda: store.reply(pid, "c1", "Which?"), lambda: store.dismiss(pid, "c1", "no")):
+        with pytest.raises(ValueError, match="only from seen"):
+            step()
+    assert store.list(pid, "pending")["count"] == 1
+    store.acknowledge(pid, ["c1"])
+    store.reply(pid, "c1", "Which one?")
+    with pytest.raises(ValueError, match="only from seen"):
+        store.resolve(pid, "c1", "Done")  # answered: the person has to reply first
+    with pytest.raises(ValueError, match="only from seen"):
+        store.dismiss(pid, "c1", "no", "agent")
+    assert store.dismiss(pid, "c1", "changed my mind", "person")["status"] == "dismissed"
+
+
+def test_a_batch_of_acknowledgements_is_all_or_nothing(services, project):
+    store, pid = services.preview_comments, project["id"]
+    add(services, project)
+    add(services, project, "Second")
+    store.acknowledge(pid, ["c2"])
+    store.resolve(pid, "c2", "Done")
+    before = (services.app_projects._directory(pid) / "comments.json").read_text(encoding="utf-8")
+    with pytest.raises(ValueError, match="resolved"):
+        store.acknowledge(pid, ["c1", "c2"])
+    with pytest.raises(LookupError):
+        store.acknowledge(pid, ["c1", "c9"])
+    assert (services.app_projects._directory(pid) / "comments.json").read_text(encoding="utf-8") == before
+    assert store.list(pid, "pending")["count"] == 1
+    mixed = store.acknowledge(pid, ["c1", "c1"])  # a repeated id counts once
+    assert [c["status"] for c in mixed["comments"]] == ["seen"]
+
+
+def test_revisions_named_in_writes_must_be_revisions_of_the_project(services, project):
+    store, pid = services.preview_comments, project["id"]
+    add(services, project)
+    store.acknowledge(pid, ["c1"])
+    with pytest.raises(ValueError, match="Unknown revision"):
+        store.resolve(pid, "c1", "Done", "unknown-revision")
+    assert store.list(pid, "seen")["comments"][0]["resolved_in"] is None
+    with pytest.raises(ValueError, match="Unknown revision"):
+        store.set_anchors(pid, "invented-anchor-revision", [{"id": "c1", "state": "lost"}])
+    with pytest.raises(ValueError, match="needs the source revision"):
+        store.set_anchors(pid, None, [{"id": "c1", "state": "lost"}])
+    assert store.list(pid, "lost")["count"] == 0
+
+
+def test_a_comment_or_anchor_from_a_revision_the_preview_no_longer_serves_is_refused(services, project, monkeypatch):
+    from vitruvius_hoard.preview_inspector import StaleSelection
+    newer = services.app_projects.update(project["id"], {"pages/index.html": "<h1>Changed</h1>\n"}, project["revision"])
+    monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "running", "revision": newer["revision"], "url": "http://127.0.0.1:1"})
+    with pytest.raises(StaleSelection, match="pick the element again"):
+        add(services, project)  # the element was picked on the older revision
+    with pytest.raises(StaleSelection):
+        services.preview_comments.set_anchors(project["id"], project["revision"], [])
+    made = services.preview_comments.add(project["id"], "On what is shown", newer["revision"], "/", element())
+    assert made["revision"] == newer["revision"] and made["stale"] is False
+
+
+PNG = "data:image/png;base64," + __import__("base64").b64encode(b"\x89PNG\r\n\x1a\n" + b"x" * 40).decode()
+
+
+def test_the_crop_is_kept_with_the_revision_it_was_taken_on_and_not_exported(services, project):
+    store, pid = services.preview_comments, project["id"]
+    made = store.add(pid, "Look", project["revision"], "/", element(), PNG)
+    assert made["has_crop"] is True and made["crop"] == {"revision": project["revision"], "bytes": 48}
+    assert store.crop(pid, "c1").read_bytes().startswith(b"\x89PNG")
+    assert add(services, project, "No crop")["has_crop"] is False
+    with pytest.raises(LookupError):
+        store.crop(pid, "c2")
+    for bad in ("data:image/jpeg;base64,AAAA", "data:image/png;base64,!!!", "data:image/png;base64," + "QUFB", PNG + "A"):
+        with pytest.raises(ValueError):
+            store.add(pid, "bad", project["revision"], "/", element(), bad)
+    with pytest.raises(ValueError, match="at most"):
+        store.add(pid, "big", project["revision"], "/", element(), "data:image/png;base64," + __import__("base64").b64encode(b"\x89PNG\r\n\x1a\n" + b"x" * 400_000).decode())
+    with pytest.raises(LookupError):
+        store.crop(pid, "../comments")
+    out = services.app_projects.export(pid, include_data=True)
+    with zipfile.ZipFile(out["path"]) as bundle:
+        assert not [name for name in bundle.namelist() if "crop" in name or "comment" in name]
+    assert "x" * 40 not in json.dumps(services.app_projects.get(pid)["files"])
+
+
+def test_api_serves_the_crop(client):
+    project = client.svc.app_projects.create("Cropped", "work-board")
+    base = f"/api/app-projects/{project['id']}/comments"
+    body = {"note": "Look", "revision": project["revision"], "page": "/", "element": element(), "crop": PNG}
+    assert client.post(base, json=body).json()["has_crop"] is True
+    served = client.get(f"{base}/c1/crop")
+    assert served.status_code == 200 and served.headers["content-type"] == "image/png" and served.content.startswith(b"\x89PNG")
+    assert client.get(f"{base}/c2/crop").status_code == 404
+    assert client.post(base, json={**body, "crop": "data:text/html;base64,AAAA"}).status_code == 400

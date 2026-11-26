@@ -65,6 +65,32 @@ A marker-generated fragment, a text node with template bindings or an attribute 
 
 The HTTP equivalents are `POST /api/app-projects/{id}/source-edit` and `GET /api/app-projects/{id}/source-count`. The packaged starter runtime applies the map only when launched by the owned preview. Exported source and the ordinary standalone server contain no preview markup. Earlier stock starters get the source map in preview while retaining their exact saved runtime on export. Custom runtimes can use the starter's optional template-rendering hook. The preview reserves the `data-vsrc` and `data-vgen` attribute names.
 
+## Comments pinned on the preview
+
+Next to **Select** the preview bar has **Comment** (button, or `Alt+Shift+C`). In the mode a click picks one element (a link is not followed), a note box opens with a crop of the element, and **Save comment** pins the note on it: a numbered pin sits at the element's top-right corner. `Esc` leaves the mode. The comment keeps `{vsrc, own_vsrc, vgen, selector, tag, classes, box, element text, page}`, the note, **the revision the page was served from when the element was picked** and the crop. A draft keeps the revision of the page it was picked on: if the preview serves another revision when it is saved, the draft is dropped with a message (the server answers 409), never saved as the newer one. A revision the project does not have is refused with a message.
+
+A comment moves through these states, and the pin shows each one by colour and glyph (and the list by name):
+
+| State | Pin | Moved by |
+| --- | --- | --- |
+| pending | orange, number | the person saved it |
+| seen by the agent | blue ring | the agent acknowledged it (the only step from pending) |
+| answered | purple, `?` | the agent replied with a question or explanation (from seen); the person's reply makes it pending again |
+| resolved | green, `✓` | the agent resolved it with a summary of what changed (from seen); the project revision holding the change is recorded and must be a real one |
+| dismissed | grey, `×` | the agent (from seen) or the person (from pending, seen or answered), with an optional reason |
+
+The agent cannot skip "seen". A batch acknowledgement is all or nothing: if one id cannot move, nothing is written. A resolved or dismissed comment can be reopened by the person, and every step can be undone (the last step of a comment, repeatedly, back to its creation). Nothing is deleted; a project keeps up to 1000 comments.
+
+**Anchors.** The preview paints a pin by the identity recorded when the comment was made. On the revision it was made on, a unique `data-vsrc` (with the same tag) or the selector with the same tag and text finds it. On any other revision source positions mean other lines, so only an element with the same tag and the same non-empty text, found by the selector or alone on the page, is the same element; if it is ambiguous or changed, the pin is **without anchor**: it keeps its place in a separate **Without anchor** list with its note, state and crop, and is never moved to a neighbour. It is found again if the element returns. The page reports anchors with the revision it serves; the server refuses a report for a revision the preview no longer serves. Comments made on an earlier revision say so (`stale`).
+
+**Crop.** When the pin is made, the page draws the element with its computed styles into a PNG (up to 480×320, at most 300 KB; none when the element is too large or too busy or the browser refuses), and the comment keeps it, as it looked on that revision, in `app-projects/<id>/comment-crops/<comment>.png` (`GET /api/app-projects/<id>/comments/<comment>/crop`). It appears in the editor and in the list.
+
+Comments are stored in the project's own data folder (`app-projects/<id>/comments.json`, written atomically). They are not in the source files, the revisions or an export; the exported application carries no trace of them, crops included.
+
+The agent works them through short tools: `app_project_comments` (`id`, `status`: `open` by default = pending + seen, or `pending`, `seen`, `answered`, `resolved`, `dismissed`, `lost`, `all`; read-only; lists counts too), `app_project_comment_ack` (`comment_ids`), `app_project_comment_resolve` (`comment_id`, `summary`, optional `revision`), `app_project_comment_reply` (`comment_id`, `text`), `app_project_comment_dismiss` (`comment_id`, `reason`) and `app_project_comment_undo` (`comment_id`). The comments waiting for the agent reach the copilot turn context in the same card as the selection (`app-preview-selection`, fields `selection` and `comments`), so selecting an element does not hide them. The list refreshes by polling, so the agent's steps change the pins within seconds.
+
+The page side adds to the inspector's contract: host → page `inspect/mode {on, kind: "comment"}`, `inspect/pins {pins: [{id, n, status, selector, vsrc, own_vsrc, tag, text, revision}]}`, `inspect/draft-clear`, `inspect/pin-focus {id}`; page → host `dock/comment-target {page, revision, element, crop}`, `dock/comment-anchors {page, revision, anchors: [{id, state: "ok"|"lost", vsrc, box}]}` and `dock/comment-focus {id}`. `dock/select` and `dock/inspector-ready` also carry `comment_mode`. The API under `/api/app-projects/<id>/comments` lists (`GET ?status=`), adds (`POST`, with the picked revision and the crop), stores anchors (`PUT /anchors`) and takes the person's steps (`POST /<comment>/respond|dismiss|reopen|undo`).
+
 ## Booking pages
 
 Use `design_brief` to choose the direction, then call `app_project_create` with `template: "booking"`. Supply `items` with a stable lowercase `id`, `title`, `category` and optional `description` for each entry. A text value can be shared or supplied as an `{es, en}` pair. Set `lang: "es"` for Spanish on first load, with `description_es` for the introductory text and `description` for its English version. The site preserves the active category when switching languages.
