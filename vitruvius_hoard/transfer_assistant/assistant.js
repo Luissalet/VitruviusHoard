@@ -1,5 +1,5 @@
-import {initialTransfer, transferTurn} from "./dialogue.js";
-import {speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
+import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
+import {hasLocalTransferVoice, speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 
 const COPY = {
@@ -10,8 +10,11 @@ const COPY = {
     getting_mic: "Solicitando acceso al micrófono…", recording: "Escuchando…", transcribing: "Transcribiendo…",
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
-    tts_unavailable: "El servicio de voz local no responde. Puedes leer la respuesta.",
-    tts_fallback: "El servicio de voz local no responde. Se usa una voz de este equipo.",
+    tts_unavailable: "No hay una voz local en castellano. Puedes leer la respuesta.",
+    dictation_common: "Dictado mediante el servicio común de Cyrano.",
+    dictation_app: "Dictado mediante la app de Cyrano.",
+    dictation_fallback: "Cyrano no responde. Se usa el análisis local de la página.",
+    tts_fallback: "Voz del sistema.",
     empty: "No se ha entendido la frase. Prueba de nuevo o escríbela.",
     data: "No se han podido cargar las cuentas y los contactos. Vuelve a enviar el mensaje.",
     executing: "Confirmando la transferencia…", success: "Transferencia simulada realizada.",
@@ -26,8 +29,11 @@ const COPY = {
     getting_mic: "Requesting microphone access…", recording: "Listening…", transcribing: "Transcribing…",
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
-    tts_unavailable: "The local speech service is unavailable. You can read the reply.",
-    tts_fallback: "The local speech service is unavailable. Using a voice from this device.",
+    tts_unavailable: "No local English voice is available. You can read the reply.",
+    dictation_common: "Dictation via the shared Cyrano service.",
+    dictation_app: "Dictation via the Cyrano app.",
+    dictation_fallback: "Cyrano is unavailable. This page is interpreting your input locally.",
+    tts_fallback: "System voice.",
     empty: "The speech was unclear. Try again or type your reply.",
     data: "Accounts and contacts could not load. Send the message again.",
     executing: "Confirming the transfer…", success: "Simulated transfer complete.",
@@ -108,6 +114,7 @@ export function mountTransferAssistant(root, options = {}) {
   let voiceCheck;
   let cursorSequence = 0;
   let sending = false;
+  let waitingForForm = false;
   const managed = new Set();
   const marks = new WeakMap();
 
@@ -133,6 +140,7 @@ export function mountTransferAssistant(root, options = {}) {
   const cancel = add(controls, "button", {type: "button", hidden: ""}, copy.cancel);
   const captureStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const voiceStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
+  const dictationStatus = add(root, "p", {class: "transfer-assistant__note", role: "status", hidden: ""});
   const transcript = add(root, "p", {class: "transfer-assistant__transcript", hidden: ""});
   const provisional = lang === "es" ? "Transcripción provisional" : "Partial transcript";
 
@@ -141,8 +149,12 @@ export function mountTransferAssistant(root, options = {}) {
     element.hidden = !text;
   }
 
+  function showDictation(route) {
+    show(dictationStatus, copy["dictation_" + route] || copy.dictation_fallback);
+  }
+
   function paint() {
-    root.dataset.transferPhase = state.phase;
+    root.dataset.transferPhase = waitingForForm ? "collecting" : state.phase;
     response.textContent = message;
     const {slots} = state;
     const source = context?.accounts.find(item => item.id === slots.source);
@@ -151,7 +163,7 @@ export function mountTransferAssistant(root, options = {}) {
       entry.textContent = values[index] || copy.pending;
       entry.dataset.filled = String(Boolean(values[index]));
     });
-    confirm.hidden = state.phase !== "ready";
+    confirm.hidden = waitingForForm || state.phase !== "ready";
     cancel.hidden = state.phase === "complete" || !Object.keys(slots).length && !state.candidates.length;
     cancel.disabled = sending;
     input.disabled = sending;
@@ -161,7 +173,7 @@ export function mountTransferAssistant(root, options = {}) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = item.name;
-      button.addEventListener("click", () => void submit(item.name));
+      button.addEventListener("click", () => void submit(item.name, {recipientChoice: item.id || item.iban}));
       return button;
     }));
   }
@@ -177,15 +189,17 @@ export function mountTransferAssistant(root, options = {}) {
     for (const field of fields) {
       if (sequence !== cursorSequence) return;
       const key = field.dataset.transferSlot;
-      field.toggleAttribute("data-transfer-next", key === snapshot.next && hasSlots);
+      field.toggleAttribute("data-transfer-next", (key === snapshot.next || key === "iban" && snapshot.next === "recipient") && hasSlots);
       const after = controlValue(field, key, current, locale);
       if (after === undefined && !managed.has(field)) continue;
       if (after !== undefined) managed.add(field);
       if (String(field.value) === String(after ?? "")) continue;
-      try {
-        await window.HoardApp?.pointTo?.(field, {id: "transfer-assistant", name: copy.title}, {scroll: false});
-      } catch {
-        // A preview cursor can disappear when the workbench switches revision.
+      if (field.getClientRects().length) {
+        try {
+          await window.HoardApp?.pointTo?.(field, {id: "transfer-assistant", name: copy.title}, {scroll: true});
+        } catch (error) {
+          console.warn("Transfer assistant could not move the preview cursor", error);
+        }
       }
       if (sequence !== cursorSequence) return;
       field.value = after ?? "";
@@ -248,7 +262,7 @@ export function mountTransferAssistant(root, options = {}) {
 
   function submit(text, options = {}) {
     if (!text.trim() || sending) return Promise.resolve(false);
-    const reviewed = state.phase === "ready" ? state.summary : undefined;
+    const reviewed = state.phase === "ready" && !waitingForForm ? state.summary : undefined;
     const version = formVersion;
     if (!options.spoken) {
       mic?.cancel();
@@ -259,28 +273,36 @@ export function mountTransferAssistant(root, options = {}) {
     return turn;
   }
 
-  async function handleTurn(text, {spoken = false, timing, interpretation}, version, reviewed) {
+  async function handleTurn(text, {spoken = false, timing, interpretation, recipientChoice}, version, reviewed) {
     if (version !== formVersion) return false;
     stopPlayback();
     if (!context) {
       try { await refreshData(); }
       catch { response.textContent = copy.data; return false; }
     }
-    if (!spoken && dictation) interpretation = await understandText(text, state, context, locale);
+    if (!spoken && !recipientChoice && !isTransferCommand(text)) {
+      interpretation = await understandText(text, state, context, locale);
+      showDictation(interpretation?.dictation_route);
+    }
     if (version !== formVersion || sending) return false;
     const previous = state.slots;
     const previousPhase = state.phase;
     const previousNext = state.next;
     const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
-    const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation});
+    const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation, recipientChoice});
     state = turn.state;
     if (turn.message) message = turn.message;
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
-    if (changed || previousPhase !== state.phase || previousNext !== state.next) void reflect();
     if (!turn.action) {
       if (changed || state.phase !== "ready") requestKey = undefined;
+      const fill = changed || previousPhase !== state.phase || previousNext !== state.next ? reflect() : null;
+      waitingForForm = Boolean(fill && state.phase === "ready");
       paint();
-      if (spoken && turn.message) read(turn.message, timing);
+      if (turn.message) read(turn.message, timing);
+      if (waitingForForm) {
+        try { await fill; }
+        finally { waitingForForm = false; paint(); }
+      }
       return true;
     }
 
@@ -310,7 +332,7 @@ export function mountTransferAssistant(root, options = {}) {
       sending = false;
       paint();
     }
-    if (spoken) read(message, timing);
+    read(message, timing);
     return true;
   }
 
@@ -318,9 +340,10 @@ export function mountTransferAssistant(root, options = {}) {
     if (!voiceCheck) {
       voiceCheck = voiceAvailability().catch(() => ({})).then(available => {
         dictation = Boolean(available.dictation);
+        showDictation(available.dictation_route);
         sttWarning = available.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
-        show(voiceStatus, available.tts ? "" : copy.tts_unavailable);
+        show(voiceStatus, available.tts ? "" : hasLocalTransferVoice(locale) ? copy.tts_fallback : copy.tts_unavailable);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;
@@ -336,12 +359,14 @@ export function mountTransferAssistant(root, options = {}) {
   listen.addEventListener("click", () => read(message));
   mic = mountDictationMicrophone(microphone, {
     language: locale,
+    finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
     request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale, dictation}),
     beforeStart: async () => {
       stopPlayback();
       show(transcript);
-      if (sttWarning || voiceCheck) await checkVoice();
+      if (!dictation || sttWarning || voiceCheck) await checkVoice();
+      if (!context) await refreshData().catch(() => {});
       return !sttWarning;
     },
     onStatus: phase => show(captureStatus, copy[phase] || sttWarning),
@@ -352,9 +377,7 @@ export function mountTransferAssistant(root, options = {}) {
     onPartial: result => show(transcript, provisional + " · " + result.text),
     onFinal: (result, timing) => {
       if (result.interpretation && result.interpretation.is_final !== true) return;
-      if (dictation && result.provider === "shared") {
-        show(captureStatus, lang === "es" ? "El dictado avanzado no responde. Se usa la transcripción local." : "Advanced dictation is unavailable. Using local transcription.");
-      }
+      showDictation(result.interpretation?.dictation_route);
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {...timing, inputProvider: result.provider}, interpretation: result.interpretation});
       else show(captureStatus, copy.empty);

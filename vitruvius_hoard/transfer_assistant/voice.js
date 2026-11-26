@@ -1,5 +1,3 @@
-import {isTransferCommand} from "./dialogue.js";
-
 const API = "/__vitruvius_preview__/transfer-voice";
 const VERSION = "cyrano.dictation/v0";
 const WIRE_FIELDS = {
@@ -8,6 +6,10 @@ const WIRE_FIELDS = {
   concept: "concept",
   source: "source_account_id",
 };
+
+function vocabulary({accounts = [], contacts = []} = {}) {
+  return [...new Set([...accounts, ...contacts].map(row => row.name.slice(0, 128)))].slice(0, 90);
+}
 
 function descriptor(state, context, locale) {
   const {accounts = [], contacts = []} = context || {};
@@ -19,7 +21,7 @@ function descriptor(state, context, locale) {
   };
   return {
     version: VERSION, language: locale,
-    vocabulary: [...new Set([...accounts, ...contacts].map(row => row.name.slice(0, 128)))].slice(0, 90),
+    vocabulary: vocabulary(context || undefined),
     schema: {
       type: "object",
       properties: {
@@ -39,7 +41,7 @@ function descriptor(state, context, locale) {
 }
 
 export async function voiceAvailability() {
-  const response = await fetch(API + "/capabilities", {signal: AbortSignal.timeout(3500)});
+  const response = await fetch(API + "/capabilities", {signal: AbortSignal.timeout(7000)});
   if (!response.ok) throw new Error("voice_unavailable");
   return response.json();
 }
@@ -50,13 +52,14 @@ async function understand(body, signal) {
   });
   if (!response.ok) throw new Error("dictation_unavailable");
   const result = await response.json();
-  if (result.version !== VERSION || typeof result.raw_transcript !== "string") throw new Error("dictation_version");
+  if (result.version !== VERSION || typeof result.raw_transcript !== "string"
+      || result.is_final !== true || !result.fields || Array.isArray(result.fields)
+      || !["changed", "missing", "ambiguous"].every(key => Array.isArray(result[key]))) throw new Error("dictation_version");
   return result;
 }
 
 export function understandText(text, state, context, locale) {
-  if (isTransferCommand(text)) return null;
-  return understand({...descriptor(state, context, locale), text}, AbortSignal.timeout(1300)).catch(() => null);
+  return understand({...descriptor(state, context, locale), text}, AbortSignal.timeout(3500)).catch(() => null);
 }
 
 function audioBase64(blob) {
@@ -73,18 +76,29 @@ export async function transcribeTransferSpeech(blob, {partial, signal, state, co
     const audio = {mime_type: blob.type, data_base64: await audioBase64(blob)};
     try {
       const result = await understand({...descriptor(state, context, locale), audio}, signal);
-      if (result.is_final !== true) throw new Error("unfinished_dictation");
       return {text: result.raw_transcript.trim(), interpretation: result, provider: "dictation"};
     } catch {
       signal.throwIfAborted();
     }
   }
   const query = new URLSearchParams({language: locale.slice(0, 2), partial: String(partial)});
+  const prompt = vocabulary(context || undefined).join(", ").slice(0, 1000);
+  if (prompt) query.set("initial_prompt", prompt);
   const response = await fetch(API + "/transcribe?" + query, {method: "POST", body: blob, signal});
   if (!response.ok) throw new Error("stt_unavailable");
   return {text: (await response.json()).text.trim(), provider: "shared"};
 }
 
+
+function localVoice(locale) {
+  const voices = window.speechSynthesis?.getVoices().filter(voice =>
+    voice.localService === true && voice.lang.slice(0, 2).toLowerCase() === locale.slice(0, 2)) || [];
+  return voices.find(voice => voice.lang.toLowerCase() === locale.toLowerCase()) || voices[0];
+}
+
+export function hasLocalTransferVoice(locale) {
+  return Boolean(localVoice(locale));
+}
 
 export async function speakTransferReply(text, {locale, signal, onFallback, onStart}) {
   try {
@@ -118,8 +132,7 @@ export async function speakTransferReply(text, {locale, signal, onFallback, onSt
     if (signal.aborted) return;
   }
   const synth = window.speechSynthesis;
-  const voices = synth?.getVoices().filter(voice => voice.localService && voice.lang.slice(0, 2) === locale.slice(0, 2)) || [];
-  const voice = voices.find(item => item.lang.toLowerCase() === locale.toLowerCase()) || voices[0];
+  const voice = localVoice(locale);
   onFallback(Boolean(voice));
   if (voice) {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -129,7 +142,10 @@ export async function speakTransferReply(text, {locale, signal, onFallback, onSt
     const stop = () => synth.cancel();
     const done = () => signal.removeEventListener("abort", stop);
     utterance.onend = done;
-    utterance.onerror = done;
+    utterance.onerror = () => {
+      done();
+      if (!signal.aborted) onFallback(false);
+    };
     signal.addEventListener("abort", stop, {once: true});
     synth.speak(utterance);
   }

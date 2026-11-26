@@ -3,7 +3,7 @@ const MIME = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
 
 export async function recordDictation({
   request, onPartial = () => {}, onStatus = () => {}, onFinal = () => {}, onError = () => {},
-  silenceMs = 1500, maxDurationMs = 20000, partials = true,
+  silenceMs = 1500, maxDurationMs = 20000, finalTimeoutMs = 15000, partials = true,
 }) {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {echoCancellation: true, noiseSuppression: true},
@@ -66,7 +66,7 @@ export async function recordDictation({
     if (final.signal.aborted) return;
     const blob = new Blob(chunks, {type: capture.mimeType});
     try {
-      const signal = AbortSignal.any([final.signal, AbortSignal.timeout(15000)]);
+      const signal = AbortSignal.any([final.signal, AbortSignal.timeout(finalTimeoutMs)]);
       const result = blob.size ? await request(blob, {partial: false, signal}) : {text: ""};
       if (!final.signal.aborted) onFinal(result, {speechEnd, captureStoppedAt, stopReason, transcriptAt: performance.now()});
     } catch {
@@ -114,7 +114,7 @@ const LABELS = {
 export function mountDictationMicrophone(button, {
   client, request, language = "es-ES", options = () => ({}), labels,
   onStatus = () => {}, beforeStart = () => true, onPartial, onFinal, onError = () => {},
-  silenceMs, partials,
+  silenceMs, finalTimeoutMs, partials,
 } = {}) {
   if (!request && !client?.understandAudio) throw new TypeError("A dictation client or request is required");
   const transcribe = request || ((blob, {partial, signal}) =>
@@ -166,7 +166,7 @@ export function mountDictationMicrophone(button, {
         return;
       }
       const next = await recordDictation({
-        request: transcribe, silenceMs, partials, onPartial: ifCurrent(onPartial),
+        request: transcribe, silenceMs, finalTimeoutMs, partials, onPartial: ifCurrent(onPartial),
         onError: reportError, onStatus: ifCurrent(setPhase),
         onFinal: ifCurrent((result, timing) => {
           capture = undefined;

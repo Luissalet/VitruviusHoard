@@ -128,9 +128,10 @@ test("partial or composite confirmation never releases the action", () => {
 
 
 
-test("only final, cited structured fields can supplement an unrecognised phrase", () => {
+test("only final, cited structured fields can populate the draft", () => {
   const raw = "Doce y medio para la destinataria habitual";
   const interpretation = {
+    raw_transcript: raw,
     is_final: true,
     changed: ["destination_contact_id", "amount_cents", "concept"],
     fields: {
@@ -191,4 +192,150 @@ test("speech output uses only a matching system voice when the local service is 
     delete globalThis.window;
     delete globalThis.SpeechSynthesisUtterance;
   }
+});
+
+test("collects an amount introduced by de before the recipient", () => {
+  const [turn] = conversation("Haz una transferencia de 50 euros a Marta");
+  assert.equal(turn.state.slots.amountCents, 5000);
+  assert.equal(turn.state.slots.recipient.id, "marta");
+});
+
+test("collects an amount in a request to send money", () => {
+  const people = {...context, contacts: [...context.contacts, {id: "pablo", name: "Pablo León"}]};
+  const turn = transferTurn(initialTransfer(), "mándale 20 euros a Pablo", people);
+  assert.equal(turn.state.slots.amountCents, 2000);
+  assert.equal(turn.state.slots.recipient.id, "pablo");
+});
+
+test("keeps the amount while asking which contact with the same name", () => {
+  const [turn] = conversation("quiero enviar 12,5 euros a María");
+  assert.equal(turn.state.slots.amountCents, 1250);
+  assert.equal(turn.state.candidates.length, 2);
+});
+
+test("por followed by a purpose is a reference", () => {
+  const [turn] = conversation("Haz una transferencia de 50 euros a Marta por el alquiler");
+  assert.equal(turn.state.slots.amountCents, 5000);
+  assert.equal(turn.state.slots.concept, "el alquiler");
+});
+
+test("para followed by a purpose preserves the selected recipient", () => {
+  const [before, turn] = conversation("A Marta por 50 euros", "para la cena");
+  assert.deepEqual(turn.state.slots.recipient, before.state.slots.recipient);
+  assert.equal(turn.state.slots.concept, "la cena");
+});
+
+test("preserves the content after el concepto es", () => {
+  const [, turn] = conversation("A Marta por 50 euros", "el concepto es Entradas de cine");
+  assert.equal(turn.state.slots.concept, "Entradas de cine");
+});
+
+test("accepts a grouped IBAN introduced with esta cuenta", () => {
+  const [turn] = conversation("Transfiere 50 euros a esta cuenta ES82 0000 0000 0000 0000 0000");
+  assert.equal(turn.state.slots.recipient.iban, "ES8200000000000000000000");
+  assert.equal(turn.state.slots.amountCents, 5000);
+});
+
+test("accepts a spoken fractional amount after a recipient", () => {
+  const [turn] = conversation("Transfiere a Marta cuarenta y cinco euros con cincuenta");
+  assert.equal(turn.state.slots.recipient.id, "marta");
+  assert.equal(turn.state.slots.amountCents, 4550);
+});
+
+for (const [phrase, id] of [["Lozano", "lozano"], ["la de Ortega", "ortega"], ["la segunda", "lozano"]]) {
+  test("disambiguates the candidates with " + phrase, () => {
+    const people = {...context, contacts: [
+      {id: "ortega", name: "María Ortega Ruiz"}, {id: "lozano", name: "María Lozano Pérez"},
+    ]};
+    const state = transferTurn(initialTransfer(), "Quiero enviar 12,5 euros a María", people).state;
+    const turn = transferTurn(state, phrase, people);
+    assert.equal(turn.state.slots.recipient.id, id);
+    assert.equal(turn.state.slots.amountCents, 1250);
+  });
+}
+
+function finalResult(text, fields, {changed = Object.keys(fields), missing = [], ambiguous = []} = {}) {
+  return {raw_transcript: text, is_final: true, fields, changed, missing, ambiguous};
+}
+
+function cited(value, quote) {
+  return {value, quote, validation: "valid"};
+}
+
+test("a final cited interpretation is authoritative instead of consulting the local parser", () => {
+  const text = "A Marta por 50 euros, concepto cena desde diaria";
+  const interpretation = finalResult(text, {
+    destination_contact_id: cited("ana", "Marta"),
+    amount_cents: cited(6000, "50 euros"),
+    concept: cited("referencia normalizada", "cena"),
+  }, {missing: ["source_account_id"]});
+  const turn = transferTurn(initialTransfer(), text, {...context, interpretation});
+  assert.deepEqual(turn.state.slots, {
+    recipient: {id: "ana", name: "Ana Prado"}, amountCents: 6000, concept: "referencia normalizada",
+  });
+  assert.equal(turn.state.next, "source");
+});
+
+test("an empty final interpretation leaves local-looking fields unassigned", () => {
+  const text = "Haz una transferencia a Marta por 50 euros";
+  const turn = transferTurn(initialTransfer(), text, {...context, interpretation: finalResult(text, {})});
+  assert.deepEqual(turn.state.slots, {});
+  assert.equal(turn.state.next, "recipient");
+});
+
+test("missing fields from a turn preserve previous values unless explicitly changed", () => {
+  const [before] = conversation(complete);
+  const text = "Cambia el concepto";
+  const turn = transferTurn(before.state, text, {...context, interpretation: finalResult(text, {},
+    {missing: ["amount_cents", "concept", "source_account_id"], changed: ["concept"]}),
+  });
+  assert.equal(turn.state.slots.amountCents, 4000);
+  assert.equal(turn.state.slots.source, "daily");
+  assert.equal(turn.state.slots.concept, undefined);
+  assert.equal(turn.state.next, "concept");
+});
+
+test("structured ambiguity replaces the old destination and supports selecting either kind of candidate", () => {
+  const [before] = conversation(complete);
+  const text = "¿A Ana o al IBAN ES82 0000 0000 0000 0000 0000?";
+  const number = "ES8200000000000000000000";
+  const ambiguous = [
+    {field: "destination_contact_id", candidates: ["ana", "unknown"]},
+    {field: "destination_iban", candidates: [number]},
+  ];
+  const turn = transferTurn(before.state, text, {...context, interpretation: finalResult(text, {}, {ambiguous})});
+  assert.equal(turn.state.slots.recipient, undefined);
+  assert.deepEqual(turn.state.candidates.map(item => item.id || item.iban), ["ana", number]);
+  assert.equal(transferTurn(turn.state, "sí", context).action, undefined);
+  const chosen = transferTurn(turn.state, number, {...context, recipientChoice: number});
+  assert.equal(chosen.state.phase, "ready");
+  assert.equal(chosen.state.slots.recipient.iban, number);
+  assert.equal(chosen.action, undefined);
+});
+
+test("an ambiguous amount without candidates clears a previously collected amount", () => {
+  const [before] = conversation(complete);
+  const text = "Dos euros y pico";
+  const interpretation = finalResult(text, {}, {ambiguous: [{field: "amount_cents", candidates: []}]});
+  const turn = transferTurn(before.state, text, {...context, interpretation});
+  assert.equal(turn.state.slots.amountCents, undefined);
+  assert.equal(turn.state.next, "amountCents");
+  assert.equal(transferTurn(turn.state, "sí", context).action, undefined);
+});
+
+test("common transcription formats keep the correct amounts and ask about the two Marías", () => {
+  const people = {...context, contacts: [...context.contacts, {id: "javier", name: "Javier Navarro"}]};
+  const turn = transferTurn(initialTransfer(),
+    "Haz una transferencia de 40 euros a Javier Navarro con el concepto CENA, desde la cuenta diaria.", people);
+  assert.equal(turn.state.slots.amountCents, 4000);
+  assert.equal(turn.state.slots.recipient.id, "javier");
+  assert.equal(turn.state.slots.concept, "CENA");
+  assert.equal(parseAmount("20 euros"), 2000);
+  assert.equal(parseAmount("35 EUROS"), 3500);
+  const grouped = transferTurn(initialTransfer(), "Transfiere 50.000 euros a Javier Navarro", people);
+  assert.equal(grouped.state.slots.amountCents, 5000000);
+  const [ambiguous] = conversation("Envia 15 euros a María con el concepto Entradas, desde la cuenta diaria.");
+  assert.equal(ambiguous.state.slots.amountCents, 1500);
+  assert.equal(ambiguous.state.candidates.length, 2);
+  assert.equal(ambiguous.state.slots.concept, "Entradas");
 });

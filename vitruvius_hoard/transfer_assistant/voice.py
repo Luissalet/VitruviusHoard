@@ -8,15 +8,21 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Lock
+from time import monotonic
 from urllib.parse import parse_qs
+from uuid import uuid4
 
-from ..hoard_link import fam_media, family
+from ..hoard_link import _famsvc, fam_media, family
+from ..hoard_link._hubclient import fetch
 
 
 VOICE_PREFIX = "/__vitruvius_preview__/transfer-voice/"
 MAX_AUDIO = 4 * 1024 * 1024
 MAX_JSON = 32 * 1024
 DICTATION_VERSION = "cyrano.dictation/v0"
+DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
+FINAL_TRANSCRIPTION_S = 21
+DICTATION_AUDIO_S = 25
 AUDIO_TYPES = {
     "audio/webm": ".webm",
     "audio/ogg": ".ogg",
@@ -31,9 +37,51 @@ def _json(status, **value):
     return status, json.dumps(value, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8"
 
 
+def _hub_get(path, timeout):
+    return fetch(family._hub() + path, timeout=timeout, headers=family._headers())
+
+
+def _offers(service, *required):
+    owner = _famsvc.owner_of(service)
+    status, value = _hub_get(f"/api/apps/{owner}/tools", timeout=0.8)
+    if status != 200 or not isinstance(value, dict) or not value.get("ok"):
+        return False
+    names = {tool.get("name") for tool in value.get("tools", []) if isinstance(tool, dict)}
+    return names.issuperset(required)
+
+
+def _transcription_ready():
+    if _offers("stt", "transcribe_file", "transcribe_status"):
+        return True
+    result = _famsvc.call_tool(_famsvc.owner_of("stt"), "transcribe_status",
+                              {"job_id": uuid4().hex}, timeout_s=1)
+    return result.get("ok", False) or (result.get("status") == 404 and "no such job" in result.get("error", "").lower())
+
+
 class TransferVoice:
     def __init__(self):
         self.partial = Lock()
+        self.discovery = Lock()
+        self.discovered_at = float("-inf")
+        self.registered = False
+
+    def _common_dictation(self):
+        with self.discovery:
+            now = monotonic()
+            if now - self.discovered_at >= 8:
+                status, catalogue = _hub_get("/api/services/status", timeout=2.2)
+                self.registered = status == 200 and isinstance(catalogue, dict) and any(
+                    row.get("service") == "dictation" for row in catalogue.get("services", []) if isinstance(row, dict)
+                )
+                self.discovered_at = now
+            return self.registered
+
+    def _dictation_call(self, tool, args, *, timeout):
+        if self._common_dictation():
+            outcome = _famsvc.call_tool(_famsvc.owner_of("dictation"), tool, args, timeout_s=timeout)
+            return (outcome.get("data") if outcome.get("ok") else None), "common"
+        outcome = family.call("cyrano", tool, args, timeout=timeout)
+        return (outcome.get("result") if outcome.get("ok") else None), "app"
 
     @staticmethod
     def max_body(route):
@@ -45,8 +93,11 @@ class TransferVoice:
 
     def handle(self, method, route, query, content_type, body):
         if method == "GET" and route == "capabilities":
-            return _json(200, stt=fam_media.available("stt"), tts=fam_media.available("tts"),
-                         dictation=fam_media.available("cyrano"))
+            common = self._common_dictation()
+            ready = _offers("dictation", *DICTATION_TOOLS)
+            route = ("common" if common else "app") if ready else "local"
+            return _json(200, stt=_transcription_ready(),
+                         tts=_offers("tts", "voice_tts"), dictation=ready, dictation_route=route)
         if method == "POST" and route == "transcribe":
             return self._transcribe(query, content_type, body)
         if method == "POST" and route == "understand":
@@ -66,14 +117,16 @@ class TransferVoice:
         if language not in ("es", "en"):
             return _json(400, code="invalid_language")
         preview = parameters.get("partial", ["false"])[0] == "true"
+        prompt = parameters.get("initial_prompt", [""])[0][:1000]
         if preview and not self.partial.acquire(blocking=False):
             return _json(429, code="partial_busy")
         try:
             with TemporaryDirectory(prefix="transfer-voice-") as directory:
                 path = Path(directory) / ("utterance" + suffix)
                 path.write_bytes(body)
-                result = fam_media.transcribe(str(path), language=language, word_timestamps=False,
-                                              timeout_s=2 if preview else 10, local_fallback=False, vad=not preview)
+                result = fam_media.transcribe(str(path), language=language, word_timestamps=False, initial_prompt=prompt,
+                                              timeout_s=2 if preview else FINAL_TRANSCRIPTION_S,
+                                              local_fallback=False, vad=not preview)
                 if result.get("still_running") and result.get("job_id"):
                     fam_media.transcribe_cancel(result["job_id"])
             if not result.get("ok"):
@@ -83,8 +136,7 @@ class TransferVoice:
             if preview:
                 self.partial.release()
 
-    @staticmethod
-    def _understand(body):
+    def _understand(self, body):
         try:
             request = json.loads(body)
         except (ValueError, UnicodeDecodeError):
@@ -103,7 +155,7 @@ class TransferVoice:
         if text is not None:
             if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000:
                 return _json(400, code="invalid_dictation")
-            result = family.call("cyrano", "dictation_understand", {**options, "text": text}, timeout=2)
+            value, route = self._dictation_call("dictation_understand", {**options, "text": text}, timeout=2)
         else:
             if not isinstance(audio, dict) or not isinstance(audio.get("mime_type"), str):
                 return _json(400, code="invalid_audio")
@@ -119,11 +171,10 @@ class TransferVoice:
             with TemporaryDirectory(prefix="transfer-dictation-") as directory:
                 path = Path(directory) / ("utterance" + suffix)
                 path.write_bytes(raw)
-                result = family.call("cyrano", "dictation_audio", {**options, "path": str(path)}, timeout=11)
-        value = result.get("result")
-        if not result.get("ok") or not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
+                value, route = self._dictation_call("dictation_audio", {**options, "path": str(path)}, timeout=DICTATION_AUDIO_S)
+        if not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
             return _json(503, code="dictation_unavailable")
-        return _json(200, **value)
+        return _json(200, **{**value, "dictation_route": route})
 
     @staticmethod
     def _speak(body):

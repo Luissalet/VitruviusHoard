@@ -141,7 +141,7 @@ function asRecipient(text, contacts) {
 const MARKERS = {
   es: {
     source: "(?:desde|con cargo a|origen\\s*[:=])",
-    concept: "(?:con (?:el |este )?concepto|concepto\\s*[:=]?)",
+    concept: "(?:(?:con (?:el |este )?|el )?concepto(?:\\s+es\\b)?\\s*[:=]?)",
     recipient: "(?:(?:destinatari[oa]|beneficiari[oa])\\s*[:=]|(?:para|a)(?!\\s+(?:la\\s+)?cuenta\\s+de\\s+origen\\b))",
     amountCents: "(?:por|importe\\s*[:=])",
   },
@@ -153,7 +153,7 @@ const MARKERS = {
   },
 };
 const REPAIR = /^(?:(?:no|s[ií]|yes)[,\s]+)?(?:mejor|cambia (?:a|el importe a)|actually|instead|make it|change (?:it|the amount) to)\s+/iu;
-const REQUEST = /^(?:(?:por favor|please)[,\s]+)?(?:(?:haz|quiero hacer|hacer|ordena|prepara)(?:\s+una)?\s+transferencia|(?:make|start|prepare)(?:\s+a)?\s+transfer|transfi[eé]re(?:me|le)?|transferir|env[ií]a(?:le)?|p[aá]sa(?:le)?|(?:send|transfer|pay))\b[,\s]*/iu;
+const REQUEST = /^(?:(?:por favor|please)[,\s]+)?(?:(?:haz|quiero hacer|hacer|ordena|prepara)(?:\s+una)?\s+transferencia|(?:make|start|prepare)(?:\s+a)?\s+transfer|transfi[eé]re(?:me|le)?|(?:quiero\s+)?(?:transferir|enviar|mandar)|env[ií]a(?:le)?|m[aá]nda(?:le)?|p[aá]sa(?:le)?|(?:send|transfer|pay))\b[,\s]*/iu;
 const CONFIRM = /^(?:s[ií](?:[,\s]+confirmo)?|confirm[ao](?: la transferencia)?|confirmar(?: la transferencia)?|adelante|yes(?:[,\s]+confirm)?|(?:i )?confirm(?: the transfer)?|go ahead)[.!]?$/iu;
 const CANCEL = /^(?:cancela(?:r)?(?: la transferencia)?|anula(?:r)?(?: la transferencia)?|olvida(?:r)?(?: la transferencia|lo)?|no confirmo|no|cancel(?: the transfer)?|never mind|do not confirm)[.!]?$/iu;
 
@@ -162,34 +162,93 @@ export function isTransferCommand(text) {
   return CONFIRM.test(raw) || CANCEL.test(raw);
 }
 
-function interpretedSlots(raw, interpretation, contacts) {
-  if (interpretation?.is_final !== true) return {};
-  const {fields, changed, ambiguous} = interpretation;
-  function evidenced(name, type) {
-    const field = fields?.[name];
-    if (Array.isArray(changed) && !changed.includes(name)) return;
-    if (field?.validation === "valid" && typeof field.value === type
-        && typeof field.quote === "string" && field.quote.trim() && raw.includes(field.quote)) return field.value;
+const WIRE_SLOTS = {
+  destination_contact_id: "recipient",
+  destination_iban: "recipient",
+  amount_cents: "amountCents",
+  concept: "concept",
+  source_account_id: "source",
+};
+
+function knownChoice(field, value, contacts) {
+  if (typeof value !== "string") return null;
+  if (field === "destination_contact_id") {
+    const contact = contacts.find(item => item.id === value);
+    return contact ? {id: contact.id, name: contact.name} : null;
   }
-  const id = evidenced("destination_contact_id", "string");
-  const wireIban = evidenced("destination_iban", "string");
-  const amountCents = evidenced("amount_cents", "number");
-  const dest = ambiguous?.find(item => item.field === "destination_contact_id");
-  return {
-    recipient: id && contacts.some(item => item.id === id) ? id : wireIban,
-    amountCents: Number.isSafeInteger(amountCents) && amountCents > 0 ? amountCents : undefined,
-    source: evidenced("source_account_id", "string"),
-    concept: evidenced("concept", "string"),
-    candidates: Array.isArray(dest?.candidates) ? contacts.filter(item => dest.candidates.includes(item.id)) : [],
-  };
+  if (field === "destination_iban") {
+    const number = iban(value);
+    return number ? {iban: number, name: number} : null;
+  }
+  return null;
 }
 
-function splitSlots(raw, lang, expected) {
+function structuredTurn(result, contacts, accounts) {
+  const {fields, changed, missing, ambiguous, raw_transcript: raw} = result;
+  const slots = {};
+  const removed = new Set();
+  const choices = [];
+
+  for (const [name, slot] of Object.entries(WIRE_SLOTS)) {
+    if (Array.isArray(changed) && !changed.includes(name)) continue;
+    const field = fields?.[name];
+    if (missing?.includes(name) && !field) removed.add(slot);
+    if (field?.validation !== "valid" || typeof field.quote !== "string" || !field.quote.trim()
+        || typeof raw !== "string" || !raw.includes(field.quote)) continue;
+    const value = field.value;
+    if (slot === "recipient") {
+      const choice = knownChoice(name, value, contacts);
+      if (choice) choices.push(choice);
+    } else if (slot === "source" && accounts.some(item => item.id === value)) {
+      slots.source = value;
+    } else if (slot === "amountCents" && Number.isSafeInteger(value) && value > 0) {
+      slots.amountCents = value;
+    } else if (slot === "concept" && typeof value === "string" && value.trim() && value.length <= 140) {
+      slots.concept = value.trim();
+    }
+  }
+
+  const alternatives = [];
+  for (const item of ambiguous || []) {
+    const slot = WIRE_SLOTS[item?.field];
+    if (!slot) continue;
+    removed.add(slot);
+    delete slots[slot];
+    if (slot === "recipient") alternatives.push(item);
+  }
+  if (alternatives.length) {
+    for (const {field, candidates} of alternatives) {
+      for (const value of candidates || []) {
+        const choice = knownChoice(field, value, contacts);
+        if (choice) choices.push(choice);
+      }
+    }
+  }
+
+  const candidates = [...new Map(choices.map(choice => [choice.id || choice.iban, choice])).values()];
+  if (candidates.length === 1 && !alternatives.length) slots.recipient = candidates[0];
+  else if (candidates.length > 1) removed.add("recipient");
+  return {slots, removed, candidates: candidates.length > 1 || alternatives.length ? candidates : null};
+}
+
+function resolveChoice(text, candidates) {
+  const key = normal(text).replace(/^(?:(?:a\s+)?(?:la|el)\s+de\s+|(?:la|el)\s+)/u, "");
+  const number = /^(?:primer[oa]?|first)$/u.test(key) ? 0
+    : /^(?:segund[oa]|second)$/u.test(key) ? 1 : /^(?:tercer[oa]?|third)$/u.test(key) ? 2 : -1;
+  if (number >= 0) return candidates[number];
+  const matches = candidates.filter(item => normal(item.name).split(/\s+/u).includes(key)
+    || normal(item.name) === key || item.id === key || item.iban === iban(text));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function splitSlots(raw, lang, state, contacts) {
   const markers = MARKERS[lang];
   const source = raw.replace(REQUEST, "").replace(REPAIR, "");
   const pattern = "(?:^|[\\s;,:])(?:" + Object.entries(markers).map(([key, marker]) => "(?<" + key + ">" + marker + ")").join("|") + ")\\s+";
   const matches = [...source.matchAll(new RegExp(pattern, "giu"))];
-  if (expected === "concept" && source === raw && matches[0]?.index !== 0) {
+  const expected = state.next;
+  const prefixed = matches[0]?.index === 0;
+  if (expected === "concept" && source === raw && !prefixed) {
     return {slots: {concept: raw}, head: "", repaired: false};
   }
   const slots = {};
@@ -202,9 +261,8 @@ function splitSlots(raw, lang, expected) {
       // «a Marta no, a María» reassigns the slot on the later marker.
       if (/\s+(?:no|not)$/iu.test(value) && matches[index + 1]?.groups.recipient) continue;
       // Accept «a Ana 40 euros» with the amount after a name.
-      if (lang === "es") value = value.replace(/^(?:la )?cuenta(?: con IBAN)?\s+/iu, "");
-      const adjacent = value.match(/^(.+?)\s+(\d[\d.,]*\s*(?:€|euros?)|[\p{L}\s-]+\s+euros?)$/iu);
-      if (adjacent && !iban(value)) {
+      if (lang === "es") value = value.replace(/^(?:(?:la|esta|esa)\s+)?cuenta(?: con IBAN)?\s+/iu, "");
+      if (/\b(?:euros?)\b|€/iu.test(value) && !iban(value)) {
         const words = value.match(/\S+/gu);
         for (let split = 1; split < words.length; split++) {
           const amount = words.slice(split).join(" ");
@@ -215,21 +273,34 @@ function splitSlots(raw, lang, expected) {
           }
         }
       }
+      const isReference = lang === "es" && /^\s*[,;:]?\s*para\b/iu.test(match[0])
+        && Boolean(state.slots.recipient || slots.recipient) && !asRecipient(value, contacts)
+        && (expected === "concept" || /^(?:el|la|los|las|un|una|unas|unos)\s+/iu.test(value));
+      if (isReference) {
+        slots.concept = value;
+        continue;
+      }
+    }
+    if (field === "amountCents" && /^\s*[,;:]?\s*por\b/iu.test(match[0]) && parseAmount(value, lang) === null
+        && !/^[+\-€]?\d|\beuros?\b/iu.test(value)) {
+      slots.concept = value;
+      continue;
     }
     if (field === "source") value = value.replace(/^(?:(?:mi|la|my|the)\s+)?(?:cuenta|account)\s+/iu, "");
     if (field === "concept") {
       // Keep the literal reference, including ordinary words such as «a».
       const end = matches.find((later, position) => position > index && later.groups.source);
       value = clean(source.slice(match.index + match[0].length, end?.index ?? source.length));
-      slots.concept = value.replace(/^(?:(?:de|of)\s+)?[:=]\s*/u, "");
+      slots.concept = value.replace(/^[:=]\s*/u, "");
       if (!end) break;
       index = matches.indexOf(end) - 1;
       continue;
     }
     slots[field] = value;
   }
-  if (head && parseAmount(head, lang) !== null) {
-    slots.amountCents ??= head;
+  const leadingAmount = lang === "es" ? head.replace(/^de\s+/iu, "") : head;
+  if (leadingAmount && parseAmount(leadingAmount, lang) !== null) {
+    slots.amountCents ??= leadingAmount;
     head = "";
   }
   return {slots, head, repaired: REPAIR.test(raw)};
@@ -239,7 +310,7 @@ export function initialTransfer() {
   return {slots: {}, candidates: [], phase: "collecting", next: "recipient"};
 }
 
-export function transferTurn(state, text, {contacts, accounts, lang = "es", allowConfirm = true, interpretation}) {
+export function transferTurn(state, text, {contacts, accounts, lang = "es", allowConfirm = true, interpretation, recipientChoice}) {
   lang = lang === "en" ? "en" : "es";
   const copy = COPY[lang];
   const raw = text.trim();
@@ -257,58 +328,66 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
 
   const next = state.phase === "cancelled" || state.phase === "complete" ? initialTransfer() : state;
   const slots = {...next.slots};
-  const parsed = splitSlots(raw, lang, next.next);
-  const changes = parsed.slots;
-  const understood = interpretedSlots(raw, interpretation, contacts);
-  if (parsed.head) {
-    const head = parsed.head.replace(/^(?:(?:la|mi|the|my)\s+)?(?:cuenta|account)\s+/iu, "");
-    const account = lookup(accounts, head);
-    const recipient = asRecipient(parsed.head, next.candidates.length ? next.candidates : contacts);
-    if (parsed.repaired && /^(?:[+\-€]?\d)|\b(?:euros?|centimos|cents)\b/u.test(normal(head))) {
-      changes.amountCents ??= parsed.head;
-    } else if (parsed.repaired && recipient) changes.recipient ??= parsed.head;
-    else if (parsed.repaired && account.length === 1) changes.source ??= head;
-    else if (!Object.keys(changes).length) changes[next.next || "recipient"] = head;
-    else if (recipient) changes.recipient ??= parsed.head;
-  }
-
-  // The shared parser can supply a cited value when this utterance didn't
-  // resolve locally. Every returned value still goes through the slot checks.
   let candidates = next.candidates;
   let issue;
-  if (understood.source && lookup(accounts, changes.source || "").length !== 1) changes.source = understood.source;
-  if (understood.concept && !changes.concept) changes.concept = understood.concept;
-  if (understood.amountCents && parseAmount(changes.amountCents || "", lang) === null) changes.amountCents = understood.amountCents;
-  if (Object.hasOwn(changes, "recipient") || understood.recipient || understood.candidates?.length) {
-    const local = Object.hasOwn(changes, "recipient") ? asRecipient(changes.recipient, contacts) : null;
-    const proposed = understood.recipient ? asRecipient(understood.recipient, contacts) : null;
-    const recipient = local || (understood.candidates?.length > 1 ? {candidates: understood.candidates} : proposed);
-    candidates = recipient?.candidates ?? [];
-    if (recipient && !candidates.length) slots.recipient = recipient;
-    else {
-      delete slots.recipient;
-      if (!candidates.length) issue = ["recipient", copy.unknownRecipient];
+  if (recipientChoice) {
+    const selected = candidates.find(item => (item.id || item.iban) === recipientChoice);
+    if (!selected) return {state, message: candidates.length ? copy.ambiguous(candidates.map(item => item.name)) : copy.start};
+    slots.recipient = selected;
+    candidates = [];
+  } else if (interpretation?.is_final === true) {
+    const extracted = structuredTurn(interpretation, contacts, accounts);
+    for (const key of extracted.removed) delete slots[key];
+    Object.assign(slots, extracted.slots);
+    if (extracted.slots.recipient) candidates = [];
+    else if (extracted.candidates || extracted.removed.has("recipient")) candidates = extracted.candidates || [];
+  } else if (!interpretation) {
+    const parsed = splitSlots(raw, lang, next, contacts);
+    const changes = parsed.slots;
+    if (parsed.head) {
+      const head = parsed.head.replace(/^(?:(?:la|mi|the|my)\s+)?(?:cuenta|account)\s+/iu, "");
+      const account = lookup(accounts, head);
+      const recipient = asRecipient(parsed.head, next.candidates.length ? next.candidates : contacts);
+      if (parsed.repaired && /^(?:[+\-€]?\d)|\b(?:euros?|centimos|cents)\b/u.test(normal(head))) {
+        changes.amountCents ??= parsed.head;
+      } else if (parsed.repaired && recipient) changes.recipient ??= parsed.head;
+      else if (parsed.repaired && account.length === 1) changes.source ??= head;
+      else if (!Object.keys(changes).length) changes[next.next || "recipient"] = head;
+      else if (recipient) changes.recipient ??= parsed.head;
     }
-  }
-  if (Object.hasOwn(changes, "amountCents")) {
-    const amount = typeof changes.amountCents === "number" ? changes.amountCents : parseAmount(changes.amountCents, lang);
-    if (amount === null) {
-      delete slots.amountCents;
-      issue ??= ["amountCents", copy.badAmount];
-    } else slots.amountCents = amount;
-  }
-  if (Object.hasOwn(changes, "concept")) {
-    const concept = clean(changes.concept);
-    if (concept && concept.length <= 140) slots.concept = concept;
-    else delete slots.concept;
-  }
-  if (Object.hasOwn(changes, "source")) {
-    const matches = lookup(accounts, changes.source);
-    if (matches.length === 1) slots.source = matches[0].id;
-    else {
-      delete slots.source;
-      issue ??= ["source", copy.unknownSource];
+
+    const choice = candidates.length ? resolveChoice(raw, candidates) : undefined;
+    if (choice || Object.hasOwn(changes, "recipient")) {
+      const recipient = choice || asRecipient(changes.recipient, contacts);
+      candidates = recipient?.candidates ?? [];
+      if (recipient && !candidates.length) slots.recipient = recipient;
+      else {
+        delete slots.recipient;
+        if (!candidates.length && next.candidates.length) candidates = next.candidates;
+        if (!candidates.length) issue = ["recipient", copy.unknownRecipient];
+      }
     }
+    if (Object.hasOwn(changes, "amountCents")) {
+      const amount = typeof changes.amountCents === "number" ? changes.amountCents : parseAmount(changes.amountCents, lang);
+      if (amount === null) {
+        delete slots.amountCents;
+        issue ??= ["amountCents", copy.badAmount];
+      } else slots.amountCents = amount;
+    }
+    if (Object.hasOwn(changes, "concept")) {
+      const concept = clean(changes.concept);
+      if (concept && concept.length <= 140) slots.concept = concept;
+      else delete slots.concept;
+    }
+    if (Object.hasOwn(changes, "source")) {
+      const matches = lookup(accounts, changes.source);
+      if (matches.length === 1) slots.source = matches[0].id;
+      else {
+        delete slots.source;
+        issue ??= ["source", copy.unknownSource];
+      }
+    }
+
   }
 
   const progress = {slots, candidates, phase: "collecting", next: null};
