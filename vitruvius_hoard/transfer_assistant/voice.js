@@ -58,8 +58,10 @@ async function understand(body, signal) {
   return result;
 }
 
-export function understandText(text, state, context, locale) {
-  return understand({...descriptor(state, context, locale), text}, AbortSignal.timeout(3500)).catch(() => null);
+export function understandText(text, state, context, locale, signal) {
+  const deadline = AbortSignal.timeout(3500);
+  return understand({...descriptor(state, context, locale), text},
+    signal ? AbortSignal.any([signal, deadline]) : deadline).catch(() => null);
 }
 
 function audioBase64(blob) {
@@ -86,7 +88,11 @@ export async function transcribeTransferSpeech(blob, {partial, signal, state, co
   if (prompt) query.set("initial_prompt", prompt);
   const response = await fetch(API + "/transcribe?" + query, {method: "POST", body: blob, signal});
   if (!response.ok) throw new Error("stt_unavailable");
-  return {text: (await response.json()).text.trim(), provider: "shared"};
+  const text = (await response.json()).text.trim();
+  if (partial || !text) return {text, provider: "shared"};
+  const interpretation = await understandText(text, state, context, locale, signal);
+  signal.throwIfAborted();
+  return {text, interpretation, provider: "shared"};
 }
 
 

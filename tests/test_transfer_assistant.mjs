@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {initialTransfer, parseAmount, transferTurn} from "../vitruvius_hoard/transfer_assistant/dialogue.js";
+import {transcribeTransferSpeech} from "../vitruvius_hoard/transfer_assistant/voice.js";
 
 const context = {
   contacts: [
@@ -338,4 +339,26 @@ test("common transcription formats keep the correct amounts and ask about the tw
   assert.equal(ambiguous.state.slots.amountCents, 1500);
   assert.equal(ambiguous.state.candidates.length, 2);
   assert.equal(ambiguous.state.slots.concept, "Entradas");
+});
+
+test("shared transcription supplies vocabulary and gives final text to dictation", async ({mock}) => {
+  const text = "A Marta";
+  const final = {...finalResult(text, {destination_contact_id: cited("marta", "Marta")}),
+    version: "cyrano.dictation/v0", dictation_route: "app"};
+  const requests = [];
+  mock.method(globalThis, "fetch", async (url, options) => {
+    requests.push({url, body: options.body});
+    return Response.json(url.endsWith("/understand") ? final : {text});
+  });
+  const clip = new Blob(["synthetic"], {type: "audio/wav"});
+  const options = {state: initialTransfer(), context, locale: "es-ES", signal: new AbortController().signal};
+  const partial = await transcribeTransferSpeech(clip, {...options, partial: true});
+  assert.deepEqual(partial, {text, provider: "shared"});
+  assert.equal(requests.length, 1);
+  const reply = await transcribeTransferSpeech(clip, {...options, partial: false});
+  assert.deepEqual(reply, {text, provider: "shared", interpretation: final});
+  const fallback = new URL(requests[1].url, "http://127.0.0.1");
+  assert.match(fallback.searchParams.get("initial_prompt"), /Cuenta diaria.*Marta Vidal/u);
+  assert.deepEqual(JSON.parse(requests[2].body).vocabulary.slice(0, 2), ["Cuenta diaria", "Ahorro"]);
+  assert.equal(JSON.parse(requests[2].body).text, text);
 });
