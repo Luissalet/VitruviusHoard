@@ -134,6 +134,19 @@ async def test_unanswered_presence_expires_and_does_not_consume_the_next_call():
 
 
 @pytest.mark.asyncio
+async def test_presence_waits_for_the_visible_revision_across_preview_reconnect():
+    canvas = CanvasSessions()
+    old = canvas.attach("project", "old")
+    canvas.attach("other", "new")
+    work = asyncio.create_task(asyncio.to_thread(canvas.wait_for_revision, "project", "new"))
+    await asyncio.sleep(0.03)
+    assert not work.done()
+    canvas.detach(old)
+    canvas.attach("project", "new")
+    await asyncio.wait_for(work, 0.5)
+
+
+@pytest.mark.asyncio
 async def test_source_presence_precedes_committed_revision(tmp_path):
     from vitruvius_hoard.app_projects import AppProjects
 

@@ -19,6 +19,7 @@ def failure(code: str, message: str):
 @dataclass
 class CanvasSession:
     project: str
+    revision: str | None = None
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     loop: asyncio.AbstractEventLoop = field(default_factory=asyncio.get_running_loop)
     events: asyncio.Queue = field(default_factory=asyncio.Queue)
@@ -33,14 +34,24 @@ class CanvasSession:
 
 class CanvasSessions:
     def __init__(self):
-        self._lock = threading.Lock()
+        self._lock = threading.Condition()
         self._sessions: dict[str, CanvasSession] = {}
 
-    def attach(self, project: str) -> CanvasSession:
-        session = CanvasSession(project)
+    def attach(self, project: str, revision: str | None = None) -> CanvasSession:
+        session = CanvasSession(project, revision)
         with self._lock:
             self._sessions[session.id] = session
+            self._lock.notify_all()
         return session
+
+    def wait_for_revision(self, project: str, revision: str, *, timeout=PRESENCE_WAIT):
+        # The previous write may have returned while the visible iframe still follows its revision.
+        # Keep this wait outside the project lock so the preview can start the new runtime.
+        with self._lock:
+            if not any(session.project == project and session.revision for session in self._sessions.values()):
+                return
+            self._lock.wait_for(lambda: any(session.project == project and session.revision == revision
+                                            for session in self._sessions.values()), timeout=timeout)
 
     def _detach(self, session):
         if self._sessions.pop(session.id, None) is None:

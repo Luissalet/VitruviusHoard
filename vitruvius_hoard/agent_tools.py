@@ -629,12 +629,16 @@ def run_vitruvius_status(services: Services, args: Empty) -> dict:
 
 
 def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
-    return services.app_projects.update(**args.model_dump(exclude_none=True, exclude={"actor"}),
-                                        actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return projects.update(**args.model_dump(exclude_none=True, exclude={"actor"}),
+                           actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
 
 
 def run_app_project_edit_source(services: Services, args: AppSourceEditArgs) -> dict:
-    return services.app_projects.edit_source(
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return projects.edit_source(
         **args.model_dump(exclude={"actor", "target"}),
         actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
         target=args.target.model_dump(exclude_none=True) if args.target else None,

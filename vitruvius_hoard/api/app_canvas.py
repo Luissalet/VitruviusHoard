@@ -31,14 +31,14 @@ class CanvasResult(BaseModel):
 
 
 @router.get("/events")
-async def canvas_events(request: Request, id: str):
+async def canvas_events(request: Request, id: str, revision: str | None = None):
     _require_same_origin_page(request)
     projects = services(request).app_projects
     if projects.status(id)["state"] != "running":
         raise HTTPException(404, "No running preview")
 
     async def stream():
-        session = projects.canvas.attach(id)
+        session = projects.canvas.attach(id, revision)
         try:
             if projects.status(id)["state"] != "running":
                 return
