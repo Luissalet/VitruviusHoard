@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppCallArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
+    AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -126,6 +126,11 @@ def project_update(request: Request, id: str, body: AppUpdateArgs):
 @router.post("/{id}/source-edit")
 def project_edit_source(request: Request, id: str, body: AppSourceEditArgs):
     return execute(lambda: services(request).app_projects.edit_source(id, **body.model_dump(exclude={"id"})))
+
+
+@router.post("/{id}/canvas-edit")
+def project_canvas_edit(request: Request, id: str, body: AppCanvasEditArgs):
+    return execute(lambda: services(request).app_projects.canvas_edit(id, **body.model_dump(exclude={"id"})))
 
 
 @router.get("/{id}/source-count")

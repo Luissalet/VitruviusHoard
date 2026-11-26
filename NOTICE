@@ -58,4 +58,8 @@ Attribution notices for the design-rule work (impeccable, hallmark) the sound-in
     No component source or media is copied. The scenes, heroes, textures and the Blender script of vitruvius_hoard/craft/ are original code.
     See craft/THIRD_PARTY.md.
 
+11. tinycss2 (BSD 3-Clause), Copyright (c) 2013-2020, Simon Sapin and contributors.
+    Installed Python dependency used to parse project stylesheets for direct canvas edits. The dependency
+    is used as distributed. Its license text is included in THIRD_PARTY_NOTICES.md.
+
 Licences: https://www.apache.org/licenses/LICENSE-2.0 and https://opensource.org/license/mit

@@ -141,6 +141,23 @@ When the preview has source annotations, a page-only change can replace the affe
 
 The session allows a short window for the animation. A closed preview, an unavailable target or an expired message still allows a valid source edit to save. With reduced motion, the preview shows a static outline after the edit.
 
+### Editing on the canvas
+
+In **Select** mode, select one sourced element to show its width, height, margin and padding handles. Margin and padding have a handle on each side. Dragging previews the change on the page. The value snaps within three pixels of a length token and shows its name. Hold Alt while dragging to bypass snapping. Releasing restores the temporary style and plans the source edit. The preview refresh displays the saved result once the new revision is served.
+
+Press Alt+Enter to focus the first handle and Tab to move through the handles. Use the arrows on the handle's axis to change the value one pixel at a time, or ten with Shift. Enter saves and Esc cancels. Double-click a literal run of text to edit it in place. Enter saves and Esc cancels. Form, table and other marker-generated text remains editable through its project fields, records or source styling.
+
+Canvas style edits use a matching length token from the linked local stylesheets as a CSS variable. The planner reads plain top-level class rules, including grouped class selectors with an optional tag or ID. It confirms the number of matching instances on the open page and warns that the shared stylesheet may affect other pages. If none matches, it adds a stable class at the source position and a rule in the last local stylesheet. The rule also uses the element's literal ID when present, so it can take precedence over a rule for that ID alone. The editor creates and links a project stylesheet when needed. A dedicated rule uses CSS priority to override a normal inline value on the edited property, while keeping existing inline declarations. Edit an inline priority declaration in the source editor first. Other styles and the template sources stay in the retained revision. Use the source editor for conditional or more complex rules.
+
+The browser and the agent use the same planner and write through the normal revision update. The companion tool `app_project_canvas_edit` accepts `id`, `vsrc`, `tag`, `expected_revision`, `path`, and a change. Call with `operation: "plan"` to see the destination, matching token, scale and affected count. A shared-class plan marks the count with `affects_scope: "page"` and `shared_stylesheet: true`. If `confirmation_required` is true, pass its `affects` as `expected_count` with `operation: "apply"`. A changed result includes an `app_project_undo` call. A stale revision requires a fresh selection. The native HTTP route is `POST /api/app-projects/{id}/canvas-edit`.
+
+- `{"kind":"style","property":"padding-left","pixels":24}` sets a dimension or physical spacing property. Pass `root_font_px` if the preview root font size differs from 16 pixels and the project uses rem tokens.
+- `{"kind":"text","index":1,"original":"Old label","value":"New label"}` replaces the second direct nonblank text node. Use its exact original text without surrounding HTML whitespace.
+
+Canvas style editing loads the declared tinycss2 dependency when needed. If it is unavailable, the style edit explains how to restore it and the other preview and text operations remain available.
+
+The inspector uses the existing preview bridge and reported source revision. Canvas requests are `dock/commit` for styles and `dock/text` for text. The host validates the sender and returns `inspect/canvas-edit-result` to the same frame. The overlay lives in the inspector's shadow tree and stays out of standalone exports.
+
 ## Booking pages
 
 Use `design_brief` to choose the direction, then call `app_project_create` with `template: "booking"`. Supply `items` with a stable lowercase `id`, `title`, `category` and optional `description` for each entry. A text value can be shared or supplied as an `{es, en}` pair. Set `lang: "es"` for Spanish on first load, with `description_es` for the introductory text and `description` for its English version. The site preserves the active category when switching languages.

@@ -259,6 +259,33 @@ class AppSourceEditArgs(BaseModel):
     target: CanvasTarget | None = Field(None, description="Optional selector and box to disambiguate repeated source positions.")
 
 
+class AppCanvasTextChange(BaseModel):
+    kind: Literal["text"]
+    value: str
+    index: int = Field(ge=0, description="Zero-based position among this tag's direct nonblank text nodes.")
+    original: str = Field(description="Original text of the node, excluding surrounding HTML whitespace.")
+
+
+class AppCanvasStyleChange(BaseModel):
+    kind: Literal["style"]
+    property: Literal["width", "height", "margin-top", "margin-right", "margin-bottom", "margin-left",
+                      "padding-top", "padding-right", "padding-bottom", "padding-left"]
+    pixels: float = Field(ge=-100_000, le=100_000)
+
+
+class AppCanvasEditArgs(BaseModel):
+    id: str = ""
+    vsrc: str = Field(description="Preview data-vsrc source position (file:line:column).")
+    tag: str = Field(description="The selected element's HTML tag.")
+    expected_revision: str = Field(description="Source revision served in the open preview.")
+    change: Annotated[AppCanvasTextChange | AppCanvasStyleChange, Field(discriminator="kind")]
+    path: str = Field("/", description="Path and query of the open preview page.")
+    operation: Literal["plan", "apply"] = "apply"
+    expected_count: int | None = Field(None, ge=1, description="Confirm the affected element count returned by plan.")
+    root_font_px: float = Field(16, gt=0, le=1000, description="Computed root font size for matching rem tokens.")
+    lang: Literal["en", "es"] = "en"
+
+
 class AppSourceCountArgs(BaseModel):
     id: str = ""
     vsrc: str
@@ -759,6 +786,8 @@ TOOLS: list[Tool] = [
         AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
     Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
         AppSourceEditArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
+    Tool("app_project_canvas_edit", "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
+        AppCanvasEditArgs, ann(False, False, True), lambda services, args: services.app_projects.canvas_edit(**args.model_dump())),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_undo", "Undo a project creation or source edit. Deshacer un alta o una edición.",

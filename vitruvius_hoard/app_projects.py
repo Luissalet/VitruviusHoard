@@ -19,6 +19,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
+from .app_canvas_edits import plan_canvas_edit
 from .app_preview import PreviewProxy
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
@@ -214,8 +215,36 @@ class AppProjects:
             return self.update(id, {filename: updated}, expected_revision, actor=actor,
                                target={**(target or {}), "vsrc": vsrc})
 
-    def source_count(self, id, vsrc, path="/"):
-        source_position(vsrc)
+    def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
+                    expected_count=None, root_font_px=16, lang="en"):
+        with self.lock:
+            current = self.get(id)
+            preview = current["preview"]
+            if (current["revision"] != expected_revision or preview.get("revision") != expected_revision
+                    or preview["state"] != "running"):
+                raise ValueError("La revisión cambió. Selecciona el elemento en la vista previa actual." if lang == "es"
+                                 else "The revision changed. Select the element in the current preview.")
+            try:
+                _, html = self._preview_html(id, path)
+                changes, target, scale, token, count = plan_canvas_edit(
+                    current["files"], html, path, vsrc, tag, change, root_font_px,
+                )
+            except SourceMapError as error:
+                if lang == "es":
+                    raise ValueError(error.spanish) from error
+                raise
+            confirmation = bool(changes) and (target["kind"] == "class" or count > 1) and expected_count != count
+            result = {"revision": expected_revision, "target": target, "affects": count, "token": token,
+                      "scale": scale, "confirmation_required": confirmation, "changed": False}
+            if target["kind"] == "class":
+                # Only the authored preview route was counted. This stylesheet can be linked elsewhere.
+                result.update(affects_scope="page", shared_stylesheet=True)
+            if operation == "plan" or confirmation or not changes:
+                return result
+            updated = self.update(id, changes, expected_revision)
+            return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"]}
+
+    def _preview_html(self, id, path):
         route = urlsplit(path)
         if not path.startswith("/") or path.startswith("//") or route.netloc or route.fragment:
             raise ValueError("Provide a page path in this preview, such as /records?q=search.")
@@ -236,7 +265,12 @@ class AppProjects:
                     html = response.read().decode("utf-8")
                 except (OSError, HTTPException) as error:
                     raise ValueError("The project's preview did not respond.") from error
-        return {"id": id, "revision": preview["revision"], "path": path, "vsrc": vsrc,
+        return preview["revision"], html
+
+    def source_count(self, id, vsrc, path="/"):
+        source_position(vsrc)
+        revision, html = self._preview_html(id, path)
+        return {"id": id, "revision": revision, "path": path, "vsrc": vsrc,
                 "same_vsrc_count": source_count(html, vsrc)}
 
     def _save(self, root, index, files, *, before_commit=None):

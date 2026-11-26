@@ -1904,6 +1904,185 @@
     "module": "design"
   },
   {
+    "name": "app_project_canvas_edit",
+    "description": "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "AppCanvasStyleChange": {
+          "properties": {
+            "kind": {
+              "const": "style",
+              "title": "Kind",
+              "type": "string"
+            },
+            "property": {
+              "enum": [
+                "width",
+                "height",
+                "margin-top",
+                "margin-right",
+                "margin-bottom",
+                "margin-left",
+                "padding-top",
+                "padding-right",
+                "padding-bottom",
+                "padding-left"
+              ],
+              "title": "Property",
+              "type": "string"
+            },
+            "pixels": {
+              "maximum": 100000,
+              "minimum": -100000,
+              "title": "Pixels",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "property",
+            "pixels"
+          ],
+          "title": "AppCanvasStyleChange",
+          "type": "object"
+        },
+        "AppCanvasTextChange": {
+          "properties": {
+            "kind": {
+              "const": "text",
+              "title": "Kind",
+              "type": "string"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "index": {
+              "description": "Zero-based position among this tag's direct nonblank text nodes.",
+              "minimum": 0,
+              "title": "Index",
+              "type": "integer"
+            },
+            "original": {
+              "description": "Original text of the node, excluding surrounding HTML whitespace.",
+              "title": "Original",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value",
+            "index",
+            "original"
+          ],
+          "title": "AppCanvasTextChange",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "vsrc": {
+          "description": "Preview data-vsrc source position (file:line:column).",
+          "title": "Vsrc",
+          "type": "string"
+        },
+        "tag": {
+          "description": "The selected element's HTML tag.",
+          "title": "Tag",
+          "type": "string"
+        },
+        "expected_revision": {
+          "description": "Source revision served in the open preview.",
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "change": {
+          "discriminator": {
+            "mapping": {
+              "style": "#/$defs/AppCanvasStyleChange",
+              "text": "#/$defs/AppCanvasTextChange"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AppCanvasTextChange"
+            },
+            {
+              "$ref": "#/$defs/AppCanvasStyleChange"
+            }
+          ],
+          "title": "Change"
+        },
+        "path": {
+          "default": "/",
+          "description": "Path and query of the open preview page.",
+          "title": "Path",
+          "type": "string"
+        },
+        "operation": {
+          "default": "apply",
+          "enum": [
+            "plan",
+            "apply"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "expected_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Confirm the affected element count returned by plan.",
+          "title": "Expected Count"
+        },
+        "root_font_px": {
+          "default": 16,
+          "description": "Computed root font size for matching rem tokens.",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "title": "Root Font Px",
+          "type": "number"
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vsrc",
+        "tag",
+        "expected_revision",
+        "change"
+      ],
+      "title": "AppCanvasEditArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_source_count",
     "description": "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
     "annotations": {
