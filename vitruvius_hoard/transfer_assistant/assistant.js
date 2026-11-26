@@ -1,4 +1,4 @@
-import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
+import {initialTransfer, isTransferCommand, PROMPT_PHRASES, transferTurn} from "./dialogue.js";
 import {speakTransferReply, transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 
@@ -44,18 +44,6 @@ const COPY = {
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
 };
-
-const QUESTIONS = {recipient: "pide-destino", amountCents: "pide-importe", concept: "pide-concepto", source: "pide-origen"};
-
-function replyPhrase(turn, corrected) {
-  if (turn.phraseId) return turn.phraseId;
-  const {phase, candidates, next} = turn.state;
-  if (phase === "cancelled") return "cancelado";
-  if (phase === "complete") return "otra";
-  if (phase === "insufficient") return "saldo-insuficiente";
-  if (phase === "ready") return corrected ? "corregido" : "confirmar";
-  return candidates.length ? "ambiguo-contacto" : QUESTIONS[next];
-}
 
 async function json(path, options) {
   const response = await fetch(path, options);
@@ -121,7 +109,7 @@ export function mountTransferAssistant(root, options = {}) {
   let pendingData;
   let message = copy.start;
   let phraseId = "saludo";
-  let voicePhrases = {};
+  let voicePhrases;
   let speech;
   let requestKey;
   let mic;
@@ -188,7 +176,7 @@ export function mountTransferAssistant(root, options = {}) {
   }
 
   function showFixed() {
-    const fixed = lang === "es" && voicePhrases[phraseId];
+    const fixed = lang === "es" && voicePhrases?.[phraseId];
     show(fixedReply, fixed && fixed !== message ? fixed : "");
   }
 
@@ -275,10 +263,9 @@ export function mountTransferAssistant(root, options = {}) {
     const {signal} = speech;
     const replyAt = performance.now();
     await voiceCheck;
-    const text = lang === "es" && voicePhrases[id];
-    if (!text || signal.aborted) return;
-    void speakTransferReply(text, {
-      phraseId: id, locale, signal,
+    if (lang !== "es" || !id || signal.aborted || (voicePhrases && !voicePhrases[id])) return;
+    void speakTransferReply(id, {
+      locale, signal,
       onFallback: () => {
         show(voiceStatus, copy.written_replies);
         track(turn, 2, copy.text_only, performance.now() - replyAt);
@@ -350,10 +337,11 @@ export function mountTransferAssistant(root, options = {}) {
         timing?.understandingMs ?? performance.now() - understandingAt);
     }
     state = turn.state;
-    if (turn.message) message = turn.message;
+    if (turn.message) {
+      ({message, phraseId} = turn);
+    }
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
     if (!turn.action) {
-      phraseId = replyPhrase(turn, changed && previousPhase === "ready");
       if (changed || state.phase !== "ready") requestKey = undefined;
       const fill = changed || previousPhase !== state.phase || previousNext !== state.next ? reflect() : null;
       waitingForForm = Boolean(fill && state.phase === "ready");
@@ -404,14 +392,14 @@ export function mountTransferAssistant(root, options = {}) {
 
   function checkVoice() {
     if (!voiceCheck) {
-      voiceCheck = voiceAvailability().catch(() => ({})).then(available => {
-        dictation = Boolean(available.dictation);
-        voicePhrases = available.voice_phrases || {};
+      voiceCheck = voiceAvailability().catch(() => null).then(available => {
+        dictation = Boolean(available?.dictation);
+        voicePhrases = available ? available.voice_phrases || {} : undefined;
         showFixed();
-        showDictation(available.dictation_route);
-        sttWarning = available.stt || dictation ? "" : copy.stt_unavailable;
+        showDictation(available?.dictation_route);
+        sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
-        show(voiceStatus, available.tts ? "" : copy.written_replies);
+        show(voiceStatus, available?.tts ? "" : copy.written_replies);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;
@@ -468,7 +456,7 @@ export function mountTransferAssistant(root, options = {}) {
     requestKey = undefined;
     stopPlayback();
     message = copy.start;
-    phraseId = QUESTIONS[slot];
+    phraseId = PROMPT_PHRASES[slot];
     paint();
   });
   window.addEventListener("pagehide", stopPlayback);

@@ -77,13 +77,10 @@ def _cache_phrases(root):
     return {key: text for key, text in phrases.items() if isinstance(text, str)} if isinstance(phrases, dict) else {}
 
 
-def _cached_reply(phrase_id, text):
-    root = _cache_root()
-    if not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
-        return _json(404, code="voice_phrase_unavailable")
+def _cached_reply(root, phrase_id):
     try:
         path = (root / f"{phrase_id}.wav").resolve()
-        if _cache_phrases(root).get(phrase_id) != text or path.parent != root:
+        if path.parent != root:
             return _json(404, code="voice_phrase_unavailable")
         audio = path.read_bytes()
     except (OSError, ValueError):
@@ -224,19 +221,24 @@ class TransferVoice:
             return _json(400, code="invalid_voice_request")
         if not isinstance(request, dict):
             return _json(400, code="invalid_voice_request")
-        text, language = request.get("text"), request.get("language", "es")
-        if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000 or language not in ("es", "en"):
+        legacy_text, language = request.get("text"), request.get("language", "es")
+        if language not in ("es", "en"):
             return _json(400, code="invalid_voice_request")
-        if VOICE_MODE == "cache-natural":
-            return _cached_reply(request.get("phrase_id"), text) if language == "es" else _json(404, code="voice_phrase_unavailable")
-        if VOICE_MODE != "piper":
+        if "text" in request and (not isinstance(legacy_text, str) or not 0 < len(legacy_text.strip()) <= 1000):
+            return _json(400, code="invalid_voice_request")
+        if VOICE_MODE not in ("cache-natural", "piper"):
             return _json(503, code="tts_disabled")
         phrase_id = request.get("phrase_id")
-        if language != "es" or not isinstance(phrase_id, str) or _cache_phrases(_cache_root()).get(phrase_id) != text:
+        if language != "es" or not isinstance(phrase_id, str) or not re.fullmatch(r"[a-z-]{1,40}", phrase_id):
             return _json(404, code="voice_phrase_unavailable")
+        root = _cache_root()
+        text = _cache_phrases(root).get(phrase_id)
+        if not text:
+            return _json(404, code="voice_phrase_unavailable")
+        if VOICE_MODE == "cache-natural":
+            return _cached_reply(root, phrase_id)
         result = fam_media.speak_bytes(text, lang=language, timeout_s=12, local_fallback=False,
-                                       voice=SPANISH_TTS_VOICE if language == "es" else None,
-                                       engine="piper" if language == "es" else None)
+                                       voice=SPANISH_TTS_VOICE, engine="piper")
         if not result.get("ok") or not result.get("data"):
             if result.get("status") == 409 or "generation is off" in str(result.get("error")).lower():
                 return _json(409, code="tts_disabled")

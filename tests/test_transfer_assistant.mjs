@@ -31,6 +31,7 @@ test("(a) all slots at once and a later explicit confirmation", () => {
   const [draft, confirmed] = conversation(complete, "Sí, confirmo");
   assert.equal(draft.state.phase, "ready");
   assert.equal(draft.action, undefined);
+  assert.equal(draft.phraseId, "confirmar");
   assert.match(draft.message, /^¿Confirmas la transferencia.*40,00.*Marta Vidal.*Cuenta diaria.*cena.*\?$/u);
   assert.deepEqual(confirmed.action, {
     recipient: {id: "marta", name: "Marta Vidal"}, amountCents: 4000, concept: "cena", source: "daily",
@@ -57,8 +58,10 @@ test("(d) corrections replace slots and require another explicit confirmation", 
   const [draft, amount, recipient, confirmed] = conversation(complete, "No, mejor sesenta", "A Marta no, a Ana", "confirmo");
   assert.equal(draft.state.slots.amountCents, 4000);
   assert.equal(amount.state.slots.amountCents, 6000);
+  assert.equal(amount.phraseId, "confirmar");
   assert.equal(amount.action, undefined);
   assert.equal(recipient.state.slots.recipient.id, "ana");
+  assert.equal(recipient.phraseId, "confirmar");
   assert.equal(recipient.action, undefined);
   assert.equal(confirmed.action.recipient.id, "ana");
 });
@@ -67,6 +70,7 @@ test("(e) same given name requires a chosen contact", () => {
   const [turn, earlyYes, picked] = conversation("A María por 20 euros, concepto regalo desde diaria", "sí", "María Vela");
   assert.deepEqual(turn.state.candidates.map(item => item.id), ["maria-uno", "maria-dos"]);
   assert.match(turn.message, /María Sierra o María Vela/u);
+  assert.equal(turn.phraseId, "ambiguo-contacto");
   assert.equal(earlyYes.action, undefined);
   assert.equal(picked.state.phase, "ready");
   assert.equal(picked.state.slots.recipient.id, "maria-dos");
@@ -83,6 +87,7 @@ test("(g) low balance blocks confirmation, then accepts an amended amount", () =
   const [low, earlyYes, amended, confirmed] = conversation(complete.replace("diaria", "ahorro"), "sí", "Mejor veinte euros", "sí");
   assert.equal(low.state.phase, "insufficient");
   assert.match(low.message, /Saldo insuficiente/);
+  assert.equal(low.phraseId, "saldo-insuficiente");
   assert.equal(earlyYes.action, undefined);
   assert.equal(amended.state.phase, "ready");
   assert.equal(confirmed.action.amountCents, 2000);
@@ -334,13 +339,19 @@ test("shared transcription supplies vocabulary and gives final text to dictation
 
 test("disabled or unavailable shared voice leaves the reply in writing", async ({mock}) => {
   let status = 409;
-  mock.method(globalThis, "fetch", async () => Response.json({}, {status}));
+  const requests = [];
+  mock.method(globalThis, "fetch", async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    return Response.json({}, {status});
+  });
   const events = [];
+  const [review] = conversation(complete);
   for (status of [409, 503]) {
-    await speakTransferReply("Transferencia cancelada.", {
+    await speakTransferReply(review.phraseId, {
       locale: "es-ES", signal: new AbortController().signal,
       onFallback: () => events.push("written"), onStart: () => events.push("voice"),
     });
   }
   assert.deepEqual(events, ["written", "written"]);
+  assert.deepEqual(requests, Array(2).fill({phrase_id: "confirmar", language: "es"}));
 });
