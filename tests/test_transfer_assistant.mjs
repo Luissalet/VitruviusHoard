@@ -312,11 +312,11 @@ test("common transcription formats keep the correct amounts and ask about the tw
   assert.equal(ambiguous.state.slots.concept, "Entradas");
 });
 
-for (const transcriptionProvider of ["Cyrano · GPU 1 · large-v3-turbo", "Funes / Talos (reserva)"]) {
+for (const transcriptionProvider of ["Boltagon · GPU 1 · large-v3-turbo", "Funes / Talos (reserva)"]) {
   test(`transcription from ${transcriptionProvider} keeps its source and gives final text to dictation`, async ({mock}) => {
     const text = "A Marta";
     const final = {...finalResult(text, {destination_contact_id: cited("marta", "Marta")}),
-      version: "cyrano.dictation/v0", dictation_route: "app"};
+      version: "cyrano.dictation/v0", dictation_route: "app", dictation_name: "Boltagon's Hoard"};
     const requests = [];
     mock.method(globalThis, "fetch", async (url, options) => {
       requests.push({url, body: options.body});
