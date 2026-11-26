@@ -2306,7 +2306,7 @@
   },
   {
     "name": "app_project_preview",
-    "description": "Start or stop this project's owned local preview. Previsualizar aplicación.",
+    "description": "Start or stop the project's local preview. The start result includes its stable open_path. Previsualizar aplicación.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,

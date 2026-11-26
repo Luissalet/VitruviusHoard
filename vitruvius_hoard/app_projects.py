@@ -463,7 +463,13 @@ class AppProjects:
         alive = item["process"].poll() is None
         proxy = self.proxies.get(id)
         return {"state": "running" if alive else "stopped", "revision": item["revision"], "url": item["url"] if alive else None,
+                "open_path": f"/api/app-projects/{id}/preview/open",
                 "pid": item["process"].pid if alive else None, "session": proxy.session if alive and proxy else None}
+
+    def running_preview_url(self, id):
+        with self.lock:
+            self._directory(id)
+            return self.status(id).get("url")
 
     @staticmethod
     def _close_process(item):

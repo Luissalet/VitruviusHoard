@@ -220,6 +220,7 @@ export default function Projects({ param }) {
           <div className="flex gap-2 items-center flex-wrap mt-3">
             <label className="label">{es ? "Versión" : "Revision"}<select aria-label={es ? "Versión" : "Revision"} className="field" value={project.selected_revision} onChange={(event) => loadProject(project.id, event.target.value)}>{project.revisions.map((revision, index) => <option key={revision} value={revision}>{index + 1}{revision === project.revision ? (es ? " · actual" : " · current") : ""}</option>)}</select></label>
             <button className="btn" disabled={!!busy} onClick={() => run("start")}>{busy === "start" ? (es ? "Abriendo…" : "Opening…") : (es ? "Abrir vista previa" : "Open preview")}</button>
+            {preview?.state === "running" && <a className="btn" href={`/design${preview.open_path}?lang=${lang}`} target="_blank" rel="noopener noreferrer">{es ? "Abrir en pestaña" : "Open in tab"}</a>}
             {preview?.state === "running" && <button className="btn" disabled={!!busy} onClick={() => run("stop")}>{es ? "Detener vista previa" : "Stop preview"}</button>}
             <button className="btn" disabled={!!busy} onClick={capture}>{busy === "render" ? (es ? "Capturando…" : "Capturing…") : (es ? "Capturar para revisión" : "Capture for review")}</button>
             <button type="button" className="btn" disabled={!!busy || !!archivePending} aria-expanded={!!archivePending}
@@ -238,7 +239,7 @@ export default function Projects({ param }) {
               <button type="button" className="btn" disabled={!!busy} onClick={() => setArchivePending(null)}>{es ? "Cancelar" : "Cancel"}</button>
             </div>
           </div>}
-          {preview?.state === "running" && visiblePreview && <p className="help mt-3">{visiblePreview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")} · <a className="underline" href={visiblePreview.url} target="_blank" rel="noreferrer">{es ? "Abrir en otra pestaña" : "Open in another tab"}</a></p>}
+          {preview?.state === "running" && visiblePreview && <p className="help mt-3">{visiblePreview.revision === project.selected_revision ? (es ? "Vista previa de esta versión" : "Preview of this revision") : (es ? "La vista previa muestra otra versión" : "Preview shows another revision")}</p>}
         </div>
         {preview?.state === "running" && <PreviewFrames frames={previewFrames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} />}
         <PreviewSelection project={project} preview={preview} frameRef={previewFrame} frameKey={previewFrames[0]?.key} es={es} notify={notify} />
