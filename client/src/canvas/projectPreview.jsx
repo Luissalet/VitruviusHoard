@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useProjectCanvas } from "../pages/projectCanvas.js";
 import { useProjectLivePreview } from "../pages/projectLivePreview.js";
 
@@ -9,15 +9,19 @@ import { useProjectLivePreview } from "../pages/projectLivePreview.js";
  */
 export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, onRevision, onError }) {
   const frameRef = useRef(null);
+  // The frame mounts a render after the preview starts; the bridge must greet that element, so it follows it.
+  const [frameElement, setFrameElement] = useState(null);
+  const attachFrame = useCallback((node) => { frameRef.current = node; if (node) setFrameElement(node); }, []);
+  const mountedFrame = useMemo(() => ({ current: frameElement }), [frameElement]);
   const frames = useProjectLivePreview(projectId, preview, baseline, frameRef, onRevision, onError);
   const visible = frames[0] || preview;
-  useProjectCanvas(frameRef, projectId, visible?.state === "running" ? visible.url : null, visible?.revision, lang);
-  return { frameRef, frames, visible };
+  useProjectCanvas(mountedFrame, projectId, visible?.state === "running" ? visible.url : null, visible?.revision, lang);
+  return { frameRef, attachFrame, frames, visible };
 }
 
 /**
  * The preview frames. During a refresh the next page loads hidden on top of the visible one, so there can be two.
- * `height` is any CSS height; the visible frame gets `frameRef`.
+ * `height` is any CSS height; the visible frame gets `frameRef` (pass `attachFrame` from the hook).
  */
 export function PreviewFrames({ frames, frameRef, title, height = 560 }) {
   return <div className="relative" style={{ height }}>

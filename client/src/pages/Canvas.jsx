@@ -46,7 +46,7 @@ export default function Canvas({ param }) {
     } catch (error) { notify(error.message); }
   };
   const syncRevision = async () => { if (currentId.current) loadProject(currentId.current); };
-  const { frameRef, frames, visible } = useProjectPreviewCanvas({
+  const { frameRef, attachFrame, frames, visible } = useProjectPreviewCanvas({
     projectId: project?.id === param ? param : null, preview, baseline: project?.revision, lang, onRevision: syncRevision,
     onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
   });
@@ -157,7 +157,7 @@ export default function Canvas({ param }) {
           <span className="help" role="status">{modes.length === 1 ? (es ? "Esta vista previa solo admite navegar." : "This preview only supports navigating.") : es ? MODE_TEXT[mode][2] : MODE_TEXT[mode][3]}</span>
         </div>
         <div className="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start">
-          <PreviewFrames frames={frames} frameRef={frameRef} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
+          <PreviewFrames frames={frames} frameRef={attachFrame} title={es ? "Vista previa de aplicación" : "Application preview"} height="max(480px, calc(100dvh - 190px))" />
           <aside className="panel flex flex-col gap-4" aria-label={es ? "Selección y comentarios" : "Selection and comments"}>
             <section>
               <div className="flex items-center gap-2"><h2 className="font-semibold">{es ? "Selección" : "Selection"} ({selection.length})</h2>
