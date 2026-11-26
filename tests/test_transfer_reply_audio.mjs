@@ -97,7 +97,9 @@ test("keeps a slow full reply in writing until PCM is ready, streams it, and pin
   await speaking;
   assert.deepEqual(callbacks, ["written", ENGINE, "end"]);
   assert.equal(started[1].when, started[0].when + started[0].duration);
-  assert.deepEqual(requests[0], {version: VERSION, text, language: "es"});
+  const {request_id: firstId, ...firstRequest} = requests[0];
+  assert.match(firstId, /^[a-f0-9]{32}$/u);
+  assert.deepEqual(firstRequest, {version: VERSION, text, language: "es"});
 
   let receipt;
   second.push(start, block(0), end(1, true));
@@ -105,16 +107,24 @@ test("keeps a slow full reply in writing until PCM is ready, streams it, and pin
   const fixed = "What reference would you like to use?";
   await player.speak(fixed, {locale: "en-IE", signal: new AbortController().signal, onEnd: value => { receipt = value; }});
   assert.equal(receipt.cached, true);
-  assert.deepEqual(requests[1], {version: VERSION, text: fixed, language: "en", engine: ENGINE});
+  const {request_id: secondId, ...secondRequest} = requests[1];
+  assert.match(secondId, /^[a-f0-9]{32}$/u);
+  assert.notEqual(secondId, firstId);
+  assert.deepEqual(secondRequest, {version: VERSION, text: fixed, language: "en", engine: ENGINE});
 });
 
 test("aborting a playing turn stops its nodes and cancels its job once", async t => {
   const {stopped} = installAudio(t, {finish: false});
   const voice = pipe();
   const requests = [];
+  let requestId;
   t.mock.method(globalThis, "fetch", async (url, options) => {
-    requests.push([options.method, url.split("/").at(-1)]);
-    return options.method === "POST" ? voice.response : Response.json({ok: true});
+    requests.push([options.method, url]);
+    if (options.method === "POST") {
+      requestId = JSON.parse(options.body).request_id;
+      return voice.response;
+    }
+    return Response.json({ok: true});
   });
   const player = createTransferReplyVoice();
   player.activate();
@@ -130,9 +140,37 @@ test("aborting a playing turn stops its nodes and cancels its job once", async t
   await started.promise;
   aborter.abort();
   await speaking;
-  assert.deepEqual(requests, [["POST", "reply"], ["DELETE", JOB]]);
+  const api = "/__vitruvius_preview__/transfer-voice/reply";
+  assert.deepEqual(requests, [["POST", api], ["DELETE", api + "/request/" + requestId]]);
   assert.deepEqual(stopped, [true]);
   assert.deepEqual(callbacks, []);
+});
+
+test("aborting before the response headers cancels the client request once", async t => {
+  const {started} = installAudio(t);
+  const posted = Promise.withResolvers();
+  const deleted = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    if (options.method === "DELETE") {
+      deleted.push(url);
+      return Response.json({ok: true});
+    }
+    posted.resolve(JSON.parse(options.body).request_id);
+    return new Promise((_, reject) => {
+      options.signal.addEventListener("abort", () => reject(options.signal.reason), {once: true});
+    });
+  });
+  const player = createTransferReplyVoice();
+  player.activate();
+  const aborter = new AbortController();
+  const speaking = player.speak("Una respuesta", {
+    locale: "es-ES", signal: aborter.signal, onFallback: () => assert.fail("A superseded turn is silent"),
+  });
+  const requestId = await posted.promise;
+  aborter.abort();
+  await speaking;
+  assert.deepEqual(deleted, ["/__vitruvius_preview__/transfer-voice/reply/request/" + requestId]);
+  assert.deepEqual(started, []);
 });
 
 test("an unavailable service leaves the written reply and does not request another voice", async t => {

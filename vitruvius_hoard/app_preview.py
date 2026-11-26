@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import threading
 import uuid
-from contextlib import closing
+from contextlib import closing, suppress
 from html import escape
 from html.parser import HTMLParser
 from http.client import HTTPConnection, HTTPException
@@ -111,7 +111,8 @@ class PreviewProxy:
                             self.wfile.write(chunk)
                 except ReplyError as error:
                     if not started:
-                        self.respond(*_json(error.status, code=error.code))
+                        with suppress(OSError):  # an aborted request may have disconnected before the reply
+                            self.respond(*_json(error.status, code=error.code))
                 except OSError:
                     pass  # the browser can leave while synthesis is still running
 

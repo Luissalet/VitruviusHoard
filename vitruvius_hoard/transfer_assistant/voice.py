@@ -203,6 +203,11 @@ class TransferVoice:
             return self._speak(body)
         if method == "DELETE" and route.startswith("reply/"):
             job_id = route.removeprefix("reply/")
+            if job_id.startswith("request/"):
+                request_id = job_id.removeprefix("request/")
+                if JOB_ID.fullmatch(request_id):
+                    self.replies.cancel_request(request_id)
+                    return _json(200, ok=True)
             if JOB_ID.fullmatch(job_id):
                 self.replies.cancel(job_id)
                 return _json(200, ok=True)
@@ -216,8 +221,10 @@ class TransferVoice:
             text = request.get("text")
             language = request.get("language")
             engine = request.get("engine")
+            request_id = request.get("request_id")
             if (request.get("version") != TTS_VERSION or not isinstance(text, str)
                     or not text.strip() or len(text) > 20_000 or language not in ("es", "en")
+                    or (request_id is not None and (not isinstance(request_id, str) or not JOB_ID.fullmatch(request_id)))
                     or (engine is not None and (not isinstance(engine, str) or not ENGINE_ID.fullmatch(engine)))):
                 raise ValueError
         except (AttributeError, ValueError):
@@ -226,7 +233,7 @@ class TransferVoice:
                      "voice": "default", "speed": 1, "wait": False}
         if engine is not None:
             arguments["engine"] = engine
-        return self.replies.stream(arguments)
+        return self.replies.stream(arguments, request_id)
 
     def _transcribe(self, query, content_type, body):
         suffix = AUDIO_TYPES.get(content_type.split(";", 1)[0].lower())

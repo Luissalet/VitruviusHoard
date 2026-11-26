@@ -1,4 +1,6 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 
 import httpx
 import pytest
@@ -8,6 +10,7 @@ from vitruvius_hoard.transfer_assistant.voice import TransferVoice
 
 
 JOB = "a" * 32
+REQUEST = "b" * 32
 ENGINE = "qwen3-tts"
 ORIGIN = "http://127.0.0.1:9"
 
@@ -63,6 +66,7 @@ def test_full_reply_uses_the_resident_cache_and_stream_in_the_same_voice(languag
 @pytest.mark.parametrize("invalid", [
     b'{"version":"old","text":"Hola","language":"es"}', b'[]', b'not json',
     request(" "), request(language="it"), request(engine="invalid\r\nheader"), request("x" * 20001),
+    request(request_id="not-a-client-id"),
 ])
 def test_malformed_reply_does_not_contact_the_voice_worker(invalid):
     def unreachable(_request):
@@ -121,3 +125,57 @@ def test_provider_unavailable_returns_text_fallback_without_trying_another_voice
         with relay.reply(request()):
             pytest.fail("Unexpected stream")
     assert (error.value.code, error.value.status) == ("tts_unavailable", 503)
+
+
+@pytest.mark.parametrize("blocked_method", ["POST", "GET"])
+def test_cancel_by_client_id_while_the_browser_has_no_headers(blocked_method):
+    blocked, release, cancelled = Event(), Event(), Event()
+    calls = []
+
+    def respond(message):
+        calls.append((message.method, message.url.path))
+        if message.method == blocked_method:
+            blocked.set()
+            assert release.wait(5), "double cleanup missed"
+        if message.method == "POST":
+            return httpx.Response(200, json=ticket())
+        if message.method == "GET":
+            return httpx.Response(200, headers={"Content-Type": NDJSON}, stream=Parts())
+        assert message.url.path == f"/api/voice/jobs/{JOB}"
+        cancelled.set()
+        return httpx.Response(200, json={"ok": True})
+
+    replies = mock_replies(respond)
+    relay = TransferVoice(replies=replies)
+
+    def serve_browser():
+        with relay.reply(request(request_id=REQUEST)):
+            pytest.fail("The browser should never receive the cancelled stream")
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        result = executor.submit(serve_browser)
+        try:
+            assert blocked.wait(3)
+            assert relay.handle("DELETE", f"reply/request/{REQUEST}", "", "", b"")[0] == 200
+            assert not replies.active
+            assert cancelled.is_set() == (blocked_method == "GET")
+        finally:
+            release.set()
+        with pytest.raises(ReplyError, match="tts_cancelled"):
+            result.result(timeout=3)
+    assert calls.count(("DELETE", f"/api/voice/jobs/{JOB}")) == 1
+    assert cancelled.is_set()
+    assert any(method == "GET" for method, _ in calls) == (blocked_method == "GET")
+
+
+def test_cancel_can_arrive_before_the_post():
+    def unreachable(_message):
+        pytest.fail("The cancelled request should not reach the worker")
+
+    replies = mock_replies(unreachable)
+    relay = TransferVoice(replies=replies)
+    assert relay.handle("DELETE", f"reply/request/{REQUEST}", "", "", b"")[0] == 200
+    with pytest.raises(ReplyError, match="tts_cancelled"):
+        with relay.reply(request(request_id=REQUEST)):
+            pytest.fail("Unexpected stream")
+    assert not replies.active

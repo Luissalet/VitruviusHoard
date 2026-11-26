@@ -149,29 +149,34 @@ export function createTransferReplyVoice() {
 
   async function speak(text, {locale, signal, onPending, onFallback, onStart, onEnd}) {
     if (signal.aborted) return;
-    let job;
+    const requestId = crypto.randomUUID().replaceAll("-", "");
     let response;
+    let submitted = false;
     let completed = false;
     function cancel() {
-      if (!job) return;
-      void fetch(API + "/" + job, {method: "DELETE", keepalive: true, redirect: "error"}).catch(() => {});
-      job = undefined;
+      if (!submitted) return;
+      submitted = false;
+      void fetch(API + "/request/" + requestId, {method: "DELETE", keepalive: true, redirect: "error"}).catch(() => {});
     }
     signal.addEventListener("abort", cancel, {once: true});
     const timer = setTimeout(() => { if (!signal.aborted) onPending?.(); }, WRITTEN_AFTER_MS);
     try {
       if (!context) throw new Error("audio_context_inactive");
+      submitted = true;
       response = await fetch(API, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({version: VERSION, text, language: locale.slice(0, 2), engine}),
+        body: JSON.stringify({version: VERSION, text, language: locale.slice(0, 2), engine, request_id: requestId}),
         signal,
         redirect: "error",
       });
-      if (!response.ok || !response.body) throw new Error("tts_unavailable");
-      job = response.headers.get("X-Transfer-Voice-Job");
+      if (!response.ok) {
+        submitted = false;
+        throw new Error("tts_unavailable");
+      }
+      if (!response.body) throw new Error("invalid_voice_stream");
+      const job = response.headers.get("X-Transfer-Voice-Job");
       if (!/^[a-f0-9]{32}$/u.test(job)) {
-        job = undefined;
         throw new Error("invalid_voice_stream");
       }
       const selected = response.headers.get("X-Transfer-Voice-Engine");
@@ -183,6 +188,7 @@ export function createTransferReplyVoice() {
         clearTimeout(timer);
         onStart?.(engine);
       }});
+      signal.throwIfAborted();
       completed = true;
       onEnd?.(end);
     } catch {
