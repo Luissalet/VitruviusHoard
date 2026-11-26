@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 
 from .hoard_link.app_bridge import BRIDGE_JS
 from .hoard_link.guard import DEV_ORIGINS, check_request
+from .transfer_assistant.voice import TransferVoice, VOICE_PREFIX
 
 SCRIPT_ROOT = "/__vitruvius_preview__/"
 # Additional preview-only scripts live alongside the application package.
@@ -63,6 +64,8 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "") ->
 class PreviewProxy:
     def __init__(self, host_port: int):
         self.backend: tuple[int, str] | None = None
+        self.voice_revision = ""
+        voice = TransferVoice()
         scripts = {"app-bridge.js": BRIDGE_JS.encode("utf-8")}
         for name in PREVIEW_SCRIPTS:
             path = SCRIPT_DIR / name
@@ -102,10 +105,22 @@ class PreviewProxy:
                         return self.respond(403, b"Preview parent not allowed", "text/plain")
                 if not self.path.startswith("/") or self.path.startswith("//"):
                     return self.respond(400, b"Invalid preview path", "text/plain")
-                path = urlsplit(self.path).path
+                parts = urlsplit(self.path)
+                path = parts.path
                 backend = proxy.backend
                 if backend is None:
                     return self.respond(503, b"Preview is not running", "text/plain")
+                if path.startswith(VOICE_PREFIX) and proxy.voice_revision == backend[1]:
+                    route = path.removeprefix(VOICE_PREFIX)
+                    try:
+                        size = int(headers.get("content-length", "0"))
+                        if not 0 <= size <= voice.max_body(route):
+                            raise ValueError
+                    except ValueError:
+                        return self.respond(413, b'{"code":"invalid_voice_size"}', "application/json")
+                    body = self.rfile.read(size) if size else b""
+                    return self.respond(*voice.handle(self.command, route, parts.query,
+                                                      headers.get("content-type", ""), body))
                 if path.startswith(SCRIPT_ROOT) and self.command == "GET":
                     script = scripts.get(path.removeprefix(SCRIPT_ROOT))
                     if script is None:

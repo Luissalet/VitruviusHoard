@@ -1,0 +1,103 @@
+.transfer-assistant {
+  display: grid;
+  gap: .75rem;
+  min-width: 0;
+  color: inherit;
+  accent-color: var(--transfer-assistant-accent, #14645c);
+}
+.transfer-assistant > [hidden],
+.transfer-assistant [hidden] {
+  display: none;
+}
+.transfer-assistant__title,
+.transfer-assistant p,
+.transfer-assistant dl,
+.transfer-assistant dd {
+  margin: 0;
+}
+.transfer-assistant__title {
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+.transfer-assistant__reply,
+.transfer-assistant__transcript {
+  overflow-wrap: anywhere;
+}
+.transfer-assistant__slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4rem 1rem;
+  padding-block: .55rem;
+  border-block: 1px solid color-mix(in srgb, currentColor 19%, transparent);
+}
+.transfer-assistant__slots div {
+  min-width: 0;
+}
+.transfer-assistant__slots dt,
+.transfer-assistant__note {
+  font-size: .875rem;
+}
+.transfer-assistant__slots dd {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.transfer-assistant__slots dd[data-filled=false] {
+  opacity: .8;
+  font-weight: 400;
+}
+.transfer-assistant__composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .5rem;
+}
+.transfer-assistant__controls,
+.transfer-assistant__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.transfer-assistant__choices:empty {
+  display: none;
+}
+.transfer-assistant button,
+.transfer-assistant input {
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: var(--transfer-assistant-radius, .5rem);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  min-height: 2.75rem;
+  padding: .45rem .7rem;
+}
+.transfer-assistant button:not(:disabled) {
+  cursor: pointer;
+}
+.transfer-assistant button:disabled {
+  opacity: .65;
+}
+.transfer-assistant button:not(:disabled):hover,
+.transfer-assistant button[aria-pressed=true] {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.transfer-assistant :is(button, input):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.transfer-assistant button.transfer-assistant__primary {
+  background: var(--transfer-assistant-accent, #14645c);
+  border-color: transparent;
+  color: var(--transfer-assistant-on-accent, white);
+  font-weight: 650;
+}
+.transfer-assistant button.transfer-assistant__primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--transfer-assistant-accent, #14645c) 87%, black);
+}
+
+
+
+.transfer-assistant input::placeholder {
+  color: color-mix(in srgb, currentColor 75%, transparent);
+  opacity: 1;
+}

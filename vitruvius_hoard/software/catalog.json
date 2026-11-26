@@ -1248,6 +1248,23 @@
     "module": "design"
   },
   {
+    "name": "app_transfer_assistant_assets",
+    "description": "Read editable source files for a transfer assistant panel. Leer el código del asistente de transferencias.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "description": "A tool without arguments.",
+      "properties": {},
+      "title": "Empty",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_templates",
     "description": "List original full application starters. Plantillas de aplicaciones completas.",
     "annotations": {

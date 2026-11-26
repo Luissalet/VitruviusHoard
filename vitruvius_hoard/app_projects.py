@@ -22,6 +22,7 @@ from .app_canvas import CanvasSessions
 from .app_preview import PreviewProxy
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
+from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
 from .app_source_map import SourceMapError, edit_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.atomic import write_json_atomic
@@ -435,6 +436,7 @@ class AppProjects:
             previous = self.processes.get(id)
             candidate["url"] = proxy.url
             candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
+            proxy.voice_revision = selected if TRANSFER_ASSISTANT_ENTRY in project["files"] else ""
             proxy.backend = (receipt.port, selected)
             self.processes[id] = candidate
             if previous:

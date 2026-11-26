@@ -167,7 +167,8 @@ export default function Projects({ param }) {
         {preview?.state === "running" && <div className="relative" style={{ height: 560 }}>
           {previewFrames.map(({ key, src, pending, onLoad }) => <iframe key={key} ref={pending ? null : previewFrame}
             title={es ? "Vista previa de aplicación" : "Application preview"} src={src} onLoad={onLoad}
-            referrerPolicy="origin" aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
+            referrerPolicy="origin" allow={Object.hasOwn(project.files, "assets/transfer-assistant/assistant.js") ? "microphone 'src'" : undefined}
+            aria-hidden={pending || undefined} tabIndex={pending ? -1 : undefined}
             className="w-full border rounded-md" style={{ height: 560, borderColor: "var(--line)", background: "white",
               ...(pending ? { position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" } : {}) }} />)}
         </div>}

@@ -188,9 +188,9 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   function cursorApi(actor, signal) {
     const cursor = cursorFor(actor);
     return {
-      async to(element) {
+      async to(element, {scroll = true} = {}) {
         signal?.throwIfAborted();
-        element.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
+        if (scroll) element.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
         const rect = element.getBoundingClientRect();
         const x = Math.max(4, Math.min(innerWidth - 28, rect.left + Math.min(rect.width / 2, 60)));
         const y = Math.max(4, Math.min(innerHeight - 36, rect.top + rect.height / 2));
@@ -397,6 +397,10 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   const api = Object.assign(previous, {
     bridgeVersion: 1,
     registerTool,
+    pointTo(element, actor, options) {
+      if (!(element instanceof Element) || !element.getClientRects().length) return;
+      return cursorApi(actor).to(element, options);
+    },
     setContext(value) { contextSource = value || {}; scheduleContext(); },
     onChanged(handler) {
       if (typeof handler !== 'function') fail('bad_args', 'onChanged needs a callback');

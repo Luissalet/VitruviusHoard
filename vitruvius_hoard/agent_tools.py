@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
+from .transfer_assistant import assistant_assets
 from .app_projects import templates as app_templates
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
@@ -696,6 +697,8 @@ TOOLS: list[Tool] = [
         "Delete a generated design system (only when the user asks). Eliminar design system.\n"
         "Sinónimos: borrar tokens, eliminar sistema de diseño.",
         TokensDeleteArgs, ann(False, True, True), run_tokens_delete),
+    Tool("app_transfer_assistant_assets", "Read editable source files for a transfer assistant panel. Leer el código del asistente de transferencias.",
+        Empty, ann(True), lambda services, args: assistant_assets(), capped=False),
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
     Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
