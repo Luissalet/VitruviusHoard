@@ -114,6 +114,8 @@ export function mountTransferAssistant(root, options = {}) {
   let context;
   let pendingData;
   let message = copy.start;
+  let latestTurn = 0;
+  let replyTurn = latestTurn;
   let dictationName = "Boltagon";
   const speaker = createTransferReplyVoice();
   let speech;
@@ -265,6 +267,7 @@ export function mountTransferAssistant(root, options = {}) {
   }
 
   function read(timing, turn = traceTurn) {
+    if (replyTurn !== latestTurn || document.hidden) return;
     stopPlayback();
     speech = new AbortController();
     const {signal} = speech;
@@ -313,6 +316,7 @@ export function mountTransferAssistant(root, options = {}) {
 
   function submit(text, options = {}) {
     if (!text.trim() || sending) return Promise.resolve(false);
+    const turnId = ++latestTurn;
     speaker.activate();
     stopPlayback();
     const reviewed = state.phase === "ready" && !waitingForForm ? state.summary : undefined;
@@ -321,12 +325,12 @@ export function mountTransferAssistant(root, options = {}) {
       mic?.cancel();
       show(transcript);
     }
-    const turn = turnQueue.then(() => handleTurn(text, options, version, reviewed));
+    const turn = turnQueue.then(() => handleTurn(text, options, {version, reviewed, turnId}));
     turnQueue = turn.catch(() => false);
     return turn;
   }
 
-  async function handleTurn(text, {spoken = false, timing, interpretation, recipientChoice}, version, reviewed) {
+  async function handleTurn(text, {spoken = false, timing, interpretation, recipientChoice}, {version, reviewed, turnId}) {
     if (version !== formVersion) return false;
     stopPlayback();
     if (!context) {
@@ -356,7 +360,10 @@ export function mountTransferAssistant(root, options = {}) {
         timing?.understandingMs ?? performance.now() - understandingAt);
     }
     state = turn.state;
-    if (turn.message) message = turn.message;
+    if (turn.message) {
+      message = turn.message;
+      replyTurn = turnId;
+    }
     const changed = JSON.stringify(previous) !== JSON.stringify(state.slots);
     if (!turn.action) {
       if (changed || state.phase !== "ready") requestKey = undefined;
@@ -373,6 +380,7 @@ export function mountTransferAssistant(root, options = {}) {
 
     sending = true;
     message = copy.executing;
+    replyTurn = turnId;
     paint();
     const key = requestKey ??= crypto.randomUUID();
     const executionAt = performance.now();
@@ -471,6 +479,7 @@ export function mountTransferAssistant(root, options = {}) {
     requestKey = undefined;
     stopPlayback();
     message = copy.start;
+    replyTurn = latestTurn;
     paint();
   });
   window.addEventListener("pagehide", stopPlayback);
