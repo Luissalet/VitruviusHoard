@@ -11,7 +11,7 @@
 
   const compact = value => String(value || '').replace(/\s+/g, ' ').trim();
   const escapeCss = value => (globalThis.CSS && CSS.escape ? CSS.escape(value)
-    : String(value).replace(/^\d/, digit => `\\3${digit} `).replace(/[^a-zA-Z0-9_\u00a0-\uffff-]/g, char => `\\${char}`));
+    : String(value).replace(/^\d|[^a-zA-Z0-9_\u00a0-\uffff-]/g, (char, at) => (at === 0 && /\d/.test(char) ? `\\3${char} ` : `\\${char}`)));
   const tagOf = element => String(element.tagName || '').toLowerCase();
   const attrOf = (element, name) => (element.getAttribute ? element.getAttribute(name) : null);
 
