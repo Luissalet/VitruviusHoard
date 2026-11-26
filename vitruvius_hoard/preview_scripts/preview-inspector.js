@@ -282,6 +282,8 @@
         saved: 'Revision saved', unchanged: 'No change', missing: 'Select the element in the current preview.',
         timeout: 'The edit could not be confirmed. Check the current revision.',
         count: count => count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements',
+        pageCount: count => (count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements') + ' on this page.',
+        shared: 'This stylesheet is shared. The change can also affect other pages.',
       },
       es: {
         width: 'Ancho', height: 'Alto', margin: 'Margen', padding: 'Relleno',
@@ -290,6 +292,8 @@
         saved: 'Versión guardada', unchanged: 'Sin cambios', missing: 'Selecciona el elemento en la vista previa actual.',
         timeout: 'No se ha podido confirmar la edición. Comprueba la revisión actual.',
         count: count => count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos',
+        pageCount: count => (count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos') + ' en esta página.',
+        shared: 'La hoja de estilos es compartida. El cambio puede afectar también a otras páginas.',
       },
     };
     let lang = document.documentElement.lang.startsWith('es') ? 'es' : 'en';
@@ -327,6 +331,9 @@
     const message = document.createElement('div');
     message.className = 'canvas-panel-message';
     message.role = 'status';
+    const scope = document.createElement('div');
+    const shared = document.createElement('div');
+    message.append(scope, shared);
     const applyButton = button('canvas-action');
     applyButton.dataset.apply = '';
     const cancelButton = button('canvas-action');
@@ -481,8 +488,10 @@
     function ask(args, plan, focus) {
       announce('');
       confirmation = { args, count: plan.affects, focus };
-      message.textContent = copy().count(visibleCount(args, plan));
-      panel.setAttribute('aria-label', message.textContent);
+      const count = visibleCount(args, plan);
+      scope.textContent = plan.affects_scope === 'page' ? copy().pageCount(count) : copy().count(count);
+      shared.textContent = plan.shared_stylesheet ? copy().shared : '';
+      panel.setAttribute('aria-label', scope.textContent);
       applyButton.textContent = copy().apply;
       cancelButton.textContent = copy().cancel;
       panel.hidden = false;
@@ -542,7 +551,11 @@
           const near = side === 'top' || side === 'left';
           const axis = horizontal ? rect.width : rect.height;
           const spacing = Math.abs(parseFloat(computed.getPropertyValue(property)) || 0);
-          const gap = kind === 'padding' ? -Math.min(axis / 2, Math.max(8, spacing)) : Math.max(12, Math.min(26, spacing));
+          // Centre the visible padding marker in its band. With little or no padding,
+          // place it beyond the element; a clipped handle can still pass double-clicks through.
+          const gap = kind === 'padding'
+            ? (spacing >= 12 && axis >= 24 ? -Math.min(axis / 2, spacing / 2, 26) : 28)
+            : Math.max(12, Math.min(26, spacing));
           const fraction = kind === 'padding' ? .72 : .28;
           x = horizontal ? (near ? rect.left - gap : rect.right + gap) : rect.left + rect.width * fraction;
           y = horizontal ? rect.top + rect.height * fraction : (near ? rect.top - gap : rect.bottom + gap);
@@ -750,15 +763,25 @@
       if (interrupted) announce(copy().missing);
     }).observe(meta, { attributes: true, attributeFilter: ['content'] });
 
+    function literalAt(event, throughHandle) {
+      if (throughHandle) stage.style.visibility = 'hidden';
+      try {
+        const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+        return caret?.offsetNode || document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer;
+      } finally {
+        if (throughHandle) stage.style.removeProperty('visibility');
+      }
+    }
+
     return {
       paint,
       hit: event => event.composedPath().includes(stage),
+      hitHandle: event => event.composedPath().some(node => node.classList?.contains('canvas-handle')),
       editing: () => Boolean(gesture || editor || confirmation),
       cancel: () => { restoreGesture(); closeEditor(); closePanel(false); },
       focus: () => handles.find(handle => !handle.hidden)?.focus({ preventScroll: true }),
-      doubleClick: event => {
-        const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
-        const node = caret?.offsetNode || document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer;
+      doubleClick: (event, throughHandle) => {
+        const node = literalAt(event, throughHandle);
         if (!node || node.nodeType !== Node.TEXT_NODE || !source(node.parentElement) || !trim(node.data)) return null;
         // Only edit the actual run of text the pointer hit, not the nearest line in a paragraph.
         const range = document.createRange();
@@ -859,11 +882,13 @@
     if (event.detail <= 1) choose(elementAt(event), event.shiftKey);
   }
   function onBlock(event) {
-    if (!mode || edits?.hit(event)) return;
-    if (event.type === 'dblclick') {
-      const element = edits?.doubleClick(event);
-      if (element) { selected = [element]; schedule(); report(); }
+    if (!mode) return;
+    const hitOverlay = edits?.hit(event);
+    if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
+      const element = edits?.doubleClick(event, hitOverlay);
+      if (element) { selected = [element]; schedule(); report(); swallow(event); return; }
     }
+    if (hitOverlay) return;
     event.preventDefault();
     event.stopPropagation();
   }
