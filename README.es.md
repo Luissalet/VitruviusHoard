@@ -43,6 +43,7 @@ La herramienta `render_preview` abre URL públicas o de bucle local y archivos H
 
 ### Proyectos de aplicación e instrumentos
 - Proyectos de código de aplicación con plantillas, acciones tipadas, vistas previas locales propias, comprobador funcional de páginas y exportación autónoma. Los elementos de la vista previa enlazan con su fuente HTML y admiten edición con comprobación de revisión y deshacer. Véase [docs/APP_PROJECTS.md](docs/APP_PROJECTS.md). El puente del App Dock permite al agente leer la vista previa abierta y actuar con un cursor con nombre. Véase [docs/APP_CANVAS.md](docs/APP_CANVAS.md).
+- La vista previa abierta se actualiza al editar o deshacer cambios en el código y resalta brevemente los elementos modificados.
 - Fábrica de instrumentos: una especificación tipada de entradas, fórmulas y salidas se convierte en un proyecto de aplicación con pruebas generadas y una exportación autónoma solo con la biblioteca estándar, más un explicador. Véase [docs/INSTRUMENTS.md](docs/INSTRUMENTS.md).
 - Comprobador de protocolos: explora todos los entrelazados de un protocolo pequeño y acotado, comprueba invariantes e interbloqueos y devuelve el contraejemplo más corto con un archivo pytest que lo reproduce.
 

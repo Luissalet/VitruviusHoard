@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
 from .app_preview import PreviewProxy
+from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
 from .app_source_map import SourceMapError, edit_source, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
@@ -155,6 +156,7 @@ class AppProjects:
         self.proxies = {}
         self.host_port = host_port
         self.canvas = CanvasSessions()
+        self.revision_events = RevisionEvents()
 
     def _directory(self, id):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
@@ -298,8 +300,24 @@ class AppProjects:
                 if conflicts:
                     raise ValueError("Project files changed: " + ", ".join(conflicts) + "; read their current source before applying edits")
             merged = {**current["files"], **files}
+            if merged == current["files"]:
+                return current
             saved = self._save(self._directory(id), self._index(current), merged)
-            return {**saved, "undo": self._undo_call(saved, current["revision"])} if saved["revision"] != current["revision"] else saved
+            self.revision_events.publish(id, revision_change(current, saved))
+            return {**saved, "undo": self._undo_call(saved, current["revision"])}
+
+    def revision_cursor(self, id, baseline):
+        """Read current source and the corresponding subscription cursor atomically."""
+        with self.lock:
+            current = self.get(id)
+            change = None
+            if baseline and baseline != current["revision"]:
+                try:
+                    previous = self.get(id, baseline)
+                except LookupError:
+                    previous = None
+                change = revision_change(previous, current, baseline=baseline)
+            return self.revision_events.sequence, current["revision"], change
 
     @staticmethod
     def _index(project):
@@ -316,10 +334,13 @@ class AppProjects:
                     raise ValueError("The application has retained edits")
                 self.stop(id)
                 (root / "archived").touch()
+                self.revision_events.close_project(id)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            self.stop(id)
-            return self._save(root, self._index(current), previous["files"])
+            saved = self._save(root, self._index(current), previous["files"])
+            if saved["revision"] != current["revision"]:
+                self.revision_events.publish(id, revision_change(current, saved))
+            return saved
 
     def status(self, id):
         item = self.processes.get(id)
@@ -441,5 +462,6 @@ class AppProjects:
             return {"id": id, "revision": project["selected_revision"], "source_sha256": project["source_sha256"], "path": str(out), "sha256": hashlib.sha256(out.read_bytes()).hexdigest(), "includes_data": actual_data}
 
     def close(self):
+        self.revision_events.close()
         for id in list(self.processes):
             self.stop(id)

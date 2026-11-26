@@ -2,7 +2,7 @@
 
 ## App project canvas
 
-Use `app_project_canvas_view` to read the project preview open in Applications and `app_project_canvas_act` to interact through its controls with a named cursor. With no open canvas, the tools report how to open it in Applications. The same bridge runs inside the project frame when Vitruvius is docked. Standalone exports run their own source without the canvas bridge. See [docs/APP_CANVAS.md](docs/APP_CANVAS.md).
+Use `app_project_canvas_view` to read the project preview open in Applications and `app_project_canvas_act` to interact through its controls with a named cursor. With no open canvas, the tools report how to open it in Applications. The same bridge runs inside the project frame when Vitruvius is docked. For an annotated element, use `app_project_source_count` to check how many elements share its source and `app_project_edit_source` with the served revision to edit literal text, attributes or classes by position. The open preview refreshes and briefly outlines the change, and the edit returns an undo call. Standalone exports run their saved source without preview markup or scripts. See [the canvas contract](docs/APP_CANVAS.md) and [the source editing workflow](docs/APP_PROJECTS.md).
 
 ## Web guides and craft library
 
