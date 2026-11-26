@@ -212,12 +212,14 @@
     const originals = [element, ...element.querySelectorAll('*')].slice(0, 80);
     const copies = [clone, ...clone.querySelectorAll('*')];
     const omitted = [];
+    let root = clone; // the element being clipped: it may itself be the picture, which is then swapped like any other
+    const swap = (target, replacement) => { if (target === root) root = replacement; else target.replaceWith(replacement); };
     const leaveOut = (original, target, why) => {
       omitted.push(`${tagOf(original)} ${(original.currentSrc || original.getAttribute('src') || '').slice(0, 80)}: ${why}`.trim());
       const box = original.getBoundingClientRect();
       const hole = document.createElement('span');
       hole.setAttribute('style', `display:inline-block;width:${Math.round(box.width)}px;height:${Math.round(box.height)}px`);
-      if (target !== clone) target.replaceWith(hole);
+      swap(target, hole);
     };
     for (let index = 0; index < originals.length; index++) {
       const original = originals[index]; const target = copies[index];
@@ -234,7 +236,7 @@
           const picture = document.createElement('img');
           picture.setAttribute('src', data); picture.setAttribute('alt', original.getAttribute('alt') || '');
           picture.setAttribute('style', style + `;width:${Math.round(box.width)}px;height:${Math.round(box.height)}px`);
-          if (target !== clone) target.replaceWith(picture);
+          swap(target, picture);
           continue;
         }
         leaveOut(original, target, loaded ? 'not readable (another origin)' : 'not loaded');
@@ -251,7 +253,7 @@
       target.setAttribute('style', style);
     }
     copies.slice(80).forEach(extra => extra.remove());
-    const markup = new XMLSerializer().serializeToString(clone);
+    const markup = new XMLSerializer().serializeToString(root);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${Math.ceil(r.width)} ${Math.ceil(r.height)}"><foreignObject x="0" y="0" width="${Math.ceil(r.width)}" height="${Math.ceil(r.height)}">${markup}</foreignObject></svg>`;
     const image = new Image();
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
