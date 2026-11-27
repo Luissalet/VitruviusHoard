@@ -1313,6 +1313,34 @@ def _disabled(page: Any, selector: str) -> bool:
         return False
 
 
+def _covering_label_input(page: Any, selector: str) -> Any:
+    """Find the enabled native control that receives a click on its own label."""
+    with contextlib.suppress(Exception):
+        target = page.query_selector(selector)
+        if target is None:
+            return None
+        try:
+            hit = target.evaluate_handle("""el => {
+                const control = el.closest('label')?.control;
+                if (control?.localName !== 'input' || control === el ||
+                    !['radio', 'checkbox'].includes(control.type) ||
+                    control.matches(':disabled') || control.closest('[aria-disabled="true"]'))
+                    return null;
+                const rect = el.getBoundingClientRect();
+                if (rect.width && rect.height &&
+                    document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === control)
+                    return control;
+                return null;
+            }""")
+        finally:
+            target.dispose()
+        control = hit.as_element()
+        if control is None:
+            hit.dispose()
+        return control
+    return None
+
+
 #: Where a slider sits and how far it can go, so the act can move it the
 #: whole way rather than to a number somebody guessed.
 _REACH_JS = """(sel) => {
@@ -1347,7 +1375,7 @@ def _slide(page: Any, selector: str, timeout: float) -> None:
 
 def perform(page: Any, acts: Sequence[Dict[str, str]],
             timeout: float = 4000, *, on_act=None, navigated=None,
-            settle_ms: int = 500) -> Tuple[List[str], List[str]]:
+            settle_ms: int = 500, automatic_labels: frozenset[str] = frozenset()) -> Tuple[List[str], List[str]]:
     """Do each act in order. Returns what could not be done, and what was off.
 
     A target may carry `@x,y` to name a point as a fraction of the element's
@@ -1374,7 +1402,16 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
                         # Allow a control still mounting on the current page,
                         # with one actionability timeout for either spelling.
                         selector = sel if sel.startswith(("#", ".", "[")) else selector
-                    page.click(selector, timeout=timeout, **_where(page, selector, spot))
+                    native = (_covering_label_input(page, selector)
+                              if verb == "click" and not spot and sel in automatic_labels else None)
+                    if native is None:
+                        page.click(selector, timeout=timeout, **_where(page, selector, spot))
+                    else:
+                        try:
+                            native.click(timeout=timeout)
+                        finally:
+                            with contextlib.suppress(Exception):
+                                native.dispose()
                 elif verb == "press":
                     page.keyboard.press(arg)
                 elif verb == "focus":

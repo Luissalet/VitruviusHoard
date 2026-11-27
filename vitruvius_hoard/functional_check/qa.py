@@ -37,7 +37,7 @@ LOG = logging.getLogger(__name__)
 #: How a case came out. ``None`` means *could not tell*: no browser, or a
 #: harness that died partway. It must never read as a failure, because recording a
 #: check that did not happen as one that failed sends a repair after it.
-PASSED, FAILED, UNKNOWN = "passed", "failed", "unknown"
+PASSED, FAILED, UNKNOWN, BLOCKED = "passed", "failed", "unknown", "blocked"
 
 
 @dataclass
@@ -68,9 +68,9 @@ class Result:
         A run of forty cases with two failures is a wall of identical lines,
         and colour is what makes the two visible without reading any of them.
         """
-        mark = {PASSED: "ok", FAILED: "FAILED", UNKNOWN: "not checked"}
+        mark = {PASSED: "ok", FAILED: "FAILED", UNKNOWN: "not checked", BLOCKED: "blocked"}
         tone = {PASSED: tint.GREEN, FAILED: tint.RED + tint.BOLD,
-                UNKNOWN: tint.YELLOW}[self.outcome]
+                UNKNOWN: tint.YELLOW, BLOCKED: tint.YELLOW}[self.outcome]
         line = (tint.paint(self.case.id, tint.DIM, on=colour) + " "
                 + tint.paint(f"[{mark[self.outcome]}]", tone, on=colour) + " "
                 + tint.paint(self.case.what,
@@ -336,6 +336,10 @@ class QA:
         return [r for r in self.results.values() if r.outcome == UNKNOWN]
 
     @property
+    def blocked(self) -> List[Result]:
+        return [r for r in self.results.values() if r.outcome == BLOCKED]
+
+    @property
     def works(self) -> bool:
         """Whether every case that could be carried out came out right."""
         return not any(r.failed for r in self.results.values())
@@ -343,13 +347,14 @@ class QA:
     def summary(self, colour: bool = False) -> str:
         """The line that says what was actually tested. Never a task count."""
         total = len(self.plan)
-        ran = sum(1 for r in self.results.values() if r.outcome != UNKNOWN)
+        ran = sum(1 for r in self.results.values() if r.outcome in (PASSED, FAILED))
         ok = sum(1 for r in self.results.values() if r.outcome == PASSED)
         bad = sum(1 for r in self.results.values() if r.failed)
         failed = tint.paint(f"{bad} failed", tint.RED + tint.BOLD,
                             on=colour and bool(bad))
         return (f"{total} case(s) planned, {ran} carried out, "
                 f"{ok} passed, {failed}"
+                + (f", {len(self.blocked)} blocked" if self.blocked else "")
                 + (f", {len(self.fixed)} fixed on the way" if self.fixed else "")
                 + (f", {len(self.gave_up)} could not be repaired"
                    if self.gave_up else ""))

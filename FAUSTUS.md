@@ -16,6 +16,8 @@ The Canvas panel also lists the active page’s elements and open comments. The 
 
 For tool results with full source contents, pass `include_files: true` to `app_project_create`, `app_project_get` or `app_project_edit_source`. The default receipts include project and revision IDs, preview status and file metadata. Use `detail: true` on `app_project_render` when you need the full lint findings, metrics and browser probe.
 
+`page_check` reports actions intercepted by the read-only preview in `blocked_cases` with their IDs, descriptions and requests. When it reaches its time limit after planning, it also lists pending and inconclusive cases in `unchecked_cases`. `stopped_at` identifies where the check stopped.
+
 ## App project data
 
 Use `app_project_create` with `files` to create a custom project with a `vitruvius-app/v2` specification. `app_project_call` reads the schema and collection records, runs declared actions in SQLite and returns an undo call on success. Pass the same `request_key` when retrying the same confirmed action. See [the collection schema and routes](docs/APP_PROJECTS.md#collections-and-declared-actions).

@@ -6,6 +6,6 @@ The measuring, planning, execution and report core is maintained inside Vitruviu
 
 Inputs can be HTML, a URL, a local page or a saved render. The derived cases describe observable behavior. Optional `criteria` add explicit requested outcomes with `id`, `what`, `acts`, `expect` and `control`: `expect.want` requires visible text, `expect.unchanged` checks stable state and `expect.painted` checks canvas output. Case origins remain explicit. A counter that is supposed to increase can therefore fail when its button does nothing, even though a generic coverage case cannot infer that requirement.
 
-Results include measured controls, executed cases, failures and an unchecked count. Unchecked cases do not produce a successful `works` verdict. A successful run proves only the reported cases; automatic coverage alone cannot establish every control's intended behavior. No model generates or grades these cases.
+Results include measured controls, executed cases, failures and counts for unchecked and blocked cases. A case is blocked when the read-only preview intercepts a write from its action. A successful `works` verdict requires every case to pass. Automatic coverage measures observable behaviour. Use explicit criteria to check intended behaviour. No model generates or grades these cases.
 
 The worker runs in the existing process boundary and retains the prior timeout, source recovery and UI flow. Caller source files remain unchanged. Explicit criteria are stored in the Hoard's data directory, including when the checked page lives elsewhere.

@@ -34,14 +34,14 @@ def main():
     criteria = json.loads(args.criteria.read_text(encoding="utf-8")) if args.criteria else []
     cases = [Case(**{**row, "origin": "criterion"}) for row in criteria]
     completed = {}
-    planned_count = 0
+    planned_cases = []
     startup_writes = []
     deadline = time.monotonic() + args.budget if args.budget else float("inf")
 
-    def checkpoint(stage, *, case=None, result=None, action=None, planned=None, startup_blocked_writes=None):
-        nonlocal planned_count, startup_writes
-        if planned is not None:
-            planned_count = planned
+    def checkpoint(stage, *, case=None, result=None, action=None, plan=None, startup_blocked_writes=None):
+        nonlocal planned_cases, startup_writes
+        if plan is not None:
+            planned_cases = [{"id": case.id, "what": case.what} for case in plan]
         if startup_blocked_writes is not None:
             startup_writes = startup_blocked_writes
         if result is not None:
@@ -51,7 +51,8 @@ def main():
             position.update(case_id=case.id, what=case.what)
         if action is not None:
             position["action"] = action
-        data = {"stopped_at": position, "planned": planned_count, "cases": list(completed.values()),
+        data = {"stopped_at": position, "planned": len(planned_cases), "plan": planned_cases,
+                "cases": list(completed.values()),
                 "startup_blocked_writes": startup_writes}
         scratch = args.progress.with_suffix(".tmp")
         scratch.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
@@ -68,7 +69,9 @@ def main():
     payload = {
         "engine": "Vitruvius page checker", "format": "vitruvius-page-check/v1",
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),
-        "failed": sum(row.failed for row in result.results.values()), "works": result.works and not result.unchecked,
+        "failed": sum(row.failed for row in result.results.values()),
+        "works": result.works and not (result.unchecked or result.blocked),
+        "blocked": len(result.blocked),
         "unchecked": len(result.unchecked),
         "startup_blocked_writes": result.startup_blocked_writes,
         "surface": [{"kind": row.kind, "selector": row.selector, "label": row.label, "enabled": row.enabled} for row in result.surface.controls] if result.surface else [],

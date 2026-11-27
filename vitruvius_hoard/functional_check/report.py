@@ -103,10 +103,10 @@ footer a { color: inherit; }
 
 def _case_html(result: Any, shots_dir: str) -> str:
     """One case, open by default when it failed."""
-    from vitruvius_hoard.functional_check.qa import FAILED, PASSED
+    from vitruvius_hoard.functional_check.qa import BLOCKED, FAILED, PASSED
 
     kind = {PASSED: "ok", FAILED: "bad"}.get(result.outcome, "unknown")
-    word = {PASSED: "pass", FAILED: "fail"}.get(result.outcome, "not checked")
+    word = {PASSED: "pass", FAILED: "fail", BLOCKED: "blocked"}.get(result.outcome, "not checked")
     case = result.case
 
     acts = "".join(
@@ -137,7 +137,7 @@ def _case_html(result: Any, shots_dir: str) -> str:
 def write(run: Any, where: str | Path, folder: str = "",
           shots_dir: str = "shots") -> Path:
     """Write the report and hand back where it went."""
-    from vitruvius_hoard.functional_check.qa import PASSED
+    from vitruvius_hoard.functional_check.qa import BLOCKED, PASSED
 
     out = Path(where).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -145,12 +145,15 @@ def write(run: Any, where: str | Path, folder: str = "",
     results = [run.results.get(c.id) for c in run.plan]
     passed = sum(1 for r in results if r and r.outcome == PASSED)
     failed = sum(1 for r in results if r and r.failed)
-    other = len(run.plan) - passed - failed
+    blocked = sum(1 for r in results if r and r.outcome == BLOCKED)
+    other = len(run.plan) - passed - failed - blocked
 
     tally = (f'<span class="pill"><b>{len(run.plan)}</b> case(s)</span>'
              f'<span class="pill ok"><b>{passed}</b> passed</span>')
     if failed:
         tally += f'<span class="pill bad"><b>{failed}</b> failed</span>'
+    if blocked:
+        tally += f'<span class="pill"><b>{blocked}</b> blocked</span>'
     if other:
         tally += f'<span class="pill"><b>{other}</b> not checked</span>'
 

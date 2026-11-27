@@ -67,12 +67,16 @@ def prepare(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] =
 def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
     """The parts of an assay run worth handing to an assistant."""
     cases = run.get("cases") or []
-    failing = [c for c in cases if c.get("outcome") not in (None, "passed")]
+    failing = [c for c in cases if c.get("outcome") not in (None, "passed", "blocked")]
+    blocked = [{"id": c["id"], "what": c["what"], "detail": c.get("detail", "")}
+               for c in cases if c.get("outcome") == "blocked"]
     return {
-        "works": bool(run.get("works")),
+        "works": bool(run.get("works")) and not blocked,
         "planned": run.get("planned", len(cases)),
-        "passed": run.get("passed", len(cases) - len(failing)),
+        "passed": run.get("passed", len(cases) - len(failing) - len(blocked)),
         "failed": run.get("failed", len(failing)),
+        "blocked": len(blocked),
+        "blocked_cases": blocked,
         **({"startup_blocked_writes": run["startup_blocked_writes"]} if run.get("startup_blocked_writes") else {}),
         "surface": [{"kind": s.get("kind"), "label": s.get("label"), "selector": s.get("selector"), "enabled": s.get("enabled")}
                     for s in (run.get("surface") or [])][:80],
@@ -110,6 +114,14 @@ def _run_worker(cmd: list[str], *, timeout: float, cwd: Path, output: Path) -> t
 def _partial(progress: Path, run_id: str, t0: float) -> dict[str, Any]:
     snapshot = _read_progress(progress)
     finished = snapshot.get("cases", [])
+    finished_by_id = {case["id"]: case for case in finished}
+    unchecked_cases = []
+    for case in snapshot.get("plan", []):
+        observed = finished_by_id.get(case["id"])
+        if observed is None:
+            unchecked_cases.append(case)
+        elif observed["outcome"] == "unknown":
+            unchecked_cases.append({**case, "detail": observed["detail"]})
     result = reduce_run({**snapshot, "works": False,
                          "passed": sum(c["outcome"] == "passed" for c in finished),
                          "failed": sum(c["outcome"] == "failed" for c in finished)})
@@ -118,6 +130,7 @@ def _partial(progress: Path, run_id: str, t0: float) -> dict[str, Any]:
         "stopped_at": snapshot.get("stopped_at", {"stage": "start_worker"}),
         "unchecked": max(0, result["planned"] - len(finished))
         + sum(c["outcome"] == "unknown" for c in finished),
+        "unchecked_cases": unchecked_cases,
     })
     return result
 
@@ -174,7 +187,8 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
     result = reduce_run(payload)
     result["engine"] = payload.get("engine", "Vitruvius page checker")
     result["unchecked"] = int(payload.get("unchecked", 0))
-    result.update({"id": run_id, "ms": ms, "folder": str(folder), "entry": entry, "exit_code": code})
+    result.update({"id": run_id, "ms": ms, "folder": str(folder), "entry": entry,
+                   "exit_code": code, "timed_out": False})
     return result
 
 
