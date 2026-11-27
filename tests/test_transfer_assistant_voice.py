@@ -2,9 +2,17 @@ import base64
 import json
 from pathlib import Path
 
+import pytest
+
 from vitruvius_hoard.hoard_link.service_contracts import OWNERS
 from vitruvius_hoard.transfer_assistant import ASSETS, ENTRY, assistant_assets
 from vitruvius_hoard.transfer_assistant import voice
+
+
+@pytest.fixture(autouse=True)
+def use_family_transport(monkeypatch):
+    """These tests exercise the family registry with injected replies."""
+    monkeypatch.setattr(voice, "_direct_voice", lambda *_args, **_kwargs: None)
 
 
 def payload(response):

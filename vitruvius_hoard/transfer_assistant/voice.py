@@ -14,10 +14,12 @@ from time import monotonic
 from urllib.parse import parse_qs
 from uuid import uuid4
 
+import httpx
+
 from ..hoard_link import _famsvc, fam_media, family
 from ..hoard_link._hubclient import fetch
 from ..software.runtime import profile
-from .reply import ENGINE_ID, JOB_ID, VERSION as TTS_VERSION, ReplyError, ReplyRelay
+from .reply import ENGINE_ID, JOB_ID, VERSION as TTS_VERSION, ReplyError, ReplyRelay, _loopback_origin
 
 
 VOICE_PREFIX = "/__vitruvius_preview__/transfer-voice/"
@@ -58,6 +60,20 @@ def _speech_origin():
         return configured
     status, app = _hub_get(f"/api/apps/{DICTATION_APP}", timeout=0.8)
     return app.get("url") if status == 200 and isinstance(app, dict) else None
+
+
+def _direct_voice(path, arguments=None, *, timeout=2):
+    """Use the explicitly configured Boltagon for dictation as well as playback."""
+    origin = os.environ.get("CYRANO_URL")
+    if origin is None:
+        return None
+    try:
+        with httpx.Client(base_url=_loopback_origin(origin), timeout=timeout, trust_env=False) as client:
+            response = client.get(path) if arguments is None else client.post(path, json=arguments)
+            value = response.json() if response.status_code == 200 else None
+            return value if isinstance(value, dict) else None
+    except (ReplyError, ValueError, httpx.HTTPError):
+        return None
 
 
 def _tool_names(service):
@@ -185,6 +201,11 @@ class TransferVoice:
 
     def handle(self, method, route, query, content_type, body):
         if method == "GET" and route == "capabilities":
+            health = _direct_voice("/api/health", timeout=.8)
+            if health and health.get("service") == "cyrano-hoard":
+                stt = health.get("stt")
+                return _json(200, stt=isinstance(stt, dict) and bool(stt.get("warm")), tts=VOICE_MODE != "off",
+                             dictation=True, dictation_route="direct", dictation_name="Boltagon")
             common = self._common_dictation()
             tools = _tool_names("dictation")
             ready = tools.issuperset(DICTATION_TOOLS)
@@ -250,11 +271,19 @@ class TransferVoice:
         if preview and not self.partial.acquire(blocking=False):
             return _json(429, code="partial_busy")
         try:
+            window = 1 if preview else CYRANO_SPEECH_S
+            direct = _direct_voice("/api/speech/transcribe", {
+                "audio": {"mime_type": content_type, "data_base64": base64.b64encode(body).decode("ascii")},
+                "language": language, "initial_prompt": prompt, "vad": not preview,
+                "fallback": False, "timeout_s": window,
+            }, timeout=window + 1)
+            if direct is not None and isinstance(direct.get("text"), str):
+                return _json(200, text=direct["text"], final=not preview,
+                             provider=f"Boltagon · {direct.get('engine', 'STT')}", ms=direct.get("ms"))
             with TemporaryDirectory(prefix="transfer-voice-") as directory:
                 path = Path(directory) / ("utterance" + suffix)
                 path.write_bytes(body)
                 started = monotonic()
-                window = 1 if preview else CYRANO_SPEECH_S
                 value, _ = self._dictation_call(SPEECH_TOOL, {
                     "path": str(path), "language": language, "initial_prompt": prompt,
                     "vad": not preview, "fallback": False, "timeout_s": window,
@@ -295,6 +324,9 @@ class TransferVoice:
         if text is not None:
             if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000:
                 return _json(400, code="invalid_dictation")
+            direct = _direct_voice("/api/dictation/understand", {**options, "text": text})
+            if direct and direct.get("version") == DICTATION_VERSION:
+                return _json(200, **direct, dictation_route="direct", dictation_name="Boltagon")
             value, route = self._dictation_call("dictation_understand", {**options, "text": text}, timeout=2)
         else:
             if not isinstance(audio, dict) or not isinstance(audio.get("mime_type"), str):
@@ -308,13 +340,18 @@ class TransferVoice:
                 return _json(400, code="invalid_audio")
             if not 0 < len(raw) <= MAX_AUDIO:
                 return _json(400, code="invalid_audio")
+            direct = _direct_voice("/api/dictation/understand", {**options, "audio": audio},
+                                   timeout=DICTATION_AUDIO_S)
+            if direct and direct.get("version") == DICTATION_VERSION:
+                return _json(200, **direct, dictation_route="direct", dictation_name="Boltagon")
             with TemporaryDirectory(prefix="transfer-dictation-") as directory:
                 path = Path(directory) / ("utterance" + suffix)
                 path.write_bytes(raw)
                 value, route = self._dictation_call("dictation_audio", {**options, "path": str(path)}, timeout=DICTATION_AUDIO_S)
         if not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
             return _json(503, code="dictation_unavailable")
-        return _json(200, **{**value, "dictation_route": route, "dictation_name": _dictation_details()[0]})
+        return _json(200, **{**value, "dictation_route": route, "dictation_name": _dictation_details()[0],
+                             "dictation_fallback": "CYRANO_URL" in os.environ})
 
     @staticmethod
     def _speak(body):
