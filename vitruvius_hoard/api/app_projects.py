@@ -9,12 +9,13 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs, VoiceAssistantRevision,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
 from ..hoard_link.agentkit import AppError
 from ..preview_comments import list_comments
+from ..agent_tools import VoiceAssistantRevision
 
 router = APIRouter(prefix="/api/app-projects")
 
