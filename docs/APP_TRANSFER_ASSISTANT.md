@@ -30,6 +30,8 @@ The preview cursor points to each field as the assistant fills it, expires 2.5 s
 
 The `transfer-assistant:latency` event reports the input and output provider and milliseconds from the detected speech end to capture stop and final text, from final text to reply, from reply to audio and from speech end to audio playback. The event is local to the page. The preview does not save audio in the project. The microphone control source is shared with the local dictation service so its controls, pause detection and cancellation match across consumers.
 
+The conversation trace uses the dictation provider's display name from health or the Hub. Each preview caches that name and retains the last known name during temporary discovery failures. A fresh preview uses Boltagon when discovery cannot supply a name.
+
 ## Uso en castellano
 
 Abre la página de transferencias del proyecto y usa **Hablar** o el campo escrito. Indica una persona o un IBAN, el importe, el concepto y la cuenta de origen, en una frase o por pasos. Antes de confirmar, revisa el resumen y los campos rellenados. Puedes cambiar un dato con «no, mejor sesenta» o «a Marta no, a María», elegir uno de los contactos propuestos o pulsar **Cancelar**. Para ejecutar la transferencia simulada, confirma en el resumen o di «sí, confirmo» si el proyecto admite la confirmación por voz. El saldo se comprueba de nuevo al confirmar.
