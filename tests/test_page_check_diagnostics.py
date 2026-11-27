@@ -24,7 +24,7 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
         raise subprocess.TimeoutExpired(command, kwargs["timeout"])
 
     monkeypatch.setattr(assay, "available", lambda: True)
-    monkeypatch.setattr(assay.proc, "run", time_out)
+    monkeypatch.setattr(assay, "_run_worker", time_out)
     result = assay.run(tmp_path, html="<form></form>", timeout_s=15)
     assert result["timed_out"] is True
     assert result["works"] is False
@@ -39,7 +39,8 @@ def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeyp
     page = Mock()
     engine = Browser(tmp_path, "index.html", url=url)
     engine._engine = Mock()
-    engine._engine.new_page.return_value = page
+    engine._engine.new_context.return_value.new_page.return_value = page
+    page.query_selector.return_value = object()
     monkeypatch.setattr(browser, "settle", lambda *args, **kwargs: None)
     monkeypatch.setattr(browser, "answer_dialogs", lambda page: None)
 

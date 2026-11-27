@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import time
 
 # The owned worker is invoked by absolute path even when its cwd is the page.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -16,6 +17,10 @@ def case_row(row):
             "environment": row.case.environment}
 
 
+class _BudgetReached(BaseException):
+    """Unwind the browser even when a case handles ordinary driver errors."""
+
+
 def main():
     parser = argparse.ArgumentParser(description="Measure and exercise a local page in a real browser")
     parser.add_argument("folder")
@@ -24,12 +29,14 @@ def main():
     parser.add_argument("--criteria", type=Path)
     parser.add_argument("--url", help="Read-only loopback preview to check in place")
     parser.add_argument("--progress", type=Path)
+    parser.add_argument("--budget", type=float)
     args = parser.parse_args()
     criteria = json.loads(args.criteria.read_text(encoding="utf-8")) if args.criteria else []
     cases = [Case(**{**row, "origin": "criterion"}) for row in criteria]
     completed = {}
     planned_count = 0
     startup_writes = []
+    deadline = time.monotonic() + args.budget if args.budget else float("inf")
 
     def checkpoint(stage, *, case=None, result=None, action=None, planned=None, startup_blocked_writes=None):
         nonlocal planned_count, startup_writes
@@ -50,8 +57,14 @@ def main():
         scratch.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         scratch.replace(args.progress)
 
-    result = check(args.folder, args.entry, criteria=cases, url=args.url,
-                   on_progress=checkpoint if args.progress else None)
+        if time.monotonic() >= deadline:
+            raise _BudgetReached
+
+    try:
+        result = check(args.folder, args.entry, criteria=cases, url=args.url,
+                       on_progress=checkpoint if args.progress else None)
+    except _BudgetReached:
+        return 124
     payload = {
         "engine": "Vitruvius page checker", "format": "vitruvius-page-check/v1",
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),
