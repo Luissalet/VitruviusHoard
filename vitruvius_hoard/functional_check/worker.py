@@ -69,7 +69,9 @@ def main():
     payload = {
         "engine": "Vitruvius page checker", "format": "vitruvius-page-check/v1",
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),
-        "failed": sum(row.failed for row in result.results.values()), "works": result.works and not result.unchecked,
+        "failed": sum(row.failed for row in result.results.values()),
+        "works": result.works and not (result.unchecked or result.blocked),
+        "blocked": len(result.blocked),
         "unchecked": len(result.unchecked),
         "startup_blocked_writes": result.startup_blocked_writes,
         "surface": [{"kind": row.kind, "selector": row.selector, "label": row.label, "enabled": row.enabled} for row in result.surface.controls] if result.surface else [],

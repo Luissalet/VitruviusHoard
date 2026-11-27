@@ -22,7 +22,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 from vitruvius_hoard.functional_check import browser
-from vitruvius_hoard.functional_check.qa import FAILED, PASSED, UNKNOWN, QA, Result
+from vitruvius_hoard.functional_check.qa import BLOCKED, FAILED, PASSED, UNKNOWN, QA, Result
 from vitruvius_hoard.functional_check.surface import Case, Surface, from_page, plan
 
 #: How long to keep watching a page whose surface never stops changing. This
@@ -341,7 +341,7 @@ class Browser:
                 with contextlib.suppress(Exception):
                     context.close()
 
-    def perform(self, page, acts, *, on_act=None, settle_ms=150, automatic_labels=None):
+    def perform(self, page, acts, *, on_act=None, settle_ms=150, automatic_labels=frozenset()):
         def before_action(action):
             if action["verb"] != "wait" and not self._acting:
                 self._acting = True
@@ -813,8 +813,8 @@ def check(folder: str | Path, entry: str = "index.html",
         for n, case in enumerate(cases, 1):
             case.id = f"C{n:03d}"
         progress("plan", plan=cases, startup_blocked_writes=engine.startup_blocked_writes)
-        automatic_labels = {control.selector: {} for control in opened.surface.controls
-                            if control.kind == "cell" and control.enabled}
+        automatic_labels = frozenset(control.selector for control in opened.surface.controls
+                                     if control.kind == "cell" and control.enabled)
         # Nothing to press, type into or draw on. A page like that has only
         # one thing to say for itself, so an empty one is empty for good.
         nothing_to_try = not (opened.surface.operable
@@ -1159,7 +1159,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 result = Result(case=case, outcome=UNKNOWN, detail=f"could not be carried out: {error}")
             if engine.blocked_writes and (case.acts or result.outcome != PASSED):
                 writes = ", ".join(dict.fromkeys(engine.blocked_writes))[:320]
-                result.outcome = UNKNOWN
+                result.outcome = BLOCKED
                 result.detail = f"The read-only preview blocked {writes}."
                 blocked_criterion = blocked_criterion or case.origin == "criterion"
             progress("case_finished", case=case, result=result)
@@ -1721,7 +1721,7 @@ def _nothing_drawn(run: QA, drew: bool, opened: Opened) -> None:
     if drew or opened.unreached or not opened.surface.canvases:
         return
     acted = [r for r in run.results.values()
-             if r.case.acts and r.outcome != UNKNOWN]
+             if r.case.acts and r.outcome in (PASSED, FAILED)]
     if len(acted) < 2 or any(r.failed for r in run.results.values()):
         return
     case = Case(id="C000", what="something is drawn into the canvas",
@@ -1775,7 +1775,7 @@ def _nothing_responds(run: QA, answered: set, engine: Browser,
     if unreached:
         return
     acted = [r for r in run.results.values()
-             if r.case.acts and r.outcome != UNKNOWN]
+             if r.case.acts and r.outcome in (PASSED, FAILED)]
     # **Counted by control, not by case.** This is a verdict on a page that
     # offered several things and answered none of them, and one control
     # pressed twice is one thing pressed twice. A sortable table whose only

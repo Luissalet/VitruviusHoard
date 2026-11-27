@@ -180,12 +180,13 @@ function AssayView({ assay, t }) {
       </div>
     );
   }
+  const blockedOnly = assay.blocked > 0 && !assay.failed && !assay.unchecked;
   return (
     <div className="panel mt-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-[13px] font-semibold">{t("assay_title")}</h3>
-        <span className={`chip ${assay.works ? "chip-ok" : "chip-danger"}`}>
-          {assay.unchecked ? t("assay_unchecked") : assay.works ? t("assay_works") : t("assay_broken")} · {assay.passed}/{assay.planned}
+        <span className={`chip ${assay.works ? "chip-ok" : blockedOnly ? "" : "chip-danger"}`}>
+          {assay.unchecked ? t("assay_unchecked") : blockedOnly ? t("assay_blocked") : assay.works ? t("assay_works") : t("assay_broken")} · {assay.passed}/{assay.planned}
         </span>
       </div>
       <div className="help mt-1">{t("assay_surface")}: {(assay.surface || []).map((s) => `${s.kind} “${s.label || s.selector}”`).join(", ") || "—"}</div>
@@ -199,6 +200,20 @@ function AssayView({ assay, t }) {
               </div>
               {c.detail && <div className="text-[12px] mt-1" style={{ color: "var(--muted)" }}>{c.detail}</div>}
               {!!c.acts?.length && <div className="mono mt-1" style={{ color: "var(--muted)" }}>{JSON.stringify(c.acts)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      {!!assay.blocked_cases?.length && (
+        <div className="flex flex-col gap-2 mt-3">
+          <div className="help">{assay.blocked} {t("assay_blocked")}</div>
+          {assay.blocked_cases.map((c) => (
+            <div key={c.id} className="card">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[13px]">{c.what}</span>
+                <span className="chip">{c.id}</span>
+              </div>
+              {c.detail && <div className="text-[12px] mt-1" style={{ color: "var(--muted)" }}>{c.detail}</div>}
             </div>
           ))}
         </div>

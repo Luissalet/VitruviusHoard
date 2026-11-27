@@ -1313,47 +1313,32 @@ def _disabled(page: Any, selector: str) -> bool:
         return False
 
 
-def _covering_label_input(page: Any, selector: str) -> Optional[str]:
-    """Identify a transparent native control covering the text of its own label."""
+def _covering_label_input(page: Any, selector: str) -> Any:
+    """Find the enabled native control that receives a click on its own label."""
     with contextlib.suppress(Exception):
-        return page.eval_on_selector(selector, """el => {
-            const control = el.closest('label')?.control;
-            if (!control?.id || control === el || !['radio', 'checkbox'].includes(control.type))
+        target = page.query_selector(selector)
+        if target is None:
+            return None
+        try:
+            hit = target.evaluate_handle("""el => {
+                const control = el.closest('label')?.control;
+                if (control?.localName !== 'input' || control === el ||
+                    !['radio', 'checkbox'].includes(control.type) ||
+                    control.matches(':disabled') || control.closest('[aria-disabled="true"]'))
+                    return null;
+                const rect = el.getBoundingClientRect();
+                if (rect.width && rect.height &&
+                    document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === control)
+                    return control;
                 return null;
-            const style = getComputedStyle(control);
-            if (style.opacity !== '0' || !['absolute', 'fixed'].includes(style.position))
-                return null;
-            const rect = el.getBoundingClientRect();
-            if (rect.width && rect.height &&
-                document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === control)
-                return control.id;
-            return null;
-        }""", strict=False)
+            }""")
+        finally:
+            target.dispose()
+        control = hit.as_element()
+        if control is None:
+            hit.dispose()
+        return control
     return None
-
-
-def _click(page, selector, spot, timeout, label_obstructions):
-    if label_obstructions is None or spot:
-        page.click(selector, timeout=timeout, **_where(page, selector, spot))
-        return
-
-    from playwright.sync_api import TimeoutError
-
-    key = (page.url, selector)
-    cover = _covering_label_input(page, selector)
-    if cover and label_obstructions.get(key) == cover:
-        raise ValueError(f"target is covered by its own input #{cover}")
-    try:
-        page.click(selector, timeout=timeout, **_where(page, selector))
-    except TimeoutError as error:
-        if cover:
-            # Playwright may scroll the text under a sticky header during the
-            # attempt. It still records the original native hit in the log.
-            intercepted = any(f'id="{cover}"' in line and "intercepts pointer events" in line
-                              for line in str(error).splitlines())
-            if intercepted or _covering_label_input(page, selector) == cover:
-                label_obstructions[key] = cover
-        raise
 
 
 #: Where a slider sits and how far it can go, so the act can move it the
@@ -1390,7 +1375,7 @@ def _slide(page: Any, selector: str, timeout: float) -> None:
 
 def perform(page: Any, acts: Sequence[Dict[str, str]],
             timeout: float = 4000, *, on_act=None, navigated=None,
-            settle_ms: int = 500, automatic_labels=None) -> Tuple[List[str], List[str]]:
+            settle_ms: int = 500, automatic_labels: frozenset[str] = frozenset()) -> Tuple[List[str], List[str]]:
     """Do each act in order. Returns what could not be done, and what was off.
 
     A target may carry `@x,y` to name a point as a fraction of the element's
@@ -1417,8 +1402,16 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
                         # Allow a control still mounting on the current page,
                         # with one actionability timeout for either spelling.
                         selector = sel if sel.startswith(("#", ".", "[")) else selector
-                    obstructions = automatic_labels.get(sel) if automatic_labels is not None else None
-                    _click(page, selector, spot, timeout, obstructions)
+                    native = (_covering_label_input(page, selector)
+                              if verb == "click" and not spot and sel in automatic_labels else None)
+                    if native is None:
+                        page.click(selector, timeout=timeout, **_where(page, selector, spot))
+                    else:
+                        try:
+                            native.click(timeout=timeout)
+                        finally:
+                            with contextlib.suppress(Exception):
+                                native.dispose()
                 elif verb == "press":
                     page.keyboard.press(arg)
                 elif verb == "focus":

@@ -67,12 +67,16 @@ def prepare(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] =
 def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
     """The parts of an assay run worth handing to an assistant."""
     cases = run.get("cases") or []
-    failing = [c for c in cases if c.get("outcome") not in (None, "passed")]
+    failing = [c for c in cases if c.get("outcome") not in (None, "passed", "blocked")]
+    blocked = [{"id": c["id"], "what": c["what"], "detail": c.get("detail", "")}
+               for c in cases if c.get("outcome") == "blocked"]
     return {
-        "works": bool(run.get("works")),
+        "works": bool(run.get("works")) and not blocked,
         "planned": run.get("planned", len(cases)),
-        "passed": run.get("passed", len(cases) - len(failing)),
+        "passed": run.get("passed", len(cases) - len(failing) - len(blocked)),
         "failed": run.get("failed", len(failing)),
+        "blocked": len(blocked),
+        "blocked_cases": blocked,
         **({"startup_blocked_writes": run["startup_blocked_writes"]} if run.get("startup_blocked_writes") else {}),
         "surface": [{"kind": s.get("kind"), "label": s.get("label"), "selector": s.get("selector"), "enabled": s.get("enabled")}
                     for s in (run.get("surface") or [])][:80],

@@ -7,7 +7,8 @@ from unittest.mock import Mock
 from vitruvius_hoard import assay
 from vitruvius_hoard.agent_tools import call_tool
 from vitruvius_hoard.functional_check import browser
-from vitruvius_hoard.functional_check.qa import UNKNOWN
+from vitruvius_hoard.functional_check.qa import BLOCKED, PASSED, UNKNOWN
+from vitruvius_hoard.functional_check.report import write as write_report
 from vitruvius_hoard.functional_check.run import Browser, check, judge
 from vitruvius_hoard.functional_check.surface import Case
 
@@ -16,21 +17,24 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
     def time_out(command, **kwargs):
         progress = Path(command[command.index("--progress") + 1])
         progress.write_text(json.dumps({
-            "planned": 4,
+            "planned": 5,
             "plan": [
                 {"id": "C001", "what": "Show validation"},
                 {"id": "C002", "what": "Save a reservation"},
                 {"id": "C003", "what": "Read availability"},
                 {"id": "C004", "what": "Clear the form"},
+                {"id": "C005", "what": "Check the confirmation"},
             ],
             "startup_blocked_writes": ["POST /startup-ping"],
             "cases": [
                 {"id": "C001", "what": "Show validation", "outcome": "passed"},
-                {"id": "C002", "what": "Save a reservation", "outcome": "unknown",
+                {"id": "C002", "what": "Save a reservation", "outcome": "blocked",
                  "detail": "The preview blocked the write."},
+                {"id": "C003", "what": "Read availability", "outcome": "unknown",
+                 "detail": "The control could not be read."},
             ],
-            "stopped_at": {"stage": "perform_action", "case_id": "C003",
-                           "what": "Read availability", "action": {"verb": "click", "target": "#read"}},
+            "stopped_at": {"stage": "perform_action", "case_id": "C004",
+                           "what": "Clear the form", "action": {"verb": "click", "target": "#clear"}},
         }), encoding="utf-8")
         raise subprocess.TimeoutExpired(command, kwargs["timeout"])
 
@@ -40,11 +44,16 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
     assert result["timed_out"] is True
     assert result["works"] is False
     assert result["passed"] == 1 and result["failed"] == 0 and result["unchecked"] == 3
-    assert result["stopped_at"]["action"] == {"verb": "click", "target": "#read"}
-    assert result["unchecked_cases"] == [
+    assert result["blocked"] == 1
+    assert result["blocked_cases"] == [
         {"id": "C002", "what": "Save a reservation", "detail": "The preview blocked the write."},
-        {"id": "C003", "what": "Read availability"},
+    ]
+    assert result["failing"][0]["id"] == "C003"
+    assert result["stopped_at"]["action"] == {"verb": "click", "target": "#clear"}
+    assert result["unchecked_cases"] == [
+        {"id": "C003", "what": "Read availability", "detail": "The control could not be read."},
         {"id": "C004", "what": "Clear the form"},
+        {"id": "C005", "what": "Check the confirmation"},
     ]
     assert result["cases_sample"][0]["what"] == "Show validation"
     assert result["startup_blocked_writes"] == ["POST /startup-ping"]
@@ -53,16 +62,21 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
 def test_agent_retains_all_unchecked_cases_when_capping_large_results():
     missing = [{"id": f"C{index:03d}", "what": f"Check {index} " + "description " * 20}
                for index in range(100)]
+    blocked = [{"id": f"B{index:03d}", "what": "Write", "detail": "POST /reservation"}
+               for index in range(10)]
     services = SimpleNamespace(assay_page=lambda **_: {
         "timed_out": True,
         "unchecked": len(missing),
         "unchecked_cases": missing,
+        "blocked": len(blocked),
+        "blocked_cases": blocked,
         "cases_sample": [{"id": f"X{index:03d}", "detail": "details " * 100} for index in range(40)],
     })
 
     result = call_tool(services, "page_check", {"html": "<p>Page</p>"})
 
     assert result["unchecked_cases"] == missing
+    assert result["blocked_cases"] == blocked
     assert result["truncated"]["original_lengths"] == {"cases_sample": 40}
 
 
@@ -156,8 +170,14 @@ def test_background_timers_do_not_invalidate_visible_help_but_action_timers_do(t
         result = check(tmp_path, criteria=criteria, url=preview["url"])
         cases = {row.case.what: row for row in result.results.values()}
         assert cases["Show local help"].outcome == "passed"
-        assert cases["Save through the preview"].outcome == UNKNOWN
+        assert cases["Save through the preview"].outcome == BLOCKED
         assert "POST /reservations" in cases["Save through the preview"].detail
+        assert cases["Save through the preview"] in result.blocked
+        assert cases["Save through the preview"] not in result.unchecked
+        assert "[blocked]" in cases["Save through the preview"].render()
+        report = write_report(result, tmp_path / "check.html").read_text(encoding="utf-8")
+        assert '<b>1</b> blocked' in report
+        assert 'class="tag unknown">blocked<' in report
         assert set(result.startup_blocked_writes) == {
             "POST /startup-ping", "POST /startup-after-await", "POST /startup-status",
         }
@@ -186,58 +206,39 @@ def test_in_progress_fill_names_the_target_without_the_entered_value():
 
 
 
-def test_automatic_label_click_reuses_only_a_current_native_obstruction(tmp_path, monkeypatch):
+def test_automatic_label_click_exercises_the_enabled_covering_radio_twice(tmp_path):
     import pytest
 
     pytest.importorskip("playwright")
     (tmp_path / "index.html").write_text("""
         <label style="position:relative; display:inline-block; cursor:pointer">
-          <input id="option" type="radio" style="position:absolute; opacity:0; inset:0; width:100%; height:100%; margin:0">
+          <input type="radio" style="position:absolute; opacity:0; inset:0; width:100%; height:100%; margin:0"
+                 onclick="document.body.dataset.presses = +(document.body.dataset.presses || 0) + 1">
           <span id="text">One option</span>
         </label>
     """, encoding="utf-8")
     acts = [{"click": "#text"}]
-    automatic_labels = {"#text": {}}
+    automatic_labels = frozenset({"#text"})
     with Browser(tmp_path, "index.html") as engine, engine.open() as (page, *_):
-        click = Mock(wraps=page.click)
-        monkeypatch.setattr(page, "click", click)
-        first, _ = browser.perform(page, acts, timeout=350, settle_ms=0, automatic_labels=automatic_labels)
-        assert "Timeout" in first[0]
-        repeat, _ = browser.perform(page, acts, timeout=350, settle_ms=0, automatic_labels=automatic_labels)
-        assert "covered by its own input #option" in repeat[0]
-        assert click.call_count == 1
+        assert browser.perform(page, acts * 2, timeout=1000, settle_ms=0, automatic_labels=automatic_labels) == ([], [])
+        assert page.locator("input").is_checked()
+        assert page.locator("body").get_attribute("data-presses") == "2"
 
         explicit, _ = browser.perform(page, acts, timeout=350, settle_ms=0)
         assert "Timeout" in explicit[0]
-        assert click.call_count == 2
+        assert page.locator("body").get_attribute("data-presses") == "2"
 
-        page.locator("#option").evaluate("element => element.style.pointerEvents = 'none'")
-        uncovered, _ = browser.perform(page, acts, timeout=1000, settle_ms=0, automatic_labels=automatic_labels)
-        assert uncovered == []
-        assert click.call_count == 3
-        assert page.locator("#option").is_checked()
+        page.locator("input").evaluate("element => element.disabled = true")
+        assert browser._covering_label_input(page, "#text") is None
+        page.locator("input").evaluate("element => { element.disabled = false; element.style.pointerEvents = 'none'; }")
+        assert browser._covering_label_input(page, "#text") is None
+        assert browser.perform(page, acts, timeout=1000, settle_ms=0, automatic_labels=automatic_labels) == ([], [])
+        assert page.locator("body").get_attribute("data-presses") == "3"
 
     result = check(tmp_path)
     repeated = next(row for row in result.results.values() if row.case.what == "click One option twice")
-    assert repeated.outcome == UNKNOWN
-    assert "covered by its own input #option" in repeated.detail
-
-
-def test_automatic_label_remembers_interception_during_playwright_scroll(monkeypatch):
-    import pytest
-
-    playwright = pytest.importorskip("playwright.sync_api")
-    cover = Mock(side_effect=["option", None, None])
-    monkeypatch.setattr(browser, "_covering_label_input", cover)
-    page = Mock(url="http://127.0.0.1/controls")
-    page.click.side_effect = playwright.TimeoutError(
-        'Page.click: Timeout 4000ms exceeded.\n  - <input id="option"/> intercepts pointer events')
-    results = {}
-    for _ in range(2):
-        with pytest.raises(playwright.TimeoutError):
-            browser._click(page, "#text", "", 4000, results)
-    assert results == {(page.url, "#text"): "option"}
-    assert page.click.call_count == 2
+    assert repeated.outcome == PASSED
+    assert "the first press: changed the page; the second:" in repeated.evidence
 
 
 def test_navigation_link_is_pressed_once_and_missing_target_returns_immediately(tmp_path):
