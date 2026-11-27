@@ -241,6 +241,14 @@ class AppArchiveArgs(BaseModel):
     lang: Literal["en", "es"] = "en"
 
 
+class VoiceAssistantRevision(BaseModel):
+    expected_revision: str = Field(min_length=1, max_length=64, description="Current project source revision.")
+
+
+class AppVoiceAssistantRefreshArgs(VoiceAssistantRevision):
+    id: str = Field(min_length=1, max_length=64, description="Application project ID.")
+
+
 class AppUpdateArgs(BaseModel):
     id: str = ""
     files: dict[str, str]
@@ -903,6 +911,10 @@ TOOLS: list[Tool] = [
         AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
+    Tool("app_project_refresh_voice_assistant",
+         "Update embedded voice assistant assets with undo. Actualizar el asistente de voz incrustado con deshacer.",
+         AppVoiceAssistantRefreshArgs, ann(False, False, True),
+         lambda s, a: s.app_projects.refresh_voice_assistant(a.id, a.expected_revision)),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
     Tool("app_project_add_voice_assistant", "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",

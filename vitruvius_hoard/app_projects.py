@@ -29,6 +29,7 @@ from .app_source_map import SourceMapError, edit_source, first_changed_source, s
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
+from .transfer_assistant.embedded import embedded_assistant_assets
 from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
 from .transfer_assistant import FORM_ENTRY, form_assistant_files
 
@@ -424,6 +425,20 @@ class AppProjects:
             root = self.root / id
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
             return self._save(root, index, files, action="create", author=author)
+
+    def refresh_voice_assistant(self, id, expected_revision):
+        """Update the installed assistant bundles in one reversible source revision."""
+        with self.lock:
+            current = self.get(id)
+            if current["revision"] != expected_revision:
+                raise AppError("conflict", "Read the current project revision before refreshing the voice assistant",
+                               status=409, details={"revision": current["revision"]})
+            assets = embedded_assistant_assets(current["files"])
+            files = sorted(path for path, content in assets.items() if current["files"].get(path) != content)
+            if not files:
+                return {"id": id, "revision": expected_revision, "changed": False, "files": []}
+            saved = self.update(id, {path: assets[path] for path in files}, expected_revision)
+            return {"id": id, "revision": saved["revision"], "changed": True, "files": files, "undo": saved["undo"]}
 
     @staticmethod
     def _change_details(current, files, target=None, examples=None, tokens_id=None):

@@ -17,6 +17,7 @@ from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
 from ..hoard_link.agentkit import AppError
 from ..preview_comments import list_comments
+from ..agent_tools import VoiceAssistantRevision
 
 router = APIRouter(prefix="/api/app-projects")
 
@@ -137,6 +138,11 @@ def project_list(request: Request, archived: bool = False):
 @router.post("", status_code=201)
 def project_create(request: Request, body: AppCreateArgs):
     return execute(lambda: run_app_project_create(services(request), body, author={"kind": "person"}))
+
+
+@router.post("/{id}/voice-assistant/refresh")
+def project_refresh_voice_assistant(request: Request, id: str, body: VoiceAssistantRevision):
+    return execute(lambda: services(request).app_projects.refresh_voice_assistant(id, body.expected_revision))
 
 
 @router.get("/{id}")

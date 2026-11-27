@@ -12,6 +12,24 @@ The project exposes `GET /api/schema`, `GET /api/collections/accounts` and `GET 
 
 For a custom integration, set `data-transfer-assistant="manual"`, import `mountTransferAssistant` and pass the container with optional `language`, `loadContext`, `execute` and `onDraft` options. Use `onDraft` to switch a legacy form to the matching recipient mode before its fields are filled. The default language comes from the page. Use `es` for Spain Spanish or `en` for English. The inherited text styles and the CSS variables `--transfer-assistant-accent`, `--transfer-assistant-on-accent` and `--transfer-assistant-radius` match the project theme.
 
+## Update an embedded assistant / Actualizar un asistente incrustado
+
+Use `app_project_get` to read the current source revision. Then call
+`app_project_refresh_voice_assistant` with `{"id":"<project id>","expected_revision":"<current revision>"}`.
+It replaces the product assets for the assistants already embedded in the project and creates a source revision when
+a file changes. The page and its existing mount, configuration, action declarations and data are preserved. For forms
+created with `app_project_add_voice_assistant`, the same refresh keeps the configured selector, schema and submission policy.
+
+Open the returned revision with `app_project_preview` using `{"id":"<project id>","operation":"start","revision":"<new revision>"}`.
+Verify that the panel displays the full reply and, with voice available, starts playback while the reply streams. Run the
+returned `undo.tool` with its exact `undo.arguments` to restore the previous sources, then open the restored revision.
+An up-to-date assistant returns `changed: false` and leaves the revision unchanged.
+
+Lee la revisión vigente con `app_project_get` y pásala como `expected_revision` a
+`app_project_refresh_voice_assistant`. Abre la revisión que devuelve la herramienta y comprueba la respuesta escrita, el
+audio de Boltagon y la traza del turno. Para volver a la versión anterior, ejecuta la herramienta de `undo`
+con los argumentos de ese resultado y abre de nuevo la vista previa. La actualización conserva la página y los datos.
+
 ## Local audio
 
 Open the project preview on loopback to grant the microphone. The opt-in Applications iframe allows it from that preview origin. The microphone control starts capture on a click and stops when it detects a pause or when the user chooses **Finish**. It shows provisional transcription separately and only processes a final turn. Typing uses the same dialogue. The browser never invokes browser speech recognition.
@@ -22,7 +40,7 @@ The panel shows the full reply immediately and asks Boltagon to read that same t
 
 If the first audio is still pending at 1.5 seconds, the panel shows that the reply is available in writing while it continues to wait for audio. Late audio plays while that reply is current. A new turn supersedes the previous reply as soon as it is accepted, including while the previous turn is still being interpreted. Each voice request has a browser-generated identifier so the preview can cancel it before stream headers arrive or as soon as the worker sends its job receipt. Microphone capture and leaving the page also stop active playback. After an unavailable service or a change of engine, the reply remains available in writing. **Read reply aloud** replays the full current message. The exported project carries the written dialogue and the owned preview supplies audio.
 
-Set `VITRUVIUS_TRANSFER_VOICE_MODE=off` to keep replies in writing. Earlier saved assets use the fixed-phrase `/speak` route with the existing `cache-natural` or `piper` settings and the manifest in `<VITRUVIUS_PROFILE_DIR>/voice-cache` (or `VITRUVIUS_VOICE_CACHE`). To enable streaming in those projects, save the complete current `app_transfer_assistant_assets` result as a new project revision.
+Set `VITRUVIUS_TRANSFER_VOICE_MODE=off` to keep replies in writing. Earlier saved assets use the fixed-phrase `/speak` route with the existing `cache-natural` or `piper` settings and the manifest in `<VITRUVIUS_PROFILE_DIR>/voice-cache` (or `VITRUVIUS_VOICE_CACHE`). Use `app_project_refresh_voice_assistant` to enable streaming in those projects.
 
 Open **How this reply was processed** to see which services handled the latest turn, how long the recorded steps took and when the page fell back to local parsing or written replies.
 
