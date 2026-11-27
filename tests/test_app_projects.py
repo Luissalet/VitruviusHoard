@@ -259,3 +259,31 @@ def test_browser_fields_can_share_form_member_names(tmp_path):
                 browser.close()
     finally:
         projects.close()
+
+
+def test_revision_history_records_author_and_walks_back_without_reapplying_undone_source(client, services):
+    created = client.post("/api/app-projects", json={"name": "History"}).json()
+    id = created["id"]
+    route = f"/api/app-projects/{id}"
+    first = services.app_projects.update(id, {"pages/index.html": "<h1>First</h1>"}, created["revision"],
+                                         actor={"id": "editor", "name": "Editor"})
+    second = client.put(route, json={"files": {"pages/index.html": "<h1>Second</h1>"},
+                                     "expected_revision": first["revision"]}).json()
+    assert second["history"][-2]["author"] == {"kind": "agent", "id": "editor", "name": "Editor"}
+    assert second["history"][-1]["author"] == {"kind": "person"}
+
+    def undo(project):
+        return client.post(route + "/undo", json={"expected_revision": project["revision"],
+                           "expected_updated_ts": project["updated_ts"],
+                           "revision": project["history"][-1]["undo_revision"]})
+
+    assert undo(first).status_code == 400
+    restored = undo(second).json()
+    assert restored["revision"] == first["revision"]
+    assert restored["history"][-1]["action"] == "undo"
+    assert restored["history"][-1]["previous_revision"] == second["revision"]
+    assert restored["history"][-1]["undo_revision"] == created["revision"]
+    original = undo(restored).json()
+    assert original["revision"] == created["revision"]
+    assert original["history"][-1]["undo_revision"] is None
+    assert original["revisions"] == second["revisions"]

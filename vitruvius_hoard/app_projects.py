@@ -323,7 +323,7 @@ class AppProjects:
         return {"id": id, "revision": revision, "path": path, "vsrc": vsrc,
                 "same_vsrc_count": source_count(html, vsrc)}
 
-    def _save(self, root, index, files, *, before_commit=None):
+    def _save(self, root, index, files, *, before_commit=None, action="edit", author=None):
         destinations = set()
         for name, source in files.items():
             path = PurePosixPath(name)
@@ -354,19 +354,32 @@ class AppProjects:
             finally:
                 if stage.exists() and stage.resolve().parent == (root / "revisions").resolve():
                     shutil.rmtree(stage)
-        updated = {**index, "name": spec["name"], "revision": revision, "updated_ts": time.time(), "revisions": list(dict.fromkeys(index.get("revisions", []) + [revision]))}
+        now = time.time()
+        previous = index.get("revision")
+        history = index.get("history")
+        if history is None:
+            history = [{"revision": saved, "action": "legacy"} for saved in index.get("revisions", [])]
+        if revision != previous:
+            undo_revision = previous
+            if action == "undo":
+                restored = next((entry for entry in reversed(history) if entry["revision"] == revision), {})
+                undo_revision = restored.get("undo_revision")
+            history = [*history, {"revision": revision, "previous_revision": previous, "ts": now,
+                                  "undo_revision": undo_revision, "action": action, "author": author}]
+        updated = {**index, "name": spec["name"], "revision": revision, "updated_ts": now,
+                   "revisions": list(dict.fromkeys([*index.get("revisions", []), revision])), "history": history}
         if before_commit is not None:
             before_commit(revision)
         write_json_atomic(root / "project-index.json", updated)
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
-               description_es=None, files=None):
+               description_es=None, files=None, *, author=None):
         if files is None:
             files = starter_files(name, template, description, accent, fields, items, lang, description_es)
         elif "server.py" not in files:
             files = {**files, "server.py": _standalone_runtime()}
-        project = self.create_from_files(name, template, files)
+        project = self.create_from_files(name, template, files, author=author)
         return {**project, "undo": self._undo_call(project)}
 
     @staticmethod
@@ -376,13 +389,13 @@ class AppProjects:
             "expected_updated_ts": project["updated_ts"],
         }}
 
-    def create_from_files(self, name, template, files):
+    def create_from_files(self, name, template, files, *, author=None):
         """Create a project from a complete generated source (instruments use this)."""
         with self.lock:
             id = uuid.uuid4().hex[:16]
             root = self.root / id
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
-            return self._save(root, index, files)
+            return self._save(root, index, files, action="create", author=author)
 
     def update(self, id, files, expected_revision, *, actor=None, target=None):
         with self.lock:
@@ -417,7 +430,8 @@ class AppProjects:
                 if hint.get("selector"):
                     change["selectors"] = [hint["selector"]]
 
-            saved = self._save(self._directory(id), self._index(current), merged,
+            author = {"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")} if actor else {"kind": "person"}
+            saved = self._save(self._directory(id), self._index(current), merged, author=author,
                                before_commit=before_commit if actor is not None else None)
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
@@ -439,7 +453,7 @@ class AppProjects:
     def _index(project):
         return {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
 
-    def undo(self, id, expected_revision, expected_updated_ts, revision=None):
+    def undo(self, id, expected_revision, expected_updated_ts, revision=None, *, author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["updated_ts"] != expected_updated_ts:
@@ -451,7 +465,7 @@ class AppProjects:
                 self._set_archived(root, self._index(current), True)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            saved = self._save(root, self._index(current), previous["files"])
+            saved = self._save(root, self._index(current), previous["files"], action="undo", author=author)
             if saved["revision"] != current["revision"]:
                 self.revision_events.publish(id, revision_change(current, saved))
             return saved

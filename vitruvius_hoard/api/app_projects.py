@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUpdateArgs,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -112,6 +112,11 @@ def comment_dismiss(request: Request, id: str, comment_id: str, body: CommentTex
     return execute(lambda: _comments(request, id).dismiss(id, comment_id, body.text, "person"))
 
 
+@router.post("/{id}/comments/{comment_id}/resolve")
+def comment_resolve(request: Request, id: str, comment_id: str):
+    return execute(lambda: _comments(request, id).resolve_person(id, comment_id))
+
+
 @router.post("/{id}/comments/{comment_id}/reopen")
 def comment_reopen(request: Request, id: str, comment_id: str, body: CommentTextBody):
     return execute(lambda: _comments(request, id).reopen(id, comment_id, body.text))
@@ -129,7 +134,7 @@ def project_list(request: Request, archived: bool = False):
 
 @router.post("", status_code=201)
 def project_create(request: Request, body: AppCreateArgs):
-    return execute(lambda: services(request).app_projects.create(**body.model_dump()))
+    return execute(lambda: services(request).app_projects.create(**body.model_dump(), author={"kind": "person"}))
 
 
 @router.get("/{id}")
@@ -187,6 +192,14 @@ def project_events(request: Request, id: str, revision: str | None = None):
 @router.put("/{id}")
 def project_update(request: Request, id: str, body: AppUpdateArgs):
     return execute(lambda: services(request).app_projects.update(id, body.files, body.expected_revision))
+
+
+@router.post("/{id}/undo")
+def project_undo(request: Request, id: str, body: AppUndoArgs):
+    if body.revision is None:
+        raise HTTPException(400, "Choose a source revision to restore")
+    return execute(lambda: services(request).app_projects.undo(
+        id, body.expected_revision, body.expected_updated_ts, body.revision, author={"kind": "person"}))
 
 
 @router.post("/{id}/archive")
