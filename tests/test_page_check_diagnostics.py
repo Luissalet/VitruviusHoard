@@ -15,11 +15,21 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
     def time_out(command, **kwargs):
         progress = Path(command[command.index("--progress") + 1])
         progress.write_text(json.dumps({
-            "planned": 3,
+            "planned": 4,
+            "plan": [
+                {"id": "C001", "what": "Show validation"},
+                {"id": "C002", "what": "Save a reservation"},
+                {"id": "C003", "what": "Read availability"},
+                {"id": "C004", "what": "Clear the form"},
+            ],
             "startup_blocked_writes": ["POST /startup-ping"],
-            "cases": [{"id": "C001", "what": "Show validation", "outcome": "passed"}],
-            "stopped_at": {"stage": "perform_action", "case_id": "C002",
-                           "what": "Save a reservation", "action": {"verb": "click", "target": "#send"}},
+            "cases": [
+                {"id": "C001", "what": "Show validation", "outcome": "passed"},
+                {"id": "C002", "what": "Save a reservation", "outcome": "unknown",
+                 "detail": "The preview blocked the write."},
+            ],
+            "stopped_at": {"stage": "perform_action", "case_id": "C003",
+                           "what": "Read availability", "action": {"verb": "click", "target": "#read"}},
         }), encoding="utf-8")
         raise subprocess.TimeoutExpired(command, kwargs["timeout"])
 
@@ -28,8 +38,13 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
     result = assay.run(tmp_path, html="<form></form>", timeout_s=15)
     assert result["timed_out"] is True
     assert result["works"] is False
-    assert result["passed"] == 1 and result["failed"] == 0 and result["unchecked"] == 2
-    assert result["stopped_at"]["action"] == {"verb": "click", "target": "#send"}
+    assert result["passed"] == 1 and result["failed"] == 0 and result["unchecked"] == 3
+    assert result["stopped_at"]["action"] == {"verb": "click", "target": "#read"}
+    assert result["unchecked_cases"] == [
+        {"id": "C002", "what": "Save a reservation", "detail": "The preview blocked the write."},
+        {"id": "C003", "what": "Read availability"},
+        {"id": "C004", "what": "Clear the form"},
+    ]
     assert result["cases_sample"][0]["what"] == "Show validation"
     assert result["startup_blocked_writes"] == ["POST /startup-ping"]
 

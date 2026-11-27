@@ -812,7 +812,7 @@ def check(folder: str | Path, entry: str = "index.html",
                                              criteria)
         for n, case in enumerate(cases, 1):
             case.id = f"C{n:03d}"
-        progress("plan", planned=len(cases), startup_blocked_writes=engine.startup_blocked_writes)
+        progress("plan", plan=cases, startup_blocked_writes=engine.startup_blocked_writes)
         # Nothing to press, type into or draw on. A page like that has only
         # one thing to say for itself, so an empty one is empty for good.
         nothing_to_try = not (opened.surface.operable
@@ -1145,8 +1145,10 @@ def check(folder: str | Path, entry: str = "index.html",
         def record_case(case: Case) -> Result:
             nonlocal blocked_criterion
             if blocked_criterion and case.origin != "criterion":
-                return Result(case=case, outcome=UNKNOWN,
-                              detail="Automatic case left unchecked after a requested action hit the read-only preview boundary.")
+                result = Result(case=case, outcome=UNKNOWN,
+                                detail="Automatic case left unchecked after a requested action hit the read-only preview boundary.")
+                progress("case_finished", case=case, result=result)
+                return result
             try:
                 result = carry_out(case)
             except Exception as error:
