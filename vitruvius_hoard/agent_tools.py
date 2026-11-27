@@ -22,16 +22,13 @@ from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
-AGENT_INSTRUCTIONS = """Design library, Chromium rendering, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
-New design: call design_brief with the full commission. Before building, use its art_direction.create in Alternatives,
-score the three library directions and record a decision. Choose a non-typical direction unless the brief asks for the
-typical one. Pass the decided study id to app_project_create for a custom app.
-Use content_sections as drafts and keep the commission's facts. Put a simulation notice in the footer only on request.
-After the decision, render, critique and iterate to 8/10 or three rounds, then use page_assay.
-For a deterministic critique of a captured render, call design_critique with use_vision=false and clean_review=false.
-If design_critique returns partial=true, its missing list names the model passes that did not finish.
-Diagrams: diagram_types, then diagram_render. Fix their gates.
-reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when asked."""
+AGENT_INSTRUCTIONS = """Design library, Chromium renders, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
+Call design_brief with the full commission. Before building, use its art_direction.create in Alternatives, score its three library directions and record the decision. Avoid the typical direction unless requested. Pass the decided study ID to app_project_create for custom apps.
+Use content_sections as drafts, keep the commission's facts and add a footer simulation notice only on request.
+After the decision, render and critique to 8/10 or three rounds, then use page_assay.
+For deterministic critique, call design_critique with use_vision=false and clean_review=false. On partial=true, missing lists unfinished model passes.
+Use diagram_types then diagram_render and fix their gates.
+Run reference_add, source_add, source_ingest, tokens_delete and reference_delete only when asked."""
 
 
 # ---------------- library ----------------
