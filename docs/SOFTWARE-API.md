@@ -6,6 +6,10 @@ Native schemas/annotations are retained in vitruvius_hoard/software/catalog.json
 
 `app_project_create` accepts a partial UTF-8 `files` map, such as `pages/index.html` and `assets/style.css`. If the map lacks `project.json`, `layout.html` or `pages/index.html`, missing files are filled in from the selected starter. With `template: "custom"`, the work-board starter fills those gaps. Explicit files take precedence, and omitting `server.py` uses the built-in standalone runtime.
 
+`page_check` accepts the `render_id` returned by `app_project_render`. It checks the source revision recorded in the capture through an internal preview, with a snapshot of the current project data and the usual browser checks and time budget. The editor's live preview keeps serving its current revision. If the captured revision is unavailable, the tool reports the render and revision in a `not_found` error. A render made from HTML still uses its saved HTML.
+
+En `page_check`, pasa el `render_id` de `app_project_render` para comprobar la revisión de la captura. La herramienta usa una vista previa interna con una copia temporal de los datos actuales y conserva el plazo y los resultados parciales habituales. Si la revisión ya no está disponible, la respuesta `not_found` identifica la captura y la revisión.
+
 In an open canvas, `app_project_canvas_act` with `action: "highlight"` can find a visible figure or image by name. For example, set `args.label` to the text of an SVG's `<title>` or its `aria-labelledby` reference.
 
 If an edit advances the live preview before an anchor report from the same preview session arrives, `PUT /api/app-projects/{id}/comments/anchors` returns HTTP 200 with `changed: 0` and `stale: true`. Stored anchors stay as they are. A report for an earlier preview session, a stopped preview or a newer source revision that the preview has yet to serve still returns HTTP 409.

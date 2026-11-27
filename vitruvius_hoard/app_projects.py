@@ -9,11 +9,12 @@ import sqlite3
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
 import zipfile
-from contextlib import closing
+from contextlib import closing, contextmanager
 from http.client import HTTPConnection, HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
@@ -728,42 +729,8 @@ class AppProjects:
                 return status
             root = self._directory(id)
             run = root / "runs" / uuid.uuid4().hex
-            run.mkdir(parents=True)
-            ready = run / "ready.json"
-            output = run / "output.log"
-            # One captured source dictionary owns both the process and its receipt.
-            source = run / "source"
-            for name, content in project["files"].items():
-                path = source / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(content.encode("utf-8"))
-            server = source / "server.py"
-            renderer = Path(__file__).with_name("app_source_map.py")
-            command = [sys.executable, "-u", str(server), "--port", "0", "--database",
-                       str(root / "data" / "app.db"), "--ready-file", str(ready), "--revision", selected]
-            runtime_hash = hashlib.sha256(project["files"]["server.py"].encode("utf-8")).hexdigest()
-            if runtime_hash in _LEGACY_STARTER_RUNTIMES:
-                command.insert(2, str(renderer))
-            preview_env = {**os.environ, "VITRUVIUS_PREVIEW_SOURCE_MAP": str(renderer)}
-            log = output.open("wb")
+            candidate = self._start_runtime(project, run, root / "data" / "app.db")
             try:
-                process = subprocess.Popen(
-                    command, cwd=source, env=preview_env, stdout=log, stderr=log,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-            except OSError:
-                log.close()
-                raise
-            candidate = {"process": process, "log": log, "revision": selected}
-            try:
-                deadline = time.monotonic() + 15
-                while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
-                    time.sleep(.02)
-                if not ready.exists() or process.poll() is not None:
-                    raise ValueError("Application did not start: " + output.read_text(encoding="utf-8", errors="replace"))
-                receipt = urlsplit(json.loads(ready.read_text(encoding="utf-8"))["url"])
-                if receipt.scheme != "http" or receipt.hostname != "127.0.0.1" or not receipt.port:
-                    raise ValueError("Invalid preview process address")
                 proxy = self.proxies.get(id)
                 if proxy is None:
                     proxy = self.proxies[id] = PreviewProxy(self.host_port)
@@ -772,19 +739,81 @@ class AppProjects:
                 raise
             previous = self.processes.get(id)
             candidate["url"] = proxy.url
-            candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
             proxy.voice_revision = selected if {TRANSFER_ASSISTANT_ENTRY, FORM_ENTRY} & project["files"].keys() else ""
-            proxy.backend = (receipt.port, selected)
+            proxy.backend = (urlsplit(candidate["runtime_url"]).port, selected)
             self.processes[id] = candidate
             if previous:
                 self._close_process(previous)
             return self.status(id)
+
+    def _start_runtime(self, project, run, database, *, deadline=None):
+        ready = run / "ready.json"
+        output = run / "output.log"
+        source = run / "source"
+        for name, content in project["files"].items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content.encode("utf-8"))
+        selected = project["selected_revision"]
+        server = source / "server.py"
+        renderer = Path(__file__).with_name("app_source_map.py")
+        command = [sys.executable, "-u", str(server), "--port", "0", "--database",
+                   str(database), "--ready-file", str(ready), "--revision", selected]
+        runtime_hash = hashlib.sha256(project["files"]["server.py"].encode("utf-8")).hexdigest()
+        if runtime_hash in _LEGACY_STARTER_RUNTIMES:
+            command.insert(2, str(renderer))
+        preview_env = {**os.environ, "VITRUVIUS_PREVIEW_SOURCE_MAP": str(renderer)}
+        log = output.open("wb")
+        try:
+            process = subprocess.Popen(
+                command, cwd=source, env=preview_env, stdout=log, stderr=log,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except OSError:
+            log.close()
+            raise
+        runtime = {"process": process, "log": log, "revision": selected}
+        try:
+            ready_by = time.monotonic() + 15
+            if deadline is not None:
+                ready_by = min(ready_by, deadline)
+            while not ready.exists() and process.poll() is None and time.monotonic() < ready_by:
+                time.sleep(.02)
+            if not ready.exists() or process.poll() is not None:
+                raise ValueError("Application did not start: " + output.read_text(encoding="utf-8", errors="replace"))
+            receipt = urlsplit(json.loads(ready.read_text(encoding="utf-8"))["url"])
+            if receipt.scheme != "http" or receipt.hostname != "127.0.0.1" or not receipt.port:
+                raise ValueError("Invalid preview process address")
+            runtime["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
+            return runtime
+        except Exception:
+            self._close_process(runtime)
+            raise
 
     def preview_runtime(self, id, revision=None):
         """Pin server-side reads and captures to the requested runtime."""
         with self.lock:
             status = self.preview(id, revision)
             return status, self.processes[id]["runtime_url"]
+
+    @contextmanager
+    def assay_preview(self, id, revision, *, deadline):
+        """Give a page check its own runtime without switching the editor preview or writing project data."""
+        with self.lock:
+            project = self.get(id, revision)
+            live_database = self._directory(id) / "data" / "app.db"
+        with tempfile.TemporaryDirectory(prefix="vitruvius-assay-") as directory:
+            run = Path(directory)
+            database = run / "app.db"
+            if live_database.is_file():
+                with (closing(sqlite3.connect(live_database.resolve().as_uri() + "?mode=ro", uri=True)) as live,
+                      closing(sqlite3.connect(database)) as snapshot):
+                    live.backup(snapshot)
+            runtime = self._start_runtime(project, run, database, deadline=deadline)
+            try:
+                yield runtime["runtime_url"]
+            finally:
+                self._close_process(runtime)
 
     def export(self, id, revision=None, include_data=False):
         with self.lock:

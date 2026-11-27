@@ -818,7 +818,7 @@
             }
           ],
           "default": null,
-          "description": "A previous render_preview of raw HTML (its saved source is reused).",
+          "description": "An app_project_render capture (checks its saved project revision) or an HTML render_preview (reuses its saved source). Captura de proyecto o de HTML.",
           "title": "Render Id"
         },
         "path": {
@@ -6579,7 +6579,7 @@
             }
           ],
           "default": null,
-          "description": "A previous render_preview of raw HTML (its saved source is reused).",
+          "description": "An app_project_render capture (checks its saved project revision) or an HTML render_preview (reuses its saved source). Captura de proyecto o de HTML.",
           "title": "Render Id"
         },
         "path": {
