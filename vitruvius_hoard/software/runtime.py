@@ -179,10 +179,16 @@ class Runtime:
     def __init__(self):
         self.modules = {k: Module(k) for k in ("design", "babel", "theseus")}
         self.settings = {}
+        self.library_report = None
+        self.library_lock = asyncio.Lock()
 
     async def restore(self):
         self.settings.clear()
-        saved = read_json(profile() / "software-modules.json")
+        root = profile()
+        path = root / "software-modules.json"
+        record = read_json(root / "library-preparation.json")
+        self.library_report = record.get("report") if isinstance(record, dict) else None
+        saved = read_json(path)
         if not isinstance(saved, dict) or type(saved.get("version")) is not int or saved["version"] != 1:
             return
         settings = saved.get("modules")
@@ -204,10 +210,12 @@ class Runtime:
     async def set_module(self, name, enabled, automatic=False):
         return await owned(self._set_module(name, enabled, automatic))
 
-    async def _set_module(self, name, enabled, automatic):
+    async def _set_module(self, name, enabled, automatic, *, expected=None):
         module = self.modules[name]
         async with module.lock:
             previous = self.settings.get(name, {"enabled": module.state == "on", "automatic": module.automatic})
+            if expected is not None and previous != expected:
+                return None
             settings = {**self.settings, name: {"enabled": enabled, "automatic": automatic}}
             try:
                 # Commit intent before touching the owner. No await between reading and replacing
@@ -219,8 +227,78 @@ class Runtime:
             status = await module._transition(enabled, automatic)
             return {**status, "previous": previous}
 
+    async def prepare_first_start(self):
+        root = profile()
+        receipt_path = root / "library-preparation.json"
+        record = read_json(receipt_path)
+        state = record if isinstance(record, dict) else {}
+        pending = state.get("first_start_pending") or (state.get("undo") and not state.get("report"))
+        if pending:
+            if self.settings.get("design", {}).get("enabled") is False:
+                return
+        else:
+            existing = ("software-modules.json", receipt_path.name, "design/vitruvius.db",
+                        "software-links.db", "babel", "theseus")
+            if any((root / name).exists() for name in existing):
+                return
+        try:
+            if not state.get("first_start_pending"):
+                write_json_atomic(receipt_path, {**state, "first_start_pending": True})
+            await self.prepare_library()
+        except Exception as error:
+            # Keep the host and its preparation button available if the first load fails.
+            self.library_report = {"ok": False, "errors": [{"part": "startup", "message": str(error)}]}
+
+    async def prepare_library(self):
+        return await owned(self._prepare_library())
+
+    async def _prepare_library(self):
+        from .library_setup import prepare
+        async with self.library_lock:
+            design = self.modules["design"]
+            previous = None
+            if design.state != "on":
+                enabled = await self._set_module("design", True, False)
+                previous = enabled["previous"]
+            if design.state != "on":
+                raise NativeError(409, {"error": "Design changed state while preparing the library."})
+            design.active += 1
+            design.idle.clear()
+            try:
+                report = await asyncio.to_thread(prepare, design.app.state.services, profile(), previous)
+            finally:
+                design.active -= 1
+                if not design.active:
+                    design.idle.set()
+            self.library_report = {key: value for key, value in report.items() if key != "undo"}
+            return {**report, "module": design.status()}
+
+    async def undo_library(self, token):
+        return await owned(self._undo_library(token))
+
+    async def _undo_library(self, token):
+        from .library_setup import RECEIPT, receipt, undo_data
+        async with self.library_lock:
+            root = profile()
+            state = receipt(root)
+            changes = state.get("undo")
+            if not changes or changes["token"] != token:
+                raise NativeError(409, {"error": "This library preparation is no longer available to undo."})
+            result = await asyncio.to_thread(undo_data, root, changes)
+            restored = None
+            if changes["previous"] is not None:
+                restored = await self._set_module("design", **changes["previous"],
+                                                  expected={"enabled": True, "automatic": False})
+            self.library_report = changes.get("previous_report")
+            write_json_atomic(root / RECEIPT, {"report": self.library_report} if self.library_report else {})
+            return {"ok": True, **result, "module_restored": restored is not None,
+                    "module": self.modules["design"].status()}
+
     def status(self):
-        return {"modules": [m.status() for m in self.modules.values()]}
+        status = {"modules": [m.status() for m in self.modules.values()]}
+        if self.library_report is not None:
+            status["library"] = self.library_report
+        return status
 
     async def call(self, name, arguments, *, admitted=False, agent=''):
         import httpx

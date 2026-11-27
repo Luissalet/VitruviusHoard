@@ -227,9 +227,24 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const nameBox = name.getBoundingClientRect();
     const noteBox = note.getBoundingClientRect();
     const height = nameBox.height + (note.textContent ? noteBox.height + 4 : 0);
-    const top = Math.max(6, Math.min(cursor.y + 27, innerHeight - height - 6));
+    const width = Math.max(nameBox.width, noteBox.width);
+    const margin = 6;
+    const gap = 8;
+    const maxTop = Math.max(margin, innerHeight - height - margin);
+    let top = Math.max(margin, Math.min(cursor.y + 27, maxTop));
+    let left = cursor.x + 21;
+    if (cursor.avoidTarget && cursor.target?.isConnected) {
+      const target = cursor.target.getBoundingClientRect();
+      if (top < target.bottom && top + height > target.top) {
+        if (target.bottom + gap <= maxTop) top = target.bottom + gap;
+        else if (target.top - gap - height >= margin) top = target.top - gap - height;
+        else if (target.right + gap + width <= innerWidth - margin) left = target.right + gap;
+        else if (target.left - gap - width >= margin) left = target.left - gap - width;
+        else top = cursor.y < innerHeight / 2 ? maxTop : margin;
+      }
+    }
     for (const [element, box, offset] of [[name, nameBox, 0], [note, noteBox, nameBox.height + 4]]) {
-      element.style.left = `${Math.max(6, Math.min(cursor.x + 21, innerWidth - box.width - 6)) - cursor.x}px`;
+      element.style.left = `${Math.max(margin, Math.min(left, innerWidth - box.width - margin)) - cursor.x}px`;
       element.style.top = `${top + offset - cursor.y}px`;
     }
   }
@@ -237,7 +252,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   function cursorApi(cursor, signal, presence) {
     return {
       presence,
-      async to(element, box, {scroll = true} = {}) {
+      async to(element, box, {scroll = true, avoidTarget = false} = {}) {
         signal?.throwIfAborted();
         if (scroll) element?.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
         if (!cursor) return;
@@ -249,6 +264,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
         cursor.node.classList.remove('highlight');
         cursor.node.querySelector('.note').textContent = '';
         cursor.target = element;
+        cursor.avoidTarget = avoidTarget;
         const distance = Math.hypot(x - cursor.x, y - cursor.y);
         cursor.animation?.cancel();
         if (!reduced()) {
@@ -374,7 +390,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const element = actionTarget(args, 'input:not([type=hidden]),textarea,[contenteditable=true]', cursor.presence);
     enabled(element);
     if (element.readOnly || element.matches('input[type=file],input[type=checkbox],input[type=radio],input[type=button],input[type=submit]')) fail('bad_args', 'Target is not an editable text field');
-    await cursor.to(element);
+    await cursor.to(element, undefined, {avoidTarget: true});
     await cursor.touch();
     element.focus();
     const characters = Array.from(args.value);

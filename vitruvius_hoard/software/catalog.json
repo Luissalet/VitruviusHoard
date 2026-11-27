@@ -3035,6 +3035,140 @@
     "module": "design"
   },
   {
+    "name": "app_project_critique_loop",
+    "description": "Read the application critique rounds, best revision and reasons. Consultar el bucle de crítica.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "AppCritiqueLoopArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_critique_round",
+    "description": "Assess an application revision. Evaluar una revisión de la aplicación.\nCapture the current revision at 390, 834 and 1440 px for deterministic critique.\nRetain the best revision and restore it after a lower score, with reasons and undo.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Design system to freeze on the first round.",
+          "title": "Tokens Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "id"
+      ],
+      "title": "AppCritiqueRoundArgs",
+      "type": "object"
+    },
+    "x-timeout-s": 120.0,
+    "module": "design"
+  },
+  {
+    "name": "app_project_critique_round_undo",
+    "description": "Undo the latest critique round and its source selection. Deshacer una ronda de crítica.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        },
+        "expected_round_id": {
+          "title": "Expected Round Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "expected_updated_ts": {
+          "title": "Expected Updated Ts",
+          "type": "number"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_round_id",
+        "expected_revision",
+        "expected_updated_ts",
+        "id"
+      ],
+      "title": "AppCritiqueUndoArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_render",
     "description": "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
     "annotations": {
