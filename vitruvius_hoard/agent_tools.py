@@ -440,10 +440,15 @@ class CollectionImportArgs(BaseModel):
     path: str = Field(..., min_length=1, description="Local path to a portable reference collection JSON manifest.")
 
 
+class DesignPatternsArgs(BaseModel):
+    html: Optional[str] = Field(None, description="Page or fragment to suggest relevant form controls for.")
+
+
 class DesignPatternArgs(BaseModel):
     id: str
     text: str = "FORM / FIELD"
     accent: str = Field("#e36a39", pattern="^#[0-9a-fA-F]{6}$")
+    lang: Optional[str] = Field(None, max_length=40, description="Page language for the form recipe, e.g. es-ES.")
 
 
 class ReferenceSearchArgs(BaseModel):
@@ -952,8 +957,8 @@ TOOLS: list[Tool] = [
         Empty, ann(True), lambda services, args: {"collections": services.reference_collections()}),
     Tool("reference_import_collection", "Import a local snapshot collection into the gallery. Importar colección local.\nRetains provenance and reuses identical versions; no source HTML is executed.",
         CollectionImportArgs, ann(False, False, True), lambda services, args: services.reference_import_collection(args.path), capped=False),
-    Tool("design_patterns", "List eight original editable HTML design studies. Patrones de diseño propios.",
-        Empty, ann(True), lambda services, args: {"patterns": services.design_patterns()}),
+    Tool("design_patterns", "List HTML patterns and suggest controls for a form. Patrones y controles de formulario.",
+        DesignPatternsArgs, ann(True), lambda services, args: services.design_pattern_list(args.html)),
     Tool("design_pattern", "Generate editable standalone HTML from an original pattern. Generar patrón propio.\nLiteral text and accent colour; use render_preview, page_assay and design_critique to check the source.",
         DesignPatternArgs, ann(True), lambda services, args: services.design_pattern(**args.model_dump()), capped=False),
     Tool("reference_add",

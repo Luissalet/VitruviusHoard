@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm } from "../copilot-hooks.js";
 
-export default function PatternPicker({ onApply }) {
+export default function PatternPicker({ onApply, suggestForm }) {
   const { lang, notify } = useApp();
   const es = lang === "es";
   const [patterns, setPatterns] = useState([]);
@@ -24,14 +24,22 @@ export default function PatternPicker({ onApply }) {
   const generate = async (event) => {
     event.preventDefault();
     setBusy(true);
-    try { setReady(await api.designPattern({ id, text, accent })); }
+    try { setReady(await api.designPattern({ id, text, accent, lang })); }
     catch (error) { notify(error.message); }
     finally { setBusy(false); }
   };
   return (
     <details className="panel mb-4">
-      <summary className="cursor-pointer font-semibold text-[14px]">{es ? "Patrones HTML propios" : "Original HTML patterns"}</summary>
-      <p className="help mt-2">{es ? "Ocho estudios de composición e interacción. Genera una fuente, llévala al editor y comprueba el resultado con Render y el ensayo funcional." : "Eight composition and interaction studies. Generate source, bring it into the editor and check it with Render and the functional assay."}</p>
+      <summary className="cursor-pointer font-semibold text-[14px]">
+        {es ? "Patrones HTML propios" : "Original HTML patterns"}
+        {suggestForm && <span className="chip chip-accent ml-2">{es ? "Formulario detectado" : "Form detected"}</span>}
+      </summary>
+      {suggestForm && <div className="flex items-baseline flex-wrap gap-2 mt-3">
+        <p className="help">{es ? "Este formulario puede usar los controles del sistema de diseño." : "This form can use the design system's controls."}</p>
+        <button type="button" className="btn-link" onClick={() => { setId("form-controls"); setReady(null); }}>
+          {es ? "Elegir controles de formulario" : "Choose form controls"}
+        </button>
+      </div>}
       <form onSubmit={generate} className="flex flex-col gap-3 mt-3">
         <label className="label" htmlFor="pattern-id">{es ? "Patrón" : "Pattern"}</label>
         <select id="pattern-id" className="field" value={id} onChange={(event) => setId(event.target.value)}>

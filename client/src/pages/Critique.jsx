@@ -46,6 +46,7 @@ function findingsByArea(findings) {
 }
 
 function RenderView({ render, t }) {
+  const es = useApp().lang === "es";
   if (!render) return null;
   if (render.metrics?.error) {
     return (
@@ -113,11 +114,11 @@ function RenderView({ render, t }) {
                 {findings.map((f, i) => (
                   <div key={i} className="card">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-[13px]">{f.title}</span>
+                      <span className="font-semibold text-[13px]">{(es && f.title_es) || f.title}</span>
                       <span className="flex gap-1"><TierChip tier={f.tier} t={t} /><SeverityChip severity={f.severity} t={t} /></span>
                     </div>
-                    <div className="text-[13px] mt-1">{f.detail}</div>
-                    {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {f.fix}</div>}
+                    <div className="text-[13px] mt-1">{(es && f.detail_es) || f.detail}</div>
+                    {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {(es && f.fix_es) || f.fix}</div>}
                   </div>
                 ))}
               </div>
@@ -352,7 +353,8 @@ export default function Critique({ param }) {
       <h1 className="text-[20px] font-semibold">{t("nav_critique")}</h1>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
-          <PatternPicker onApply={applyPattern} />
+          <PatternPicker onApply={applyPattern}
+            suggestForm={render?.lint?.recommended_patterns?.some((pattern) => pattern.id === "form-controls")} />
           {draft.previous.length > 0 && <div className="flex gap-3 items-center flex-wrap mb-4" role="status">
             <span className="help">{lang === "es" ? `Fuente aplicada. ${draft.previous.length} ${draft.previous.length === 1 ? "borrador guardado" : "borradores guardados"} durante esta edición.` : `Source applied. ${draft.previous.length} ${draft.previous.length === 1 ? "draft retained" : "drafts retained"} during this edit.`}</span>
             <button type="button" className="btn" onClick={restoreDraft}>{lang === "es" ? "Restaurar borrador" : "Restore draft"}</button>
