@@ -972,6 +972,12 @@ class Services:
     def design_patterns(self):
         return design_patterns.catalogue()
 
+    def design_pattern_list(self, html=None):
+        result = {"patterns": self.design_patterns()}
+        if html is not None:
+            result["recommended_patterns"] = design_patterns.recommend(html)
+        return result
+
     def design_pattern(self, **kwargs):
         return design_patterns.generate(**kwargs)
 

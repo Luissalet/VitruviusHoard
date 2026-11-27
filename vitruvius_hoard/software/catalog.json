@@ -3193,7 +3193,7 @@
   },
   {
     "name": "design_patterns",
-    "description": "List eight original editable HTML design studies. Patrones de diseño propios.",
+    "description": "List HTML patterns and suggest controls for a form. Patrones y controles de formulario.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -3201,9 +3201,22 @@
       "openWorldHint": false
     },
     "inputSchema": {
-      "description": "A tool without arguments.",
-      "properties": {},
-      "title": "Empty",
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Page or fragment to suggest relevant form controls for.",
+          "title": "Html"
+        }
+      },
+      "title": "DesignPatternsArgs",
       "type": "object"
     },
     "module": "design"
@@ -3233,6 +3246,20 @@
           "pattern": "^#[0-9a-fA-F]{6}$",
           "title": "Accent",
           "type": "string"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Page language for the form recipe, e.g. es-ES.",
+          "title": "Lang"
         }
       },
       "required": [
