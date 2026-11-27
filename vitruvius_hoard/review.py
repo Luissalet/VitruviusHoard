@@ -11,6 +11,8 @@ import re
 import time
 from typing import Any, Optional
 
+from .software.global_models import VisionUnavailable
+
 VERDICTS = ("recapture", "rebuild", "fix", "ship")
 MAX_FINDINGS = 8
 HTML_CAP = 28_000
@@ -71,9 +73,12 @@ def run(link: Any, *, images: list[bytes], html: str, findings: list[dict],
     ]
     try:
         result = chat_before_deadline(link, messages, images, deadline)
-    except TimeoutError:
-        return {"verdict": None, "findings": [], "status": "timed_out", "error": "The clean review exceeded the model budget.",
+    except VisionUnavailable as error:
+        return {"verdict": None, "findings": [], "status": "unavailable", "reason": error.reason, "error": str(error),
                 "model": None, "ms": round((time.monotonic() - t0) * 1000, 1)}
+    except TimeoutError as error:
+        return {"verdict": None, "findings": [], "status": "timed_out", "error": "The clean review exceeded the model budget.",
+                "model": getattr(error, "model", None), "ms": round((time.monotonic() - t0) * 1000, 1)}
     except Exception as error:  # noqa: BLE001 — the review is best-effort
         return {"verdict": None, "findings": [], "error": f"review unavailable: {type(error).__name__}: {error}", "model": None, "ms": round((time.monotonic() - t0) * 1000, 1)}
     text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
@@ -82,9 +87,10 @@ def run(link: Any, *, images: list[bytes], html: str, findings: list[dict],
 
 
 def chat_before_deadline(link, messages, images, deadline):
+    chat = getattr(link, "vision_chat", link.chat)
     if deadline is None:
-        return link.chat(messages, images=images, effort="high")
+        return chat(messages, images=images, effort="high")
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("The model budget is exhausted")
-    return link.chat(messages, images=images, effort="high", timeout=remaining)
+    return chat(messages, images=images, effort="high", timeout=remaining)

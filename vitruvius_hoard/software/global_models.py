@@ -3,12 +3,13 @@
 Provider credentials never leave Faustus. Missing/stale global selection is an
 error; the incorporated SDK's model registry and loopback fallbacks are bypassed.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 from functools import wraps
 from concurrent.futures import Future
 import asyncio
 import threading
+import time
 import httpx
 from hoard_link import Link
 from hoard_link._sync import SyncFacade
@@ -16,6 +17,19 @@ from hoard_link.types import Resolution
 from .owned_http import OwnedAsyncClient,close_client
 
 _job = ContextVar('vitruvius_global_job', default=None)
+VISION_RESOLUTION_TIMEOUT_S = 3.0
+
+
+class VisionUnavailable(ValueError):
+    def __init__(self, reason, message):
+        super().__init__(message)
+        self.reason = reason
+
+
+class VisionTimeout(TimeoutError):
+    def __init__(self, model):
+        super().__init__("The selected vision model exceeded the model budget.")
+        self.model = model
 
 
 @contextmanager
@@ -46,6 +60,9 @@ class GlobalSync(SyncFacade):
                 parent = self._link
                 self._inner = GlobalLink(parent.config, client=None if parent._owns_client else parent._client)
             return self._inner
+
+    def vision_chat(self, messages, *, images, effort, timeout=None):
+        return self._run(lambda link: link.vision_chat(messages, images=images, effort=effort, timeout=timeout))
 
     def close(self, timeout=None):
         if self._thread is threading.current_thread():
@@ -102,6 +119,10 @@ class GlobalLink(Link):
             return await asyncio.shield(asyncio.wrap_future(future))
         try:
             selected = await self._selection(urls)
+        except asyncio.CancelledError:
+            # An expired owner must not cancel the other users of its selection.
+            future.set_exception(TimeoutError("Global model resolution was cancelled"))
+            raise
         except BaseException as error:
             future.set_exception(error)
             raise
@@ -131,10 +152,36 @@ class GlobalLink(Link):
             return await super().resolve(capability, task)
         selected = await self.selection()
         if capability == 'vision' and not selected['vision']:
-            raise ValueError('The selected global model does not expose vision')
+            raise VisionUnavailable("no_model", "The selected global model does not expose vision.")
         return Resolution(capability=capability, provider='openai', api='openai', state='resolved',
                           url=selected['base'] + selected['chat_path'], model=selected['model'],
                           reason='Exact global selection through Faustus', details={'allow_load': False})
+
+    async def vision_chat(self, messages, *, images, effort, timeout=None):
+        """Resolve vision within a short budget and keep the selected model pinned for generation."""
+        if not self.config.faustus_urls:
+            raise VisionUnavailable("no_model", "No global model endpoint is configured.")
+
+        deadline = time.monotonic() + timeout if timeout is not None else None
+        resolution_budget = VISION_RESOLUTION_TIMEOUT_S if timeout is None else min(timeout, VISION_RESOLUTION_TIMEOUT_S)
+        with global_job() if _job.get() is None else nullcontext():
+            try:
+                async with asyncio.timeout(resolution_budget):
+                    resolution = await self.resolve("vision")
+            except VisionUnavailable:
+                raise
+            except (TimeoutError, httpx.TimeoutException) as error:
+                raise VisionUnavailable("resolution_timeout", "Vision model resolution exceeded its budget.") from error
+            except (ValueError, httpx.HTTPError) as error:
+                raise VisionUnavailable("resolution_error", "The global vision model could not be resolved.") from error
+
+            try:
+                remaining = deadline - time.monotonic() if deadline is not None else None
+                if remaining is not None and remaining <= 0:
+                    raise TimeoutError("The model budget is exhausted")
+                return await self.chat(messages, images=images, effort=effort, capability="vision", timeout=remaining)
+            except (TimeoutError, httpx.TimeoutException) as error:
+                raise VisionTimeout(resolution.model) from error
 
     async def _post_chat(self, provider, url, payload, level):
         selected = await self.selection()
