@@ -103,6 +103,16 @@ def _dedupe(findings: list[dict]) -> list[dict]:
     return out
 
 
+def _visual_score(value: Any) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
+    try:
+        score = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return score if 0 <= score <= 10 else None
+
+
 def _vision_findings(parsed: dict) -> list[dict]:
     from .rules.registry import enrich, get_rule, make_finding
     out = []
@@ -179,14 +189,15 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
             text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
             model = getattr(result, "model", None) or (result.get("model") if isinstance(result, dict) else None)
             parsed = _extract_json(text or "")
-            if parsed:
+            score = _visual_score(parsed.get("score")) if parsed else None
+            if score is not None:
                 findings.extend(_vision_findings(parsed))
                 vision_model = model
-                vision_score = parsed.get("score")
+                vision_score = score
                 vision_summary = parsed.get("summary", "")
                 vision = {"status": "complete"}
             else:
-                vision = {"status": "unavailable", "reason": "invalid_response"}
+                vision = {"status": "unavailable", "reason": "invalid_score" if parsed else "invalid_response"}
         except TimeoutError:
             vision = {"status": "timed_out"}
         except Exception as error:  # noqa: BLE001 — vision is best-effort
@@ -199,16 +210,12 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
     gate = waivers_mod.gate(findings)
     findings = _with_review_weights(findings)
     heuristic_score = score_of(findings)
-    score_source = "heuristic"
-    if vision_score is not None:
-        try:
-            score = round((float(vision_score) + heuristic_score) / 2, 2)
-        except (TypeError, ValueError):
-            score = heuristic_score
-        else:
-            score_source = "vision_blend"
-    else:
+    if vision_score is None:
         score = heuristic_score
+        score_source = "heuristic"
+    else:
+        score = round((vision_score + heuristic_score) / 2, 2)
+        score_source = "vision_blend"
 
     review = None
     if clean_review:

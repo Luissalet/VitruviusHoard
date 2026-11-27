@@ -7,6 +7,7 @@ from threading import Event
 import time
 
 import httpx
+import pytest
 
 from hoard_link import LinkConfig
 from vitruvius_hoard.agent_tools import call_tool, tool_catalog
@@ -29,6 +30,26 @@ def test_confined_render_id_keeps_the_successful_vision_contract(services):
     assert report["score"] == round((report["heuristic_score"] + 9) / 2, 2)
     assert report["score_source"] == "vision_blend"
     assert report["missing"] == [] and report["partial"] is False
+
+
+@pytest.mark.parametrize("model_score", ["unrated", "NaN", "Infinity", -0.01, 10.01, True, None])
+def test_invalid_visual_score_leaves_the_deterministic_report_unchanged(services, model_score):
+    class UnratedVision:
+        def chat(self, messages, **kwargs):
+            return {"model": "fixture-vision", "text": json.dumps({
+                "score": model_score, "summary": "Visual-only summary",
+                "findings": [{"area": "typography", "title": "Visual-only finding", "severity": "warn"}],
+            })}
+
+    services.link_sync = UnratedVision()
+    args = {"render_id": services.render(html="<h1>Captured page</h1>", widths=[390])["id"]}
+    deterministic = call_tool(services, "design_critique", {**args, "use_vision": False})
+    report = call_tool(services, "design_critique", args)
+    assert report["partial"] is True and report["missing"] == ["vision"]
+    assert report["vision"] == {"status": "unavailable", "reason": "invalid_score"}
+    assert report["vision_model"] is None and report["score_source"] == "heuristic"
+    for key in ("score", "heuristic_score", "findings", "summary", "gate", "ship_ready"):
+        assert report[key] == deterministic[key], key
 
 
 def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(services, monkeypatch):
