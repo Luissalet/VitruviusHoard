@@ -12,6 +12,8 @@ For a browser capture, static floor checks for colour and style skip stylesheet 
 
 `app_project_create` and `app_project_get` return the project ID, selected revision, preview status and a `file_manifest` with the path, UTF-8 byte length and SHA-256 of each source file. The creation receipt also includes its undo call. Use `include_files: true` on either tool to return the full project with source contents and history. On `app_project_get`, pass `revision` to read a retained revision.
 
+If a client reads `project.json` for saved design tokens or library examples, pass `include_files: true` in its initial `app_project_get` call. Use the default receipt for a final check that the project still has the same `revision`.
+
 `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
 
 Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. The creation receipt only applies while the project has had no saved source edits. If you save a revision and then undo it, the history stays and the creation receipt cannot be used to retire the project.
