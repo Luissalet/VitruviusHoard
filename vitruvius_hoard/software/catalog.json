@@ -651,7 +651,7 @@
   },
   {
     "name": "design_critique",
-    "description": "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\nMerges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy). Tiers: Floor errors always block, Reflex warnings block unless waived on the record (waivers=[{rule, reason}], reason 24+ characters, never repeated), Finish advisories never block. gate.state is pass or fix. clean_review=true adds a fresh-context verdict: recapture, rebuild, fix or ship.\nSinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
+    "description": "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\nMerges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy). Tiers: Floor errors always block, Reflex warnings block unless waived on the record (waivers=[{rule, reason}], reason 24+ characters, never repeated), Finish advisories never block. gate.state is pass or fix. clean_review=true adds a fresh-context verdict: recapture, rebuild, fix or ship.\nIf model work does not finish before timeout_s, the report returns deterministic findings and names what is missing. Para una crítica determinista, usa use_vision=false y clean_review=false.\nSinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -728,8 +728,17 @@
         },
         "use_vision": {
           "default": true,
+          "description": "Set false for deterministic checks. With clean_review=false, no model is called.",
           "title": "Use Vision",
           "type": "boolean"
+        },
+        "timeout_s": {
+          "default": 110,
+          "description": "Budget in seconds for optional model work. Default 110 leaves time for the reply under the Hub's 120-second limit. If the budget expires, deterministic findings still return.",
+          "maximum": 900,
+          "minimum": 1,
+          "title": "Timeout S",
+          "type": "number"
         },
         "tokens_id": {
           "anyOf": [

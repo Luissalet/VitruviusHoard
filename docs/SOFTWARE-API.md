@@ -10,6 +10,10 @@ Native schemas/annotations are retained in vitruvius_hoard/software/catalog.json
 
 En `page_check`, pasa el `render_id` de `app_project_render` para comprobar la revisión de la captura. La herramienta usa una vista previa interna con una copia temporal de los datos actuales y conserva el plazo y los resultados parciales habituales. Si la revisión ya no está disponible, la respuesta `not_found` identifica la captura y la revisión.
 
+`design_critique` accepts a captured `render_id` as before. The default model budget is 110 seconds so the tool can return a report before the Hub's 120-second deadline. Set `timeout_s` below your transport's deadline when you need a different budget. Vision and `clean_review` share that budget. The usual deterministic findings, score and gate still return when a model pass is missing. `score_source` is `heuristic` for a deterministic score and `vision_blend` when the model score contributed. `partial`, `vision.status`, `missing` and `next_action` describe which checks completed.
+
+Para una crítica determinista, llama a `design_critique` con `{"render_id":"…","use_vision":false,"clean_review":false}`. Con solo `render_id`, se aplica el plazo predeterminado. Si `vision.status` es `timed_out`, usa los hallazgos y la puntuación deterministas. `missing` indica qué revisión del modelo quedó pendiente y `next_action` ofrece una llamada que funciona sin modelo.
+
 In an open canvas, `app_project_canvas_act` with `action: "highlight"` can find a visible figure or image by name. For example, set `args.label` to the text of an SVG's `<title>` or its `aria-labelledby` reference.
 
 If an edit advances the live preview before an anchor report from the same preview session arrives, `PUT /api/app-projects/{id}/comments/anchors` returns HTTP 200 with `changed: 0` and `stale: true`. Stored anchors stay as they are. A report for an earlier preview session, a stopped preview or a newer source revision that the preview has yet to serve still returns HTTP 409.

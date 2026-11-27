@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Annotated, Literal, Any, Optional
 
@@ -10,6 +11,7 @@ from pydantic import BaseModel, Field, FiniteFloat, StrictBool, model_validator
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .assay import DEFAULT_TIMEOUT_S as PAGE_CHECK_TIMEOUT_S
+from .critique import DEFAULT_TIMEOUT_S as CRITIQUE_TIMEOUT_S, TIMEOUT_DESCRIPTION as CRITIQUE_TIMEOUT_DESCRIPTION
 from .transfer_assistant import assistant_assets
 from .app_canvas import project_tool_caller
 from .app_project_results import render_summary, source_summary
@@ -25,6 +27,8 @@ score the three library directions and record a decision. Choose a non-typical d
 typical one. Pass the decided study id to app_project_create for a custom app.
 Use content_sections as drafts and keep the commission's facts. Put a simulation notice in the footer only on request.
 After the decision, render, critique and iterate to 8/10 or three rounds, then use page_assay.
+For a deterministic critique of a captured render, call design_critique with use_vision=false and clean_review=false.
+If design_critique returns partial=true, its missing list names the model passes that did not finish.
 Diagrams: diagram_types, then diagram_render. Fix their gates.
 reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when asked."""
 
@@ -123,7 +127,8 @@ class CritiqueArgs(BaseModel):
     url: Optional[str] = Field(None, max_length=2000)
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file (or a folder holding index.html) already written to disk: use it instead of pasting the whole page into html.")
     focus: Optional[str] = Field(None, max_length=200)
-    use_vision: bool = True
+    use_vision: bool = Field(True, description="Set false for deterministic checks. With clean_review=false, no model is called.")
+    timeout_s: float = Field(CRITIQUE_TIMEOUT_S, ge=1, le=900, description=CRITIQUE_TIMEOUT_DESCRIPTION)
     tokens_id: Optional[str] = Field(None, max_length=40, description="A tokens_generate system to compare the page with (ds/* rules).")
     waivers: list[dict[str, str]] = Field(default_factory=list, description="[{rule, reason}]: Reflex-tier (warning) rules left standing on purpose. The reason needs 24+ characters and may not repeat another waiver's; Floor (error) rules cannot be waived.")
     clean_review: bool = Field(False, description="Final review in a clean context: a fresh call to the global model with only the screenshots, the HTML and the findings. The verdict (recapture | rebuild | fix | ship) comes first; at most 8 findings.")
@@ -647,6 +652,7 @@ def run_page_assay(services: Services, args: AssayArgs) -> dict:
 
 
 def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
+    deadline = time.monotonic() + args.timeout_s
     render_id = args.render_id
     if render_id is None:
         page_path = _local_page_path(args.path) if args.path and not args.html and not args.url else None
@@ -654,7 +660,7 @@ def run_design_critique(services: Services, args: CritiqueArgs) -> dict:
                               tokens_id=args.tokens_id, page_path=page_path, local_preview=bool(args.url))
         render_id = row["id"]
     return services.critique_render(render_id, focus=args.focus, use_vision=args.use_vision, tokens_id=args.tokens_id,
-                                    waivers=args.waivers, clean_review=args.clean_review)
+                                    waivers=args.waivers, clean_review=args.clean_review, deadline=deadline)
 
 
 def run_render_compare(services: Services, args: CompareArgs) -> dict:
@@ -924,6 +930,7 @@ TOOLS: list[Tool] = [
     Tool("design_critique",
         "Critique a rendered page: score 0-10, findings with fixes, using lint + local vision model. Crítica de diseño.\n"
         "Merges deterministic lint with an optional vision-model rubric (hierarchy, typography, colour, motion, a11y, copy). Tiers: Floor errors always block, Reflex warnings block unless waived on the record (waivers=[{rule, reason}], reason 24+ characters, never repeated), Finish advisories never block. gate.state is pass or fix. clean_review=true adds a fresh-context verdict: recapture, rebuild, fix or ship.\n"
+        "If model work does not finish before timeout_s, the report returns deterministic findings and names what is missing. Para una crítica determinista, usa use_vision=false y clean_review=false.\n"
         "Sinónimos: criticar, evaluar diseño, puntuación, feedback visual.",
         CritiqueArgs, ann(False, False, False), run_design_critique),
     Tool("page_assay",

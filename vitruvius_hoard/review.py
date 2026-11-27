@@ -55,7 +55,7 @@ def parse(text: str) -> dict[str, Any]:
     return {"verdict": verdict, "findings": findings[:MAX_FINDINGS], "verdict_parsed": parsed}
 
 
-def run(link: Any, *, images: list[bytes], html: str, findings: list[dict]) -> dict[str, Any]:
+def run(link: Any, *, images: list[bytes], html: str, findings: list[dict], deadline: Optional[float] = None) -> dict[str, Any]:
     """One fresh call: no history, no system prompt from the build. ``link`` has a sync ``chat``."""
     t0 = time.monotonic()
     if link is None:
@@ -69,9 +69,21 @@ def run(link: Any, *, images: list[bytes], html: str, findings: list[dict]) -> d
         {"role": "user", "content": f"AUTOMATIC FINDINGS\n{_digest(findings)}\n\nHTML{' (truncated)' if truncated else ''}\n```html\n{body}\n```"},
     ]
     try:
-        result = link.chat(messages, images=images, effort="high")
+        result = chat_before_deadline(link, messages, images, deadline)
+    except TimeoutError:
+        return {"verdict": None, "findings": [], "status": "timed_out", "error": "The clean review exceeded the model budget.",
+                "model": None, "ms": round((time.monotonic() - t0) * 1000, 1)}
     except Exception as error:  # noqa: BLE001 — the review is best-effort
         return {"verdict": None, "findings": [], "error": f"review unavailable: {type(error).__name__}: {error}", "model": None, "ms": round((time.monotonic() - t0) * 1000, 1)}
     text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
     model = getattr(result, "model", None) or (result.get("model") if isinstance(result, dict) else None)
     return {**parse(text or ""), "model": model, "images": len(images), "ms": round((time.monotonic() - t0) * 1000, 1)}
+
+
+def chat_before_deadline(link, messages, images, deadline):
+    if deadline is None:
+        return link.chat(messages, images=images, effort="high")
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("The model budget is exhausted")
+    return link.chat(messages, images=images, effort="high", timeout=remaining)
