@@ -87,6 +87,9 @@ def ingest_source(db: Database, config: Any, source: dict[str, Any]) -> dict[str
     paths = json.loads(source.get("paths") or "[]")
     structured = bool(source.get("structured"))
 
+    if kind == "bundled":
+        return {"ok": True, "docs": source["docs"], "chunks": source["chunks"]}
+
     db.execute("UPDATE sources SET status = 'cloning', error = '' WHERE id = ?", (source_id,))
 
     dest = Path(config.sources_dir) / source_id
