@@ -502,6 +502,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       return () => changedHandlers.delete(handler);
     },
     message(text, sendNow = false) { send('dock/message', {text: String(text), send: Boolean(sendNow)}); },
+    reportConversation(entry) { send('dock/conversation', {entry}); },
   });
   window.HoardApp = api;
   for (const [method, ...args] of previous.q || []) {
