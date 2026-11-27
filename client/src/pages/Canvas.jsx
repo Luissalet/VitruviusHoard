@@ -6,6 +6,7 @@ import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
 import { CanvasElements, CanvasHistory } from "../canvas/CanvasInspector.jsx";
 import { CanvasConversation, CanvasLiveSteps } from "../canvas/CanvasActivity.jsx";
+import ProjectCritiqueLoop from "../components/ProjectCritiqueLoop.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
 
@@ -281,6 +282,8 @@ export default function Canvas({ param }) {
             <div id="canvas-pane-activity" role="tabpanel" aria-labelledby="canvas-tab-activity" hidden={rail !== "activity"}>
               <CanvasConversation es={es} projectId={project.id} />
               <CanvasLiveSteps steps={liveSteps.filter((step) => step.kind !== "edit" || step.revision === visible.revision)} es={es} />
+              <ProjectCritiqueLoop key={project.id} project={project} visibleRevision={visible.revision}
+                lang={lang} onRevision={syncRevision} />
               <CanvasHistory key={project.id} project={project} visibleRevision={visible.revision} onChange={updateHistory} es={es} />
             </div>
             <div id="canvas-pane-elements" role="tabpanel" aria-labelledby="canvas-tab-elements" hidden={rail !== "elements"}>
