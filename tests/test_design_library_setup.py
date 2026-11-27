@@ -95,6 +95,42 @@ async def test_explicit_preparation_undo_keeps_existing_sources_and_edited_examp
         assert not (await execute("reference_collections", {}))["collections"]
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("disabled", [False, True])
+async def test_interrupted_first_start_can_resume(profile, monkeypatch, disabled):
+    from vitruvius_hoard.software import library_setup
+
+    def interrupted(*args):
+        raise OSError("first start interrupted before preparing data")
+
+    first = create_app()
+    with monkeypatch.context() as patch:
+        patch.setattr(library_setup, "prepare", interrupted)
+        async with first.router.lifespan_context(first):
+            execute = first.state.execute
+            status = await execute("software_modules", {})
+            assert modules(status)["design"]["enabled"]
+            assert not status["library"]["ok"]
+            if disabled:
+                await execute("software_module_set", {"module": "design", "enabled": False})
+
+    restarted = create_app()
+    async with restarted.router.lifespan_context(restarted):
+        execute = restarted.state.execute
+        status = await execute("software_modules", {})
+        if disabled:
+            assert not modules(status)["design"]["enabled"]
+            assert "library" not in status
+            status = {"library": await execute("design_library_prepare", {})}
+        else:
+            assert modules(status)["design"]["enabled"]
+        assert status["library"]["ok"]
+        assert status["library"]["available"]["references"] == 5
+        saved = json.loads((profile / "library-preparation.json").read_text(encoding="utf-8"))
+        assert "first_start_pending" not in saved
+
+
+
 def test_preparation_tool_descriptions_are_brief():
     controls = [row for row in catalog() if row["name"] in {"design_library_prepare", "design_library_undo"}]
     assert len(controls) == 2

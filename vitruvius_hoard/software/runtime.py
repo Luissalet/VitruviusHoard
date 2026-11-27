@@ -229,14 +229,21 @@ class Runtime:
 
     async def prepare_first_start(self):
         root = profile()
-        existing = ("software-modules.json", "library-preparation.json", "design/vitruvius.db",
-                    "software-links.db", "babel", "theseus")
-        if any((root / name).exists() for name in existing):
-            record = read_json(root / "library-preparation.json")
-            pending = isinstance(record, dict) and record.get("undo") and not record.get("report")
-            if not pending or self.modules["design"].state != "on":
+        receipt_path = root / "library-preparation.json"
+        record = read_json(receipt_path)
+        state = record if isinstance(record, dict) else {}
+        pending = state.get("first_start_pending") or (state.get("undo") and not state.get("report"))
+        if pending:
+            if self.settings.get("design", {}).get("enabled") is False:
+                return
+        else:
+            existing = ("software-modules.json", receipt_path.name, "design/vitruvius.db",
+                        "software-links.db", "babel", "theseus")
+            if any((root / name).exists() for name in existing):
                 return
         try:
+            if not state.get("first_start_pending"):
+                write_json_atomic(receipt_path, {**state, "first_start_pending": True})
             await self.prepare_library()
         except Exception as error:
             # Keep the host and its preparation button available if the first load fails.

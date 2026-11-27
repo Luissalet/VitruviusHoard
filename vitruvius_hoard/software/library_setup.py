@@ -165,6 +165,8 @@ def prepare(services, profile, previous):
     }
     report.update(ok=not errors, motion=motion_ids, collection=collection["collection"])
     state["report"] = {key: value for key, value in report.items() if key != "undo"}
+    if report["ok"]:
+        state.pop("first_start_pending", None)
     write_json_atomic(profile / RECEIPT, state)
     return report
 
