@@ -84,7 +84,7 @@ class Services:
         write_url(config)
         self.db = Database(config.db_path)
 
-        self.app_projects = AppProjects(config.data_dir, host_port=config.port)
+        self.app_projects = AppProjects(config.data_dir, host_port=config.port, token_name=self._tokens_name)
         self.preview_selections = PreviewSelections()
         self.preview_comments = PreviewComments(self.app_projects)
         self.alternatives = AlternativeStudies(self)
@@ -848,6 +848,10 @@ class Services:
         return {"id": r["id"], "name": r["name"], "created_ts": r["created_ts"], "brief": json.loads(r["brief"] or "{}"),
                "tokens": tokens, "roles": tokens_mod.roles_of(tokens), "css": r["css"], "tailwind": r["tailwind"],
                "preview_render_id": r["preview_render_id"]}
+
+    def _tokens_name(self, tokens_id: str) -> Optional[str]:
+        row = self.db.one("SELECT name FROM design_systems WHERE id = ?", (tokens_id,))
+        return row["name"] if row else None
 
     def tokens_get(self, tokens_id: str) -> Optional[dict[str, Any]]:
         row = self.db.one("SELECT * FROM design_systems WHERE id = ?", (tokens_id,))

@@ -133,7 +133,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
           <code>{entry.target || entry.files[0]}</code>
           {!entry.target && entry.files.length > 1 && <span> +{entry.files.length - 1}</span>}
         </p>}
-        <CanvasMaterials examples={entry.examples} tokensId={entry.tokens_id} />
+        <CanvasMaterials materials={entry.materials} es={es} />
         {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"
           aria-disabled={undoing} aria-label={`${es ? "Deshacer paso" : "Undo step"} · ${revisionLabel(entry.revision)}`}
           onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
