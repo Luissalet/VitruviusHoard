@@ -89,6 +89,11 @@ def test_source_returns_the_real_entry_and_shared_code():
 def test_cold_host_routes_and_tools_need_no_design(tmp_path, monkeypatch):
     monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
     monkeypatch.setenv("HOARD_EVENTS", "0")
+    # Fresh profiles prepare Design on first start. Test the explicitly disabled profile here.
+    (tmp_path / "software-modules.json").write_text(json.dumps({
+        "version": 1,
+        "modules": {"design": {"enabled": False, "automatic": False}},
+    }), encoding="utf-8")
     from vitruvius_hoard.software.host import create_app
     app = create_app()
     with TestClient(app, base_url="http://127.0.0.1:5191") as client:
