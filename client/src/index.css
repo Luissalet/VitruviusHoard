@@ -166,13 +166,6 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 }
 .canvas-inspector-section { min-width: 0; padding: 12px; border-bottom: 1px solid var(--line); }
 .canvas-inspector > .canvas-inspector-section:last-child { border-bottom: 0; }
-/* Keep a track for live activity even when the preview has nothing to report. */
-#canvas-pane-activity:not([hidden]) { display: grid; grid-template-rows: auto 72px; }
-#canvas-pane-activity > :first-child { grid-row: 1; }
-#canvas-pane-activity:not(:has(> .canvas-live-steps, > .canvas-timeline))::before { content: ""; grid-row: 2; }
-#canvas-pane-activity > :is(.canvas-live-steps, .canvas-timeline) {
-  grid-row: 2; min-block-size: 0; overflow: auto; scrollbar-gutter: stable; align-content: start;
-}
 .canvas-inspector-heading {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   margin: 0 0 8px; color: var(--ink); font: inherit; font-weight: 700;
@@ -246,6 +239,7 @@ textarea.field.preview-comment-text { font-family: inherit; font-size: 13px; }
 #canvas-conversation:not(:empty) { margin-top: 8px; }
 .canvas-timeline { padding: 8px 12px 12px; border-bottom: 1px solid var(--line); }
 .canvas-timeline ol, .canvas-interactions ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.canvas-timeline .canvas-timeline-actions { block-size: 72px; overflow: auto; scrollbar-gutter: stable; align-content: start; }
 .canvas-speech { padding: 7px 4px; min-width: 0; }
 .canvas-speech[data-role="user"] { background: var(--surface-2); border-radius: 6px; padding: 8px 10px; }
 .canvas-speech strong { color: var(--muted); font-size: 12px; }

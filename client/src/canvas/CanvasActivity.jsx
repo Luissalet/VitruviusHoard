@@ -59,20 +59,23 @@ export function CanvasTimeline({ steps, es }) {
   useEffect(() => {
     if (requestNode.current?.getClientRects().length) requestNode.current.scrollIntoView({ block: "nearest" });
   }, [request?.id]);
-  if (!steps.length) return null;
+  const speech = steps.filter((entry) => entry.kind === "speech");
+  const actions = groupCanvasActivity(steps).filter((entry) => entry.kind !== "speech");
   return <div className="canvas-timeline" role="log" aria-label={es ? "Conversación y actividad" : "Conversation and activity"}
     aria-relevant="additions">
-    <ol role="list">
-      {groupCanvasActivity(steps).map((entry) => {
-        if (entry.kind === "speech") {
-          const user = entry.role === "user";
-          const label = user ? (es ? "Encargo" : "Request") : entry.speaker || (es ? "Agente" : "Agent");
-          return <li key={entry.id} className="canvas-speech" data-role={entry.role}
-            ref={entry.id === request?.id ? requestNode : undefined}>
-            <strong>{label}</strong>
-            <p>{entry.text}</p>
-          </li>;
-        }
+    {speech.length > 0 && <ol role="list">
+      {speech.map((entry) => {
+        const user = entry.role === "user";
+        const label = user ? (es ? "Encargo" : "Request") : entry.speaker || (es ? "Agente" : "Agent");
+        return <li key={entry.id} className="canvas-speech" data-role={entry.role}
+          ref={entry.id === request?.id ? requestNode : undefined}>
+          <strong>{label}</strong>
+          <p>{entry.text}</p>
+        </li>;
+      })}
+    </ol>}
+    <ol className="canvas-timeline-actions" role="list" aria-label={es ? "Acciones en la vista previa" : "Preview actions"}>
+      {actions.map((entry) => {
         if (entry.kind === "interactions") {
           const count = entry.steps.length;
           const unit = es ? (count === 1 ? "interacción" : "interacciones")
