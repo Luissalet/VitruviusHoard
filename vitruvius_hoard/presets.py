@@ -490,7 +490,8 @@ def apply_parts(tokens: dict[str, Any], p: dict, parts: list[str]) -> dict[str, 
     return t
 
 
-def apply(svc, name: str, *, tokens_id: Optional[str] = None, parts: Optional[list[str]] = None, title: Optional[str] = None) -> dict[str, Any]:
+def apply(svc, name: str, *, tokens_id: Optional[str] = None, parts: Optional[list[str]] = None,
+          title: Optional[str] = None, fonts: Optional[dict[str, str]] = None) -> dict[str, Any]:
     from . import tokens as tokens_mod
     p = get(name)
     if p is None:
@@ -511,6 +512,8 @@ def apply(svc, name: str, *, tokens_id: Optional[str] = None, parts: Optional[li
         tokens_id, created = row["id"], True
         parts = list(PARTS)
     tokens = apply_parts(row["tokens"], p, parts)
+    if fonts and "type" in parts:
+        tokens["typography"].update({role: fonts[role] for role in ("heading", "body", "mono") if fonts.get(role)})
     svc.db.execute("UPDATE design_systems SET tokens = ?, css = ?, tailwind = ? WHERE id = ?",
                    (json.dumps(tokens), tokens_mod.to_css(tokens), tokens_mod.to_tailwind(tokens), tokens_id))
     try:

@@ -194,6 +194,19 @@ def test_render_and_lint_accept_a_page_on_disk(services, tmp_path):
     assert "id" in by_file and "findings" in by_folder
 
 
+@pytest.mark.parametrize(("root", "warns"), [
+    ('<html lang="es">', False),
+    ("<HTML data-other='>' LANG=es>", False),
+    ('<html lang="  ">', True),
+    ('<!-- <html lang="es"> --><html>', True),
+])
+def test_static_design_lint_reads_document_language(services, root, warns):
+    html = f"<!doctype html>{root}<body><h1 lang='es'>Las Trojes</h1></body></html>"
+    result = call_tool(services, "design_lint", {"html": html, "packs": ["core"], "engines": ["static"]})
+
+    assert any(item["check_id"] == "a11y.no-lang" for item in result["findings"]) == warns
+
+
 def test_local_page_errors_are_clear(tmp_path):
     from vitruvius_hoard.agent_tools import read_local_page
     import pytest

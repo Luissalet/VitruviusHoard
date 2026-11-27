@@ -166,6 +166,24 @@ def test_tokens_generate_from_the_flexoki_preset(tmp_path):
         svc.stop()
 
 
+def test_tokens_generate_can_override_some_preset_fonts(tmp_path):
+    svc = make_services(tmp_path)
+    try:
+        fonts = {"heading": "Instrument Serif", "body": "Barlow"}
+        row = call_tool(svc, "tokens_generate", {"name": "Studio", "preset": "kiln-ember", "fonts": fonts})
+        preset = presets.get("kiln-ember")
+        expected = {**fonts, "mono": preset["tokens"]["fonts"]["mono"]}
+
+        assert row["tokens"]["preset"]["name"] == "kiln-ember"
+        assert row["tokens"]["color"]["roles"] == preset["tokens"]["colors"]
+        for role, family in expected.items():
+            assert row["tokens"]["typography"][role] == family
+            assert f"--font-{role}: {family};" in row["css"]
+        assert svc.tokens_get(row["id"])["roles"]["fonts"] == expected
+    finally:
+        svc.stop()
+
+
 def test_flexoki_rest(client):
     listed = client.get("/api/presets", params={"source": "flexoki"}).json()
     assert listed["count"] == 8 and listed["presets"][0]["license"]["holder"].startswith("Steph Ango")

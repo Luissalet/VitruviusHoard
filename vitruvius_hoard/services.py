@@ -40,6 +40,7 @@ from .hoard_link.atomic import write_json_atomic
 from .hoard_link.config import LinkConfig
 from .hoard_link.media import bins as media_bins
 from .hoard_link.web import safety
+from .rules.pagesrc import page_of
 from .rules.registry import ENGINES
 from .hoard_link.tokens import read_or_create_token
 from .ingest.git import git_available
@@ -579,7 +580,10 @@ class Services:
             raise ValueError(f"engines must be among {', '.join(ENGINES)}")
         if engines == ["static"] and html is not None and not render_id and not url:
             # The static rules read the source text and its cascade: no capture, no browser.
-            return lint_mod.run_lint({}, html, tokens=tokens, packs=packs, engines=engines)
+            page = page_of(None, html)
+            document = next((node for node in page.root.children if node.tag == "html"), None)
+            lang = document.attrs.get("lang", "").strip() if document is not None else ""
+            return lint_mod.run_lint({"lang": lang}, html, tokens=tokens, packs=packs, engines=engines)
         if render_id:
             render = self.get_render(render_id)
             if render is None:

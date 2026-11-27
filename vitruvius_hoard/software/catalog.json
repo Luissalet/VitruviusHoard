@@ -1037,6 +1037,7 @@
             }
           ],
           "default": null,
+          "description": "Font families or CSS stacks for heading, body and mono. With a preset, supplied roles override its fonts.",
           "title": "Fonts"
         },
         "radius": {
@@ -1155,7 +1156,7 @@
             }
           ],
           "default": null,
-          "description": "Build the whole system from a preset instead (design_preset_list), e.g. 'flexoki' or 'flexoki-orange'; the other fields except name are ignored.",
+          "description": "Build from a preset (design_preset_list), e.g. 'flexoki'. Accepts name and optional fonts overrides. Other generation fields are ignored.",
           "title": "Preset"
         }
       },
