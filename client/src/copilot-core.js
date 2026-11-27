@@ -28,15 +28,17 @@ export function formSnapshot(kind, { objectId, initial, current } = {}) {
 export function collectEditor(dispatch) {
   const answers = [];
   const refs = [];
+  let project;
   try {
     dispatch({
       provide: (snapshot) => { if (snapshot && typeof snapshot === "object" && snapshot.kind) answers.push(snapshot); },
       provideObjects: (list) => { if (Array.isArray(list)) refs.push(...list); },
+      provideProject: (value) => { if (value?.external_project_id) project = value; },
     });
   } catch { /* a broken form must not break the turn */ }
   const dirty = answers.filter((a) => a.dirty);
   const editor = dirty.length ? dirty[dirty.length - 1] : answers[answers.length - 1];
-  return { editor, refs };
+  return { editor, refs, ...(project ? { project } : {}) };
 }
 
 // One entry per object kind the views can show: the client API call that reads it and how its title is spelled.
@@ -76,8 +78,8 @@ export async function resolveObjects(refs, api) {
 
 /**
  * Build `{ project?, active_objects?, editor? }` for the current view. Every part is optional: a failing read omits
- * that part, an id that does not resolve (or "new") means "no object", and the promise never rejects. The app has
- * no projects, so `project` is never set.
+ * that part, an id that does not resolve (or "new") means "no object", and the promise never rejects.
+ * A mounted canvas can name its project's conversation explicitly.
  *  - api: the app's client API (`api.render(id)`, `api.tokensGet(id)`, ...)
  *  - ask: `(detail) => void` that dispatches the context request to the mounted forms and views
  */
@@ -89,6 +91,7 @@ export async function buildContext({ api, ask }) {
     const collected = collectEditor(ask);
     editor = collected.editor;
     refs = collected.refs;
+    if (collected.project) out.project = collected.project;
   } catch { /* omit the editor part */ }
 
   // The pages take no id from the route (`#/tokens` is the page, not an object), so only the objects a view reports count.

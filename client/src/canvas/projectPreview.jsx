@@ -9,7 +9,7 @@ import { usePreviewEdits } from "../preview-edits.js";
  * (`usePreviewEdits`). Both screens use this hook, so the preview, its refresh, its edits and the agent tools that
  * reach it behave the same in both places.
  */
-export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, onRevision, onError }) {
+export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, onRevision, onError, onActivity }) {
   const frameRef = useRef(null);
   // The frame mounts a render after the preview starts; the bridge must greet that element, so it follows it.
   const [frameElement, setFrameElement] = useState(null);
@@ -18,7 +18,7 @@ export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, on
   const frames = useProjectLivePreview(projectId, preview, baseline, frameRef, onRevision, onError);
   const visible = frames[0] || preview;
   usePreviewEdits(projectId, visible?.state === "running", frameRef, lang);
-  useProjectCanvas(mountedFrame, projectId, visible?.state === "running" ? visible.url : null, visible?.revision, lang);
+  useProjectCanvas(mountedFrame, projectId, visible?.state === "running" ? visible.url : null, visible?.revision, lang, onActivity);
   return { frameRef, attachFrame, frames, visible };
 }
 

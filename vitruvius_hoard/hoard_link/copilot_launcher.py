@@ -116,6 +116,10 @@ LAUNCHER_JS = r"""
     .hoard-copilot{position:fixed;top:var(--hoard-copilot-top,14px);right:14px;bottom:calc(var(--hoard-copilot-bottom,18px) + 48px);width:min(430px,calc(100vw - 28px));z-index:2147483001;
       display:flex;flex-direction:column;background:#17141f;color:#f4f1ff;border:1px solid rgba(127,127,127,.4);
       border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);font:14px/1.4 system-ui,sans-serif}
+    .hoard-copilot[data-inline]{position:static;width:100%;height:clamp(250px,46dvh,435px);min-width:0;z-index:auto;box-shadow:none}
+    .hoard-copilot[data-inline]:not(:has(faustus-chat)){height:auto}
+    .hoard-copilot .hoard-copilot-loading{margin:12px}
+    .hoard-copilot details summary{cursor:pointer}
     .hoard-copilot[hidden]{display:none}
     .hoard-copilot header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;
       border-bottom:1px solid rgba(127,127,127,.25)}
@@ -332,6 +336,7 @@ LAUNCHER_JS = r"""
   // ``--hoard-copilot-top``.
   // An app that sets ``--hoard-copilot-top`` itself keeps its value.
   function fitBelowHeader() {
+    if (aside?.hasAttribute('data-inline')) return;
     if (!aside) return;
     aside.style.removeProperty('--hoard-copilot-top');
     if (getComputedStyle(document.documentElement).getPropertyValue('--hoard-copilot-top').trim()) return;
@@ -382,27 +387,68 @@ LAUNCHER_JS = r"""
     retry.addEventListener('click', () => { attach(body, title); });
     const detail = document.createElement('small');
     detail.textContent = String(error && error.message || error || '');
-    box.append(text, retry, detail);
+    box.append(text, retry);
+    if (aside?.hasAttribute('data-inline')) {
+      const disclosure = document.createElement('details');
+      const label = document.createElement('summary');
+      label.textContent = es ? 'Detalles técnicos' : 'Technical details';
+      disclosure.append(label, detail);
+      box.appendChild(disclosure);
+    } else box.appendChild(detail);
     body.replaceChildren(box);
   }
 
   function attach(body, title) {
+    if (aside?.hasAttribute('data-inline')) {
+      const status = document.createElement('p');
+      status.className = 'hoard-copilot-loading';
+      status.setAttribute('role', 'status');
+      status.textContent = lang() === 'es' ? 'Cargando conversación…' : 'Loading conversation…';
+      body.replaceChildren(status);
+    }
     mounting = mount(body, title).catch((error) => { panel = null; unavailable(body, title, error); }).finally(() => { mounting = null; });
     return mounting;
   }
 
   let mounting = null;
   let mountTarget = null;
+  let returnFocus = null;
 
-  function open(toggle) {
+  function placeAside(container) {
+    const inline = container instanceof HTMLElement && container.isConnected;
+    const destination = inline ? container : layer;
+    const previous = aside.hasAttribute('data-inline') ? aside.parentElement : null;
+    aside.toggleAttribute('data-inline', inline);
+    if (aside.parentElement !== destination) {
+      if (previous) window.dispatchEvent(new CustomEvent('hoard:copilot-visibility', {
+        detail: { container: previous, visible: false },
+      }));
+      if (aside.isConnected && typeof destination.moveBefore === 'function') destination.moveBefore(aside, null);
+      else destination.appendChild(aside);
+    }
+  }
+
+  function setVisible(toggle, visible) {
+    aside.hidden = !visible;
+    toggle.setAttribute('aria-expanded', String(visible));
+    if (aside.hasAttribute('data-inline')) {
+      window.dispatchEvent(new CustomEvent('hoard:copilot-visibility', {
+        detail: { container: aside.parentElement, visible },
+      }));
+    }
+  }
+
+  function open(toggle, container, trigger) {
+    returnFocus = trigger || toggle;
     if (aside) {
-      aside.hidden = false; fitBelowHeader(); toggle.setAttribute('aria-expanded', 'true');
+      placeAside(container); setVisible(toggle, true); fitBelowHeader();
       if (!panel && !mounting && mountTarget) attach(mountTarget.body, mountTarget.title); else schedule();
       return;
     }
     aside = document.createElement('aside');
     aside.className = 'hoard-copilot';
     aside.setAttribute('aria-label', 'Faustus');
+    aside.tabIndex = -1;
     const header = document.createElement('header');
     const title = document.createElement('strong');
     title.textContent = 'Faustus';
@@ -410,7 +456,10 @@ LAUNCHER_JS = r"""
     close.type = 'button';
     close.textContent = '×';
     close.setAttribute('aria-label', lang() === 'es' ? 'Cerrar Faustus' : 'Close Faustus');
-    close.addEventListener('click', () => { aside.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); });
+    close.addEventListener('click', () => {
+      setVisible(toggle, false);
+      (returnFocus?.getClientRects().length ? returnFocus : toggle).focus();
+    });
     header.append(title, close);
     const body = document.createElement('div');
     body.className = 'hoard-copilot-body';
@@ -420,10 +469,10 @@ LAUNCHER_JS = r"""
     aside.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !modalOrder.length && !event.defaultPrevented) close.click();
     });
-    layer.appendChild(aside);
+    placeAside(container);
+    setVisible(toggle, true);
     fitBelowHeader();
     window.addEventListener('resize', () => { if (aside && !aside.hidden) fitBelowHeader(); });
-    toggle.setAttribute('aria-expanded', 'true');
     mountTarget = { body, title };
     attach(body, title);
   }
@@ -442,12 +491,21 @@ LAUNCHER_JS = r"""
     toggle.setAttribute('aria-label', 'Faustus');
     toggle.title = 'Faustus';
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.addEventListener('click', () => (aside && !aside.hidden ? (aside.hidden = true, toggle.setAttribute('aria-expanded', 'false')) : open(toggle)));
+    toggle.addEventListener('click', () => {
+      const slot = document.querySelector('[data-hoard-copilot-inline-slot]');
+      if (aside && !aside.hidden && aside.getClientRects().length) setVisible(toggle, false);
+      else open(toggle, slot?.getClientRects().length ? slot : null);
+    });
     layer.appendChild(toggle);
     const modalObserver = new MutationObserver(placeLayer);
     modalObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
     placeLayer();
-    window.addEventListener('hoard:copilot-open', () => open(toggle));
+    window.addEventListener('hoard:copilot-open', (event) => open(toggle, event.detail?.container, event.detail?.trigger));
+    window.addEventListener('hoard:copilot-release', (event) => {
+      if (!aside || aside.parentElement !== event.detail?.container) return;
+      setVisible(toggle, false);
+      placeAside(null);
+    });
     for (const name of ['pushState', 'replaceState']) {
       const original = history[name];
       if (typeof original !== 'function') continue;
