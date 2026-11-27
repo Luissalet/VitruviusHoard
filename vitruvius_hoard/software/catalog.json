@@ -2119,6 +2119,117 @@
     "module": "design"
   },
   {
+    "name": "app_project_edit_template_data",
+    "description": "Edit project template text with undo. Editar texto de plantilla con deshacer.\nPass name and/or description to change {{name}} and {{description}} as literal project data.\nUsa name o description y la revisión vigente; conserva el marcado de la plantilla.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Literal project name, used by {{name}}.",
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Literal project description, used by {{description}}.",
+          "title": "Description"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasActor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agent identity for the preview cursor."
+        }
+      },
+      "required": [
+        "id",
+        "expected_revision"
+      ],
+      "title": "AppTemplateDataArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_canvas_edit",
     "description": "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
     "annotations": {
