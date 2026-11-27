@@ -836,9 +836,10 @@
           "title": "Path"
         },
         "timeout_s": {
-          "default": 300,
+          "default": 105,
+          "description": "Page-check budget in seconds. Set below the calling transport's timeout when overriding either limit.",
           "maximum": 900,
-          "minimum": 30,
+          "minimum": 1,
           "title": "Timeout S",
           "type": "integer"
         },
@@ -6572,9 +6573,10 @@
           "title": "Path"
         },
         "timeout_s": {
-          "default": 300,
+          "default": 105,
+          "description": "Page-check budget in seconds. Set below the calling transport's timeout when overriding either limit.",
           "maximum": 900,
-          "minimum": 30,
+          "minimum": 1,
           "title": "Timeout S",
           "type": "integer"
         },

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, FiniteFloat, StrictBool, model_validator
 
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
+from .assay import DEFAULT_TIMEOUT_S as PAGE_CHECK_TIMEOUT_S
 from .transfer_assistant import assistant_assets
 from .app_projects import templates as app_templates
 from .preview_inspector import read_selection
@@ -105,7 +106,7 @@ class AssayArgs(BaseModel):
     url: Optional[str] = Field(None, max_length=2000, description="A URL whose HTML is downloaded and checked as a single page.")
     render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
-    timeout_s: int = Field(300, ge=30, le=900)
+    timeout_s: int = Field(PAGE_CHECK_TIMEOUT_S, ge=1, le=900, description="Page-check budget in seconds. Set below the calling transport's timeout when overriding either limit.")
     before: bool = Field(False, description="Before a redesign: also save the page's links, form fields, event handlers and titles; the result carries kept_saved.id.")
     kept: Optional[str] = Field(None, max_length=40, description="After a redesign: the id saved by an earlier `before`. The check fails when any saved link, field, handler or title is missing.")
     snapshot_only: bool = Field(False, description="With before: save the snapshot and skip driving the page.")

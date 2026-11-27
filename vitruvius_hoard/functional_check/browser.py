@@ -58,6 +58,7 @@ class Element:
     painted: Optional[int] = None
     loaded: Optional[bool] = None
     src: str = ""
+    navigates: bool = False
 
 
 # --------------------------------------------------------------------------
@@ -86,7 +87,7 @@ def serve(root: Path) -> Iterator[str]:
     # Chromium can open an idle connection before requesting the document.
     # One such connection must not hold up every other request for the page.
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread = threading.Thread(target=httpd.serve_forever, args=(0.05,), daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -340,6 +341,8 @@ __CANVAS__    const pending = [];
         if (o.tag === 'canvas') pending.push(
             _pixels(el).then(p => { o.painted = p[0]; }));
         if (o.kind) o.group = groupOf(el);
+        const href = o.tag === 'a' ? (el.getAttribute('href') || '').trim() : '';
+        o.navigates = !!href && href !== '#' && !/^javascript:/i.test(href);
         o.readonly = !!(el.readOnly || el.hasAttribute('readonly'));
         const form = el.closest('form');
         const holder = form || el.parentElement;
@@ -913,7 +916,7 @@ def elements(page: Any) -> List[Element]:
             readonly=bool(r.get("readonly", False)),
             grabbed=bool(r.get("grabbed", False)),
             painted=r.get("painted"), loaded=r.get("loaded"),
-            src=str(r.get("src") or "")[:200],
+            src=str(r.get("src") or "")[:200], navigates=bool(r.get("navigates")),
         )
         for r in rows or []
     ]
@@ -1202,6 +1205,22 @@ def facts(page: Any) -> Dict[str, Any]:
         return {}
 
 
+def can_respond_late(page: Any) -> bool:
+    """Allow slow recovery unless the page offers only immediate native behavior."""
+    with contextlib.suppress(Exception):
+        immediate = page.evaluate(r"""() => {
+          if (document.querySelector('script,style,link,iframe,object,embed,svg,video,audio,meta[http-equiv]'))
+            return false;
+          return ![...document.querySelectorAll('*')].some(el =>
+            el.localName.includes('-') || !!el.shadowRoot ||
+            [...el.attributes].some(attr => attr.name.startsWith('on') ||
+              attr.name === 'style' || /^\s*javascript:/i.test(attr.value)));
+        }""")
+        if immediate is True:
+            return False
+    return True
+
+
 def signature(page: Any) -> Dict[str, Any]:
     """What the page is showing, for comparing against itself."""
     try:
@@ -1327,7 +1346,8 @@ def _slide(page: Any, selector: str, timeout: float) -> None:
 
 
 def perform(page: Any, acts: Sequence[Dict[str, str]],
-            timeout: float = 4000, *, on_act=None) -> Tuple[List[str], List[str]]:
+            timeout: float = 4000, *, on_act=None, navigated=None,
+            settle_ms: int = 500) -> Tuple[List[str], List[str]]:
     """Do each act in order. Returns what could not be done, and what was off.
 
     A target may carry `@x,y` to name a point as a fraction of the element's
@@ -1336,6 +1356,7 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
     """
     could_not: List[str] = []
     was_off: List[str] = []
+    start_url = getattr(page, "url", "")
     for step in acts:
         for verb, raw in step.items():
             if on_act is not None:
@@ -1345,16 +1366,15 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
             try:
                 if verb in ("click", "dblclick"):
                     sel, _, spot = arg.partition("@")
-                    try:
-                        page.click(sel, timeout=timeout, **_where(page, sel, spot))
-                    except Exception:
-                        # **Words are a second way to name a control, not a
-                        # second chance to press it.** A selector that found
-                        # its element and could not press it will not match
-                        # as text, and asking costs a second full timeout.
-                        if _found(page, sel):
-                            raise
-                        page.click(f"text={sel}", timeout=timeout)
+                    selector = sel if _found(page, sel) else f"text={sel}"
+                    changed_document = (navigated is not None and navigated()) or page.url != start_url
+                    if changed_document and not _found(page, selector):
+                        raise ValueError("target is absent after navigation")
+                    if selector != sel and not _found(page, selector):
+                        # Allow a control still mounting on the current page,
+                        # with one actionability timeout for either spelling.
+                        selector = sel if sel.startswith(("#", ".", "[")) else selector
+                    page.click(selector, timeout=timeout, **_where(page, selector, spot))
                 elif verb == "press":
                     page.keyboard.press(arg)
                 elif verb == "focus":
@@ -1397,7 +1417,7 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
             # grid whose two handlers double-toggle, so every click nets to
             # nothing, measure as though it had responded.
             page.mouse.move(1, 1)
-            page.wait_for_timeout(500)
+            page.wait_for_timeout(settle_ms)
     return could_not, was_off
 
 

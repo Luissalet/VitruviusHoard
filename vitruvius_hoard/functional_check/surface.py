@@ -100,6 +100,7 @@ class Control:
     pairing: int = 0
     #: Whether the page refuses typing into it, which makes it an output.
     readonly: bool = False
+    navigates: bool = False
 
     @property
     def name(self) -> str:
@@ -190,7 +191,8 @@ def from_page(shot) -> Surface:
                 enabled=e.enabled, width=e.width, height=e.height,
                 group=getattr(e, "group", 0),
                 pairing=getattr(e, "pairing", 0),
-                readonly=bool(getattr(e, "readonly", False)))
+                readonly=bool(getattr(e, "readonly", False)),
+                navigates=bool(getattr(e, "navigates", False)))
         for e in getattr(shot, "elements", ())
         if getattr(e, "kind", "") and e.visible]
     return Surface(kind="page", controls=controls)
@@ -353,9 +355,10 @@ def plan(surface: Surface, criteria: Sequence[Any] = ()) -> List[Case]:
             # Undo after undo, start after start, a toggle that only toggles
             # one way. Nothing is asserted about *what* changes, only that
             # the program did not throw.
-            add(f"press {c.name} twice",
-                [{"click": c.selector}, {"click": c.selector}], {"quiet": True},
-                c.selector)
+            if not c.navigates:
+                add(f"press {c.name} twice",
+                    [{"click": c.selector}, {"click": c.selector}], {"quiet": True},
+                    c.selector)
         elif c.kind in ("text", "number") and not c.readonly:
             # **A field is probed with values it can hold.** A number box
             # refuses letters at the browser level, so a case that types

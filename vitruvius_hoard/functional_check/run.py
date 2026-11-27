@@ -163,19 +163,19 @@ class Opened:
 class Browser:
     """One browser and one server, held open for a whole run.
 
-    A fresh page per case, not a fresh browser. Every case needs the program
-    in its starting state: a paint tool with a cell already filled is a
-    different program from one just loaded. A new tab gives you that.
-    Launching the engine per case instead cost a browser start and a server
-    bind every time: on a 21-case program that is 21 of each, and it turned
-    seconds of work into minutes, and a tool meant to run in CI should not
-    spend it starting Chromium.
+    Reuse the context while browser settings match. Each case gets a fresh
+    page and its browser storage is cleared before the next case.
     """
 
     def __init__(self, folder: Path, entry: str, headless: bool = True, url: Optional[str] = None) -> None:
         self.folder, self.entry, self.headless = folder, entry, headless
         self._exit = contextlib.ExitStack()
         self._engine: Any = None
+        self._context: Any = None
+        self._storage: Any = None
+        self._options: dict = {}
+        self._surface_seen = False
+        self._navigated = False
         self._play: Any = None
         self._base = ""
         self.url = url
@@ -232,7 +232,34 @@ class Browser:
             raise ValueError("Case environment supports viewport, reduced_motion and color_scheme")
         if self.url:
             options["service_workers"] = "block"
-        page = self._engine.new_page(**options)
+        if self._context is None or options != self._options:
+            if self._context is not None:
+                self._context.close()
+            self._context = self._engine.new_context(**options)
+            if not self.url:
+                # Routing disables the shared HTTP cache between cases.
+                self._context.route("**/*", lambda route: route.continue_())
+            self._storage = None
+            self._options = options
+        context = self._context
+        page = context.new_page()
+        origins: set[str] = set()
+
+        def remember(url):
+            target = urlsplit(url)
+            if target.scheme in ("http", "https") and target.netloc:
+                origins.add(f"{target.scheme}://{target.netloc}")
+
+        def watch(tab):
+            tab.on("framenavigated", lambda frame: remember(frame.url))
+
+        def main_navigation(frame):
+            if frame == page.main_frame:
+                self._navigated = True
+
+        watch(page)
+        page.on("framenavigated", main_navigation)
+        context.on("page", watch)
         if self.url:
             from vitruvius_hoard.browser import _origin
 
@@ -261,7 +288,7 @@ class Browser:
                             self.startup_blocked_writes.append(entry)
                     route.abort()
 
-            page.route("**/*", read_only)
+            context.route("**/*", read_only)
         page.add_init_script("""(() => {
           window.__vitruviusStateShifts = [];
           try { new PerformanceObserver(list => {
@@ -285,13 +312,36 @@ class Browser:
                       wait_until="load", timeout=30000)
             # `load` fires when the document and its scripts are fetched, which
             # on anything framework-rendered is before a single control exists.
-            self.rest = browser.settle(page, ceiling_ms=SETTLE_CEILING_MS)
+            self._navigated = False
+            ready = {"poll_ms": 65, "stable": 2} if self._surface_seen else {}
+            self.rest = browser.settle(page, ceiling_ms=SETTLE_CEILING_MS, **ready)
+            self._surface_seen = self._surface_seen or bool(self.rest and self.rest.live)
             yield page, crashes, console, failed
         finally:
-            with contextlib.suppress(Exception):
-                page.close()
+            try:
+                context.remove_listener("page", watch)
+                # Close documents first so unload handlers cannot restore
+                # cookies or origin storage after the reset.
+                for tab in context.pages:
+                    if self._storage is None or tab != self._storage[0]:
+                        tab.close()
+                if self.url:
+                    context.unroute("**/*", read_only)
+                context.clear_cookies()
+                if origins and self._storage is None:
+                    blank = context.new_page()
+                    self._storage = (blank, context.new_cdp_session(blank))
+                for origin in origins:
+                    self._storage[1].send("Storage.clearDataForOrigin", {
+                        "origin": origin, "storageTypes": "all",
+                    })
+            except Exception:
+                # If a crashed tab prevents a reset, discard the context.
+                self._context = self._storage = None
+                with contextlib.suppress(Exception):
+                    context.close()
 
-    def perform(self, page, acts, *, on_act=None):
+    def perform(self, page, acts, *, on_act=None, settle_ms=150):
         def before_action(action):
             if action["verb"] != "wait" and not self._acting:
                 self._acting = True
@@ -301,7 +351,8 @@ class Browser:
             if on_act is not None:
                 on_act(action)
 
-        return browser.perform(page, acts, on_act=before_action)
+        return browser.perform(page, acts, on_act=before_action, navigated=lambda: self._navigated,
+                               settle_ms=settle_ms)
 
 
 #: What a page is called, for a path nobody has written yet.
@@ -741,6 +792,7 @@ def check(folder: str | Path, entry: str = "index.html",
     with Browser(root, entry, url=url) as engine:
         progress("open_page")
         with engine.open() as (page, crashes, console, failed):
+            can_respond_late = browser.can_respond_late(page)
             opened = Opened(surface=from_page(_Shot(browser.elements(page))),
                             unreached=browser.unreached(page),
                             crashes=list(crashes),
@@ -809,7 +861,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 progress("inspect_case", case=case)
 
                 def perform(acts):
-                    options = {}
+                    options = {"settle_ms": 500} if not case.expect.get("quiet") or case.origin == "criterion" else {}
                     if on_progress is not None:
                         options["on_act"] = lambda action: progress("perform_action", case=case, action=action)
                     result = engine.perform(page, acts, **options)
@@ -1130,7 +1182,8 @@ def check(folder: str | Path, entry: str = "index.html",
         # one control instead of two, and was called dead. A verdict must
         # not depend on how loaded the machine is.
         if opened.rest is None or opened.rest.quiet:
-            _nothing_responds(run, answered, engine, opened.unreached)
+            _nothing_responds(run, answered, engine, opened.unreached,
+                              can_respond_late=can_respond_late)
         _nothing_drawn(run, any(drew), opened)
     return run
 
@@ -1609,6 +1662,8 @@ def _one_look(engine: Browser) -> bool:
             if not pressable:
                 return True
             engine.perform(page, [{"click": c.selector} for c in pressable])
+            if browser.moved(before, browser.signature(page)):
+                return True
             for _ in range(SLOW_LOOKS):
                 page.wait_for_timeout(SLOW_POLL_MS)
                 if browser.moved(before, browser.signature(page)):
@@ -1676,7 +1731,8 @@ def _nothing_drawn(run: QA, drew: bool, opened: Opened) -> None:
 
 
 def _nothing_responds(run: QA, answered: set, engine: Browser,
-                      unreached: Optional[Dict[str, int]] = None) -> None:
+                      unreached: Optional[Dict[str, int]] = None, *,
+                      can_respond_late: bool = True) -> None:
     """A page that answers none of its own controls has nothing behind it.
 
     This is the only finding here that no single case can make, and it has
@@ -1722,7 +1778,7 @@ def _nothing_responds(run: QA, answered: set, engine: Browser,
     tried = {r.case.control or r.case.id for r in acted}
     if len(tried) < 2 or any(r.case.id in answered for r in acted):
         return
-    if run.surface is not None and _waited_out(engine, run.surface):
+    if can_respond_late and run.surface is not None and _waited_out(engine, run.surface):
         return
     case = Case(id="C000", what="the page answers something it offers",
                 acts=[], expect={})

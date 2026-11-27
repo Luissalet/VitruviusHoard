@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import time
@@ -26,7 +27,9 @@ from typing import Any, Optional
 from .hoard_link import proc
 
 INSTALL_HINT = "The page checker is incorporated in Vitruvius; its Playwright browser dependency must be installed."
-DEFAULT_TIMEOUT_S = 300
+# The Hub normally allows 120 seconds, without forwarding its transport timeout.
+DEFAULT_TIMEOUT_S = 105
+RESPONSE_RESERVE_S = 4
 
 
 def available() -> bool:
@@ -88,6 +91,37 @@ def _read_progress(path: Path) -> dict[str, Any]:
         return {}
 
 
+def _run_worker(cmd: list[str], *, timeout: float, cwd: Path, output: Path) -> tuple[int, str, str]:
+    # Files allow timeout recovery without waiting for inherited pipe handles
+    # held by the Playwright driver or Chromium after the worker is stopped.
+    stdout = output / "stdout.json"
+    stderr = output / "stderr.log"
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    with stdout.open("wb") as out, stderr.open("wb") as err:
+        child = proc.popen(cmd, cwd=cwd, stdout=out, stderr=err, env=env, low_priority=True)
+        try:
+            code = child.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            raise
+    return code, stdout.read_text(encoding="utf-8"), stderr.read_text(encoding="utf-8", errors="replace")
+
+
+def _partial(progress: Path, run_id: str, t0: float) -> dict[str, Any]:
+    snapshot = _read_progress(progress)
+    finished = snapshot.get("cases", [])
+    result = reduce_run({**snapshot, "works": False,
+                         "passed": sum(c["outcome"] == "passed" for c in finished),
+                         "failed": sum(c["outcome"] == "failed" for c in finished)})
+    result.update({
+        "id": run_id, "ms": int((time.monotonic() - t0) * 1000), "timed_out": True,
+        "stopped_at": snapshot.get("stopped_at", {"stage": "start_worker"}),
+        "unchecked": max(0, result["planned"] - len(finished))
+        + sum(c["outcome"] == "unknown" for c in finished),
+    })
+    return result
+
+
 def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = None,
         url: Optional[str] = None, timeout_s: int = DEFAULT_TIMEOUT_S, runner: Any = None,
         criteria: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
@@ -110,27 +144,18 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
         cmd.extend(["--criteria", str(criterion_path)])
     t0 = time.monotonic()
     if runner is None:
-        cmd.extend(["--progress", str(progress)])
+        work_budget = max(0.1, timeout_s - RESPONSE_RESERVE_S)
+        cmd.extend(["--progress", str(progress), "--budget", str(work_budget)])
         try:
-            done = proc.run(cmd, timeout=timeout_s, cwd=folder)  # the whole process tree is killed on a timeout
-            code, out, err = done.returncode, done.stdout, done.stderr
+            code, out, err = _run_worker(cmd, timeout=timeout_s, cwd=folder, output=run_dir)
         except subprocess.TimeoutExpired:
-            snapshot = _read_progress(progress)
-            finished = snapshot.get("cases", [])
-            result = reduce_run({**snapshot, "works": False,
-                                 "passed": sum(c["outcome"] == "passed" for c in finished),
-                                 "failed": sum(c["outcome"] == "failed" for c in finished)})
-            result.update({
-                "id": run_id, "ms": int((time.monotonic() - t0) * 1000), "timed_out": True,
-                "stopped_at": snapshot.get("stopped_at", {"stage": "start_worker"}),
-                "unchecked": max(0, result["planned"] - len(finished))
-                + sum(c["outcome"] == "unknown" for c in finished),
-            })
-            return result
+            return _partial(progress, run_id, t0)
         except OSError as error:
             return {"error": f"assay could not start: {error}", "hint": INSTALL_HINT, "id": run_id}
     else:
         code, out, err = runner(cmd, timeout_s)
+    if code == 124:
+        return _partial(progress, run_id, t0)
     ms = int((time.monotonic() - t0) * 1000)
     try:
         payload = json.loads(out.strip()) if out.strip() else None
