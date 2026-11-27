@@ -1,6 +1,8 @@
 /** Local microphone capture for the shared dictation service. */
 const MIME = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
+const FIRST_PROBE_MS = 110;
 const ADAPTIVE_PROBE_MS = 150;
+const ADAPTIVE_RETRY_MS = 250;
 const ADAPTIVE_LONG_MS = 1650;
 
 export async function recordDictation({
@@ -31,7 +33,9 @@ export async function recordDictation({
   let probing;
   let proposal;
   let accepted;
-  let probeRequested = false;
+  let hasProbed = false;
+  let probeAttempts = 0;
+  let retryProbeAt;
   let pendingSnapshot;
   let speechEpoch = 0;
   let speaking = false;
@@ -41,7 +45,7 @@ export async function recordDictation({
   let captureStoppedAt;
   let stopReason;
   let audibleFrames = 0;
-  const minimumVoicedFrames = endTurn ? 2 : 4;
+  const sampleMs = endTurn ? 25 : 50;
   const started = performance.now();
 
   function stop({cancel = false, reason = "manual"} = {}) {
@@ -60,20 +64,26 @@ export async function recordDictation({
     if (!cancel) onStatus("transcribing");
   }
 
-  async function probe(blob, controller, observedSpeechEnd) {
+  function rearmProbe(epoch) {
+    if (!stopped && epoch === speechEpoch && probeAttempts === 1) {
+      retryProbeAt = performance.now() + ADAPTIVE_RETRY_MS;
+    }
+  }
+
+  async function probe(blob, controller, epoch, observedSpeechEnd) {
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(1600)]);
     try {
       const result = await request(blob, {partial: true, adaptive: true, signal});
       signal.throwIfAborted();
-      if (!result?.text) return;
+      if (epoch !== speechEpoch || !result?.text) return;
       onPartial(result);
       const candidate = await endTurn(result, {signal});
-      if (signal.aborted || !candidate || observedSpeechEnd !== speechEnd) return;
+      if (signal.aborted || !candidate || epoch !== speechEpoch || observedSpeechEnd !== speechEnd) return;
       proposal = candidate;
       // Recheck the microphone before cutting. Speech may have resumed between interval ticks.
       if (candidate.silenceMs <= 700 && performance.now() - observedSpeechEnd >= candidate.silenceMs) sampleVoice();
     } catch {
-      // The ordinary final request still handles missing, slow and unsupported probes.
+      rearmProbe(epoch);
     } finally {
       if (probing === controller) probing = undefined;
     }
@@ -87,7 +97,9 @@ export async function recordDictation({
       if (stopped || epoch === undefined || epoch !== speechEpoch) return;
       if (!speaking && chunks.length) {
         probing = new AbortController();
-        void probe(new Blob(chunks, {type: capture.mimeType}), probing, speechEnd);
+        void probe(new Blob(chunks, {type: capture.mimeType}), probing, epoch, speechEnd);
+      } else if (!speaking) {
+        rearmProbe(epoch);
       }
       return;
     }
@@ -143,23 +155,28 @@ export async function recordDictation({
     speaking = energy >= .018;
     if (speaking) {
       audibleFrames += 1;
-      if (audibleFrames >= minimumVoicedFrames) speechEnd = now;
+      if (audibleFrames >= 4) speechEnd = now;
       if (endTurn && !wasSpeaking) {
         speechEpoch++;
         probing?.abort();
         probing = undefined;
-        probeRequested = false;
+        probeAttempts = 0;
+        retryProbeAt = undefined;
         proposal = undefined;
       }
     } else if (!speechEnd) audibleFrames = 0;
     const pause = speechEnd ? now - speechEnd : 0;
-    if (endTurn && !speaking && pause >= ADAPTIVE_PROBE_MS && !probeRequested && pendingSnapshot === undefined) {
-      probeRequested = true;
+    const probePause = hasProbed ? ADAPTIVE_PROBE_MS : FIRST_PROBE_MS;
+    const canProbe = probeAttempts === 0 || (probeAttempts === 1 && now >= retryProbeAt);
+    if (endTurn && !speaking && pause >= probePause && canProbe && pendingSnapshot === undefined) {
+      hasProbed = true;
+      probeAttempts++;
       try {
         pendingSnapshot = speechEpoch;
         capture.requestData();
       } catch {
         pendingSnapshot = undefined;
+        rearmProbe(speechEpoch);
       }
     }
     const cutoff = proposal?.silenceMs ?? (endTurn ? ADAPTIVE_LONG_MS : silenceMs);
@@ -168,7 +185,7 @@ export async function recordDictation({
       stop({reason: accepted ? "adaptive" : "silence"});
     } else if (now - started >= maxDurationMs) stop({reason: "limit"});
   }
-  timer = setInterval(sampleVoice, 50);
+  timer = setInterval(sampleVoice, sampleMs);
   return {stop};
 }
 

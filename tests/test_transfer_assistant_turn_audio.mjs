@@ -160,6 +160,7 @@ function mockCapture(t) {
   let voiced = false;
   let time = 0;
   let tick;
+  let sampleMs;
   class Recorder extends EventTarget {
     static isTypeSupported() { return true; }
     mimeType = "audio/webm";
@@ -185,7 +186,7 @@ function mockCapture(t) {
       async resume() {}
       async close() {}
     },
-    setInterval: handler => { tick = handler; return 1; },
+    setInterval: (handler, interval) => { tick = handler; sampleMs = interval; return 1; },
     clearInterval: () => { tick = undefined; },
   };
   for (const [name, value] of Object.entries(overrides)) {
@@ -195,8 +196,8 @@ function mockCapture(t) {
   }
   return async (duration, voice = false) => {
     voiced = voice;
-    for (let frame = 0; frame < duration; frame += 50) {
-      time += 50;
+    for (let frame = 0; frame < duration; frame += sampleMs) {
+      time += sampleMs;
       tick?.();
       await new Promise(resolve => setImmediate(resolve));
     }
@@ -281,7 +282,7 @@ test("failed adaptive probes use a full final and legacy callers keep 1500 ms", 
     await advance(50);
     assert.equal(final[0].result.text, "final íntegro");
     assert.equal(final[0].timing.captureStoppedAt - final[0].timing.speechEnd, cutoff);
-    assert.deepEqual(requests, endTurn ? [true, false] : [false]);
+    assert.deepEqual(requests, endTurn ? [true, true, false] : [false]);
   }
 });
 
@@ -373,7 +374,7 @@ test("an affirmative review waits for a later correction and uses the final reco
   assert.equal(final[1].outcome.action.amountCents, 4000);
 });
 
-test("the adaptive detector can complete a brief response with two voiced frames", async t => {
+test("the adaptive detector can complete a brief response with 100 ms of voiced samples", async t => {
   const advance = mockCapture(t);
   const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
   const final = [];
@@ -391,7 +392,7 @@ test("the adaptive detector can complete a brief response with two voiced frames
 });
 
 
-for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 700], [700, 650, 850], [550, 1650, 1650]]) {
+for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 675], [700, 650, 825], [550, 1650, 1650]]) {
   test(`a ${silenceMs} ms verdict with ${latency} ms transcription cuts at ${cutoff} ms`, async t => {
     const advance = mockCapture(t);
     const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
@@ -413,8 +414,8 @@ for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 700], [7
     });
     await advance(400, true);
     const speechEnd = performance.now();
-    await advance(150);
-    assert.equal(probeAt - speechEnd, 150);
+    await advance(125);
+    assert.equal(probeAt - speechEnd, 125);
     await advance(latency);
     assert.deepEqual(final, []);
     transcript.resolve();
@@ -422,9 +423,9 @@ for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 700], [7
 
     const remaining = cutoff - (probeAt - speechEnd + latency);
     if (remaining > 0) {
-      await advance(remaining - 50);
+      await advance(remaining - 25);
       assert.deepEqual(final, []);
-      await advance(50);
+      await advance(25);
     }
     assert.equal(final.length, 1);
     assert.equal(final[0].result.text, short ? "Veinte euros" : "Treinta y cinco euros");
@@ -433,6 +434,55 @@ for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 700], [7
     assert.deepEqual(requests, short ? [true] : [true, false]);
   });
 }
+
+test("a rejected snapshot retries during the final pause without waiting on an obsolete request", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const first = Promise.withResolvers();
+  const final = [];
+  const requests = [];
+  let busyUntil = 0;
+  let obsoleteSignal;
+  await recordDictation({
+    request: async (_blob, {partial, signal}) => {
+      const now = performance.now();
+      const busy = now < busyUntil;
+      requests.push({partial, now, status: busy ? 429 : 200});
+      if (busy) throw new Error("partial_busy");
+      busyUntil = now + 700;
+      if (requests.length === 1) {
+        obsoleteSignal = signal;
+        return await first.promise;
+      }
+      return {text: "Treinta y cinco euros"};
+    },
+    endTurn: async result => ({silenceMs: 650, result}),
+    onFinal: (result, timing) => final.push({result, timing}),
+  });
+  await advance(400, true);
+  await advance(150);
+  await advance(150, true);
+  assert.equal(obsoleteSignal.aborted, true);
+  await advance(75); // The second interior pause is too brief for another snapshot.
+  await advance(200, true);
+  const speechEnd = performance.now();
+  await advance(150);
+  assert.deepEqual(requests.map(({status}) => status), [200, 429]);
+  await advance(225);
+  assert.equal(requests.length, 2);
+  await advance(25);
+  assert.deepEqual(requests.map(({status}) => status), [200, 429, 200]);
+  first.resolve({text: "Treinta y"});
+  await advance(250);
+  assert.deepEqual(requests, [
+    {partial: true, now: 525, status: 200},
+    {partial: true, now: speechEnd + 150, status: 429},
+    {partial: true, now: speechEnd + 400, status: 200},
+  ]);
+  assert.equal(final.length, 1);
+  assert.equal(final[0].result.text, "Treinta y cinco euros");
+  assert.equal(final[0].timing.stopReason, "adaptive");
+});
 
 test("a late short verdict samples the microphone again before accepting its snapshot", async t => {
   const advance = mockCapture(t);
