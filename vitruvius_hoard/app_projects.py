@@ -636,6 +636,15 @@ class AppProjects:
             self._directory(id)
             return self.status(id).get("url")
 
+    def open_preview_url(self, id):
+        """Resolve an existing preview or start the saved revision for a stable link."""
+        with self.lock:
+            try:
+                url = self.running_preview_url(id)
+            except ValueError as error:
+                raise LookupError("Application project not found") from error
+            return url or self.preview(id)["url"]
+
     @staticmethod
     def _close_process(item):
         process = item["process"]
