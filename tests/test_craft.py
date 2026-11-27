@@ -90,7 +90,7 @@ def test_new_rules_have_spanish_text_and_are_registered():
     from vitruvius_hoard.rules.registry import list_rules
     lint.ensure_rules()
     rows = list_rules(pack="webcraft")
-    assert len(rows) == 7 and all(r["runnable"] and r["id"] in i18n_es.RULES_ES for r in rows)
+    assert len(rows) == 10 and all(r["runnable"] and r["id"] in i18n_es.RULES_ES for r in rows)
 
 
 def test_scene_pages_carry_their_controls():
