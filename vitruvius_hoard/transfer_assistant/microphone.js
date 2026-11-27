@@ -68,10 +68,10 @@ export async function recordDictation({
       if (!result?.text) return;
       onPartial(result);
       const candidate = await endTurn(result, {signal});
-      if (signal.aborted || !candidate) return;
-      // Never cut immediately on a short verdict that missed the snapshot's cutoff.
-      const expiredShort = candidate.silenceMs <= 700 && performance.now() - observedSpeechEnd > candidate.silenceMs;
-      proposal = expiredShort ? {...candidate, silenceMs: ADAPTIVE_LONG_MS} : candidate;
+      if (signal.aborted || !candidate || observedSpeechEnd !== speechEnd) return;
+      proposal = candidate;
+      // Recheck the microphone before cutting. Speech may have resumed between interval ticks.
+      if (candidate.silenceMs <= 700 && performance.now() - observedSpeechEnd >= candidate.silenceMs) sampleVoice();
     } catch {
       // The ordinary final request still handles missing, slow and unsupported probes.
     } finally {
@@ -134,7 +134,8 @@ export async function recordDictation({
     stop({cancel: true});
     throw error;
   }
-  timer = setInterval(() => {
+  function sampleVoice() {
+    if (stopped) return;
     const now = performance.now();
     analyser.getFloatTimeDomainData(samples);
     const energy = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
@@ -166,7 +167,8 @@ export async function recordDictation({
       accepted = proposal?.result;
       stop({reason: accepted ? "adaptive" : "silence"});
     } else if (now - started >= maxDurationMs) stop({reason: "limit"});
-  }, 50);
+  }
+  timer = setInterval(sampleVoice, 50);
   return {stop};
 }
 
