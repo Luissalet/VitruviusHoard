@@ -35,7 +35,8 @@
     return byKey;
   }
 
-  const unsafe = "script, style, link, template[shadowrootmode], [data-vgen]";
+  const sourceAssets = "script, style, link";
+  const unsafe = sourceAssets + ", template[shadowrootmode], [data-vgen]";
   const attributes = (node) => [...node.attributes]
     .filter(({ name }) => name !== "data-vsrc")
     .map(({ name, value }) => [name, value]).sort();
@@ -85,7 +86,14 @@
       if (before.tagName !== after.tagName || before.children.length !== after.children.length ||
           JSON.stringify(attributes(before)) !== JSON.stringify(attributes(after)) ||
           JSON.stringify(text(before)) !== JSON.stringify(text(after))) return replace(before, after);
-      if (before.matches(unsafe) || after.matches(unsafe)) return null;
+      if (before.matches(unsafe) || after.matches(unsafe)) {
+        const file = sourceFile(before);
+        if (!node || !before.matches(sourceAssets) || !files.has(file) || sourceFile(after) !== file) return null;
+        // An insertion above an unchanged asset moves its source position. Keep the live asset in place.
+        const moved = before.cloneNode(true);
+        moved.setAttribute("data-vsrc", afterKey);
+        return moved.isEqualNode(after) ? reanchor : null;
+      }
       for (let i = 0; i < before.children.length; i++) {
         const child = plan(before.children[i], after.children[i]);
         if (!child) return replace(before, after);

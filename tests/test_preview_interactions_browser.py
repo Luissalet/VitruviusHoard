@@ -26,14 +26,19 @@ def page():
             browser.close()
 
 
-def preview_frame(page):
-    view = {"revision": "before", "template": "Antes", "extra": ""}
+def preview_frame(page, *, tail=""):
+    view = {"revision": "before", "template": "Antes", "extra": "", "tail": tail}
     script = SCRIPT.read_text(encoding="utf-8")
 
     def route(request):
         url = request.request.url
         if url == ORIGIN + "/":
             return request.fulfill(content_type="text/html", body='<iframe src="/preview"></iframe>')
+        if url == ORIGIN + "/assistant.css":
+            return request.fulfill(content_type="text/css", body="main { color: rgb(25, 65, 105) }")
+        if url == ORIGIN + "/assistant.js":
+            return request.fulfill(content_type="application/javascript",
+                                   body="window.assistantStarts = (window.assistantStarts || 0) + 1")
         if url != ORIGIN + "/preview":
             return request.abort()
         body = f"""<!doctype html><meta name="vitruvius-preview-revision" content="{view['revision']}">
@@ -44,7 +49,7 @@ def preview_frame(page):
             <section id="first" data-vsrc="pages/index.html:5:1">Programa</section>
             <input id="draft" aria-label="Borrador" data-vsrc="pages/index.html:7:1">
             {view['extra']}
-          </main><script>{script}</script>"""
+          </main>{view['tail']}<script>{script}</script>"""
         return request.fulfill(content_type="text/html", body=body, headers={"X-Vitruvius-Revision": view["revision"]})
 
     page.route("**/*", route)
@@ -102,6 +107,43 @@ def test_template_contents_are_refreshed_and_stay_inert(page):
     blocked = refresh("after", "script", extra='<script data-vsrc="pages/index.html:6:1">window.activeScriptRan = true</script>')
     assert not blocked["applied"]
     assert frame.evaluate("Boolean(window.activeScriptRan)") is False
+
+
+def test_section_before_assistant_assets_refreshes_without_document_loads(page):
+    def assistant_block(line, *, href="/assistant.css", src="/assistant.js", style="main { margin: 1rem }"):
+        return f"""
+          <link id="assistant-sheet" rel="stylesheet" href="{href}" data-vsrc="pages/index.html:{line}:1">
+          <span hidden data-voice-assistant data-vsrc="pages/index.html:{line + 1}:1"></span>
+          <script id="assistant-module" type="module" src="{src}" data-vsrc="pages/index.html:{line + 2}:1"></script>
+          <style id="assistant-style" data-vsrc="pages/index.html:{line + 3}:1">{style}</style>"""
+
+    frame, refresh = preview_frame(page, tail=assistant_block(10))
+    full_document_loads = []
+    page.on("framenavigated", lambda loaded: full_document_loads.append(loaded.url))
+    selector = "#assistant-sheet, #assistant-module, #assistant-style"
+    frame.evaluate("selector => { window.assistantAssets = [...document.querySelectorAll(selector)] }", selector)
+    assert frame.evaluate("window.assistantStarts") == 1
+
+    section = '<section id="booking" data-vsrc="pages/index.html:8:1">Reserva</section>'
+    result = refresh("before", "after", extra=section, tail=assistant_block(11))
+    assert result["applied"]
+    assert frame.locator("#booking").inner_text() == "Reserva"
+    assert frame.evaluate("window.documentStamp") == "original"
+    assert len(full_document_loads) == 0
+    assert frame.locator(selector).evaluate_all(
+        "(nodes) => nodes.every((node, index) => node === window.assistantAssets[index])"
+    )
+    assert frame.evaluate("window.assistantStarts") == 1
+    assert frame.locator("#assistant-sheet").get_attribute("data-vsrc") == "pages/index.html:11:1"
+    assert frame.locator("#assistant-module").get_attribute("data-vsrc") == "pages/index.html:13:1"
+    assert frame.locator("#assistant-style").get_attribute("data-vsrc") == "pages/index.html:14:1"
+    assert frame.locator('meta[name="vitruvius-preview-revision"]').get_attribute("content") == "after"
+
+    for change in ({"href": "/other.css"}, {"src": "/other.js"}, {"style": "main { margin: 2rem }"}):
+        blocked = refresh("after", "asset-change", extra=section, tail=assistant_block(12, **change))
+        assert not blocked["applied"]
+        assert frame.locator("#assistant-sheet").get_attribute("data-vsrc") == "pages/index.html:11:1"
+        assert frame.locator('meta[name="vitruvius-preview-revision"]').get_attribute("content") == "after"
 
 
 def test_date_focus_segments_do_not_end_the_tab_walk(page):
