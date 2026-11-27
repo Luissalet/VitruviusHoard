@@ -372,6 +372,32 @@ class AppRenderArgs(AppIdArgs):
     widths: Optional[list[int]] = None
 
 
+class AppCritiqueLoopArgs(BaseModel):
+    id: str
+    lang: Literal["en", "es"] = "en"
+
+
+class AppCritiqueRoundBody(BaseModel):
+    lang: Literal["en", "es"] = "en"
+    expected_revision: str
+    tokens_id: Optional[str] = Field(None, max_length=40, description="Design system to freeze on the first round.")
+
+
+class AppCritiqueRoundArgs(AppCritiqueRoundBody):
+    id: str
+
+
+class AppCritiqueUndoBody(BaseModel):
+    lang: Literal["en", "es"] = "en"
+    expected_round_id: str
+    expected_revision: str
+    expected_updated_ts: float
+
+
+class AppCritiqueUndoArgs(AppCritiqueUndoBody):
+    id: str
+
+
 class CanvasViewArgs(BaseModel):
     id: str = Field(..., description="Application project ID.")
     scope: Literal["screen", "page"] = "screen"
@@ -908,6 +934,15 @@ TOOLS: list[Tool] = [
         AppCommentUndoArgs, ann(False, False, False), lambda services, args: undo_comment(services, args.id, args.comment_id), capped=False),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
+    Tool("app_project_critique_loop", "Read the application critique rounds, best revision and reasons. Consultar el bucle de crítica.",
+        AppCritiqueLoopArgs, ann(True), lambda services, args: services.app_projects.critique_loop(args.id, args.lang), capped=False),
+    Tool("app_project_critique_round", "Capture the current revision at 390, 834 and 1440 px and run a deterministic critique. "
+        "Retain the best revision and restore it after a lower score, with reasons and undo. Evaluar una revisión.",
+        AppCritiqueRoundArgs, ann(False, False, False), lambda services, args: services.app_project_critique_round(**args.model_dump()),
+        timeout_s=120, capped=False),
+    Tool("app_project_critique_round_undo", "Undo the latest critique round and its source selection. Deshacer una ronda de crítica.",
+        AppCritiqueUndoArgs, ann(False, False, False), lambda services, args: services.app_projects.undo_critique_round(**args.model_dump()),
+        capped=False),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
         AppRenderArgs, ann(False, False, True), lambda services, args: services.app_project_render(args.id, args.revision, args.widths)),
     Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
