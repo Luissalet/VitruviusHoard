@@ -1592,11 +1592,15 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
     if name in UNCAPPED_TOOLS or (name == "render_preview" and (arguments or {}).get("include_images")):
         cap = False
     try:
-        capture_tool = name == "render_preview"
-        result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and not capture_tool)
-        if capture_tool and cap:
-            # The generic cap can shorten top-level lists. Keep the whole capture manifest.
-            manifest = {key: result[key] for key in ("files", "widths") if key in result}
+        manifest_keys = {
+            "render_preview": ("files", "widths"),
+            "page_check": ("unchecked_cases",),
+            "page_assay": ("unchecked_cases",),
+        }.get(name, ())
+        result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and not manifest_keys)
+        if cap and manifest_keys:
+            # Keep the complete lists of captured files and unchecked cases.
+            manifest = {key: result[key] for key in manifest_keys if key in result}
             protected = {key: tuple(value) for key, value in manifest.items()}
             result = {**cap_result({**result, **protected}), **manifest}
         return result

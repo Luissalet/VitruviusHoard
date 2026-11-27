@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from vitruvius_hoard import assay
+from vitruvius_hoard.agent_tools import call_tool
 from vitruvius_hoard.functional_check import browser
 from vitruvius_hoard.functional_check.qa import UNKNOWN
 from vitruvius_hoard.functional_check.run import Browser, check, judge
@@ -47,6 +48,22 @@ def test_timeout_retains_completed_criterion_and_blocking_action(tmp_path, monke
     ]
     assert result["cases_sample"][0]["what"] == "Show validation"
     assert result["startup_blocked_writes"] == ["POST /startup-ping"]
+
+
+def test_agent_retains_all_unchecked_cases_when_capping_large_results():
+    missing = [{"id": f"C{index:03d}", "what": f"Check {index} " + "description " * 20}
+               for index in range(100)]
+    services = SimpleNamespace(assay_page=lambda **_: {
+        "timed_out": True,
+        "unchecked": len(missing),
+        "unchecked_cases": missing,
+        "cases_sample": [{"id": f"X{index:03d}", "detail": "details " * 100} for index in range(40)],
+    })
+
+    result = call_tool(services, "page_check", {"html": "<p>Page</p>"})
+
+    assert result["unchecked_cases"] == missing
+    assert result["truncated"]["original_lengths"] == {"cases_sample": 40}
 
 
 def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeypatch):
