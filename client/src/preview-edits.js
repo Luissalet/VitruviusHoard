@@ -21,19 +21,30 @@ export function usePreviewEdits(projectId, running, frameRef, lang) {
         configure(frame);
         return;
       }
+      const scale = data.type === "dock/edit-scale";
       const kind = data.type === "dock/commit" ? "style" : data.type === "dock/text" ? "text" : null;
-      if (!kind || data.args?.change?.kind !== kind || typeof data.request !== "string") return;
+      const args = data.args;
+      if (typeof data.request !== "string") return;
+      if (scale) {
+        if (typeof args?.revision !== "string" || typeof args.path !== "string" ||
+            !Number.isFinite(args.root_font_px)) return;
+      } else if (!kind || args?.change?.kind !== kind) return;
       const reply = (payload) => {
         if (!disposed && frame === frameRef.current && previewOrigin(frame) === origin) {
           send(frame, origin, "inspect/canvas-edit-result", { request: data.request, ...payload });
         }
       };
       try {
-        const response = await fetch("/design/api/app-projects/" + encodeURIComponent(projectId) + "/canvas-edit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data.args, lang }),
-        });
+        const endpoint = "/design/api/app-projects/" + encodeURIComponent(projectId) + "/canvas-edit";
+        const response = scale
+          ? await fetch(endpoint + "/scale?" + new URLSearchParams({
+              revision: args.revision, path: args.path, root_font_px: args.root_font_px,
+            }))
+          : await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...args, lang }),
+            });
         const result = await response.json();
         if (response.ok) reply({ result });
         else reply({ error: result.error || (lang === "es" ? "No se ha podido editar." : "The edit could not be saved.") });

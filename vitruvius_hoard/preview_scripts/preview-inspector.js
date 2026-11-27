@@ -211,7 +211,7 @@
   const picked = new Map(); // element -> what it was when chosen (tag, text, position, place), so another revision can be matched
   const clips = new WeakMap(); // element -> data URL of its clip, or false when none could be made
   let expired = []; // chosen elements that are no longer the same element on the revision now served
-  let lastRevision;
+  let lastRevision, updatedTs = null;
   let cursorSheet;
   let layer; let root; let edits; let frame = 0; let watcher = 0;
 
@@ -322,7 +322,15 @@
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
-  const report = () => { paintEdits(); const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); scheduleElements(); };
+  function report() {
+    paintEdits();
+    const message = snapshot();
+    lastRevision = message.revision;
+    updatedTs = message.selection.length ? Date.now() / 1000 : null;
+    publishContext(message.selection);
+    post('dock/select', message);
+    scheduleElements();
+  }
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
   const candidates = () => [...document.body.querySelectorAll('*')].filter(element => !isOwn(element)
     && !['script', 'style', 'link', 'meta', 'head', 'noscript', 'template'].includes(tagOf(element))
@@ -517,15 +525,17 @@
       }
     }
 
+    const rootFont = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
     function argumentsFor(element, change) {
       return {
         vsrc: source(element), tag: tagOf(element), expected_revision: meta.content, change,
         path: location.pathname + location.search,
-        root_font_px: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
+        root_font_px: rootFont(),
       };
     }
 
-    function request(args, operation, expectedCount) {
+    function exchange(type, args) {
       const request = crypto.randomUUID();
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -537,9 +547,13 @@
           if (data.error) reject(new Error(data.error));
           else resolve(data.result);
         });
-        post(args.change.kind === 'style' ? 'dock/commit' : 'dock/text',
-          { request, args: { ...args, operation, expected_count: expectedCount } });
+        post(type, { request, args });
       });
+    }
+
+    function request(args, operation, expectedCount) {
+      return exchange(args.change.kind === 'style' ? 'dock/commit' : 'dock/text',
+        { ...args, operation, expected_count: expectedCount });
     }
 
     function emitGesture(current, phase) {
@@ -714,12 +728,14 @@
         return;
       }
       if (confirmation) anchor(panel, next.getBoundingClientRect());
-      const key = [meta.content, source(next), location.pathname, location.search].join('|');
+      const path = pageId();
+      const rootFontPx = rootFont();
+      const key = [meta.content, path, rootFontPx].join('|');
       if (key !== scaleKey) {
         scale = [];
         scaleKey = key;
-        request(argumentsFor(next, { kind: 'style', property: 'width', pixels: 0 }), 'plan')
-          .then(plan => { if (scaleKey === key) scale = plan.scale; }).catch(() => {});
+        exchange('dock/edit-scale', { revision: meta.content, path, root_font_px: rootFontPx })
+          .then(result => { if (scaleKey === key) scale = result.scale; }).catch(() => {});
       }
     }
 
@@ -1175,6 +1191,11 @@
       hostLanguage = data.lang;
       edits?.setLanguage(hostLanguage);
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
+    else if (data.type === 'inspect/read-selection' && typeof data.id === 'string') {
+      if (selected.length && (revision() !== lastRevision || selected.some(element => !element.isConnected))) settle();
+      const { selection, revision: servedRevision } = snapshot();
+      post('dock/result', { id: data.id, ok: true, result: { selection, revision: servedRevision, updated_ts: updatedTs } });
+    }
     else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select');
     else if (data.type === 'inspect/elements') {
       listRequested = true; listKey = ''; scheduleElements();

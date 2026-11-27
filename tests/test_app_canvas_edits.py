@@ -203,6 +203,12 @@ def test_http_and_agent_share_the_same_plan_and_agent_catalog(client):
         response = client.post(base + "/canvas-edit", json=args)
         assert response.status_code == 200
         plan = response.json()
+        scale_url = base + "/canvas-edit/scale"
+        scale = client.get(scale_url, params={"revision": project["revision"]})
+        assert scale.status_code == 200 and scale.json() == {"scale": plan["scale"]}
+        invalid_scale = client.get(scale_url, params={"revision": project["revision"], "root_font_px": 0})
+        assert invalid_scale.status_code == 400 and "root_font_px" in invalid_scale.text
+        assert projects.get(project["id"])["revision"] == project["revision"]
         assert plan == call_tool(client.svc, "app_project_canvas_edit", args)
         write = call_tool(client.svc, "app_project_canvas_edit", {**args, "operation": "apply", "expected_count": plan["affects"]})
         assert write["changed"] and write["undo"]["tool"] == "app_project_undo"
@@ -216,6 +222,7 @@ def test_http_and_agent_share_the_same_plan_and_agent_catalog(client):
 def test_canvas_text_and_preview_work_without_the_style_parser(opened, monkeypatch):
     projects, project = opened
     monkeypatch.setitem(sys.modules, "tinycss2", None)
+    assert projects.canvas_scale(project["id"], project["revision"]) == {"scale": []}
     with pytest.raises(ValueError, match="requiere tinycss2"):
         edit(projects, project, 1, lang="es")
     assert projects.get(project["id"])["preview"]["state"] == "running"

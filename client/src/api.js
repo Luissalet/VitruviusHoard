@@ -155,7 +155,6 @@ export const api = {
   appProjectCritiqueUndo: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/critique-loop/undo`, { body }),
   appProjectRender: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/render`, { body }),
   appProjectSelection: (id) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}/selection`),
-  appProjectSelectionSet: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}/selection`, { body }),
   appProjectComments: (id, status = "all") => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}/comments`, { params: { status } }),
   appProjectCommentAdd: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/comments`, { body }),
   appProjectCommentAnchors: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}/comments/anchors`, { body }),

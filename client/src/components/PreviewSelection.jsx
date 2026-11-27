@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { api } from "../api.js";
 import { useCopilotForm } from "../copilot-hooks.js";
 import { affectsText, chipText, copilotSelection, identitiesOf, isInspectorMessage, sourceText } from "../preview-selection.js";
 import { isCommentMessage } from "../preview-comments.js";
@@ -9,9 +8,8 @@ import PreviewComments from "./PreviewComments.jsx";
  * "Select" and "Comment" modes for the application preview. Comment pins a note on an element (see `PreviewComments`,
  * which shares this bar, the frame and the message listener); the copilot turn context carries the selection and the
  * comments waiting for the agent in the same card.
- * "Select" mode: The inspector script inside the preview reports the elements the person
- * picked; this bar shows them as chips, lets the person remove one, and stores the list so an agent can read it
- * (`app_project_selection`) and the copilot sees it in the turn context. The frame is found through `frameRef`.
+ * The inspector reports the elements the person picks. This bar keeps the chips in this workbench and includes them in
+ * the copilot turn context. The read-only agent tool queries the live preview through the canvas relay.
  */
 export default function PreviewSelection({ project, preview, frameRef, frameKey, es, notify, canvas = false, onComments }) {
   const [mode, setMode] = useState(false);
@@ -38,16 +36,11 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
   const served = useRef(null);
   const previewRevision = useRef(null);
   previewRevision.current = preview?.revision || null;
-  const store = (list) => {
-    if (!projectId) return;
-    api.appProjectSelectionSet(projectId, { selection: list, revision: served.current || undefined })
-      .catch((error) => { if (error.status !== 409) notify(error.message); }); // 409: the page settled on another revision and will report again
-  };
-
-  // A new project or a stopped preview starts clean. A reload of the same preview (a new address) keeps the selection.
+  // A new workbench, project or preview opening starts clean.
   useEffect(() => {
+    page.current = null;
+    served.current = null;
     setMode(false); setCommentMode(false); setItems([]); setConnected(false);
-    return () => { if (projectId) api.appProjectSelectionSet(projectId, { selection: [] }).catch(() => {}); };
   }, [running, projectId]);
 
   // `frameKey` names the visible frame: when a live refresh swaps in a new iframe (even at the same address), the page
@@ -79,16 +72,16 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
         const held = state.current;
         const samePage = page.current === null || page.current === event.data.page;
         page.current = event.data.page ?? null;
-        if (!samePage && held.items.length) { setItems([]); store([]); }
+        if (!samePage && held.items.length) setItems([]);
         else if (!selection.length && held.items.length) send("inspect/restore", { items: identitiesOf(held.items) });
         if (held.mode && !pageMode) send("inspect/mode", { on: true });
         else if (held.commentMode && !event.data.comment_mode) send("inspect/mode", { on: true, kind: "comment" });
         setReady((count) => count + 1);
-        if (selection.length && samePage) { setItems(selection); store(selection); }
+        if (selection.length && samePage) setItems(selection);
         return;
       }
       page.current = event.data.page ?? page.current;
-      setMode(Boolean(pageMode)); setItems(selection); store(selection);
+      setMode(Boolean(pageMode)); setItems(selection);
     };
     window.addEventListener("message", onMessage);
     frame.addEventListener("load", hello); // before it loads, the frame is still the empty document of this page: nothing to greet
@@ -117,12 +110,12 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     <div className="flex gap-2 items-center flex-wrap">
       {!canvas && <><button type="button" className={`btn ${mode ? "btn-active" : ""}`} aria-pressed={mode} aria-keyshortcuts="Alt+Shift+S" onClick={toggle} disabled={!connected} title="Alt+Shift+S">{mode ? (es ? "Salir de seleccionar" : "Stop selecting") : (es ? "Seleccionar" : "Select")}</button>
       <button type="button" className={`btn ${commentMode ? "btn-active" : ""}`} aria-pressed={commentMode} aria-keyshortcuts="Alt+Shift+C" onClick={toggleComment} disabled={!connected} title="Alt+Shift+C">{commentMode ? (es ? "Salir de comentar" : "Stop commenting") : (es ? "Comentar" : "Comment")}</button></>}
-      {items.length > 0 && <button type="button" className="btn" onClick={() => { send("inspect/clear"); setItems([]); store([]); if (canvas) document.getElementById("canvas-elements-title")?.focus(); }}>{es ? "Quitar todo" : "Clear all"}</button>}
+      {items.length > 0 && <button type="button" className="btn" onClick={() => { send("inspect/clear"); setItems([]); if (canvas) document.getElementById("canvas-elements-title")?.focus(); }}>{es ? "Quitar todo" : "Clear all"}</button>}
       {!canvas && <span className="help" role="status">{!connected ? (es ? "Esta vista previa no admite selección todavía." : "This preview does not support selection yet.") : commentMode ? (es ? "Haz clic en un elemento y escribe la nota. Esc sale." : "Click an element and write the note. Esc leaves.") : mode ? (es ? "Haz clic para seleccionar. Mayús+clic añade o quita. Arrastra un tirador o enfócalo con Alt+Intro. Doble clic edita texto. Esc sale." : "Click to select. Shift+click adds or removes. Drag a handle or focus it with Alt+Enter. Double-click to edit text. Esc leaves.") : items.length ? (es ? `${items.filter((item) => !item.expired).length} seleccionados: el agente los ve en su turno.` : `${items.filter((item) => !item.expired).length} selected: the agent sees them in its turn.`) : (es ? "Selecciona elementos para pedir un cambio sobre ellos." : "Select elements to ask for a change on them.")}</span>}
     </div>
     {items.length > 0 && <ul className="flex flex-wrap gap-2" aria-label={es ? "Elementos seleccionados" : "Selected elements"}>{items.map((item, index) => <li key={item.selector + index} className={`chip chip-wrap ${item.expired ? "chip-amber" : "chip-accent"}`} style={{ alignItems: "flex-start" }}>
       <span><strong style={item.expired ? { textDecoration: "line-through" } : undefined}>{chipText(item, index)}</strong>{item.expired && <><br /><span>{es ? "caducada: la versión actual ya no tiene este elemento" : "expired: the current revision no longer has this element"}</span></>}{sourceText(item, es) && <><br /><span>{sourceText(item, es)}</span></>}{affectsText(item, es) && <><br /><span>{affectsText(item, es)}</span></>}</span>
-      <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length }); const next = items.filter((_, at) => at !== index); setItems(next); store(next); }}>×</button>
+      <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length }); setItems(items.filter((_, at) => at !== index)); }}>×</button>
     </li>)}</ul>}
     </div>}
     <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} onComments={onComments} canvas={canvas} />
