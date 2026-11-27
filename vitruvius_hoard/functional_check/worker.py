@@ -10,6 +10,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from vitruvius_hoard.functional_check import check, PASSED, Case
 
 
+def case_row(row):
+    return {"id": row.case.id, "what": row.case.what, "outcome": row.outcome,
+            "detail": row.detail, "measured": row.evidence, "acts": row.case.acts,
+            "environment": row.case.environment}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Measure and exercise a local page in a real browser")
     parser.add_argument("folder")
@@ -17,19 +23,38 @@ def main():
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--criteria", type=Path)
     parser.add_argument("--url", help="Read-only loopback preview to check in place")
+    parser.add_argument("--progress", type=Path)
     args = parser.parse_args()
     criteria = json.loads(args.criteria.read_text(encoding="utf-8")) if args.criteria else []
     cases = [Case(**{**row, "origin": "criterion"}) for row in criteria]
-    result = check(args.folder, args.entry, criteria=cases, url=args.url)
+    completed = {}
+    planned_count = 0
+
+    def checkpoint(stage, *, case=None, result=None, action=None, planned=None):
+        nonlocal planned_count
+        if planned is not None:
+            planned_count = planned
+        if result is not None:
+            completed[case.id] = case_row(result)
+        position = {"stage": stage}
+        if case is not None:
+            position.update(case_id=case.id, what=case.what)
+        if action is not None:
+            position["action"] = action
+        data = {"stopped_at": position, "planned": planned_count, "cases": list(completed.values())}
+        scratch = args.progress.with_suffix(".tmp")
+        scratch.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        scratch.replace(args.progress)
+
+    result = check(args.folder, args.entry, criteria=cases, url=args.url,
+                   on_progress=checkpoint if args.progress else None)
     payload = {
         "engine": "Vitruvius page checker", "format": "vitruvius-page-check/v1",
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),
         "failed": sum(row.failed for row in result.results.values()), "works": result.works and not result.unchecked,
         "unchecked": len(result.unchecked),
         "surface": [{"kind": row.kind, "selector": row.selector, "label": row.label, "enabled": row.enabled} for row in result.surface.controls] if result.surface else [],
-        "cases": [{"id": row.case.id, "what": row.case.what, "outcome": row.outcome,
-                   "detail": row.detail, "measured": row.evidence, "acts": row.case.acts,
-                   "environment": row.case.environment} for row in result.results.values()],
+        "cases": [case_row(row) for row in result.results.values()],
     }
     print(json.dumps(payload, ensure_ascii=False))
     return 0 if payload["works"] else 1

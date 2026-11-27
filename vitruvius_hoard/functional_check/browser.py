@@ -1327,7 +1327,7 @@ def _slide(page: Any, selector: str, timeout: float) -> None:
 
 
 def perform(page: Any, acts: Sequence[Dict[str, str]],
-            timeout: float = 4000) -> Tuple[List[str], List[str]]:
+            timeout: float = 4000, *, on_act=None) -> Tuple[List[str], List[str]]:
     """Do each act in order. Returns what could not be done, and what was off.
 
     A target may carry `@x,y` to name a point as a fraction of the element's
@@ -1338,6 +1338,9 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
     was_off: List[str] = []
     for step in acts:
         for verb, raw in step.items():
+            if on_act is not None:
+                target = str(raw).partition("=")[0] if verb == "fill" else str(raw)
+                on_act({"verb": verb, "target": target[:160]})
             arg = _CONTAINS.sub(r":has-text(\1)", str(raw))
             try:
                 if verb in ("click", "dblclick"):

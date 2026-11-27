@@ -2,6 +2,8 @@
 
 The Applications page and `/api/app-projects` expose a complete source workspace. `app_templates` lists work board, reference library, inventory and booking. `app_project_create` saves pages, global layout, styles, client, typed declarations and a standalone Python server. No framework repository, external CLI, generated model or workbench installation is required to run the exported app.
 
+`page_check` checks an owned preview in a browser. A case that hits the read-only preview boundary names the blocked request and stays unverified. When this blocks an explicit criterion, the checker still runs the other requested criteria and marks automatic cases as unchecked. A run that reaches its deadline returns completed cases and `stopped_at` with the current phase, case and action when available.
+
 ## Source and data
 
 `app_project_get` returns every source file and its selected revision. `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.

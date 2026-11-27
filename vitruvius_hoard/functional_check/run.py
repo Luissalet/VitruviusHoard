@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+from urllib.parse import urlsplit
 
 from vitruvius_hoard.functional_check import browser
 from vitruvius_hoard.functional_check.qa import FAILED, PASSED, UNKNOWN, QA, Result
@@ -106,6 +107,7 @@ class Browser:
         self._play: Any = None
         self._base = ""
         self.url = url
+        self.blocked_writes: List[str] = []
         #: How the last page opened came to rest. See `browser.Settled`: the
         #: three facts in it are kept apart because only one of them is a
         #: fault, and the other two are ordinary properties of working pages.
@@ -149,6 +151,7 @@ class Browser:
     @contextlib.contextmanager
     def open(self, environment=None) -> Any:
         """One tab, loaded and settled, with its faults collected."""
+        self.blocked_writes = []
         options = {"viewport": {"width": 1100, "height": 760}, **(environment or {})}
         if set(options) - {"viewport", "reduced_motion", "color_scheme"}:
             raise ValueError("Case environment supports viewport, reduced_motion and color_scheme")
@@ -162,9 +165,13 @@ class Browser:
 
             def read_only(route):
                 request = route.request
-                if request.method in ("GET", "HEAD") and _origin(request.url) == origin:
+                same_origin = _origin(request.url) == origin
+                if request.method in ("GET", "HEAD") and same_origin:
                     route.continue_()
                 else:
+                    if same_origin and request.method not in ("GET", "HEAD"):
+                        path = urlsplit(request.url).path
+                        self.blocked_writes.append(f"{request.method} {path}"[:200])
                     route.abort()
 
             page.route("**/*", read_only)
@@ -446,8 +453,10 @@ def judge(case: Case, before: Dict[str, Any], after: Dict[str, Any],
             bad.append("the first press did nothing and the second did "
                        "something, from the same state, so this control is "
                        "one behind")
-        return Result(case=case, outcome=FAILED if bad else PASSED,
-                      detail="; ".join(bad)[:400],
+        outcome = FAILED if bad else UNKNOWN if could_not else PASSED
+        detail = "; ".join(bad or (["could not " + could_not[0]] if could_not else []))
+        return Result(case=case, outcome=outcome,
+                      detail=detail[:400],
                       evidence=(f"the first press: "
                                 f"{'changed the page' if answered_once else 'did nothing'}"
                                 f"; the second: {browser.changed(before, after)}")[:400])
@@ -477,8 +486,13 @@ def judge(case: Case, before: Dict[str, Any], after: Dict[str, Any],
         observed += ("; " if observed else "") + (
             "could not " + could_not[0] + ", and the rest of the case went ahead")
 
-    return Result(case=case, outcome=FAILED if bad else PASSED,
-                  detail="; ".join(bad)[:400], evidence=observed[:400])
+    repeated_click = len(case.acts) == 2 and case.acts[0] == case.acts[1] and "click" in case.acts[0]
+    if repeated_click and could_not and answered_once is not None:
+        first = "changed the page" if answered_once else "did nothing"
+        observed = f"the first press: {first}; {observed}"
+    outcome = FAILED if bad else UNKNOWN if could_not and (not quiet or repeated_click) else PASSED
+    detail = "could not " + could_not[0] if outcome == UNKNOWN else "; ".join(bad)
+    return Result(case=case, outcome=outcome, detail=detail[:400], evidence=observed[:400])
 
 
 def _text(page: Any) -> str:
@@ -611,7 +625,7 @@ def _once_there_is_data(was: Surface, now: Surface,
 
 def check(folder: str | Path, entry: str = "index.html",
           criteria: Sequence[Case] = (),
-          shots: Optional[Path] = None, url: Optional[str] = None) -> QA:
+          shots: Optional[Path] = None, url: Optional[str] = None, *, on_progress=None) -> QA:
     """Measure, plan, carry it all out, and report. The whole thing.
 
     `shots` is a folder to keep screenshots in, one before and one after each
@@ -623,7 +637,10 @@ def check(folder: str | Path, entry: str = "index.html",
     # and `assay ./todo.html` open the same thing.
     root, entry = aimed(folder, entry)
     root = root.expanduser().resolve()
+    progress = on_progress or (lambda stage, **values: None)
+    progress("launch_browser")
     with Browser(root, entry, url=url) as engine:
+        progress("open_page")
         with engine.open() as (page, crashes, console, failed):
             opened = Opened(surface=from_page(_Shot(browser.elements(page))),
                             unreached=browser.unreached(page),
@@ -634,6 +651,7 @@ def check(folder: str | Path, entry: str = "index.html",
         cases = plan(opened.surface, criteria)
         seed = _seeding(cases)
         if seed:
+            progress("discover_controls_after_input")
             with contextlib.suppress(Exception):
                 with engine.open() as (page, *_):
                     browser.perform(page, _twice(seed))
@@ -643,6 +661,7 @@ def check(folder: str | Path, entry: str = "index.html",
                                              criteria)
         for n, case in enumerate(cases, 1):
             case.id = f"C{n:03d}"
+        progress("plan", planned=len(cases))
         # Nothing to press, type into or draw on. A page like that has only
         # one thing to say for itself, so an empty one is empty for good.
         nothing_to_try = not (opened.surface.operable
@@ -686,7 +705,18 @@ def check(folder: str | Path, entry: str = "index.html",
         entries: List[Tuple[str, List[str], Dict[str, Any]]] = []
 
         def carry_out(case: Case) -> Result:
+            progress("open_case", case=case)
             with engine.open(**({"environment": case.environment} if case.environment else {})) as (page, crashes, console, failed):
+                progress("inspect_case", case=case)
+
+                def perform(acts):
+                    options = {}
+                    if on_progress is not None:
+                        options["on_act"] = lambda action: progress("perform_action", case=case, action=action)
+                    result = browser.perform(page, acts, **options)
+                    progress("inspect_case", case=case)
+                    return result
+
                 before = browser.signature(page)
                 shot_before = _shoot(page, shots, f"{case.id}-before")
                 # **A case asserts about its last act, not about its own
@@ -754,7 +784,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 # answering only the second press is what has to be visible,
                 # and a before-and-after across both cannot see it.
                 if case.expect.get("same_each"):
-                    could_not, was_off = browser.perform(page, case.acts[:-2])
+                    could_not, was_off = perform(case.acts[:-2])
                     first_from = browser.signature(page)
                     # **Both rules about a square compare the page either
                     # side of a press, and a page that moves on its own
@@ -775,11 +805,11 @@ def check(folder: str | Path, entry: str = "index.html",
                     ticks = bool(ticking[0])
                     itself_one = (browser.itself(page, case.control)
                                   if watched else None)
-                    more, off_more = browser.perform(page, case.acts[-2:-1])
+                    more, off_more = perform(case.acts[-2:-1])
                     after_one = browser.signature(page)
                     itself_two = (browser.itself(page, case.control)
                                   if watched else None)
-                    more2, off2 = browser.perform(page, case.acts[-1:])
+                    more2, off2 = perform(case.acts[-1:])
                     itself_three = (browser.itself(page, case.control)
                                     if watched else None)
                     could_not = list(could_not) + list(more) + list(more2)
@@ -814,7 +844,7 @@ def check(folder: str | Path, entry: str = "index.html",
                         _shoot(page, shots, f"{case.id}-after"))
                     return result
 
-                could_not, was_off = browser.perform(page, setup)
+                could_not, was_off = perform(setup)
                 answered_setup = None
                 if setup:
                     at_start, before = before, browser.signature(page)
@@ -831,6 +861,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 was_counted = browser.counted(page)
                 row_before = None
                 stirred = False
+                answered_once = None
                 if len(final) > 1:
                     could_not_more, was_off_more = [], []
                     # **Which of the two presses answered.** A sequence is
@@ -864,16 +895,19 @@ def check(folder: str | Path, entry: str = "index.html",
                             if case.control and case.origin == "seeded":
                                 row_before = browser.row_of(page,
                                                             case.control)
-                        cn, wo = browser.perform(page, [step])
+                        cn, wo = perform([step])
                         could_not_more += list(cn)
                         was_off_more += list(wo)
                         now = browser.signature(page)
-                        _did_something(step, browser.moved(seen, now), worked)
+                        moved = browser.moved(seen, now)
+                        if at == 0 and not cn and not wo:
+                            answered_once = moved
+                        _did_something(step, moved, worked)
                         seen = now
                         if not stirred and browser.moved(before, now):
                             stirred = True
                 else:
-                    could_not_more, was_off_more = browser.perform(page, final)
+                    could_not_more, was_off_more = perform(final)
                 could_not = list(could_not) + list(could_not_more)
                 was_off = list(was_off) + list(was_off_more)
                 after = browser.signature(page)
@@ -944,7 +978,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 measured_state = browser.state_facts(page, case.expect.get("focused", "")) if state_requested else None
                 result = judge(case, before, after, crashes, could_not,
                                was_off, text, answered_setup=answered_setup,
-                               stirred=stirred, self_stopped=self_stopped,
+                               answered_once=answered_once, stirred=stirred, self_stopped=self_stopped,
                                blank=still_blank,
                                itself=(itself_before, itself_after),
                                rows=(row_before, row_after),
@@ -955,9 +989,32 @@ def check(folder: str | Path, entry: str = "index.html",
                     result.evidence += "\nState: " + json.dumps({"requested": case.environment, "measured": measured_state}, ensure_ascii=False)
                 return result
 
+        blocked_criterion = False
+
+        def record_case(case: Case) -> Result:
+            nonlocal blocked_criterion
+            if blocked_criterion and case.origin != "criterion":
+                return Result(case=case, outcome=UNKNOWN,
+                              detail="Automatic case left unchecked after a requested action hit the read-only preview boundary.")
+            try:
+                result = carry_out(case)
+            except Exception as error:
+                result = Result(case=case, outcome=UNKNOWN, detail=f"could not be carried out: {error}")
+            if engine.blocked_writes and (case.acts or result.outcome != PASSED):
+                writes = ", ".join(dict.fromkeys(engine.blocked_writes))[:320]
+                result.outcome = UNKNOWN
+                result.detail = f"The read-only preview blocked {writes}."
+                blocked_criterion = blocked_criterion or case.origin == "criterion"
+            progress("case_finished", case=case, result=result)
+            return result
+
         run = QA(measure=lambda: opened.surface, build_plan=lambda _: cases,
-                 carry_out=carry_out)
+                 carry_out=record_case)
         run.run()
+        if blocked_criterion:
+            progress("close_browser")
+            return run
+        progress("review_results")
         _unfillable_boxes(run, engine)
         _page_says(run, noticed)
         _opposites_disagree(run, opened.surface, worked)
