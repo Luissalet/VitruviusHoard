@@ -15,6 +15,7 @@ from ..hoard_link import family
 from .reply import ReplyError, _loopback_origin
 
 
+# The bus uses these fixed IDs and the original v1 wire labels.
 STAGES = {
     "voice.turn": ("vitruvius", "Etapa", "Stage"),
     "voice.cut": ("vitruvius", "Etapa", "Stage"),

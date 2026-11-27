@@ -205,5 +205,5 @@ class VoiceDirectory:
         return self._call(DICTATION_APP, SPEECH_PATHS[operation], args, timeout=timeout, trace=trace)
 
     def tool(self, app_id, tool, args, *, timeout, trace=None):
-        return self._call(app_id, "/api/agent/call", {"tool": tool, "arguments": args},
+        return self._call(app_id, "/api/agent/call", {"name": tool, "arguments": args},
                           timeout=timeout, agent=True, trace=trace)

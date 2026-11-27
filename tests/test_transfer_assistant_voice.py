@@ -5,7 +5,10 @@ from threading import Event
 
 import httpx
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
+from vitruvius_hoard.hoard_link.agentkit import make_agent_router
 from vitruvius_hoard.transfer_assistant import ASSETS, ENTRY, assistant_assets
 from vitruvius_hoard.transfer_assistant import voice, voice_directory, voice_trace
 
@@ -162,16 +165,23 @@ def test_partial_never_submits_to_the_reserve_and_final_can_use_it_directly(loop
     )
     requests = []
 
+    def transcribe(name, arguments):
+        requests.append((name, arguments))
+        if name == "transcribe_file":
+            assert Path(arguments["path"]).read_bytes() == b"test"
+            return {"job_id": "once", "status": "queued"}
+        assert name == "transcribe_status" and arguments["job_id"] == "once"
+        return {"job_id": "once", "status": "done", "text": "Reserva"}
+
+    app = FastAPI()
+    app.include_router(make_agent_router(tools_fn=lambda: [], call_fn=transcribe, token_fn=lambda: "fixture",
+                                         instructions="", app_name="funes", skills=False))
+    native = TestClient(app)
+
     def reserve():
-        url, _, options = calls[-1]
+        url, path, options = calls[-1]
         assert url == "http://localhost:59732"
-        assert options["token"] == "fixture"
-        request = options["arguments"]
-        requests.append(request)
-        if request["tool"] == "transcribe_file":
-            assert Path(request["arguments"]["path"]).read_bytes() == b"test"
-            return {"result": {"job_id": "once", "status": "queued"}}
-        return {"result": {"job_id": "once", "status": "done", "text": "Reserva"}}
+        return native.post(path, json=options["arguments"], headers={"Authorization": "Bearer " + options["token"]})
 
     tools["/api/agent/call"] = reserve
     response = relay.handle("POST", "transcribe", "partial=true&adaptive=true", "audio/wav", b"test")
@@ -181,8 +191,8 @@ def test_partial_never_submits_to_the_reserve_and_final_can_use_it_directly(loop
     assert response[0] == 200
     assert payload(response)["provider"] == voice.FAMILY_TRANSCRIPTION
     assert payload(response)["fallback_reason"] == "resident_queue_timeout"
-    assert [request["tool"] for request in requests] == ["transcribe_file", "transcribe_status"]
-    assert not Path(requests[0]["arguments"]["path"]).exists()
+    assert [name for name, _ in requests] == ["transcribe_file", "transcribe_status"]
+    assert not Path(requests[0][1]["path"]).exists()
 
 
 def test_resident_silence_does_not_launch_a_duplicate_and_preserves_alternate_details(loopback):
@@ -219,7 +229,11 @@ def test_piper_and_legacy_cache_keep_their_public_route(loopback, monkeypatch, t
     monkeypatch.setattr(voice, "VOICE_MODE", "piper")
     tools["/api/agent/call"] = lambda: {"result": {"path": str(path)}}
     assert post(relay, "speak", phrase_id="confirmar") == (200, wav, "audio/wav")
-    assert calls[-1][2]["arguments"]["arguments"]["text"] == phrases["confirmar"]
+    url, route, request = calls[-1]
+    assert (url, route) == ("http://[::1]:59733", "/api/agent/call")
+    assert request["arguments"] == {"name": "voice_tts", "arguments": {
+        "text": phrases["confirmar"], "lang": "es", "voice": voice.SPANISH_TTS_VOICE, "engine": "piper",
+    }}
     tools["/api/agent/call"] = lambda: {"result": {"error": "generation is OFF"}}
     assert post(relay, "speak", phrase_id="confirmar")[0] == 409
 
