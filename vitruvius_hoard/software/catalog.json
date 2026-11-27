@@ -1320,7 +1320,7 @@
   },
   {
     "name": "app_project_create",
-    "description": "Create an editable application project. Crear aplicación.\nUse template='static-page' for a standalone page without a records interface. Supply files to save authored source in one call.\nPara una página suelta usa static-page. Si ya tienes el código fuente, pásalo en files al crear el proyecto.\nFor a new custom design, pass the decided art-direction study from the brief.",
+    "description": "Create an editable application project. Crear aplicación.\nUse template='static-page' for a standalone page without a records interface. Supply files to save authored source in one call.\nPara una página suelta usa static-page. Si ya tienes el código fuente, pásalo en files al crear el proyecto.\nFor a new custom design, pass the decided art-direction study from the brief.\nPass include_files=true to return the full saved source. Usa include_files=true para recibir el código guardado.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -1438,12 +1438,18 @@
           "default": null,
           "description": "For a new custom design, pass the decided study from the brief.",
           "title": "Art Direction Study Id"
+        },
+        "include_files": {
+          "default": false,
+          "description": "Return the full saved project, including all source files.",
+          "title": "Include Files",
+          "type": "boolean"
         }
       },
       "required": [
         "name"
       ],
-      "title": "AppCreateArgs",
+      "title": "AppCreateToolArgs",
       "type": "object"
     },
     "module": "design"
@@ -1473,7 +1479,7 @@
   },
   {
     "name": "app_project_get",
-    "description": "Read a complete application source revision. Leer archivos y revisión de aplicación.",
+    "description": "Read an application revision and file manifest. Leer revisión y lista de archivos.\nPass include_files=true for full source and history.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -1498,9 +1504,15 @@
           ],
           "default": null,
           "title": "Revision"
+        },
+        "include_files": {
+          "default": false,
+          "description": "Return all source files and history for the selected revision.",
+          "title": "Include Files",
+          "type": "boolean"
         }
       },
-      "title": "AppIdArgs",
+      "title": "AppProjectGetArgs",
       "type": "object"
     },
     "module": "design"
@@ -1807,7 +1819,7 @@
   },
   {
     "name": "app_project_edit_source",
-    "description": "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
+    "description": "Edit literal HTML by source position with undo. Editar un elemento por su posición.\nReturns changed file metadata. Pass include_files=true for full source.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -2086,6 +2098,12 @@
           ],
           "default": null,
           "description": "Optional selector and box to disambiguate repeated source positions."
+        },
+        "include_files": {
+          "default": false,
+          "description": "Return the full saved project, including all source files.",
+          "title": "Include Files",
+          "type": "boolean"
         }
       },
       "required": [
@@ -2094,7 +2112,7 @@
         "expected_revision",
         "change"
       ],
-      "title": "AppSourceEditArgs",
+      "title": "AppSourceEditToolArgs",
       "type": "object"
     },
     "module": "design"
@@ -3256,7 +3274,7 @@
   },
   {
     "name": "app_project_render",
-    "description": "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
+    "description": "Capture an application preview for critique. Capturar la vista previa de una aplicación.\nReturns screenshots and a lint summary. Pass detail=true for full metrics and probe.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -3296,9 +3314,15 @@
           ],
           "default": null,
           "title": "Widths"
+        },
+        "detail": {
+          "default": false,
+          "description": "Return the full capture result, including lint, metrics and raw probe.",
+          "title": "Detail",
+          "type": "boolean"
         }
       },
-      "title": "AppRenderArgs",
+      "title": "AppProjectRenderToolArgs",
       "type": "object"
     },
     "module": "design"

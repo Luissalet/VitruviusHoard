@@ -15,7 +15,7 @@ def test_edit_then_undo_then_archive_keeps_source_records_and_export(services):
         return call_tool(services, tool, args)
 
     projects = services.app_projects
-    original = call("app_project_create", name="Archive round trip")
+    original = call("app_project_create", name="Archive round trip", include_files=True)
     id = original["id"]
     source = original["files"]["pages/index.html"]
     column = source.index("<h2>Current records") + 1
@@ -54,8 +54,9 @@ def test_edit_then_undo_then_archive_keeps_source_records_and_export(services):
         recovered = call(reversal["tool"], **reversal["arguments"])
         assert recovered["changed"] and not recovered["archived"]
         assert call("app_project_list", archived=True)["projects"] == []
-        assert call("app_project_get", id=id)["files"] == original["files"]
-        assert "Edited records" in call("app_project_get", id=id, revision=edit["revision"])["files"]["pages/index.html"]
+        assert call("app_project_get", id=id, include_files=True)["files"] == original["files"]
+        historical = call("app_project_get", id=id, revision=edit["revision"], include_files=True)
+        assert "Edited records" in historical["files"]["pages/index.html"]
         assert projects.status(id)["state"] == "stopped"
         preview = call("app_project_preview", id=id)
         with urlopen(preview["url"] + "/api/records/" + record["id"], timeout=5) as response:

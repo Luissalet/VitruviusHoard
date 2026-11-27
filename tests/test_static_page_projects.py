@@ -13,6 +13,7 @@ def test_static_page_can_be_created_by_the_agent(tmp_path):
 
     project = call_tool(services, "app_project_create", {
         "name": "Guía", "template": "static-page", "lang": "es", "description_es": "Información práctica.",
+        "include_files": True,
     })
     files = project["files"]
     assert files.keys() == {

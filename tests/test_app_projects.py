@@ -30,7 +30,7 @@ def test_agent_create_completes_partial_source_from_starter(tmp_path, template, 
         "pages/index.html": "<h1>Field notes</h1>",
         "assets/style.css": "h1 { color: #285744; }",
     }
-    arguments = {"name": "Research log", "template": template, "files": files}
+    arguments = {"name": "Research log", "template": template, "files": files, "include_files": True}
     project = call_tool(SimpleNamespace(app_projects=projects), "app_project_create", arguments)
 
     expected = {**starter_files("Research log", starter), **files}
@@ -49,7 +49,7 @@ def test_agent_create_complete_custom_source_only_adds_runtime(tmp_path):
         "layout.html": "<html lang='en'><body>{{content}}</body></html>",
         "pages/index.html": "<h1>Field notes</h1>",
     }
-    arguments = {"name": "Notes", "template": "custom", "files": files}
+    arguments = {"name": "Notes", "template": "custom", "files": files, "include_files": True}
     services = SimpleNamespace(app_projects=projects)
     builtin = call_tool(services, "app_project_create", arguments)
 

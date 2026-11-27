@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field, FiniteFloat, StrictBool, model_validator
 from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_tool, cap_result, tool_catalog as catalog_of
 from .services import Services
 from .transfer_assistant import assistant_assets
+from .app_project_results import render_summary, source_summary
 from .app_projects import templates as app_templates
+from .app_source_map import source_position
 from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
@@ -208,9 +210,17 @@ class AppCreateArgs(BaseModel):
     art_direction_study_id: Optional[str] = Field(None, max_length=40, description="For a new custom design, pass the decided study from the brief.")
 
 
+class AppCreateToolArgs(AppCreateArgs):
+    include_files: StrictBool = Field(False, description="Return the full saved project, including all source files.")
+
+
 class AppIdArgs(BaseModel):
     id: str = ""
     revision: Optional[str] = None
+
+
+class AppProjectGetArgs(AppIdArgs):
+    include_files: StrictBool = Field(False, description="Return all source files and history for the selected revision.")
 
 
 class CanvasActor(BaseModel):
@@ -299,6 +309,10 @@ class AppSourceEditArgs(BaseModel):
     lang: Literal["en", "es"] = "en"
     actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
     target: CanvasTarget | None = Field(None, description="Optional selector and box to disambiguate repeated source positions.")
+
+
+class AppSourceEditToolArgs(AppSourceEditArgs):
+    include_files: StrictBool = Field(False, description="Return the full saved project, including all source files.")
 
 
 class AppCanvasTextChange(BaseModel):
@@ -395,6 +409,10 @@ class AppExportArgs(AppIdArgs):
 
 class AppRenderArgs(AppIdArgs):
     widths: Optional[list[int]] = None
+
+
+class AppProjectRenderToolArgs(AppRenderArgs):
+    detail: StrictBool = Field(False, description="Return the full capture result, including lint, metrics and raw probe.")
 
 
 class AppCritiqueLoopArgs(BaseModel):
@@ -783,8 +801,18 @@ def run_app_project_create(services: Services, args: AppCreateArgs, *, author=No
     receipt = None
     if args.art_direction_study_id:
         receipt = services.alternatives.art_direction_receipt(args.art_direction_study_id)
-    return services.app_projects.create(**args.model_dump(exclude={"art_direction_study_id"}),
+    return services.app_projects.create(**args.model_dump(exclude={"art_direction_study_id", "include_files"}),
                                         art_direction=receipt, author=author or {"kind": "agent"})
+
+
+def run_app_project_create_tool(services: Services, args: AppCreateToolArgs) -> dict:
+    project = run_app_project_create(services, args)
+    return project if args.include_files else source_summary(project)
+
+
+def run_app_project_get(services: Services, args: AppProjectGetArgs) -> dict:
+    project = services.app_projects.get(args.id, args.revision)
+    return project if args.include_files else source_summary(project)
 
 
 def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
@@ -794,14 +822,23 @@ def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
                            actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
 
 
-def run_app_project_edit_source(services: Services, args: AppSourceEditArgs) -> dict:
+def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs) -> dict:
     projects = services.app_projects
     projects.canvas.wait_for_revision(args.id, args.expected_revision)
-    return projects.edit_source(
-        **args.model_dump(exclude={"actor", "target"}),
+    project = projects.edit_source(
+        **args.model_dump(exclude={"actor", "target", "include_files"}),
         actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
         target=args.target.model_dump(exclude_none=True) if args.target else None,
     )
+    if args.include_files:
+        return project
+    changed_path = source_position(args.vsrc)[0] if project["revision"] != args.expected_revision else None
+    return source_summary(project, changed_path=changed_path, edit=True)
+
+
+def run_app_project_render(services: Services, args: AppProjectRenderToolArgs) -> dict:
+    render = services.app_project_render(args.id, args.revision, args.widths)
+    return render if args.detail else render_summary(render)
 
 
 def run_app_project_canvas_edit(services: Services, args: AppCanvasEditArgs) -> dict:
@@ -911,12 +948,14 @@ TOOLS: list[Tool] = [
     Tool("app_project_create", "Create an editable application project. Crear aplicación.\n"
         "Use template='static-page' for a standalone page without a records interface. Supply files to save authored source in one call.\n"
         "Para una página suelta usa static-page. Si ya tienes el código fuente, pásalo en files al crear el proyecto.\n"
-        "For a new custom design, pass the decided art-direction study from the brief.",
-        AppCreateArgs, ann(False, False, True), run_app_project_create, capped=False),
+        "For a new custom design, pass the decided art-direction study from the brief.\n"
+        "Pass include_files=true to return the full saved source. Usa include_files=true para recibir el código guardado.",
+        AppCreateToolArgs, ann(False, False, True), run_app_project_create_tool, capped=False),
     Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
         AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
-    Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
-        AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
+    Tool("app_project_get", "Read an application revision and file manifest. Leer revisión y lista de archivos.\n"
+        "Pass include_files=true for full source and history.",
+        AppProjectGetArgs, ann(True), run_app_project_get, capped=False),
     Tool("app_project_refresh_voice_assistant",
          "Update embedded voice assistant assets with undo. Actualizar el asistente de voz incrustado con deshacer.",
          AppVoiceAssistantRefreshArgs, ann(False, False, True),
@@ -928,8 +967,9 @@ TOOLS: list[Tool] = [
         lambda services, args: services.app_projects.add_voice_assistant(
             args.id, args.expected_revision, args.page, args.form_selector, args.field_schema, args.allow_submit
         ), capped=False),
-    Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
-        AppSourceEditArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
+    Tool("app_project_edit_source", "Edit literal HTML by source position with undo. Editar un elemento por su posición.\n"
+        "Returns changed file metadata. Pass include_files=true for full source.",
+        AppSourceEditToolArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
     Tool("app_project_canvas_edit", "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
         AppCanvasEditArgs, ann(False, False, True), run_app_project_canvas_edit),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",
@@ -993,8 +1033,9 @@ TOOLS: list[Tool] = [
     Tool("app_project_critique_round_undo", "Undo the latest critique round and its source selection. Deshacer una ronda de crítica.",
         AppCritiqueUndoArgs, ann(False, False, False), lambda services, args: services.app_projects.undo_critique_round(**args.model_dump()),
         capped=False),
-    Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
-        AppRenderArgs, ann(False, False, True), lambda services, args: services.app_project_render(args.id, args.revision, args.widths)),
+    Tool("app_project_render", "Capture an application preview for critique. Capturar la vista previa de una aplicación.\n"
+        "Returns screenshots and a lint summary. Pass detail=true for full metrics and probe.",
+        AppProjectRenderToolArgs, ann(False, False, True), run_app_project_render, capped=False),
     Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
         AppCallArgs, ann(False, True, False), lambda services, args: services.app_project_call(**args.model_dump())),
     Tool("reference_collections", "List imported local reference collections and their counts. Colecciones de referencias.",
@@ -1550,7 +1591,7 @@ def call_tool(services: Services, name: str, arguments: dict | None, *, cap: boo
     if name in UNCAPPED_TOOLS or (name == "render_preview" and (arguments or {}).get("include_images")):
         cap = False
     try:
-        capture_tool = name in ("render_preview", "app_project_render")
+        capture_tool = name == "render_preview"
         result = run_tool(TOOLS_BY_NAME, services, name, arguments, cap=cap and not capture_tool)
         if capture_tool and cap:
             # The generic cap can shorten top-level lists. Keep the whole capture manifest.

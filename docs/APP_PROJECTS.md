@@ -10,7 +10,9 @@ For a browser capture, static floor checks for colour and style skip stylesheet 
 
 ## Source and data
 
-`app_project_get` returns every source file and its selected revision. `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
+`app_project_create` and `app_project_get` return the project ID, selected revision, preview status and a `file_manifest` with the path, UTF-8 byte length and SHA-256 of each source file. The creation receipt also includes its undo call. Use `include_files: true` on either tool to return the full project with source contents and history. On `app_project_get`, pass `revision` to read a retained revision.
+
+`app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
 
 Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. The creation receipt only applies while the project has had no saved source edits. If you save a revision and then undo it, the history stays and the creation receipt cannot be used to retire the project.
 
@@ -108,7 +110,7 @@ For single-record-type projects, `app_project_call` provides `list`, `get`, `cre
 
 Inputs are checked against the declared field types and choices; text stays literal in server-rendered pages. These are application JSON calls with a generated typed client, not component compiler transforms. Additional runtime behavior belongs to the editable project's code.
 
-`app_project_render` captures the selected owned preview through a local browser worker into the existing render history, with project identity, source revision and source SHA in the metrics. Existing `design_critique` can inspect that render. Source is pinned for a preview process; data can change between screenshots if users continue editing it. The ordinary HTML patterns, reference gallery, tokens, diagrams, movement and criterion library remain available.
+`app_project_render` captures the selected owned preview through a local browser worker into render history. The receipt includes the render ID, preview URL, widths, screenshot paths, project identity, source revision and source SHA. Its lint summary includes the score, finding counts and the Floor and Reflex findings. Pass `detail: true` for the full findings, metrics and raw browser probe. `design_critique` can inspect the render by ID. Source is pinned for a preview process; data can change between screenshots if users continue editing it. The ordinary HTML patterns, reference gallery, tokens, diagrams, movement and criterion library remain available.
 
 `design_critique` and `page_assay` can also open a loopback preview by URL. Assay uses the page in place so its relative assets remain available. The critique counts consecutive Tab stops inside one native date or time input as a single control and follows focus to the remaining fields. Loopback assay reads the preview. Use the publication's synthetic form check to verify an inbox write. Set `VITRUVIUS_BROWSER_CHANNEL=chrome` to prefer the installed Chrome channel, for example on a machine with more than one supported channel.
 
@@ -139,7 +141,7 @@ The owned preview maps each served opening tag in `layout.html` and `pages/**/*.
 
 `app_project_source_count` takes id, vsrc and an optional preview path (including its query). It returns `same_vsrc_count` for that rendered response, with the preview's revision. Reusing `{{content}}` in a layout can serve the same source tag several times. The table and form fragments mark their existing top-level elements with `data-vgen` and the marker's source position. For a generated descendant, use the closest `data-vgen` ancestor.
 
-`app_project_edit_source` takes id, vsrc, tag, `expected_revision` and a change. Use the revision from the preview that supplied the selection. A mismatch in revision, tag or position requires a fresh selection. The tool saves through `app_project_update` and returns its undo call after a material edit.
+`app_project_edit_source` takes id, vsrc, tag, `expected_revision` and a change. Use the revision from the preview that supplied the selection. A mismatch in revision, tag or position requires a fresh selection. The receipt reports the saved revision, preview status, and each changed file's path, UTF-8 byte length and SHA-256 in `changed_files`. A material edit includes an undo call. An identical edit returns `changed: false` and an empty `changed_files` list. Pass `include_files: true` for the full saved project with source contents.
 
 - `{"kind":"text","value":"New label"}` replaces a single direct literal text node, preserving surrounding source indentation.
 - `{"kind":"attribute","name":"aria-label","value":"New label"}` sets a literal attribute. A null value removes it.
