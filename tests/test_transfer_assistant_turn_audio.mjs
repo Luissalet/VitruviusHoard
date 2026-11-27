@@ -391,24 +391,73 @@ test("the adaptive detector can complete a brief response with two voiced frames
 });
 
 
-test("a late short verdict waits instead of cutting immediately from a stale snapshot", async t => {
+for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 700], [700, 650, 850], [550, 1650, 1650]]) {
+  test(`a ${silenceMs} ms verdict with ${latency} ms transcription cuts at ${cutoff} ms`, async t => {
+    const advance = mockCapture(t);
+    const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+    const transcript = Promise.withResolvers();
+    const short = silenceMs === 650;
+    const final = [];
+    const requests = [];
+    let probeAt;
+    await recordDictation({
+      request: async (_blob, {partial}) => {
+        requests.push(partial);
+        if (!partial) return {text: "Treinta y cinco euros"};
+        probeAt = performance.now();
+        await transcript.promise;
+        return {text: short ? "Veinte euros" : "Treinta y"};
+      },
+      endTurn: async result => short ? {silenceMs, result} : {silenceMs},
+      onFinal: (result, timing) => final.push({result, timing}),
+    });
+    await advance(400, true);
+    const speechEnd = performance.now();
+    await advance(150);
+    assert.equal(probeAt - speechEnd, 150);
+    await advance(latency);
+    assert.deepEqual(final, []);
+    transcript.resolve();
+    await new Promise(resolve => setImmediate(resolve));
+
+    const remaining = cutoff - (probeAt - speechEnd + latency);
+    if (remaining > 0) {
+      await advance(remaining - 50);
+      assert.deepEqual(final, []);
+      await advance(50);
+    }
+    assert.equal(final.length, 1);
+    assert.equal(final[0].result.text, short ? "Veinte euros" : "Treinta y cinco euros");
+    assert.equal(final[0].timing.captureStoppedAt - final[0].timing.speechEnd, cutoff);
+    assert.equal(final[0].timing.stopReason, short ? "adaptive" : "silence");
+    assert.deepEqual(requests, short ? [true] : [true, false]);
+  });
+}
+
+test("a late short verdict samples the microphone again before accepting its snapshot", async t => {
   const advance = mockCapture(t);
   const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
   const pending = Promise.withResolvers();
   const final = [];
+  let firstSignal;
   let requests = 0;
   await recordDictation({
     request: async () => ({text: ++requests === 1 ? "Sí" : "Sí, confirmo"}),
-    endTurn: async result => {
-      if (requests === 1) await pending.promise;
+    endTurn: async (result, {signal}) => {
+      if (requests === 1) {
+        firstSignal = signal;
+        await pending.promise;
+      }
       return {silenceMs: 650, result};
     },
     onFinal: result => final.push(result.text),
   });
   await advance(400, true);
   await advance(900);
+  await advance(0, true); // Speech resumes before the next scheduled sample.
   pending.resolve();
-  await advance(50);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(firstSignal.aborted, true);
   assert.deepEqual(final, []);
   await advance(350, true);
   await advance(650);
