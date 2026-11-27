@@ -30,6 +30,7 @@ from .hoard_link.media import bins as media_bins
 from .hoard_link.media.ffmpeg import FFmpeg
 from .hoard_link.web import browser as web_browser
 from .hoard_link.web import safety
+from .render_coverage import capture_full_page
 
 log = logging.getLogger("vitruvius.browser")
 
@@ -1393,15 +1394,11 @@ class BrowserWorker:
                     pass
                 path = out_dir / f"{w}.png"
                 if full_page:
-                    # Cap full-page height at 6000px via a clip.
-                    dims = page.evaluate("() => ({w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight})")
-                    h = min(int(dims.get("h", 900)), 6000)
-                    page.screenshot(path=str(path), full_page=True, clip={"x": 0, "y": 0, "width": w, "height": h})
-                    saved_h = h
+                    coverage = capture_full_page(page, path, w)
                 else:
                     page.screenshot(path=str(path))
-                    saved_h = 900
-                files.append({"width": w, "path": str(path), "full_page": full_page, "w": w, "h": saved_h})
+                    coverage = {"h": 900}
+                files.append({"width": w, "path": str(path), "full_page": full_page, "w": w, **coverage})
 
             probe = {}
             try:

@@ -4,6 +4,7 @@ import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
+import CaptureWarning from "../components/CaptureWarning.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 
 export default function Projects({ param }) {
@@ -251,7 +252,13 @@ export default function Projects({ param }) {
           <details className="mt-3"><summary className="cursor-pointer help">{es ? "Añadir archivo" : "Add file"}</summary><div className="flex gap-2 flex-wrap mt-2"><input className="field flex-1 min-w-0" aria-label={es ? "Ruta del archivo nuevo" : "New file path"} placeholder="pages/about.html" value={newFile} onChange={(event) => setNewFile(event.target.value)} /><button className="btn" type="button" disabled={!newFile.trim()} onClick={() => { if (!Object.hasOwn(project.files, newFile)) setDrafts((current) => ({ ...current, [draftPrefix + newFile]: current[draftPrefix + newFile] ?? "" })); setFile(newFile); setNewFile(""); }}>{es ? "Añadir" : "Add"}</button></div></details>
         </div>
         <div className="panel flex gap-3 flex-wrap items-center"><label className="flex gap-2 items-center"><input type="checkbox" checked={includeData} onChange={(event) => setIncludeData(event.target.checked)} />{es ? "Incluir copia de los datos" : "Include a data copy"}</label><button className="btn" disabled={!!busy} onClick={exportProject}>{busy === "export" ? (es ? "Exportando…" : "Exporting…") : (es ? "Exportar aplicación" : "Export application")}</button>{bundle && <a className="btn btn-primary" href={bundle.download_url} download>{`${es ? "Descargar ZIP · versión" : "Download ZIP · revision"} ${project.revisions.indexOf(bundle.revision) + 1}`}</a>}</div>
-        {render && <div className="panel"><p className="help">{es ? "Captura guardada en el historial de Crítica." : "Capture saved in Critique history."}</p><a href="#/critique" className="btn mt-2">{es ? "Revisar captura" : "Review capture"}</a></div>}
+        {render && (
+          <div className="panel">
+            <p className="help">{es ? "Captura guardada en el historial de Crítica." : "Capture saved in Critique history."}</p>
+            <CaptureWarning captures={render.capture_truncation} lang={lang} />
+            <a href="#/critique" className="btn mt-2">{es ? "Revisar captura" : "Review capture"}</a>
+          </div>
+        )}
       </div>}
     </div>
   </div>;

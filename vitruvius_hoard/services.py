@@ -29,6 +29,7 @@ from .browser import BrowserWorker, loopback_preview
 from .alternatives import AlternativeStudies
 from .app_projects import AppProjects
 from .preview_inspector import PreviewSelections
+from .render_coverage import capture_coverage, restore_capture_coverage
 from .app_runtime import validate_request_key
 from .preview_comments import PreviewComments
 from .instruments import Instruments
@@ -341,7 +342,7 @@ class Services:
         row = {
             "id": render_id, "created_ts": time.time(), "kind": kind, "input_hash": input_hash, "url": url or "",
             "title": title, "widths": widths or [390, 1024, 1440], "dark": dark, "files": files, "metrics": metrics,
-            "lint": lint_result, "ms": ms,
+            "lint": lint_result, "ms": ms, **capture_coverage(files),
         }
         if "error" in capture:
             row["metrics"] = {"error": capture["error"], "hint": capture.get("hint")}
@@ -359,11 +360,13 @@ class Services:
 
     @staticmethod
     def _render_dict(r) -> dict[str, Any]:
+        files = json.loads(r["files"] or "[]")
+        metrics = json.loads(r["metrics"] or "{}")
+        restore_capture_coverage(files, metrics.pop("probe", None) or {})
         return {"id": r["id"], "created_ts": r["created_ts"], "kind": r["kind"], "input_hash": r["input_hash"],
-               "url": r["url"], "title": r["title"], "widths": json.loads(r["widths"] or "[]"), "dark": bool(r["dark"]),
-               "files": json.loads(r["files"] or "[]"),
-               "metrics": {k: v for k, v in json.loads(r["metrics"] or "{}").items() if k != "probe"},  # probe: lint only
-               "lint": json.loads(r["lint"] or "{}"), "ms": r["ms"]}
+                "url": r["url"], "title": r["title"], "widths": json.loads(r["widths"] or "[]"), "dark": bool(r["dark"]),
+                "files": files, "metrics": metrics, "lint": json.loads(r["lint"] or "{}"), "ms": r["ms"],
+                **capture_coverage(files)}
 
     def _render_lint_inputs(self, render: dict[str, Any]) -> tuple[dict[str, Any], str]:
         """Probe and HTML to lint a stored render with: the full probe kept at render time (older renders only have the
@@ -590,7 +593,8 @@ class Services:
             if render is None:
                 raise LookupError(f"Unknown render '{render_id}'.")
             probe, source = self._render_lint_inputs(render)
-            return lint_mod.run_lint(probe, html or source, tokens=tokens, packs=packs, engines=engines)
+            return {**lint_mod.run_lint(probe, html or source, tokens=tokens, packs=packs, engines=engines),
+                    **capture_coverage(render["files"])}
         if html is None and url is None:
             raise ValueError("lint needs html, url or render_id")
         self.check_url(url)
@@ -627,15 +631,18 @@ class Services:
         """Drive the page's controls in a real browser. ``before`` also saves what a redesign must keep (links, fields, handlers, titles);
         ``kept`` (an id from an earlier ``before``) fails the check when any of it is missing from this page."""
         snapshot_before = self.kept_get(kept) if kept else None
+        coverage = {}
         with ExitStack() as cleanup:
             preview_url = None
             deadline = None
             if render_id:
+                render = self.get_render(render_id)
+                if render:
+                    coverage = capture_coverage(render["files"])
                 source = self.config.renders_dir / render_id / "source.html"
                 if source.is_file():
                     path, html = str(source), None
                 else:
-                    render = self.get_render(render_id)
                     project = render["metrics"].get("app_project") if render else None
                     if not project:
                         raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
@@ -665,7 +672,8 @@ class Services:
             page_source = html if html is not None else self._read_page_file(path)
             saved = self.kept_save(page_source, label=label or (url or path or "page"), source=url or path or "html") if before else None
             if snapshot_only:
-                return {"works": True, "failed": 0, "kept": saved, "note": "Snapshot saved; run page_check with kept=<id> after the redesign."}
+                return {"works": True, "failed": 0, "kept": saved,
+                        "note": "Snapshot saved; run page_check with kept=<id> after the redesign.", **coverage}
             options = {"url": preview_url} if preview_url else {}
             if deadline is not None:
                 timeout_s = max(0.1, deadline - time.monotonic())
@@ -683,7 +691,7 @@ class Services:
                                                          "detail": f"{check['total_missing']} item(s) missing: " + ", ".join(f"{n} {k}" for k, n in check["missing_count"].items() if n),
                                                          "measured": check["missing_count"], "acts": [], "environment": {}})
         self._emit_event("vitruvius.assay.done", {"id": result.get("id"), "works": result.get("works"), "failed": result.get("failed")})
-        return result
+        return {**result, **coverage}
 
     @staticmethod
     def _read_page_file(path: Optional[str]) -> str:
@@ -754,7 +762,9 @@ class Services:
         result = critique_mod.critique(probe=probe, html=html, focus=focus, images=images or None,
                                        link=self.link_sync if (use_vision or clean_review) else None, use_vision=use_vision,
                                        tokens=tokens, waivers=waivers, prior_waivers=waivers_mod.stored(self.db, render_id),
-                                       clean_review=clean_review, deadline=deadline)
+                                       clean_review=clean_review, deadline=deadline,
+                                       capture_truncation=render.get("capture_truncation"))
+        result.update(capture_coverage(render["files"]))
         waivers_mod.store(self.db, render_id, result["waivers"]["accepted"])
         if result.get("review") and result["review"].get("verdict"):
             rv = result["review"]

@@ -23,7 +23,7 @@ def source_summary(project, *, changed_path=None, edit=False):
 
 
 def render_summary(render):
-    keys = ("id", "url", "widths", "files", "app_project")
+    keys = ("id", "url", "widths", "files", "app_project", "capture_truncation")
     summary = {key: render[key] for key in keys if key in render}
     lint = render["lint"]
     findings = lint["findings"]

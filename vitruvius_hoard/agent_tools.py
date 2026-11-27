@@ -941,7 +941,7 @@ TOOLS: list[Tool] = [
     Tool("render_preview",
         "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\n"
         "Use url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, "
-        "capture paths, dimensions, lint and metrics. Image bytes are optional.\n"
+        "capture paths, dimensions, lint and metrics. Full-page screenshots report truncated, page_height and captured_height. Image bytes are optional.\n"
         "Sinónimos: renderizar, capturar, screenshot, previsualizar.",
         RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
@@ -1088,7 +1088,7 @@ TOOLS: list[Tool] = [
         AppCritiqueUndoArgs, ann(False, False, False), lambda services, args: services.app_projects.undo_critique_round(**args.model_dump()),
         capped=False),
     Tool("app_project_render", "Capture an application preview for critique. Capturar la vista previa de una aplicación.\n"
-        "Returns screenshots and a lint summary. Pass detail=true for full metrics and probe.",
+        "Returns screenshots and a lint summary. Full-page screenshots report truncated, page_height and captured_height. Pass detail=true for full metrics and probe.",
         AppProjectRenderToolArgs, ann(False, False, True), run_app_project_render, capped=False),
     Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
         AppCallArgs, ann(False, True, False), lambda services, args: services.app_project_call(**args.model_dump())),
