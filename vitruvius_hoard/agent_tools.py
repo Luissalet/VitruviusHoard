@@ -106,7 +106,7 @@ class LintArgs(BaseModel):
 class AssayArgs(BaseModel):
     html: Optional[str] = Field(None, max_length=2_000_000, description="The page to check (a complete HTML document).")
     url: Optional[str] = Field(None, max_length=2000, description="A URL whose HTML is downloaded and checked as a single page.")
-    render_id: Optional[str] = Field(None, max_length=40, description="A previous render_preview of raw HTML (its saved source is reused).")
+    render_id: Optional[str] = Field(None, max_length=40, description="An app_project_render capture (checks its saved project revision) or an HTML render_preview (reuses its saved source). Captura de proyecto o de HTML.")
     path: Optional[str] = Field(None, max_length=1000, description="A local .html file or a folder holding index.html.")
     timeout_s: int = Field(PAGE_CHECK_TIMEOUT_S, ge=1, le=900, description="Page-check budget in seconds. Set below the calling transport's timeout when overriding either limit.")
     before: bool = Field(False, description="Before a redesign: also save the page's links, form fields, event handlers and titles; the result carries kept_saved.id.")

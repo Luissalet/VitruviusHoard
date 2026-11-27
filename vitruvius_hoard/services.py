@@ -9,6 +9,7 @@ import json
 import logging
 import time
 import uuid
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -625,37 +626,51 @@ class Services:
                    before: bool = False, kept: Optional[str] = None, snapshot_only: bool = False, label: str = "") -> dict[str, Any]:
         """Drive the page's controls in a real browser. ``before`` also saves what a redesign must keep (links, fields, handlers, titles);
         ``kept`` (an id from an earlier ``before``) fails the check when any of it is missing from this page."""
-        snapshot_before = None
-        preview_url = None
-        if kept:
-            snapshot_before = self.kept_get(kept)
-        if render_id:
-            source = self.config.renders_dir / render_id / "source.html"
-            if not source.is_file():
-                raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
-            path, html = str(source), None
-        elif url:
-            if loopback_preview(url):
-                preview_url = url
-                if before or kept:
-                    import httpx
-                    with httpx.Client(trust_env=False) as client:
-                        response = client.get(url, timeout=6)
-                        if response.status_code != 200:
-                            raise ValueError(f"Could not read the local page: HTTP {response.status_code}")
-                        html = response.text
-            else:
-                self.check_url(url)
-                html = self._fetch_page(url)
-        if html is None and not path and not preview_url:
-            raise ValueError("page_assay needs html, url, render_id or a local path")
-        page_source = html if html is not None else self._read_page_file(path)
-        saved = self.kept_save(page_source, label=label or (url or path or "page"), source=url or path or "html") if before else None
-        if snapshot_only:
-            return {"works": True, "failed": 0, "kept": saved, "note": "Snapshot saved; run page_check with kept=<id> after the redesign."}
-        options = {"url": preview_url} if preview_url else {}
-        result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s,
-                               runner=self.assay_runner, criteria=criteria, **options)
+        snapshot_before = self.kept_get(kept) if kept else None
+        with ExitStack() as cleanup:
+            preview_url = None
+            deadline = None
+            if render_id:
+                source = self.config.renders_dir / render_id / "source.html"
+                if source.is_file():
+                    path, html = str(source), None
+                else:
+                    render = self.get_render(render_id)
+                    project = render["metrics"].get("app_project") if render else None
+                    if not project:
+                        raise LookupError(f"Render '{render_id}' has no saved source (URL renders keep none).")
+                    project_id, revision = project["id"], project["revision"]
+                    deadline = time.monotonic() + timeout_s
+                    try:
+                        preview_url = cleanup.enter_context(self.app_projects.assay_preview(project_id, revision, deadline=deadline))
+                    except (LookupError, FileNotFoundError) as error:
+                        raise LookupError(f"Render '{render_id}' refers to unavailable project '{project_id}' revision '{revision}'.") from error
+                    url, path, html = preview_url, None, None
+            elif url:
+                if loopback_preview(url):
+                    preview_url = url
+                else:
+                    self.check_url(url)
+                    html = self._fetch_page(url)
+            if preview_url and (before or kept):
+                import httpx
+                with httpx.Client(trust_env=False) as client:
+                    read_budget = min(6, max(0.1, deadline - time.monotonic())) if deadline is not None else 6
+                    response = client.get(preview_url, timeout=read_budget)
+                    if response.status_code != 200:
+                        raise ValueError(f"Could not read the local page: HTTP {response.status_code}")
+                    html = response.text
+            if html is None and not path and not preview_url:
+                raise ValueError("page_assay needs html, url, render_id or a local path")
+            page_source = html if html is not None else self._read_page_file(path)
+            saved = self.kept_save(page_source, label=label or (url or path or "page"), source=url or path or "html") if before else None
+            if snapshot_only:
+                return {"works": True, "failed": 0, "kept": saved, "note": "Snapshot saved; run page_check with kept=<id> after the redesign."}
+            options = {"url": preview_url} if preview_url else {}
+            if deadline is not None:
+                timeout_s = max(0.1, deadline - time.monotonic())
+            result = assay_mod.run(self.config.data_dir, html=html, path=path, timeout_s=timeout_s,
+                                   runner=self.assay_runner, criteria=criteria, **options)
         if saved:
             result["kept_saved"] = saved
         if snapshot_before is not None:
