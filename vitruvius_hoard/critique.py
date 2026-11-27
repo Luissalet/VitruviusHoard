@@ -199,11 +199,14 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
     gate = waivers_mod.gate(findings)
     findings = _with_review_weights(findings)
     heuristic_score = score_of(findings)
+    score_source = "heuristic"
     if vision_score is not None:
         try:
             score = round((float(vision_score) + heuristic_score) / 2, 2)
         except (TypeError, ValueError):
             score = heuristic_score
+        else:
+            score_source = "vision_blend"
     else:
         score = heuristic_score
 
@@ -232,6 +235,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
     return {
         "score": score,
         "heuristic_score": heuristic_score,
+        "score_source": score_source,
         "vision_model": vision_model,
         "vision": vision,
         "partial": bool(missing),

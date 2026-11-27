@@ -18,7 +18,7 @@ def test_confined_render_id_keeps_the_successful_vision_contract(services):
     class PromptRecorder:
         def chat(self, messages, *, images, effort, timeout):
             assert 0 < timeout <= DEFAULT_TIMEOUT_S
-            assert images and effort == "high"
+            assert len(images) == 1 and effort == "high"
             return {"model": "fixture-vision", "text": '{"score": 9, "summary": "Visual feedback", "findings": []}'}
 
     services.link_sync = PromptRecorder()
@@ -27,6 +27,7 @@ def test_confined_render_id_keeps_the_successful_vision_contract(services):
     assert report["vision_model"] == "fixture-vision" and report["vision"] == {"status": "complete"}
     assert report["summary"] == "Visual feedback"
     assert report["score"] == round((report["heuristic_score"] + 9) / 2, 2)
+    assert report["score_source"] == "vision_blend"
     assert report["missing"] == [] and report["partial"] is False
 
 
@@ -66,7 +67,8 @@ def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(ser
     assert partial["review"]["status"] == "timed_out" and partial["review"]["verdict"] is None
     assert "use_vision=false" in partial["next_action"]["es"]
     assert deterministic["vision"] == {"status": "not_requested"} and deterministic["partial"] is False
-    for key in ("score", "heuristic_score", "findings", "gate", "ship_ready", "rules_run"):
+    assert deterministic["score_source"] == "heuristic"
+    for key in ("score", "heuristic_score", "score_source", "findings", "gate", "ship_ready", "rules_run"):
         assert partial[key] == deterministic[key], key
 
 
