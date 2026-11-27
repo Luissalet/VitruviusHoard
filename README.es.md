@@ -18,6 +18,7 @@ El trabajo con modelos de lenguaje usa solo el modelo global elegido a través d
 
 ### Biblioteca y reglas de diseño
 - Biblioteca consultable de criterios de diseño, estilos, paletas y parejas tipográficas, y una galería de referencias con colecciones, patrones HTML originales y galerías de diseño curadas que se pueden capturar como referencias.
+- El patrón Controles de formulario incluye un desplegable con tokens, fecha y hora localizadas y un grupo de opciones accesible por teclado. Render lo propone cuando detecta un formulario. El lint de navegador avisa de los controles visibles que conservan la apariencia predeterminada en páginas con tokens.
 - Registro de reglas de lint (motores estático, de navegador y visual) con severidades, paquetes y textos en español; `design_lint` puede ejecutar solo el motor estático tras cada edición.
 - Crítica en tres niveles: Suelo (nunca se exime), Reflejo (se puede eximir con una justificación razonada) y Acabado (consejo). La puerta pasa solo sin hallazgos de Suelo ni de Reflejo abiertos; una revisión en contexto limpio da una segunda mirada nueva.
 - Auditoría de «slop»: renderiza una página en ocho anchos y puntúa de 0 a 100 las señales de aspecto genérico de IA, con plan de arreglo y un briefing de dirección de diseño.

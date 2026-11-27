@@ -46,7 +46,7 @@ def test_every_non_visual_rule_has_an_implementation_and_visual_ones_do_not():
 
 def test_core_pack_keeps_the_original_ids():
     core = {r["id"] for r in registry.list_rules(pack="core")}
-    assert core == set(lint.CHECK_IDS) and len(core) == 32
+    assert core == set(lint.CHECK_IDS) and len(core) == 33
 
 
 def test_listing_filters_and_summary():

@@ -16,6 +16,12 @@ Use `app_project_create` with `files` to create a custom project with a `vitruvi
 
 `app_transfer_assistant_assets` supplies the panel and its streamed voice client. Save the complete asset set with `app_project_update` and keep its undo call. The owned preview relays full Spanish and English replies to the resident voice service while the panel keeps the written reply available. [Transfer assistant](docs/APP_TRANSFER_ASSISTANT.md)
 
+## Form controls
+
+Pass a page or fragment in `design_patterns(html=...)` to get `recommended_patterns`. `design_lint` and renders with lint also suggest `form-controls` when they see a form. `design_pattern(id="form-controls", lang="es-ES")` returns a working HTML page and a `recipe` with reusable `markup`, `css` and `script`. Link the project's token CSS and keep the form control names and accessible labels. The recipe uses native select and radio semantics, formats date entry from the document language (default es-ES), and submits canonical dates and 24-hour times. A calendar or clock button opens the system picker where available. Keep the native date or time input interface by placing `data-native-picker` on its wrapper.
+
+The browser rule `form.native-unstyled` reports visible select, date, time, radio or checkbox controls whose computed appearance matches the native default at a measured width. It runs when the page exposes design tokens or `tokens_id` is supplied. The evidence includes affected widths. Styling the native controls preserves the system interaction.
+
 ## Web guides and craft library
 
 Cold tools (available with every module OFF, no engine, no data store, nothing to start):
