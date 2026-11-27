@@ -10,6 +10,11 @@ JUDGED_FIX = "Lo juzga el modelo de visión a partir de las capturas."
 
 # id -> (nombre, descripción, arreglo)
 RULES_ES: dict[str, tuple[str, str, str]] = {
+    "form.native-unstyled": (
+        "Controles de formulario sin estilo",
+        "Hay controles visibles con la apariencia predeterminada del navegador en una página con tokens.",
+        "Aplica los tokens de superficie, borde y foco. Consulta el patrón Controles de formulario.",
+    ),
     # ---- core
     "font.generic-only": ("Solo tipografías del sistema", "Todas las fuentes de la página son tipografías genéricas o por defecto.", "Elige una tipografía de titulares con carácter y emparéjala con una de texto legible."),
     "font.too-many-families": ("Demasiadas familias tipográficas", "Se cargan más de cuatro familias tipográficas.", "Una familia para titulares, una para texto y una monoespaciada."),

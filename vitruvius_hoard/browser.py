@@ -51,6 +51,74 @@ def loopback_preview(url: Optional[str]) -> bool:
 
 # The probe JS: must never throw. Every metric is wrapped in try/catch and
 # missing/failed metrics are simply omitted or null.
+FORM_CONTROLS_JS = r"""
+() => {
+  const nativeSelector = "select, input:is([type=date], [type=time], [type=radio], [type=checkbox])";
+  const all = [...document.querySelectorAll(nativeSelector)].slice(0, 250);
+  const visible = (element) => {
+    const style = getComputedStyle(element);
+    return element.getClientRects().length > 0 && style.visibility === "visible" &&
+      Number(style.opacity) > .01 && (element.checkVisibility?.({ opacityProperty: true }) ?? true);
+  };
+  const controls = all.filter(visible);
+  const hasForm = controls.length > 0 || [...document.querySelectorAll("form,[role=form]")].some(visible);
+  const tokenized = (style) => {
+    const known = ["--color-bg", "--color-background", "--color-surface", "--color-primary",
+                   "--color-primary-500", "--color-on-bg", "--ds-surface", "--ds-primary"];
+    if (known.some((token) => style.getPropertyValue(token).trim())) return true;
+    const short = ["--surface", "--paper", "--bg", "--ink", "--accent", "--primary", "--line", "--border"];
+    return short.filter((token) => style.getPropertyValue(token).trim()).length >= 2;
+  };
+  if (!controls.length) return { has_form: hasForm, unstyled: [] };
+
+  // The shadow tree holds browser defaults, isolated from this page's author styles.
+  const host = document.createElement("span");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = "all:initial;position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none";
+  const shadow = host.attachShadow({mode: "open"});
+  document.body.append(host);
+  try {
+    const face = ["appearance", "backgroundColor", "backgroundImage", "borderTopColor", "borderTopStyle",
+                  "borderTopWidth", "borderTopLeftRadius", "boxShadow"];
+    const defaults = new Map();
+    const unstyled = [];
+    for (const element of controls) {
+      const select = element.localName === "select";
+      const kind = select ? "select" : element.type;
+      const style = getComputedStyle(element);
+      const props = kind === "radio" || kind === "checkbox" ? [...face, "accentColor"] : face;
+      const scheme = style.colorScheme;
+      const key = JSON.stringify([kind, scheme, element.disabled, element.multiple, element.size]);
+      if (!defaults.has(key)) {
+        const baseline = document.createElement(select ? "select" : "input");
+        if (select) {
+          baseline.multiple = element.multiple;
+          if (element.hasAttribute("size")) baseline.size = element.size;
+        } else baseline.type = kind;
+        baseline.disabled = element.disabled;
+        baseline.style.colorScheme = scheme;
+        shadow.append(baseline);
+        const bare = getComputedStyle(baseline);
+        defaults.set(key, props.map((prop) => bare[prop]));
+      }
+      if (!props.every((prop, i) => style[prop] === defaults.get(key)[i])) continue;
+      const label = element.labels?.[0]?.textContent || element.getAttribute("aria-label") || "";
+      unstyled.push({
+        kind,
+        index: all.indexOf(element),
+        element: (element.id ? element.localName + "#" + element.id : element.localName).slice(0, 120),
+        label: label.replace(/\s+/g, " ").trim().slice(0, 120),
+        tokenized: tokenized(style),
+      });
+    }
+    return { has_form: hasForm, unstyled };
+  } finally {
+    host.remove();
+  }
+}
+"""
+
+
 PROBE_JS = r"""
 () => {
   const out = {};
@@ -1223,6 +1291,7 @@ class BrowserWorker:
             layout: dict[str, Any] = {}
             dom: dict[str, Any] = {}
             platform_fonts = []
+            forms: dict[str, Any] = {}
             for w in widths:
                 page.set_viewport_size({"width": w, "height": 900})
                 try:
@@ -1241,6 +1310,10 @@ class BrowserWorker:
                         log.debug("Could not sample platform fonts", exc_info=True)
                 for element in dom[str(w)].get("els", []):
                     element.pop("font_node", None)
+                try:
+                    forms[str(w)] = page.evaluate(FORM_CONTROLS_JS)
+                except Exception:  # noqa: BLE001 - only use measured form evidence
+                    pass
                 path = out_dir / f"{w}.png"
                 if full_page:
                     # Cap full-page height at 6000px via a clip.
@@ -1264,6 +1337,11 @@ class BrowserWorker:
                 probe["dom"] = dom
             if platform_fonts:
                 probe["rendered_fonts"] = platform_fonts
+            if forms:
+                probe["form_controls"] = {
+                    "has_form": any(report["has_form"] for report in forms.values()),
+                    "widths": {width: report["unstyled"] for width, report in forms.items()},
+                }
             probe["script_errors"] = script_errors
             if payload.get("keyboard", True):
                 from . import keyboard

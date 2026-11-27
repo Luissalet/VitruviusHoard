@@ -2,6 +2,7 @@
   {
     "id": "book",
     "title": "Libro a doble página",
+    "title_en": "Double-page book",
     "summary": "Tres pliegos con una hoja segmentada en perspectiva, arrastre y retorno por muelle amortiguado.",
     "tags": [
       "libro",
@@ -52,6 +53,7 @@
   {
     "id": "glitch",
     "title": "Retrato sobre rejilla",
+    "title_en": "Portrait on a grid",
     "summary": "Una textura fotográfica deforma una malla mediante un shader y responde a la posición del puntero.",
     "tags": [
       "retrato",
@@ -103,6 +105,7 @@
   {
     "id": "gallery",
     "title": "Sala-galería 3D",
+    "title_en": "3D gallery room",
     "summary": "Una sala real en WebGL con suelo, luces, paneles seleccionables y desplazamiento de cámara.",
     "tags": [
       "galería",
@@ -156,6 +159,7 @@
   {
     "id": "city",
     "title": "Ciudad como mapa",
+    "title_en": "City as a map",
     "summary": "Mapa urbano 3D con edificios instanciados, ventanas iluminadas, destinos y una pieza roja destacada.",
     "tags": [
       "ciudad",
@@ -207,6 +211,7 @@
   {
     "id": "rock",
     "title": "Producto sobre roca",
+    "title_en": "Product on rock",
     "summary": "Anillo y basalto modelados en 3D, luz dramática y recorrido de cámara ligado al scroll.",
     "tags": [
       "producto",

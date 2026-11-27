@@ -7,6 +7,7 @@ import json
 import re
 from typing import Any, Optional
 
+from . import brief_content
 from .db import Database
 from .hoard_link.docs import citations, textsearch
 from .hoard_link.docs.vecmath import rrf
@@ -17,10 +18,12 @@ DEFAULT_ANTI_PATTERNS = [
     "Avoid the stock purple-to-blue gradient button.",
     "Avoid near-black text on white paired with an acid-green accent, or cream+terracotta+serif, as the default palette.",
     "Do not leave Lorem ipsum or 'Your Company' placeholder copy in the final page.",
+    "Put a simulation notice in the page footer only when the commission explicitly asks for it.",
     "Do not disable focus outlines without a :focus-visible replacement.",
 ]
 
 DEFAULT_CHECKLIST = [
+    "Before building, compare the three library directions in Alternatives and record the chosen direction.",
     "Run render_preview at 390/1024/1440 and check for horizontal overflow.",
     "Run design_lint and fix every error-severity finding.",
     "Check text/background contrast is at least 4.5:1 for body text.",
@@ -329,7 +332,8 @@ def _clean_palette(row: dict) -> dict:
 
 def brief(db: Database, *, subject: str, vibe: Optional[str] = None, product_type: Optional[str] = None,
          platform: Optional[str] = None, mode: str = "marketing", knobs: Optional[dict] = None,
-         use_model: bool = False, link: Any = None) -> dict[str, Any]:
+         use_model: bool = False, link: Any = None, lang: Optional[str] = None,
+         show_simulation_notice: Optional[bool] = None, allow_typical_direction: bool = False) -> dict[str, Any]:
     knobs = knobs or {}
     cites: list[str] = []
 
@@ -387,13 +391,19 @@ def brief(db: Database, *, subject: str, vibe: Optional[str] = None, product_typ
         "motion_guidance": motion_chunks, "anti_patterns": anti_patterns[:10], "checklist": list(DEFAULT_CHECKLIST),
         "cites": sorted(set(cites)),
     }
+    result.update(brief_content.build(subject, product_type=product_type, lang=lang,
+                                      show_simulation_notice=show_simulation_notice,
+                                      allow_typical_direction=allow_typical_direction))
+    result["cites"] = sorted(set(result["cites"]) | set(result["content_cites"]))
 
     if use_model and link is not None:
         try:
             prompt = (f"Write a 150-word art direction paragraph for a {mode} {product_type or 'page'} about "
                      f"'{subject}', vibe '{vibe or 'unspecified'}', platform '{platform or 'web'}'. "
                      f"Reference the chosen style names ({', '.join(s['name'] for s in styles) or 'n/a'}), "
-                     f"the palette and the font pairing. Plain prose, no headings.")
+                      f"the palette and the font pairing. Use the content and facts of the commission. "
+                      f"Simulation notice requested: {result['simulation_notice']['show']}. If requested, use the footer. "
+                      "Plain prose, no headings.")
             chat_result = link.chat([{"role": "user", "content": prompt}], effort="medium")
             result["direction"] = getattr(chat_result, "text", None) or (
                 chat_result.get("text") if isinstance(chat_result, dict) else str(chat_result))

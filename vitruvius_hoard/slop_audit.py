@@ -302,8 +302,10 @@ def fallback_brief(text: str, avoid: list[str], theme: Optional[dict], lang: str
 
 
 def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str] = None, url: Optional[str] = None,
-                    text: Optional[str] = None, use_model: bool = True, lang: Optional[str] = None) -> dict[str, Any]:
-    from . import themes as themes_mod
+                    text: Optional[str] = None, use_model: bool = True, lang: Optional[str] = None,
+                    product_type: Optional[str] = None, show_simulation_notice: Optional[bool] = None,
+                    allow_typical_direction: bool = False) -> dict[str, Any]:
+    from . import brief_content, themes as themes_mod
     lang = i18n.norm_lang(lang)
     t0 = time.monotonic()
     source = text or ""
@@ -323,6 +325,9 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
     source = (source or "").strip()[:TEXT_CAP]
     if len(source) < 20:
         raise ValueError("The page has too little text to write a direction from (pass text, html, url or a render_id).")
+    content = brief_content.build(source, product_type=product_type, lang=lang,
+                                  show_simulation_notice=show_simulation_notice,
+                                  allow_typical_direction=allow_typical_direction)
     avoid = [f["title"] for f in (audit or {}).get("findings", []) if f.get("slop")][:6]
     try:
         theme = themes_mod.get(themes_mod.deal(prompt=source[:600], n=1, salt="direction", today="brief")["deal"][0]["slug"])
@@ -332,8 +337,12 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
     if use_model and getattr(svc, "link_sync", None) is not None:
         if lang == "es":
             user = f"TEXTO DE LA PÁGINA\n{source}" + (f"\n\nINDICIOS YA ENCONTRADOS EN ESTA PÁGINA\n- " + "\n- ".join(avoid) if avoid else "")
+            user += ("\n\nUsa los hechos concretos del encargo. El aviso de simulación, si se pide, va en el pie."
+                     if content["simulation_notice"]["show"] else "\n\nUsa los hechos concretos del encargo. Omite los avisos de simulación en la página.")
         else:
             user = f"PAGE TEXT\n{source}" + (f"\n\nSIGNS ALREADY FOUND ON THIS PAGE\n- " + "\n- ".join(avoid) if avoid else "")
+            user += ("\n\nUse the facts of the commission. Keep a requested simulation notice in the footer."
+                     if content["simulation_notice"]["show"] else "\n\nUse the facts of the commission. Omit simulation notices from the page.")
         try:
             res = svc.link_sync.chat([{"role": "system", "content": _BRIEF_SYSTEM_ES if lang == "es" else _BRIEF_SYSTEM},
                                       {"role": "user", "content": user}], effort="low")
@@ -349,6 +358,6 @@ def direction_brief(svc, *, render_id: Optional[str] = None, html: Optional[str]
         brief = {k: brief.get(k) or fb[k] for k in BRIEF_KEYS}
     labels = i18n_es.BRIEF_LABELS_ES if lang == "es" else _LABELS
     lines = "\n".join(f"{labels[k]}: {brief[k]}" for k in BRIEF_KEYS)
-    return {**{k: brief[k] for k in BRIEF_KEYS}, "text": lines, "lang": lang, "labels": labels, "source": "model" if complete else ("partial" if got else "fallback"),
+    return {**content, **{k: brief[k] for k in BRIEF_KEYS}, "text": lines, "lang": lang, "labels": labels, "source": "model" if complete else ("partial" if got else "fallback"),
             "model": model, "error": error, "theme": themes_mod.public(theme) if theme else None, "render_id": render_id,
             "ms": round((time.monotonic() - t0) * 1000)}

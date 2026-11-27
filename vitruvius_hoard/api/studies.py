@@ -35,7 +35,9 @@ def studies_list(request: Request):
 
 @router.post("/design-alternatives", status_code=201)
 def studies_create(body: StudyCreateArgs, request: Request):
-    return execute(lambda: services(request).alternatives.create(body.brief, [_dump(c) for c in body.criteria], [_dump(a) for a in body.alternatives], body.diversity_threshold, body.check_only))
+    return execute(lambda: services(request).alternatives.create(
+        body.brief, [_dump(c) for c in body.criteria], [_dump(a) for a in body.alternatives],
+        body.diversity_threshold, body.check_only, art_direction=body.art_direction, allow_typical=body.allow_typical))
 
 
 @router.get("/design-alternatives/{id}")

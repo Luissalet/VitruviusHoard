@@ -8,8 +8,8 @@ def ids_of(result):
 
 
 def test_all_checks_registered_and_ids_match():
-    assert len(CHECKS) == len(CHECK_IDS) == 32
-    assert len(set(CHECK_IDS)) == 32
+    assert len(CHECKS) == len(CHECK_IDS) == 33
+    assert len(set(CHECK_IDS)) == 33
 
 
 def test_clean_probe_triggers_few_or_no_findings():
@@ -379,3 +379,29 @@ def test_run_lint_handles_empty_inputs_gracefully():
     result = run_lint({}, "")
     assert isinstance(result["findings"], list)
     assert 0.0 <= result["score"] <= 10.0
+
+
+def test_native_form_lint_scopes_browser_evidence_to_tokenized_pages():
+    native = {"kind": "select", "element": "select#room", "label": "Room", "index": 0, "tokenized": True}
+    other = {"kind": "date", "element": "input#date", "index": 1, "tokenized": False}
+    probe = default_probe(form_controls={"has_form": True, "widths": {
+        "390": [native, other], "1440": [native],
+    }})
+    result = run_lint(probe, "", only=["form.native-unstyled"])
+    finding, = result["findings"]
+    assert finding["evidence"] == [
+        {"kind": "select", "element": "select#room", "label": "Room", "widths": [390, 1440]}
+    ]
+    assert finding["title_es"] == "Controles de formulario sin estilo"
+    assert result["recommended_patterns"][0]["id"] == "form-controls"
+
+    with_system, = run_lint(probe, "", only=["form.native-unstyled"], tokens={"color": {}})["findings"]
+    assert with_system["evidence"][1]["widths"] == [390]
+    probe["form_controls"]["widths"] = {"390": [other]}
+    assert run_lint(probe, "", only=["form.native-unstyled"])["findings"] == []
+
+
+def test_static_source_can_recommend_form_controls_without_visual_evidence():
+    result = run_lint({}, "<form><select></select></form>", only=["form.native-unstyled"])
+    assert result["findings"] == []
+    assert result["recommended_patterns"][0]["id"] == "form-controls"

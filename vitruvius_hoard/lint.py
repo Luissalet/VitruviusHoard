@@ -467,6 +467,30 @@ def check_dark_no_scheme(probe: dict, html: str) -> list[Finding]:
     return []
 
 
+def check_form_native_unstyled(probe: dict, html: str) -> list[Finding]:
+    widths = (probe.get("form_controls") or {}).get("widths") or {}
+    controls = {}
+    for width, items in widths.items():
+        for item in items:
+            if not (probe.get("design_system") or item.get("tokenized")):
+                continue
+            key = (item["kind"], item["element"], item.get("label"), item.get("index"))
+            evidence = {name: item[name] for name in ("kind", "element", "label") if item.get(name)}
+            controls.setdefault(key, {**evidence, "widths": []})["widths"].append(int(width))
+    if not controls:
+        return []
+    from .i18n import localize_finding
+
+    count = len(controls)
+    finding = _finding("form.native-unstyled", "layout", "warn", "Unstyled form controls",
+                       f"{count} visible native field(s) use the default browser appearance on a page with tokens.",
+                       list(controls.values())[:12],
+                       "Apply the project's surface, border and focus tokens. See the form-controls design pattern.",
+                       "Vitruvius form-controls")
+    spanish = localize_finding(finding, "es")
+    return [{**finding, **{f"{field}_es": spanish[field] for field in ("title", "detail", "fix")}}]
+
+
 CHECKS: list[CheckFn] = [
     check_font_generic_only,
     check_font_too_many_families,
@@ -500,6 +524,7 @@ CHECKS: list[CheckFn] = [
     check_perf_large_transfer,
     check_viewport_missing,
     check_dark_no_scheme,
+    check_form_native_unstyled,
 ]
 
 CHECK_IDS = [
@@ -510,7 +535,7 @@ CHECK_IDS = [
     "type.line-length", "motion.no-reduced-motion", "motion.everything-animates", "motion.long-durations",
     "motion.linear-easing", "a11y.missing-alt", "a11y.small-targets", "a11y.heading-order", "a11y.no-lang",
     "a11y.no-focus-visible", "content.lorem-ipsum", "content.emoji-icons", "content.placeholder-copy",
-    "perf.dom-size", "perf.images-unsized", "perf.large-transfer", "viewport.missing", "dark.no-scheme",
+    "perf.dom-size", "perf.images-unsized", "perf.large-transfer", "viewport.missing", "dark.no-scheme", "form.native-unstyled",
 ]
 
 
@@ -521,7 +546,7 @@ def score_of(findings: list[Finding]) -> float:
 
 
 def _register_core() -> None:
-    """The 32 original checks, registered as data (``rules/core.py``) with their functions."""
+    """The built-in checks, registered as data (``rules/core.py``) with their functions."""
     from .rules.core import CORE_RULES
     from .rules.registry import Rule, get_rule, register_rule
     for spec, fn in zip(CORE_RULES, CHECKS):
@@ -582,8 +607,12 @@ def run_lint(probe: dict, html: str, *, tokens: dict | None = None, packs=None, 
         counts[f["severity"]] = counts.get(f["severity"], 0) + 1
         if f.get("tier"):
             tiers[f["tier"]] = tiers.get(f["tier"], 0) + 1
+    from .design_patterns import recommend
+    suggested = recommend(html, has_form=(probe.get("form_controls") or {}).get("has_form"))
     result = {"findings": findings, "score": score_of(findings), "counts": counts, "tiers": tiers, "rules_run": len(rules),
               "design_system": bool(tokens)}
+    if suggested:
+        result["recommended_patterns"] = suggested
     if probe.get("rendered_fonts"):
         result["rendered_fonts"] = probe["rendered_fonts"]
     return result

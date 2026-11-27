@@ -32,13 +32,16 @@ def embeddings_build(request: Request):
 
 
 class BriefBody(BaseModel):
-    subject: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=2000)
     vibe: Optional[str] = None
     product_type: Optional[str] = None
     platform: Optional[str] = None
     mode: str = "marketing"
     knobs: Optional[dict[str, Any]] = None
     use_model: bool = False
+    lang: Optional[str] = None
+    show_simulation_notice: Optional[bool] = None
+    allow_typical_direction: bool = False
 
 
 @router.post("/library/brief")
