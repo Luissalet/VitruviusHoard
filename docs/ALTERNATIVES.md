@@ -4,11 +4,18 @@ An **alternatives study** compares options that differ in structure, on criteria
 keeps the decision with its reason. Tools: `design_alternatives_create`, `_list`, `_get`, `_add`, `_evaluate`, `_criteria`,
 `_analyze`, `_decide`. REST: `/api/design-alternatives` (UI: **Alternatives** screen, read-only). Code: `vitruvius_hoard/alternatives.py`.
 
+## Art direction before building
+
+1. Give `design_brief` the full commission as `subject`, or pass it as `text` to `design_direction_brief`. Use the `content_sections` as draft copy and retain the facts supplied in the commission. Each section links to a shipped showcase recipe. The `simulation_notice` field is opt-in and provides footer text when requested.
+2. Pass `art_direction.create.arguments` to `design_alternatives_create`. The three directions cite editable library patterns and describe composition, typography, palette and motion. The product generates each pattern's HTML and compares the structural fingerprints. One option is the typical choice for the category and appears as a named baseline.
+3. Use `design_alternatives_evaluate` to score each direction against the commission with a written rationale. Use the criterion id from the created study in each manual score. Record the choice and reason with `design_alternatives_decide`. Choose one of the other directions unless the commission asks for the typical one, in which case set `allow_typical_direction: true` in the brief. The decision returns an undo call that reopens the study and preserves the previous choice in history.
+4. Build from the chosen direction. For a new custom application, pass the decided `art_direction_study_id` to `app_project_create`. The project stores the study, revision, pattern and reason in `project.json`.
+
 ## What a study holds
 
 - **Brief**: what is designed and for whom (at least a sentence).
 - **Criteria** (1 to 12), each with a metric `source`, a `direction` (`max`/`min`; default from the source) and a `weight`.
-- **Alternatives** (2 to 12): `page` (`html` or `path`), `app_project` (`project_id`, revision pinned) or `diagram_document`
+- **Alternatives** (2 to 12): `page` (`html`, `path` or `pattern_id`), `app_project` (`project_id`, revision pinned) or `diagram_document`
   (`document_id`, revision pinned). Page source is stored with its SHA-256 so later edits of the file do not change the study.
 - A **decision** (alternative, reason, trade-offs accepted) and the **history** of earlier criteria revisions.
 

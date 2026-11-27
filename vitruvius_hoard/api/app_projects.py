@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from .deps import services
 from ..agent_tools import (
     AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
+    run_app_project_create,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -134,7 +135,7 @@ def project_list(request: Request, archived: bool = False):
 
 @router.post("", status_code=201)
 def project_create(request: Request, body: AppCreateArgs):
-    return execute(lambda: services(request).app_projects.create(**body.model_dump(), author={"kind": "person"}))
+    return execute(lambda: run_app_project_create(services(request), body, author={"kind": "person"}))
 
 
 @router.get("/{id}")

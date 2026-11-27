@@ -15,14 +15,14 @@ from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
-AGENT_INSTRUCTIONS = """Vitruvius's Hoard is a design workbench: a cited library of design criterion, a render -> capture -> critique
-loop on real Chromium, a design-system (tokens) generator with a playground, and a gallery of captured websites.
-Always cite `[vitruvius: ...]` when quoting the library (design_search, design_brief, design_rules).
-Loop: write HTML -> render_preview -> design_critique -> fix -> render again; stop at score >= 8 or after 3 rounds,
-then page_assay it (drives every control in a real browser and reports what does not work).
-Use design_brief before a page from scratch; styles_search / palettes_search / fonts_search for quick lookups.
-Diagrams: diagram_types, then diagram_render (structure, Mermaid, Excalidraw, draw.io; isometric = one object); fix gates.
-reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when the user asks."""
+AGENT_INSTRUCTIONS = """Design library, Chromium rendering, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
+New design: call design_brief with the full commission. Before building, use its art_direction.create in Alternatives,
+score the three library directions and record a decision. Choose a non-typical direction unless the brief asks for the
+typical one. Pass the decided study id to app_project_create for a custom app.
+Use content_sections as drafts and keep the commission's facts. Put a simulation notice in the footer only on request.
+After the decision, render, critique and iterate to 8/10 or three rounds, then use page_assay.
+Diagrams: diagram_types, then diagram_render. Fix their gates.
+reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when asked."""
 
 
 # ---------------- library ----------------
@@ -37,13 +37,16 @@ class SearchArgs(BaseModel):
 
 
 class BriefArgs(BaseModel):
-    subject: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=2000, description="The full commission, including required content and actions.")
     vibe: Optional[str] = Field(None, max_length=120)
     product_type: Optional[str] = Field(None, max_length=120)
     platform: Optional[str] = Field(None, max_length=60)
     mode: str = Field("marketing", pattern="^(marketing|product)$")
     knobs: Optional[dict[str, Any]] = None
     use_model: bool = False
+    lang: Optional[Literal["es", "en"]] = None
+    show_simulation_notice: Optional[bool] = Field(None, description="Set true when the commission explicitly requests a simulation notice.")
+    allow_typical_direction: bool = Field(False, description="Set true when the commission explicitly requests the typical direction.")
 
 
 class RulesArgs(BaseModel):
@@ -198,6 +201,7 @@ class AppCreateArgs(BaseModel):
     lang: Literal["es", "en"] = "en"
     description_es: Optional[str] = None
     files: Optional[dict[str, str]] = Field(None, description="Custom UTF-8 source files. Omit server.py to use the built-in runtime.")
+    art_direction_study_id: Optional[str] = Field(None, max_length=40, description="For a new custom design, pass the decided study from the brief.")
 
 
 class AppIdArgs(BaseModel):
@@ -468,8 +472,7 @@ def run_design_search(services: Services, args: SearchArgs) -> dict:
 
 
 def run_design_brief(services: Services, args: BriefArgs) -> dict:
-    return services.library_brief(subject=args.subject, vibe=args.vibe, product_type=args.product_type,
-                                  platform=args.platform, mode=args.mode, knobs=args.knobs, use_model=args.use_model)
+    return services.library_brief(**args.model_dump())
 
 
 def run_design_rules(services: Services, args: RulesArgs) -> dict:
@@ -724,6 +727,20 @@ def run_vitruvius_status(services: Services, args: Empty) -> dict:
     return services.status()
 
 
+def run_app_project_create(services: Services, args: AppCreateArgs, *, author=None) -> dict:
+    receipt = None
+    if args.art_direction_study_id:
+        study = services.alternatives.get(args.art_direction_study_id)
+        decision = study.get("decision")
+        if not study.get("art_direction") or not decision:
+            raise ValueError("Choose an art direction in Alternatives before creating the project")
+        direction = next(a for a in study["alternatives"] if a["id"] == decision["alternative_id"])
+        receipt = {"study_id": study["id"], "study_revision": decision["revision"],
+                   "pattern_id": direction["pattern_id"], "reason": decision["reason"]}
+    return services.app_projects.create(**args.model_dump(exclude={"art_direction_study_id"}),
+                                        art_direction=receipt, author=author or {"kind": "agent"})
+
+
 def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
     projects = services.app_projects
     projects.canvas.wait_for_revision(args.id, args.expected_revision)
@@ -769,7 +786,7 @@ TOOLS: list[Tool] = [
         SearchArgs, ann(True), run_design_search),
     Tool("design_brief",
         "Design brief for a page/app: style, palette, fonts, rules, motion, anti-patterns. Brief de diseño.\n"
-        "Deterministic composition (2-3 styles, one palette, one font pairing, rules by area, anti-patterns, checklist), all cited.\n"
+        "Domain copy, library references and the mandatory three-direction Alternatives study to complete before building.\n"
         "Sinónimos: brief, dirección de arte, vibe, paleta, tipografía, para una landing, para una app.",
         BriefArgs, ann(True), run_design_brief),
     Tool("design_rules",
@@ -845,8 +862,9 @@ TOOLS: list[Tool] = [
         Empty, ann(True), lambda services, args: assistant_assets(), capped=False),
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
-    Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
-        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump(), author={"kind": "agent"}), capped=False),
+    Tool("app_project_create", "Create an editable application project. Crear aplicación.\n"
+        "For a new custom design, pass the decided art-direction study from the brief.",
+        AppCreateArgs, ann(False, False, True), run_app_project_create, capped=False),
     Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
         AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
@@ -1331,12 +1349,14 @@ class DirectionBriefArgs(BaseModel):
     text: Optional[str] = Field(None, max_length=20000, description="The page's text, when you already have it.")
     use_model: bool = Field(True, description="false = the deterministic brief from the theme catalogue, no model call.")
     lang: Optional[Literal["es", "en"]] = Field(None, description="Language the brief is written in: es (Spanish, Spain; default) or en.")
+    product_type: Optional[str] = Field(None, max_length=120)
+    show_simulation_notice: Optional[bool] = Field(None, description="Set true when the commission explicitly requests a simulation notice.")
+    allow_typical_direction: bool = Field(False, description="Set true when the commission explicitly requests the typical direction.")
 
 
 def run_design_direction_brief(services: Services, args: DirectionBriefArgs) -> dict:
     from . import slop_audit
-    return slop_audit.direction_brief(services, render_id=args.render_id, html=_page_html(args), url=args.url, text=args.text, use_model=args.use_model,
-                                      lang=args.lang)
+    return slop_audit.direction_brief(services, **args.model_dump(exclude={"path", "html"}), html=_page_html(args))
 
 
 class PresetListArgs(BaseModel):
@@ -1411,7 +1431,8 @@ TOOLS.extend([
     Tool("design_direction_brief",
         "Write the five-line design direction of a page from its own text. Dirección de diseño.\n"
         "Product / Character / Bright moment / Signature / Avoid, by the family model; falls back to the theme catalogue when no model answers. "
-        "Avoid lists the slop signs already found on that render.\nSinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
+        "Includes domain copy and the required library Alternatives workflow before building.\n"
+        "Sinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
         DirectionBriefArgs, ann(True, False, False), run_design_direction_brief, timeout_s=180),
     Tool("design_preset_list",
         "List design presets, or read one in full. Presets de diseño.\n"
