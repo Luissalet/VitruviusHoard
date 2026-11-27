@@ -1,0 +1,116 @@
+/* The surrounding project owns colour, spacing, type, radius and focus tokens. */
+.design-form {
+  --control-bg: var(--color-surface, var(--surface, #fffefa));
+  --control-text: var(--color-on-surface, var(--ink, #1d2c36));
+  --control-line: var(--color-border-strong, var(--line, #6c7f8b));
+  --control-accent: var(--color-primary-700, var(--color-primary, var(--accent, #185a74)));
+  --control-active-bg: var(--color-primary-50, #e7f2f5);
+  --control-active-text: var(--color-primary-900, #173e50);
+  --control-muted: var(--color-muted, var(--muted, #4e6270));
+  --control-error: var(--color-danger-text, #a32632);
+  --control-radius: var(--radius-md, 8px);
+  display: grid;
+  gap: var(--space-5, 20px);
+  min-inline-size: 0;
+  color: var(--control-text);
+  font-family: var(--font-body, inherit);
+}
+
+@supports (color: color-mix(in srgb, black, white)) {
+  .design-form {
+    --control-line: var(--color-border-strong,
+      color-mix(in srgb, var(--control-text) 52%, var(--color-border, var(--line, #b7c3c7))));
+  }
+}
+
+.design-form *, .design-form *::before, .design-form *::after { box-sizing: border-box; }
+.design-form [hidden] { display: none !important; }
+.design-field, .design-choices { display: grid; gap: var(--space-2, 8px); min-inline-size: 0; }
+.design-field label, .design-choices legend { font-weight: 650; }
+.design-hint { margin: 0; color: var(--control-muted); font-size: var(--text-sm, .875rem); }
+.design-error { margin: 0; color: var(--control-error); font-size: var(--text-sm, .875rem); }
+
+.design-control { position: relative; min-inline-size: 0; }
+.design-control select, .design-control input, .design-picker, .design-choice {
+  min-block-size: max(44px, var(--space-10, 44px));
+  border: 1px solid var(--control-line);
+  border-radius: var(--control-radius);
+  background: var(--control-bg);
+  color: var(--control-text);
+  font: inherit;
+}
+
+.design-control select, .design-control input {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+}
+.design-control select { cursor: pointer; }
+.design-control input { font-variant-numeric: tabular-nums; }
+.design-control option { background: var(--control-bg); color: var(--control-text); }
+
+@media (pointer: fine) and (forced-colors: none) {
+  .design-select:has(select:not([multiple]):not([size])) select {
+    appearance: none;
+    padding-inline-end: var(--space-8, 32px);
+  }
+  .design-select:has(select:not([multiple]):not([size]))::after {
+    content: "";
+    position: absolute;
+    inline-size: .55em;
+    block-size: .55em;
+    inset-inline-end: 1.05em;
+    inset-block-start: calc(50% - .38em);
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+}
+
+.design-control [aria-invalid="true"] { border-color: var(--control-error); }
+.design-form :is(input, select, button):focus-visible,
+.design-choice:has(input:focus-visible) {
+  outline: 2px solid var(--control-accent);
+  outline-offset: 3px;
+}
+.design-form :is(input, select, button):disabled { opacity: .65; cursor: not-allowed; }
+
+.design-temporal[data-enhanced] { display: flex; flex-wrap: wrap; gap: var(--space-2, 8px); }
+.design-temporal[data-enhanced] .design-temporal-text { flex: 1 1 9rem; inline-size: auto; }
+.design-temporal[data-enhanced] .design-native-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.design-picker { padding: var(--space-2, 8px) var(--space-3, 12px); cursor: pointer; }
+
+.design-choices {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(6rem, 100%), 1fr));
+}
+.design-choices legend { padding: 0 0 var(--space-2, 8px); }
+.design-choice {
+  display: flex;
+  gap: var(--space-2, 8px);
+  align-items: center;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  cursor: pointer;
+}
+.design-choice:has(input:checked) {
+  background: var(--control-active-bg);
+  color: var(--control-active-text);
+  border-color: var(--control-accent);
+}
+.design-choice input { margin: 0; accent-color: var(--control-accent); }
+.design-choice:has(input:disabled) { opacity: .65; cursor: not-allowed; }
+
+@media (forced-colors: active) {
+  .design-choice:has(input:checked) { border-color: Highlight; }
+  .design-form :is(input, select, button):focus-visible,
+  .design-choice:has(input:focus-visible) { outline-color: Highlight; }
+}

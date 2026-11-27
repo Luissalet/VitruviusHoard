@@ -437,7 +437,15 @@ class AlternativeStudies:
             raise ValueError("Each alternative needs a label")
         out: dict[str, Any] = {"label": label[:80], "kind": kind, "intent": str(raw.get("intent", ""))[:400]}
         if kind == "page":
-            if raw.get("html"):
+            if raw.get("pattern_id"):
+                from . import design_patterns
+                if raw.get("html") or raw.get("path"):
+                    raise ValueError("Choose a library pattern or supply a page source")
+                pattern = design_patterns.generate(raw["pattern_id"], text=raw.get("pattern_text") or label,
+                                                   accent=raw.get("pattern_accent") or "#e36a39")
+                source = pattern["html"]
+                out.update(pattern_id=pattern["pattern"]["id"], typical=raw.get("typical") is True)
+            elif raw.get("html"):
                 source = raw["html"]
             elif raw.get("path"):
                 from .agent_tools import read_local_page
@@ -466,13 +474,44 @@ class AlternativeStudies:
                 if a["kind"] not in SOURCES[c["source"]]["kinds"]:
                     raise ValueError(f"Criterion '{c['name']}' ({c['source']}) cannot be measured on '{a['label']}' ({a['kind']}); use a manual criterion or compare alternatives of the same kind")
 
-    def create(self, brief: str, criteria: Any, alternatives: Any, diversity_threshold: float = DEFAULT_THRESHOLD, check_only: bool = False) -> dict[str, Any]:
+    @staticmethod
+    def _check_art_patterns(alternatives):
+        from . import design_patterns
+        patterns = {a.get("pattern_id") for a in alternatives}
+        catalogue = {p["id"] for p in design_patterns.catalogue()}
+        if len(alternatives) != 3 or len(patterns) != 3 or not patterns <= catalogue:
+            raise ValueError("An art-direction study needs three distinct patterns from the library")
+        if sum(a.get("typical") is True for a in alternatives) != 1:
+            raise ValueError("Mark exactly one art direction as the typical reference")
+
+    def _art_choice(self, study, alternative_id):
+        self._check_art_patterns(study["alternatives"])
+        selected = next((a for a in study["alternatives"] if a["id"] == alternative_id), None)
+        if selected is None:
+            raise ValueError("Choose an existing library pattern in this art-direction study")
+        if selected.get("typical") and not study["art_direction"].get("allow_typical", False):
+            raise ValueError("The typical direction is the baseline. Choose another direction unless the brief asks for the typical one.")
+        return selected
+
+    def art_direction_receipt(self, id: str) -> dict[str, Any]:
+        study = self._load(id)
+        decision = study.get("decision")
+        if study.get("art_direction") is None or not decision:
+            raise ValueError("Choose an art direction in Alternatives before creating the project")
+        direction = self._art_choice(study, decision.get("alternative_id"))
+        return {"study_id": study["id"], "study_revision": decision["revision"],
+                "pattern_id": direction["pattern_id"], "reason": decision["reason"]}
+
+    def create(self, brief: str, criteria: Any, alternatives: Any, diversity_threshold: float = DEFAULT_THRESHOLD,
+               check_only: bool = False, *, art_direction: bool = False, allow_typical: bool = False) -> dict[str, Any]:
         if not isinstance(brief, str) or len(brief.strip()) < 8:
             raise ValueError("A study needs a brief of at least a sentence")
         criteria = normalise_criteria(criteria)
         if not isinstance(alternatives, list) or not 2 <= len(alternatives) <= MAX_ALTERNATIVES:
             raise ValueError(f"A study needs 2 to {MAX_ALTERNATIVES} alternatives")
         resolved = [self._resolve(a) for a in alternatives]
+        if art_direction:
+            self._check_art_patterns(resolved)
         labels = [a["label"] for a in resolved]
         if len(set(labels)) != len(labels):
             raise ValueError("Alternative labels must be unique")
@@ -486,6 +525,8 @@ class AlternativeStudies:
             a.update(id=f"a{i}", measures={}, added_ts=time.time())
         study = {"id": uuid.uuid4().hex[:12], "brief": brief.strip(), "revision": 1, "criteria": criteria, "diversity_threshold": diversity_threshold,
                  "alternatives": resolved, "decision": None, "history": [], "created_ts": time.time()}
+        if art_direction:
+            study["art_direction"] = {"allow_typical": allow_typical}
         with self.lock:
             self._save(study)
         return self._public(study)
@@ -506,6 +547,8 @@ class AlternativeStudies:
     def add_alternative(self, id: str, alternative: dict[str, Any]) -> dict[str, Any]:
         with self.lock:
             study = self._load(id)
+            if study.get("art_direction") is not None:
+                raise ValueError("An art-direction study keeps its three library patterns. Create another study to compare a different set.")
             if study.get("decision"):
                 raise ValueError("This study has a decision; start a new criteria revision before adding alternatives")
             if len(study["alternatives"]) >= MAX_ALTERNATIVES:
@@ -649,6 +692,9 @@ class AlternativeStudies:
     def decide(self, id: str, alternative_id: str, reason: str, weights: Optional[dict[str, float]] = None, accept_dominated: bool = False) -> dict[str, Any]:
         with self.lock:
             study = self._load(id)
+            policy = study.get("art_direction")
+            if policy is not None:
+                self._art_choice(study, alternative_id)
             analysis = analyze(study["criteria"], study["alternatives"], weights)
             if not analysis["complete"]:
                 raise ValueError("Measure every alternative on every criterion before deciding; missing: " + json.dumps(analysis["missing"][:6]))
@@ -665,4 +711,10 @@ class AlternativeStudies:
                                  "rank": rank, "on_frontier": not dominators, "dominated_by": dominators, "weights": analysis["weights"], "weights_overridden": bool(weights),
                                  "tradeoffs": [t["text"] for t in analysis["tradeoffs"] if alternative_id in (t["a"], t["b"])], "score": analysis["scores"][alternative_id]["total"]}
             self._save(study)
-            return self._public(study)
+            out = self._public(study)
+            if policy is not None:
+                out["undo_call"] = {"tool": "design_alternatives_criteria", "arguments": {
+                    "id": id, "criteria": study["criteria"], "new_revision": True,
+                    "reason": "Reopen the art-direction decision.",
+                }}
+            return out

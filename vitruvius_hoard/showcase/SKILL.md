@@ -15,6 +15,8 @@ Choose a concrete working reference when the brief asks for a cinematic or spati
 
 ## Procedure
 
+Before building a new design, take the full commission to `design_brief`. Create its three-direction Alternatives study, score the choices against the commission and record the decision. Use a different direction from the typical baseline unless the commission requests it. The recipe examples supply composition and interaction. Replace their copy with the facts and domain content of the new commission. Include a simulation notice in the footer only on explicit request, and preserve notices already requested for an existing page.
+
 1. Read the chosen recipe and its complete source with `showcase_source` or download the independent ZIP. Open its reference URL and inspect the named interaction states.
 2. Preserve the recipe's light, pacing, type and interaction constraints while replacing its clearly marked demonstration content. Each recipe supplies its own agent skill.
 3. Serve the exported folder with `python -m http.server 8080`, then open its id/index.html entry. Fonts, portrait and rendering engine ship locally.

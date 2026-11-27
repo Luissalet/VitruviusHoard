@@ -132,6 +132,8 @@ function controlValue(field, key, slots, locale) {
   return slots[key];
 }
 
+let assistantSequence = 0;
+
 export function mountTransferAssistant(root, options = {}) {
   const lang = (options.language || document.documentElement.lang).startsWith("en") ? "en" : "es";
   const locale = lang === "es" ? "es-ES" : "en-IE";
@@ -295,8 +297,17 @@ export function mountTransferAssistant(root, options = {}) {
     speech = undefined;
   }
 
+  const conversationId = Date.now() + "-" + (++assistantSequence);
+  function publishConversation(role, text, turn) {
+    window.HoardApp?.reportConversation?.({
+      id: "voice:" + conversationId + ":" + turn + ":" + role, role, text, speaker: cursorActor.name,
+    });
+  }
+
   function read(timing, turn = traceTurn) {
-    if (replyTurn !== latestTurn || document.hidden) return;
+    if (replyTurn !== latestTurn) return;
+    publishConversation("assistant", message, replyTurn);
+    if (document.hidden) return;
     stopPlayback();
     speech = new AbortController();
     const {signal} = speech;
@@ -346,6 +357,7 @@ export function mountTransferAssistant(root, options = {}) {
   function submit(text, options = {}) {
     if (!text.trim() || sending) return Promise.resolve(false);
     const turnId = ++latestTurn;
+    if (!options.recipientChoice) publishConversation("user", text, turnId);
     speaker.activate();
     stopPlayback();
     const reviewed = state.phase === "ready" && !waitingForForm ? state.summary : undefined;
