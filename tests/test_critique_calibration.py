@@ -115,7 +115,7 @@ def test_export_critique_matches_blind_review(calibration_browser, reviewed_expo
         preview = call_tool(calibration_browser, "app_project_preview", {"id": project["id"]}, cap=False)
         assert preview["state"] == "running"
         render = call_tool(calibration_browser, "app_project_render", {
-            "id": project["id"], "revision": project["revision"], "widths": [390, 834, 1440],
+            "id": project["id"], "revision": project["revision"], "widths": [390, 834, 1440], "detail": True,
         }, cap=False)
         assert render["app_project"]["revision"] == project["revision"]
         result = _critique(calibration_browser, render)
