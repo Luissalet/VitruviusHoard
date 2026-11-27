@@ -25,7 +25,7 @@ def collections(db):
     return list(found.values())
 
 
-def import_collection(db, config, path: str):
+def import_collection(db, config, path: str, *, track_created=False):
     """Copy snapshots into the gallery; source material is never executed."""
     manifest_path = Path(path).expanduser().resolve()
     try:
@@ -40,6 +40,8 @@ def import_collection(db, config, path: str):
     root = Path(config.references_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
     result = {"collection": {"id": collection_id, "name": name}, "imported": 0, "reused": 0, "errors": [], "references": []}
+    if track_created:
+        result["created"] = {}
     keys = set()
     for index, entry in enumerate(entries):
         stage = None
@@ -106,15 +108,18 @@ def import_collection(db, config, path: str):
                         stage.rename(destination)
                         stage = None
                         published = destination
+                    created_ts = time.time()
                     db.execute(
                         "INSERT INTO references_t(id,created_ts,url,title,description,tags,note,vibe,files,palette,fonts,libs,motion,analysis) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                        (ref_id, time.time(), entry.get("url", ""), entry.get("title", key), entry.get("description", ""),
+                        (ref_id, created_ts, entry.get("url", ""), entry.get("title", key), entry.get("description", ""),
                          json.dumps(entry.get("tags", [])), entry.get("note", ""), entry.get("vibe", ""), json.dumps(stored),
                          json.dumps(palette), json.dumps(entry.get("fonts", [])), json.dumps(entry.get("libs", [])),
                          json.dumps(entry.get("motion", {})), json.dumps({"collection": provenance}, ensure_ascii=False)),
                     )
                     was_new = True
             result["imported" if was_new else "reused"] += 1
+            if was_new and track_created:
+                result["created"][ref_id] = created_ts
             published = None
             result["references"].append({"key": key, "id": ref_id})
         except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as error:

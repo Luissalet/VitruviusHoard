@@ -153,3 +153,12 @@ test("workspace controls are captured before the native object read finishes", a
   assert.equal(context.view.form_values[0].value, "Brief before read");
   assert.equal(context.active_objects[0].object_id, "ds_1");
 });
+
+
+test("the canvas scopes the conversation to the explicit project", async () => {
+  const project = { external_project_id: "integrations", title: "Integrations" };
+  const ctx = await buildContext({ api: makeApi(), ask: ({ provideProject }) => provideProject(project) });
+  assert.equal(ctx.project, project);
+  const incomplete = await buildContext({ api: makeApi(), ask: ({ provideProject }) => provideProject({ title: "Draft" }) });
+  assert.equal(incomplete.project, undefined);
+});

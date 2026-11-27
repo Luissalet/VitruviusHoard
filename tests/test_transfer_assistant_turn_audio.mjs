@@ -105,3 +105,263 @@ test("a reply computed while a newer turn is queued cannot start audio or be rep
   assert.deepEqual(submitted, ["Transferencia cancelada."]);
   assert.deepEqual(scheduled, ["Transferencia cancelada."]);
 });
+
+
+function mockCapture(t) {
+  let voiced = false;
+  let time = 0;
+  let tick;
+  class Recorder extends EventTarget {
+    static isTypeSupported() { return true; }
+    mimeType = "audio/webm";
+    state = "inactive";
+    start() { this.state = "recording"; }
+    requestData() {
+      queueMicrotask(() => this.dispatchEvent(Object.assign(new Event("dataavailable"), {data: new Blob(["audio"])})));
+    }
+    stop() {
+      this.state = "inactive";
+      this.requestData();
+      queueMicrotask(() => this.dispatchEvent(new Event("stop")));
+    }
+  }
+  const track = Object.assign(new EventTarget(), {stop() {}});
+  const overrides = {
+    navigator: {mediaDevices: {getUserMedia: async () => ({getTracks: () => [track]})}},
+    performance: {now: () => time},
+    MediaRecorder: Recorder,
+    AudioContext: class {
+      createAnalyser() { return {getFloatTimeDomainData(samples) { samples.fill(voiced ? .2 : 0); }}; }
+      createMediaStreamSource() { return {connect() {}}; }
+      async resume() {}
+      async close() {}
+    },
+    setInterval: handler => { tick = handler; return 1; },
+    clearInterval: () => { tick = undefined; },
+  };
+  for (const [name, value] of Object.entries(overrides)) {
+    const old = Object.getOwnPropertyDescriptor(globalThis, name);
+    Object.defineProperty(globalThis, name, {configurable: true, writable: true, value});
+    t.after(() => old ? Object.defineProperty(globalThis, name, old) : delete globalThis[name]);
+  }
+  return async (duration, voice = false) => {
+    voiced = voice;
+    for (let frame = 0; frame < duration; frame += 50) {
+      time += 50;
+      tick?.();
+      await new Promise(resolve => setImmediate(resolve));
+    }
+  };
+}
+
+test("a renewed pause invalidates an in-flight provisional parse", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const old = Promise.withResolvers();
+  const final = [];
+  let firstSignal;
+  let probes = 0;
+  await recordDictation({
+    request: async (_blob, {partial}) => {
+      assert.equal(partial, true);
+      return {text: ++probes === 1 ? "Sí" : "Sí, confirmo"};
+    },
+    endTurn: async (result, {signal}) => {
+      if (probes === 1) {
+        firstSignal = signal;
+        await old.promise; // The double can complete after cancellation.
+      }
+      return {silenceMs: 650, result};
+    },
+    onFinal: (result, timing) => final.push({result, timing}),
+  });
+  await advance(400, true);
+  await advance(500);
+  assert.ok(firstSignal && !firstSignal.aborted);
+  await advance(250, true);
+  assert.equal(firstSignal.aborted, true);
+  old.resolve();
+  await advance(600);
+  assert.deepEqual(final, []);
+  await advance(50);
+  assert.equal(final.length, 1);
+  assert.equal(final[0].result.text, "Sí, confirmo");
+  assert.equal(final[0].timing.stopReason, "adaptive");
+  assert.equal(final[0].timing.captureStoppedAt - final[0].timing.speechEnd, 650);
+});
+
+test("an incomplete partial survives a pause longer than the short threshold", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const final = [];
+  let probes = 0;
+  await recordDictation({
+    request: async (_blob, {partial}) => {
+      assert.equal(partial, true);
+      return {text: ++probes === 1 ? "Treinta y" : "Treinta y cinco euros"};
+    },
+    endTurn: async result => result.text === "Treinta y" ? null : {silenceMs: 650, result},
+    onFinal: result => final.push(result),
+  });
+  await advance(400, true);
+  await advance(1050);
+  assert.deepEqual(final, []);
+  await advance(400, true);
+  await advance(650);
+  assert.deepEqual(final, [{text: "Treinta y cinco euros"}]);
+});
+
+test("failed adaptive probes use a full final and legacy callers keep 1500 ms", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  for (const endTurn of [undefined, async () => { throw new Error("missing"); }]) {
+    const final = [];
+    const requests = [];
+    await recordDictation({
+      request: async (_blob, {partial}) => {
+        requests.push(partial);
+        return {text: partial ? "continuación" : "final íntegro"};
+      },
+      endTurn,
+      onFinal: (result, timing) => final.push({result, timing}),
+    });
+    const cutoff = endTurn ? 1650 : 1500;
+    await advance(400, true);
+    await advance(cutoff - 50);
+    assert.deepEqual(final, []);
+    await advance(50);
+    assert.equal(final[0].result.text, "final íntegro");
+    assert.equal(final[0].timing.captureStoppedAt - final[0].timing.speechEnd, cutoff);
+    assert.deepEqual(requests, endTurn ? [true, false] : [false]);
+  }
+});
+
+test("local commands skip understand and a speculative interpretation commits only in finalization", async t => {
+  const {
+    assessTransferEndTurn, finishProvisionalTransfer, transcribeTransferSpeech,
+  } = await import("../vitruvius_hoard/transfer_assistant/voice.js");
+  const routes = [];
+  const decision = {
+    decision: "short", silence_ms: 650, interpretation: {version: "cyrano.dictation/v0", is_final: false,
+      raw_transcript: "Veinte euros", fields: {amount_cents: {value: 2000}},
+      changed: ["amount_cents"], missing: [], ambiguous: []},
+  };
+  t.mock.method(globalThis, "fetch", async (url, request) => {
+    const route = url.split("/").at(-1).split("?")[0];
+    routes.push(route);
+    if (route === "transcribe") return Response.json({text: "Sí, confirmo", provider: "Boltagon"});
+    assert.equal(route, "end-turn");
+    const body = JSON.parse(request.body);
+    assert.equal(body.dialogue, "slots");
+    assert.equal(body.context.field, "amount_cents");
+    return Response.json(decision);
+  });
+  const signal = new AbortController().signal;
+  const options = {signal, locale: "es-ES", state: {phase: "collecting", next: "amountCents", slots: {}}};
+  assert.equal((await transcribeTransferSpeech(new Blob(["test"]), options)).text, "Sí, confirmo");
+  assert.deepEqual(routes, ["transcribe"]);
+  const proposal = await assessTransferEndTurn({text: "Veinte euros"}, options);
+  assert.equal(proposal.result.provisionalInterpretation.is_final, false);
+  assert.equal(finishProvisionalTransfer(proposal.result).interpretation.is_final, true);
+  assert.equal(proposal.result.provisionalInterpretation.is_final, false);
+  assert.deepEqual(routes, ["transcribe", "end-turn"]);
+});
+
+
+test("an affirmative review waits for a later correction and uses the final recording", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const {assessTransferEndTurn} = await import("../vitruvius_hoard/transfer_assistant/voice.js");
+  const {initialTransfer, transferTurn} = await import("../vitruvius_hoard/transfer_assistant/dialogue.js");
+  const context = {accounts: [{id: "daily", name: "Cuenta diaria", aliases: ["diaria"], balanceCents: 10000}],
+    contacts: [{id: "marta", name: "Marta Vidal", aliases: ["Marta"]}]};
+  const draft = "Haz una transferencia a Marta de 40 euros con concepto cena desde la cuenta diaria";
+  const {state} = transferTurn(initialTransfer(), draft, context);
+  assert.equal(state.phase, "ready");
+  const correction = "Sí. No, mejor cincuenta";
+  const final = [];
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.ok(url.endsWith("/end-turn"), url);
+    assert.equal(JSON.parse(options.body).text, correction, "The prefix must not consult the cutoff service");
+    return Response.json({decision: "long", silence_ms: 1650, reason: "incomplete"});
+  });
+  const capture = () => recordDictation({
+    request: async (_blob, {partial}) => {
+      requests.push(partial);
+      return {text: requests.length === 1 ? "Sí" : correction};
+    },
+    endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {state, context, locale: "es-ES", signal}),
+    onFinal: (result, timing) => final.push({result, timing, outcome: transferTurn(state, result.text, context)}),
+  });
+  await capture();
+  await advance(300, true);
+  await advance(800);
+  assert.deepEqual(final, []);
+  await advance(450, true);
+  await advance(1650);
+  assert.deepEqual(requests, [true, true, false]);
+  assert.equal(final[0].timing.stopReason, "silence");
+  assert.equal(final[0].result.text, correction);
+  assert.equal(final[0].outcome.action, undefined);
+
+  // A real confirmation remains available, but only after a final request.
+  const confirmation = [];
+  await recordDictation({
+    request: async (_blob, {partial}) => {
+      confirmation.push(partial);
+      return {text: "Sí, confirmo"};
+    },
+    endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {state, context, locale: "es-ES", signal}),
+    onFinal: (result, timing) => final.push({result, timing, outcome: transferTurn(state, result.text, context)}),
+  });
+  await advance(300, true);
+  await advance(1450);
+  assert.equal(final.length, 1);
+  await advance(50);
+  assert.deepEqual(confirmation, [true, false]);
+  assert.equal(final[1].timing.stopReason, "silence");
+  assert.equal(final[1].outcome.action.amountCents, 4000);
+});
+
+test("the adaptive detector can complete a brief response with two voiced frames", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const final = [];
+  await recordDictation({
+    request: async (_blob, {partial}) => {
+      assert.equal(partial, true);
+      return {text: "Sí"};
+    },
+    endTurn: async result => ({silenceMs: 650, result}),
+    onFinal: result => final.push(result),
+  });
+  await advance(100, true);
+  await advance(650);
+  assert.deepEqual(final, [{text: "Sí"}]);
+});
+
+
+test("a late short verdict waits instead of cutting immediately from a stale snapshot", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const pending = Promise.withResolvers();
+  const final = [];
+  let requests = 0;
+  await recordDictation({
+    request: async () => ({text: ++requests === 1 ? "Sí" : "Sí, confirmo"}),
+    endTurn: async result => {
+      if (requests === 1) await pending.promise;
+      return {silenceMs: 650, result};
+    },
+    onFinal: result => final.push(result.text),
+  });
+  await advance(400, true);
+  await advance(900);
+  pending.resolve();
+  await advance(50);
+  assert.deepEqual(final, []);
+  await advance(350, true);
+  await advance(650);
+  assert.deepEqual(final, ["Sí, confirmo"]);
+});

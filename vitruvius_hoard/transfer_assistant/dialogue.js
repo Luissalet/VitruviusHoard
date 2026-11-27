@@ -158,9 +158,12 @@ const REQUEST = /^(?:(?:por favor|please)[,\s]+)?(?:(?:haz|quiero hacer|hacer|or
 const CONFIRM = /^(?:s[ií](?:[,\s]+confirmo)?|confirm[ao](?: la transferencia)?|confirmar(?: la transferencia)?|adelante|yes(?:[,\s]+confirm)?|(?:i )?confirm(?: the transfer)?|go ahead)[.!]?$/iu;
 const CANCEL = /^(?:cancela(?:r)?(?: la transferencia)?|anula(?:r)?(?: la transferencia)?|olvida(?:r)?(?: la transferencia|lo)?|no confirmo|no|cancel(?: the transfer)?|never mind|do not confirm)[.!]?$/iu;
 
+export function isTransferConfirmation(text) {
+  return CONFIRM.test(text.trim());
+}
+
 export function isTransferCommand(text) {
-  const raw = text.trim();
-  return CONFIRM.test(raw) || CANCEL.test(raw);
+  return isTransferConfirmation(text) || CANCEL.test(text.trim());
 }
 
 const WIRE_SLOTS = {
@@ -321,7 +324,7 @@ export function transferTurn(state, text, {contacts, accounts, lang = "es", allo
     return {state: {...initialTransfer(), phase: "cancelled"}, message: copy.cancelled, phraseId: "cancelado"};
   }
 
-  if (CONFIRM.test(raw)) {
+  if (isTransferConfirmation(raw)) {
     if (state.phase === "ready" && allowConfirm) return {state: {...state, phase: "executing"}, action: {...state.slots}};
     if (state.phase === "ready") return {state, message: state.summary, phraseId: "confirmar"};
     return {state, message: copy[state.next] || copy.start, phraseId: "sin-confirmacion"};

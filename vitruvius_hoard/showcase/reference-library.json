@@ -1,0 +1,162 @@
+{
+  "format": "vitruvius-reference-collection/v1",
+  "id": "showcase-bundled",
+  "name": "Escaparates incluidos",
+  "entries": [
+    {
+      "key": "book",
+      "title": "Libro a doble página",
+      "url": "/showcase/book/index.html",
+      "description": "Tres pliegos con una hoja segmentada en perspectiva, arrastre y retorno por muelle amortiguado.",
+      "tags": [
+        "libro",
+        "book",
+        "editorial",
+        "pliegos",
+        "hoja",
+        "física",
+        "portfolio",
+        "escaparate"
+      ],
+      "files": {
+        "desktop": "assets/library-book-desktop.webp",
+        "mobile": "assets/library-book-mobile.webp"
+      },
+      "metadata": {
+        "recipe": "book",
+        "source_path": "/showcase/book/index.html",
+        "capture": "Opening view, reduced motion",
+        "assets_license": "showcase/assets/provenance.json",
+        "sha256": {
+          "desktop": "2d57246048cb51e63edb9a9676b65e7df013c854eac2e2bffae108386e355e3a",
+          "mobile": "c317a986735ba3edb44feb1a102fb9f05046730358b2ed63d5bb7bca8d486a01"
+        }
+      }
+    },
+    {
+      "key": "glitch",
+      "title": "Retrato sobre rejilla",
+      "url": "/showcase/glitch/index.html",
+      "description": "Una textura fotográfica deforma una malla mediante un shader y responde a la posición del puntero.",
+      "tags": [
+        "retrato",
+        "portrait",
+        "glitch",
+        "shader",
+        "rejilla",
+        "grid",
+        "pointer",
+        "entrada",
+        "escaparate"
+      ],
+      "files": {
+        "desktop": "assets/library-glitch-desktop.webp",
+        "mobile": "assets/library-glitch-mobile.webp"
+      },
+      "metadata": {
+        "recipe": "glitch",
+        "source_path": "/showcase/glitch/index.html",
+        "capture": "Opening view, reduced motion",
+        "assets_license": "showcase/assets/provenance.json",
+        "sha256": {
+          "desktop": "960efe88d38413f4900e99bec4a340c1e96aaf56ba576dcfaafbc3ef04eed428",
+          "mobile": "9a41878df8aa6dc187506be9bb92d97534a52cbab5da7beeb4a14ab7c363eb0e"
+        }
+      }
+    },
+    {
+      "key": "gallery",
+      "title": "Sala-galería 3D",
+      "url": "/showcase/gallery/index.html",
+      "description": "Una sala real en WebGL con suelo, luces, paneles seleccionables y desplazamiento de cámara.",
+      "tags": [
+        "galería",
+        "gallery",
+        "sala",
+        "3d",
+        "caminar",
+        "walk",
+        "paneles",
+        "proyectos",
+        "escaparate"
+      ],
+      "files": {
+        "desktop": "assets/library-gallery-desktop.webp",
+        "mobile": "assets/library-gallery-mobile.webp"
+      },
+      "metadata": {
+        "recipe": "gallery",
+        "source_path": "/showcase/gallery/index.html",
+        "capture": "Opening view, reduced motion",
+        "assets_license": "showcase/assets/provenance.json",
+        "sha256": {
+          "desktop": "9d8e4ffe10a02c20dcfb9823cf5027a3a08cb93bf99b6a7e050c9a359d954854",
+          "mobile": "39eb041b6144aff976bd6567c5790b4a9b54027a0df56cbe8bad754ab5830951"
+        }
+      }
+    },
+    {
+      "key": "city",
+      "title": "Ciudad como mapa",
+      "url": "/showcase/city/index.html",
+      "description": "Mapa urbano 3D con edificios instanciados, ventanas iluminadas, destinos y una pieza roja destacada.",
+      "tags": [
+        "ciudad",
+        "city",
+        "mapa",
+        "map",
+        "navegación",
+        "3d",
+        "azul",
+        "destinos",
+        "escaparate"
+      ],
+      "files": {
+        "desktop": "assets/library-city-desktop.webp",
+        "mobile": "assets/library-city-mobile.webp"
+      },
+      "metadata": {
+        "recipe": "city",
+        "source_path": "/showcase/city/index.html",
+        "capture": "Opening view, reduced motion",
+        "assets_license": "showcase/assets/provenance.json",
+        "sha256": {
+          "desktop": "b725693a5f078b12fa21806251a724613b46c7ce381d53045d474d0f91dbf3e3",
+          "mobile": "c37374b3850da52f0c3295c9dd217cb90206aed555d3564fb64c30544bf4f464"
+        }
+      }
+    },
+    {
+      "key": "rock",
+      "title": "Producto sobre roca",
+      "url": "/showcase/rock/index.html",
+      "description": "Anillo y basalto modelados en 3D, luz dramática y recorrido de cámara ligado al scroll.",
+      "tags": [
+        "producto",
+        "product",
+        "roca",
+        "rock",
+        "cinematográfico",
+        "cinematic",
+        "scroll",
+        "joyería",
+        "luz",
+        "escaparate"
+      ],
+      "files": {
+        "desktop": "assets/library-rock-desktop.webp",
+        "mobile": "assets/library-rock-mobile.webp"
+      },
+      "metadata": {
+        "recipe": "rock",
+        "source_path": "/showcase/rock/index.html",
+        "capture": "Opening view, reduced motion",
+        "assets_license": "showcase/assets/provenance.json",
+        "sha256": {
+          "desktop": "c8b2de0441a82960bea5ea1cc96912ff602202589d729daadf4f3175309a3cfe",
+          "mobile": "66e988395ab92331a8e1f7b306f8cd241614e1d82dba75c42befcc77e7b916a5"
+        }
+      }
+    }
+  ]
+}

@@ -243,6 +243,8 @@ class AppUpdateArgs(BaseModel):
     expected_revision: str
     actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
     target: CanvasTarget | None = Field(None, description="Optional visible target for the edit.")
+    examples: list[str] | None = Field(None, max_length=12, description="IDs of examples used in this edit.")
+    tokens_id: str | None = Field(None, max_length=120, description="Design token system used in this edit.")
 
 
 class AppSourceTextChange(BaseModel):
@@ -347,6 +349,13 @@ class AppUndoArgs(AppIdArgs):
     expected_updated_ts: float
 
 
+class AppChangeUndoArgs(BaseModel):
+    id: str = ""
+    change_id: str
+    expected_revision: str
+    expected_updated_ts: float
+
+
 class AppSelectionArgs(AppIdArgs):
     clips: bool = Field(False, description="Include each element's clip as a data URL (large); by default only its size.")
 
@@ -361,6 +370,32 @@ class AppExportArgs(AppIdArgs):
 
 class AppRenderArgs(AppIdArgs):
     widths: Optional[list[int]] = None
+
+
+class AppCritiqueLoopArgs(BaseModel):
+    id: str
+    lang: Literal["en", "es"] = "en"
+
+
+class AppCritiqueRoundBody(BaseModel):
+    lang: Literal["en", "es"] = "en"
+    expected_revision: str
+    tokens_id: Optional[str] = Field(None, max_length=40, description="Design system to freeze on the first round.")
+
+
+class AppCritiqueRoundArgs(AppCritiqueRoundBody):
+    id: str
+
+
+class AppCritiqueUndoBody(BaseModel):
+    lang: Literal["en", "es"] = "en"
+    expected_round_id: str
+    expected_revision: str
+    expected_updated_ts: float
+
+
+class AppCritiqueUndoArgs(AppCritiqueUndoBody):
+    id: str
 
 
 class CanvasViewArgs(BaseModel):
@@ -837,7 +872,7 @@ TOOLS: list[Tool] = [
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
     Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
-        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump()), capped=False),
+        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump(), author={"kind": "agent"}), capped=False),
     Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
         AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
@@ -852,8 +887,12 @@ TOOLS: list[Tool] = [
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_archive", "Archive or restore a project with its history. Archivar o restaurar una aplicación.",
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
+    Tool("app_project_change_undo", "Undo one recorded project edit. Deshacer un cambio del historial.",
+        AppChangeUndoArgs, ann(False, False, True),
+        lambda services, args: services.app_projects.undo_change(**args.model_dump(), author={"kind": "agent"}),
+        capped=False),
     Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
-        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
+        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump(), author={"kind": "agent"}), capped=False),
     Tool("app_project_preview", "Start or stop the local preview. Start returns its stable open_path. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_selection",
@@ -895,6 +934,16 @@ TOOLS: list[Tool] = [
         AppCommentUndoArgs, ann(False, False, False), lambda services, args: undo_comment(services, args.id, args.comment_id), capped=False),
     Tool("app_project_export", "Export a standalone source ZIP, optionally with SQLite data. Exportar aplicación autónoma.",
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
+    Tool("app_project_critique_loop", "Read the application critique rounds, best revision and reasons. Consultar el bucle de crítica.",
+        AppCritiqueLoopArgs, ann(True), lambda services, args: services.app_projects.critique_loop(args.id, args.lang), capped=False),
+    Tool("app_project_critique_round", "Assess an application revision. Evaluar una revisión de la aplicación.\n"
+        "Capture the current revision at 390, 834 and 1440 px for deterministic critique.\n"
+        "Retain the best revision and restore it after a lower score, with reasons and undo.",
+        AppCritiqueRoundArgs, ann(False, False, False), lambda services, args: services.app_project_critique_round(**args.model_dump()),
+        timeout_s=120, capped=False),
+    Tool("app_project_critique_round_undo", "Undo the latest critique round and its source selection. Deshacer una ronda de crítica.",
+        AppCritiqueUndoArgs, ann(False, False, False), lambda services, args: services.app_projects.undo_critique_round(**args.model_dump()),
+        capped=False),
     Tool("app_project_render", "Capture the exact owned preview into the usual render and critique workflow. Capturar aplicación.",
         AppRenderArgs, ann(False, False, True), lambda services, args: services.app_project_render(args.id, args.revision, args.widths)),
     Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",

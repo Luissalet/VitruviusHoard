@@ -40,6 +40,58 @@ print('cold124 PASS')
 
 
 @pytest.mark.asyncio
+async def test_project_tools_and_stable_preview_paths_with_other_modules_off(tmp_path, monkeypatch):
+    from vitruvius_hoard.software.host import create_app
+
+    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
+    app = create_app()
+    runtime = app.state.runtime
+    expected = {
+        "app_templates", "app_project_archive", "app_project_call", "app_project_canvas_act",
+        "app_project_canvas_edit", "app_project_canvas_view", "app_project_change_undo", "app_project_comment_ack",
+        "app_project_comment_dismiss", "app_project_comment_reply", "app_project_comment_resolve",
+        "app_project_comment_undo", "app_project_comments", "app_project_create",
+        "app_project_edit_source", "app_project_export", "app_project_get", "app_project_list",
+        "app_project_preview", "app_project_render", "app_project_selection", "app_project_source_count",
+        "app_project_undo", "app_project_update", "app_transfer_assistant_assets",
+        "app_project_critique_loop", "app_project_critique_round", "app_project_critique_round_undo",
+    }
+    try:
+        await runtime.set_module("design", True)
+        assert {m["module"]: m["state"] for m in runtime.status()["modules"]} == {
+            "design": "on", "babel": "off", "theseus": "off",
+        }
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost:9") as client:
+            tools = (await client.get("/api/agent/tools")).json()["tools"]
+            native_tools = (await client.get("/design/api/agent/tools")).json()["tools"]
+            for catalogue in (tools, native_tools):
+                names = {row["name"] for row in catalogue}
+                assert expected <= names
+                assert {name for name in names if name.startswith(("app_project_", "app_transfer_assistant_"))
+                        or name == "app_templates"} <= expected
+
+            project = (await client.post("/design/api/app-projects", json={"name": "Short preview link"})).json()
+            short = f"/api/app-projects/{project['id']}/preview/open"
+            canonical = "/design" + short
+            for lang, message in (("es", "La vista previa está detenida"), ("en", "The preview is stopped")):
+                for url in (short, canonical):
+                    response = await client.get(url, params={"lang": lang})
+                    assert response.status_code == 503 and response.text.startswith(message)
+            preview = (await client.post(canonical.removesuffix("/open"), json={"operation": "start"})).json()
+            for lang in ("es", "en"):
+                for url in (short, canonical):
+                    path = f"/transferir?lang={lang}&message=hola%20mundo"
+                    response = await client.get(url, params={"lang": lang, "path": path})
+                    assert response.status_code == 307
+                    assert response.headers["location"] == preview["url"] + path
+                    assert response.headers["cache-control"] == "no-store"
+            assert (await client.get(short.replace(project["id"], "0" * 16))).status_code == 404
+            assert (await client.get(short, params={"path": "//example.test"})).status_code == 400
+    finally:
+        await runtime.close()
+
+
+@pytest.mark.asyncio
 async def test_native_project_revision_environment_artifact_result_roundtrip(tmp_path,monkeypatch):
     monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
     from vitruvius_hoard.software.host import create_app
@@ -111,6 +163,7 @@ async def test_native_project_revision_environment_artifact_result_roundtrip(tmp
 
 @pytest.mark.asyncio
 async def test_theseus_native_frontend_uses_mounted_api_and_owner_limits(tmp_path,monkeypatch):
+    (tmp_path / "software-modules.json").write_text('{"version":1,"modules":{}}', encoding="utf-8")
     monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
     from vitruvius_hoard.software.host import create_app
     app=create_app()
@@ -138,11 +191,22 @@ async def test_theseus_native_frontend_uses_mounted_api_and_owner_limits(tmp_pat
 
 @pytest.mark.asyncio
 async def test_stdio_catalog_and_native_handlers(tmp_path):
+    (tmp_path / "software-modules.json").write_text('{"version":1,"modules":{}}', encoding="utf-8")
     from mcp import ClientSession,StdioServerParameters
     from mcp.client.stdio import stdio_client
     from vitruvius_hoard.software.host import catalog
     from vitruvius_hoard.software.host import catalog
-    params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'tests/fixtures/software_mcp.py')],cwd=str(ROOT),env={**os.environ,'VITRUVIUS_PROFILE_DIR':str(tmp_path),'HOARD_EVENTS':'0','PYTHONUTF8':'1'})
+    endpoint = os.environ.get("VITRUVIUS_URL", "http://127.0.0.1:9")
+    from urllib.parse import urlsplit
+
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=[str(ROOT / "tests/fixtures/software_mcp.py")],
+        cwd=str(ROOT),
+        env={**os.environ, "VITRUVIUS_PROFILE_DIR": str(tmp_path),
+             "VITRUVIUS_TOKEN_FILE": str(tmp_path / "mcp-token"), "VITRUVIUS_URL": endpoint,
+             "VITRUVIUS_PORT": str(urlsplit(endpoint).port or 9), "HOARD_EVENTS": "0", "PYTHONUTF8": "1"},
+    )
     async with stdio_client(params) as (reader,writer):
         async with ClientSession(reader,writer) as session:
             await session.initialize()
@@ -159,6 +223,12 @@ async def test_stdio_catalog_and_native_handlers(tmp_path):
             assert status['theseus_status'] == (
                 'Existing capabilities; development incomplete and in progress, resumed on 20 October 2026.'
             )
+            prepared = await call('design_library_prepare')
+            assert prepared['ok'] and prepared['available']['references'] == 5
+            repeated = await call('design_library_prepare')
+            assert repeated['available'] == prepared['available'] and repeated['undo'] is None
+            undone = await call('design_library_undo', prepared['undo']['arguments'])
+            assert undone['module_restored'] and not undone['module']['enabled']
             await call('software_module_set',{'module':'design','enabled':True})
             project=await call('app_project_create',{'name':'MCP synthetic project'})
             await call('software_module_set',{'module':'theseus','enabled':True})

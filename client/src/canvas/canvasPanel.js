@@ -4,7 +4,7 @@
 export const MODES = ["navigate", "select", "comment", "handles"];
 
 /** Messages the inspector inside the preview sends to its host (see `preview-inspector.js`). */
-const FROM_PAGE = new Set(["dock/inspector-ready", "dock/select", "dock/comment-target", "dock/comment-anchors", "dock/comment-focus"]);
+const FROM_PAGE = new Set(["dock/inspector-ready", "dock/select", "dock/comment-target", "dock/comment-anchors", "dock/comment-focus", "dock/elements"]);
 
 /** True for an inspector message from the visible preview frame: right window, right origin, right envelope. */
 export function isCanvasMessage(event, frameWindow, origin) {

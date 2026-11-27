@@ -1,9 +1,11 @@
 /** Local microphone capture for the shared dictation service. */
 const MIME = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
+const ADAPTIVE_PROBE_MS = 150;
+const ADAPTIVE_LONG_MS = 1650;
 
 export async function recordDictation({
   request, onPartial = () => {}, onStatus = () => {}, onFinal = () => {}, onError = () => {},
-  silenceMs = 1500, maxDurationMs = 20000, finalTimeoutMs = 15000, partials = true,
+  silenceMs = 1500, maxDurationMs = 20000, finalTimeoutMs = 15000, partials = true, endTurn,
 }) {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {echoCancellation: true, noiseSuppression: true},
@@ -26,12 +28,20 @@ export async function recordDictation({
   const chunks = [];
   const final = new AbortController();
   let partial;
+  let probing;
+  let proposal;
+  let accepted;
+  let probeRequested = false;
+  let pendingSnapshot;
+  let speechEpoch = 0;
+  let speaking = false;
   let timer;
   let stopped = false;
   let speechEnd;
   let captureStoppedAt;
   let stopReason;
   let audibleFrames = 0;
+  const minimumVoicedFrames = endTurn ? 2 : 4;
   const started = performance.now();
 
   function stop({cancel = false, reason = "manual"} = {}) {
@@ -39,6 +49,7 @@ export async function recordDictation({
     if (stopped) return;
     stopped = true;
     partial?.abort();
+    probing?.abort();
     captureStoppedAt = performance.now();
     speechEnd ??= captureStoppedAt;
     stopReason = reason;
@@ -49,8 +60,37 @@ export async function recordDictation({
     if (!cancel) onStatus("transcribing");
   }
 
+  async function probe(blob, controller, observedSpeechEnd) {
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(1600)]);
+    try {
+      const result = await request(blob, {partial: true, adaptive: true, signal});
+      signal.throwIfAborted();
+      if (!result?.text) return;
+      onPartial(result);
+      const candidate = await endTurn(result, {signal});
+      if (signal.aborted || !candidate) return;
+      // Never cut immediately on a short verdict that missed the snapshot's cutoff.
+      const expiredShort = candidate.silenceMs <= 700 && performance.now() - observedSpeechEnd > candidate.silenceMs;
+      proposal = expiredShort ? {...candidate, silenceMs: ADAPTIVE_LONG_MS} : candidate;
+    } catch {
+      // The ordinary final request still handles missing, slow and unsupported probes.
+    } finally {
+      if (probing === controller) probing = undefined;
+    }
+  }
+
   capture.addEventListener("dataavailable", event => {
     if (event.data.size) chunks.push(event.data);
+    if (endTurn) {
+      const epoch = pendingSnapshot;
+      pendingSnapshot = undefined;
+      if (stopped || epoch === undefined || epoch !== speechEpoch) return;
+      if (!speaking && chunks.length) {
+        probing = new AbortController();
+        void probe(new Blob(chunks, {type: capture.mimeType}), probing, speechEnd);
+      }
+      return;
+    }
     if (!partials || stopped || partial || !speechEnd || chunks.length < 2) return;
     const controller = new AbortController();
     partial = controller;
@@ -67,7 +107,7 @@ export async function recordDictation({
     const blob = new Blob(chunks, {type: capture.mimeType});
     try {
       const signal = AbortSignal.any([final.signal, AbortSignal.timeout(finalTimeoutMs)]);
-      const result = blob.size ? await request(blob, {partial: false, signal}) : {text: ""};
+      const result = accepted || (blob.size ? await request(blob, {partial: false, signal}) : {text: ""});
       if (!final.signal.aborted) onFinal(result, {speechEnd, captureStoppedAt, stopReason, transcriptAt: performance.now()});
     } catch {
       if (!final.signal.aborted) onError("stt_unavailable");
@@ -86,7 +126,8 @@ export async function recordDictation({
   }, {once: true}));
 
   try {
-    capture.start(1250);
+    if (endTurn) capture.start();
+    else capture.start(1250);
   } catch (error) {
     stop({cancel: true});
     throw error;
@@ -95,12 +136,34 @@ export async function recordDictation({
     const now = performance.now();
     analyser.getFloatTimeDomainData(samples);
     const energy = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
-    if (energy >= .018) {
+    const wasSpeaking = speaking;
+    speaking = energy >= .018;
+    if (speaking) {
       audibleFrames += 1;
-      if (audibleFrames >= 4) speechEnd = now;
+      if (audibleFrames >= minimumVoicedFrames) speechEnd = now;
+      if (endTurn && !wasSpeaking) {
+        speechEpoch++;
+        probing?.abort();
+        probing = undefined;
+        probeRequested = false;
+        proposal = undefined;
+      }
     } else if (!speechEnd) audibleFrames = 0;
-    if (speechEnd && now - speechEnd >= silenceMs) stop({reason: "silence"});
-    else if (now - started >= maxDurationMs) stop({reason: "limit"});
+    const pause = speechEnd ? now - speechEnd : 0;
+    if (endTurn && !speaking && pause >= ADAPTIVE_PROBE_MS && !probeRequested && pendingSnapshot === undefined) {
+      probeRequested = true;
+      try {
+        pendingSnapshot = speechEpoch;
+        capture.requestData();
+      } catch {
+        pendingSnapshot = undefined;
+      }
+    }
+    const cutoff = proposal?.silenceMs ?? (endTurn ? ADAPTIVE_LONG_MS : silenceMs);
+    if (!speaking && pause >= cutoff) {
+      accepted = proposal?.result;
+      stop({reason: accepted ? "adaptive" : "silence"});
+    } else if (now - started >= maxDurationMs) stop({reason: "limit"});
   }, 50);
   return {stop};
 }
@@ -114,7 +177,7 @@ const LABELS = {
 export function mountDictationMicrophone(button, {
   client, request, language = "es-ES", options = () => ({}), labels,
   onStatus = () => {}, beforeStart = () => true, onPartial, onFinal, onError = () => {},
-  silenceMs, finalTimeoutMs, partials,
+  silenceMs, finalTimeoutMs, partials, endTurn, adaptive = () => true,
 } = {}) {
   if (!request && !client?.understandAudio) throw new TypeError("A dictation client or request is required");
   const transcribe = request || ((blob, {partial, signal}) =>
@@ -167,6 +230,7 @@ export function mountDictationMicrophone(button, {
       }
       const next = await recordDictation({
         request: transcribe, silenceMs, finalTimeoutMs, partials, onPartial: ifCurrent(onPartial),
+        endTurn: adaptive() ? endTurn : undefined,
         onError: reportError, onStatus: ifCurrent(setPhase),
         onFinal: ifCurrent((result, timing) => {
           capture = undefined;

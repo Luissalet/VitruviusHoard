@@ -117,6 +117,15 @@ class MotionStore:
             db.execute("INSERT INTO compositions VALUES (?,?,?)", (id, revision, composition.model_dump_json()))
         return self.get(id)
 
+    def discard_initial(self, id: str, composition: dict) -> bool:
+        """Discard an unchanged seeded composition. Later edits preserve all its revisions."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = db.execute("SELECT revision, body FROM compositions WHERE id = ?", (id,)).fetchall()
+            if len(rows) != 1 or rows[0][0] != 1 or json.loads(rows[0][1]) != composition:
+                return False
+            return bool(db.execute("DELETE FROM compositions WHERE id = ? AND revision = 1", (id,)).rowcount)
+
     def list(self):
         with self.connect() as db:
             rows = db.execute("SELECT id,MAX(revision) FROM compositions GROUP BY id ORDER BY rowid DESC LIMIT 100").fetchall()
