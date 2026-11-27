@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {initialTransfer, parseAmount, transferTurn} from "../vitruvius_hoard/transfer_assistant/dialogue.js";
+import {initialTransfer, parseAmount, transferSpeech, transferTurn} from "../vitruvius_hoard/transfer_assistant/dialogue.js";
 import {speakTransferReply, transcribeTransferSpeech} from "../vitruvius_hoard/transfer_assistant/voice.js";
 
 const context = {
@@ -33,6 +33,7 @@ test("(a) all slots at once and a later explicit confirmation", () => {
   assert.equal(draft.action, undefined);
   assert.equal(draft.phraseId, "confirmar");
   assert.match(draft.message, /^¿Confirmas la transferencia.*40,00.*Marta Vidal.*Cuenta diaria.*cena.*\?$/u);
+  assert.equal(transferSpeech(draft.message, draft.state, "es"), draft.message);
   assert.deepEqual(confirmed.action, {
     recipient: {id: "marta", name: "Marta Vidal"}, amountCents: 4000, concept: "cena", source: "daily",
   });
@@ -101,9 +102,34 @@ test("validates IBAN and never extracts digits from a reference or an IBAN", () 
   assert.equal(valid.state.slots.amountCents, 1250);
   const [invalid] = conversation("A ES83 0000 0000 0000 0000 0000");
   assert.equal(invalid.state.next, "recipient");
+  assert.equal(invalid.phraseId, "iban-invalido");
+  assert.equal(transferSpeech(invalid.message, invalid.state, "es"), "Indica otro contacto o un IBAN válido.");
   const [reference] = conversation("A Ana, concepto sesión 42 desde diaria");
   assert.equal(reference.state.next, "amountCents");
   assert.equal(reference.state.slots.amountCents, undefined);
+});
+
+test("the Spanish and English summaries and repeated prompts abbreviate the spoken IBAN", () => {
+  const grouped = "ES82 0000 0000 0000 0000 0000";
+  const number = "ES8200000000000000000000";
+  for (const [lang, command, confirm, ending] of [
+    ["es", `A ${grouped} por 40 euros, concepto recibo ${grouped} desde diaria`, "sí", "la cuenta terminada en 0000"],
+    ["en", `Send 40 euros to ${grouped} from current with reference receipt`, "yes", "the account ending in 0000"],
+  ]) {
+    const options = {...context, lang, allowConfirm: false};
+    const draft = transferTurn(initialTransfer(), command, options);
+    assert.equal(draft.state.phase, "ready");
+    assert.equal(draft.state.slots.recipient.iban, number);
+    const repeated = transferTurn(draft.state, confirm, options);
+    assert.equal(repeated.message, draft.message);
+    for (const turn of [draft, repeated]) {
+      assert.equal(turn.phraseId, "confirmar");
+      assert.ok(turn.message.includes(number));
+      const spoken = transferSpeech(turn.message, turn.state, lang);
+      assert.equal(spoken, turn.message.replaceAll(number, ending).replaceAll(grouped, ending));
+      assert.ok(spoken.includes(ending));
+    }
+  }
 });
 
 test("amount parsing uses integer cents and rejects negative, zero, precision and malformed text", () => {
@@ -278,6 +304,12 @@ test("structured ambiguity replaces the old destination and supports selecting e
   const turn = transferTurn(before.state, text, {...context, interpretation: finalResult(text, {}, {ambiguous})});
   assert.equal(turn.state.slots.recipient, undefined);
   assert.deepEqual(turn.state.candidates.map(item => item.id || item.iban), ["ana", number]);
+  const missingChoice = transferTurn(turn.state, "unknown", {...context, recipientChoice: "unknown"});
+  for (const prompt of [turn, missingChoice]) {
+    assert.equal(prompt.phraseId, "ambiguo-contacto");
+    assert.equal(prompt.message, `¿Te refieres a Ana Prado o ${number}?`);
+    assert.equal(transferSpeech(prompt.message, prompt.state, "es"), "¿Te refieres a Ana Prado o la cuenta terminada en 0000?");
+  }
   assert.equal(transferTurn(turn.state, "sí", context).action, undefined);
   const chosen = transferTurn(turn.state, number, {...context, recipientChoice: number});
   assert.equal(chosen.state.phase, "ready");
