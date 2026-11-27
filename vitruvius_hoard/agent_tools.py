@@ -22,11 +22,12 @@ from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
-AGENT_INSTRUCTIONS = """Design library, Chromium renders, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
-Call design_brief with the full commission. Before building, use its art_direction.create in Alternatives, score its three library directions and record the decision. Avoid the typical direction unless requested. Pass the decided study ID to app_project_create for custom apps.
-Use content_sections as drafts, keep the commission's facts and add a footer simulation notice only on request.
-After the decision, render and critique to 8/10 or three rounds, then use page_assay.
-For deterministic critique, call design_critique with use_vision=false and clean_review=false. On partial=true, missing lists unfinished model passes.
+AGENT_INSTRUCTIONS = """Design library, renders, critique, tokens and references. Cite `[vitruvius: ...]`.
+Pass the full commission to design_brief. Before building, use its art_direction.create in Alternatives. Score the three library directions and record the choice. Avoid the typical direction unless requested. Pass the study ID to app_project_create for custom apps.
+Draft from content_sections. Keep commission facts. Add a footer simulation notice only on request.
+Render and critique to 8/10 or three rounds, then use page_assay.
+For deterministic design_critique, set use_vision=false and clean_review=false. On partial=true, see missing for unfinished passes.
+Use app_project_patch for local text edits with the current revision and unique literals.
 Use diagram_types then diagram_render and fix their gates.
 Run reference_add, source_add, source_ingest, tokens_delete and reference_delete only when asked."""
 
@@ -276,6 +277,19 @@ class AppUpdateArgs(BaseModel):
     target: CanvasTarget | None = Field(None, description="Optional visible target for the edit.")
     examples: list[str] | None = Field(None, max_length=12, description="IDs of examples used in this edit.")
     tokens_id: str | None = Field(None, max_length=120, description="Design token system used in this edit.")
+
+
+class AppLiteralReplacement(BaseModel):
+    file: str = Field(min_length=1, description="Existing project-relative CSS, JS, HTML, JSON or Markdown file.")
+    old: str = Field(min_length=1, description="Nonempty literal text that must occur exactly once.")
+    new: str = Field(description="Replacement text. An empty string removes the match.")
+
+
+class AppProjectPatchArgs(VoiceAssistantRevision):
+    id: str = Field(min_length=1, max_length=64, description="Application project ID.")
+    replacements: list[AppLiteralReplacement] = Field(min_length=1, description="Literal replacements in application order.")
+    actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
+    lang: Literal["en", "es"] = "en"
 
 
 class AppVoiceAssistantArgs(BaseModel):
@@ -850,6 +864,18 @@ def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
                            author=project_tool_author(args.actor))
 
 
+def run_app_project_patch(services: Services, args: AppProjectPatchArgs) -> dict:
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    saved, paths = projects.patch(
+        **args.model_dump(exclude={"actor"}),
+        actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+        author=project_tool_author(args.actor),
+    )
+    summary = source_summary(saved, changed_paths=paths)
+    return {**summary, "bytes": sum(file["bytes"] for file in summary["changed_files"])}
+
+
 def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs) -> dict:
     projects = services.app_projects
     projects.canvas.wait_for_revision(args.id, args.expected_revision)
@@ -861,8 +887,8 @@ def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs)
     )
     if args.include_files:
         return project
-    changed_path = source_position(args.vsrc)[0] if project["revision"] != args.expected_revision else None
-    return source_summary(project, changed_path=changed_path, edit=True)
+    paths = [source_position(args.vsrc)[0]] if project["revision"] != args.expected_revision else []
+    return source_summary(project, changed_paths=paths)
 
 
 def run_app_project_edit_template_data(services: Services, args: AppTemplateDataArgs) -> dict:
@@ -1007,6 +1033,10 @@ TOOLS: list[Tool] = [
                                                              author=project_tool_author())),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
+    Tool("app_project_patch", "Patch project text with unique literal matches. Edita texto por coincidencias literales únicas.\n"
+        "Apply ordered replacements to existing CSS, JS, HTML, JSON or Markdown in one undoable revision. "
+        "Pass the current revision. The receipt lists changed paths and UTF-8 byte sizes without full source.",
+        AppProjectPatchArgs, ann(False, False, True), run_app_project_patch, capped=False),
     Tool("app_project_add_voice_assistant", "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",
         AppVoiceAssistantArgs, ann(False, False, True),
         lambda services, args: services.app_projects.add_voice_assistant(

@@ -3,19 +3,17 @@
 from hashlib import sha256
 
 
-def source_summary(project, *, changed_path=None, edit=False):
+def source_summary(project, *, changed_paths=None):
     keys = ("id", "name", "template", "revision", "selected_revision", "updated_ts", "source_sha256",
             "preview", "preview_warning", "undo")
     summary = {key: project[key] for key in keys if key in project}
     files = project["files"]
-    paths = [changed_path] if changed_path is not None else []
-    if not edit:
-        paths = sorted(files)
+    paths = sorted(files) if changed_paths is None else changed_paths
     entries = []
     for path in paths:
         content = files[path].encode("utf-8")
         entries.append({"path": path, "bytes": len(content), "sha256": sha256(content).hexdigest()})
-    if edit:
+    if changed_paths is not None:
         summary.update(changed=bool(entries), changed_files=entries)
     else:
         summary["file_manifest"] = entries

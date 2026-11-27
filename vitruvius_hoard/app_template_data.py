@@ -55,8 +55,8 @@ def edit_project_template_data(projects, project_id, expected_revision, fields, 
         spec = json.loads(files[path])
         patch = {key: value for key, value in fields.items() if spec.get(key, "") != value}
         if not patch:
-            return source_summary(current, edit=True)
+            return source_summary(current, changed_paths=[])
         _validate_text_uses(files, patch)
         data = json.dumps({**spec, **patch}, ensure_ascii=False, indent=2) + "\n"
         saved = projects.update(project_id, {path: data}, expected_revision, actor=actor, author=author)
-        return source_summary(saved, changed_path=path, edit=True)
+        return source_summary(saved, changed_paths=[path])

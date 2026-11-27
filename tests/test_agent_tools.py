@@ -37,7 +37,7 @@ def test_read_only_hints_correct():
                        "design_direction_brief", "design_preset_list", "design_pick_themes",
                        "design_alternatives_list", "design_alternatives_get", "design_alternatives_analyze", "instrument_list", "instrument_get", "instrument_compute", "instrument_explain",
                        "visual_parity_get", "visual_parity_list", "design_galleries", "remake_get", "remake_list", "remake_code", "remake_fidelity"}
-    write_names = {"app_project_create", "app_project_update", "app_project_archive", "app_project_undo", "app_project_preview", "app_project_canvas_act", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
+    write_names = {"app_project_create", "app_project_update", "app_project_patch", "app_project_archive", "app_project_undo", "app_project_preview", "app_project_canvas_act", "app_project_export", "app_project_render", "app_project_call", "reference_import_collection", "render_preview", "design_critique", "tokens_generate", "tokens_preview", "tokens_delete",
                   "reference_add", "reference_delete", "source_add", "source_ingest", "motion_save", "motion_render", "motion_sound_render", "site_audit", "mark_audit", "mark_test_sheet",
                   "diagram_render", "diagram_delete", "diagram_brand_onboard", "diagram_brand_delete", "diagram_document_save", "diagram_document_edit", "diagram_document_undo", "diagram_document_import", "diagram_style_save", "diagram_style_remove", "diagram_style_apply",
                   "design_slop_audit", "design_preset_apply", "design_figma_import",
@@ -98,6 +98,8 @@ def test_every_arg_model_validates_empty_or_minimal(services):
                 args[field_name] = []
         if t.name == "app_project_canvas_edit":
             args["change"] = {"kind": "style", "property": "width", "pixels": 24}
+        if t.name == "app_project_patch":
+            args["replacements"] = [{"file": "assets/style.css", "old": "red", "new": "blue"}]
         if t.name == "app_project_edit_source":
             args["change"] = {"kind": "text", "value": "Demo"}
         if t.name == 'motion_save':

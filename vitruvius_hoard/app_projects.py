@@ -484,6 +484,62 @@ class AppProjects:
             "tokens_id": tokens[:120] if isinstance(tokens, str) else None,
         }
 
+    def patch(self, id, expected_revision, replacements, *, actor=None, author=None, lang="en"):
+        """Stage literal replacements, then save through the ordinary revision path."""
+        with self.lock:
+            current = self.get(id)
+            es = lang == "es"
+            if current["revision"] != expected_revision:
+                raise AppError("conflict", "Lee la revisión actual antes de aplicar el parche."
+                               if es else "Read the current project revision before patching.",
+                               status=409, details={"revision": current["revision"]})
+
+            files = current["files"]
+            staged = {}
+            for position, replacement in enumerate(replacements, 1):
+                filename, old, new = (replacement[key] for key in ("file", "old", "new"))
+                where = {"file": filename, "replacement": position}
+                path = PurePosixPath(filename)
+                if (path.is_absolute() or ".." in path.parts or "\\" in filename or ":" in filename
+                        or filename != path.as_posix() or not path.name or "\0" in filename):
+                    raise AppError("invalid_path", f"Usa una ruta relativa del proyecto: {filename}"
+                                   if es else f"Use a project-relative file path: {filename}", details=where)
+                if path.suffix.lower() not in {".css", ".js", ".html", ".json", ".md"}:
+                    raise AppError("unsupported_file", f"Solo se admiten ficheros CSS, JS, HTML, JSON y Markdown: {filename}"
+                                   if es else f"Only CSS, JS, HTML, JSON and Markdown files are supported: {filename}",
+                                   details=where)
+                if filename not in files:
+                    raise AppError("not_found", f"El fichero no existe en esta revisión: {filename}"
+                                   if es else f"File is absent from this revision: {filename}", status=404, details=where)
+
+                source = staged.get(filename, files[filename])
+                try:
+                    new.encode("utf-8")
+                except UnicodeEncodeError as error:
+                    raise AppError("invalid_text", "El reemplazo debe ser texto UTF-8."
+                                   if es else "The replacement must be UTF-8 text.", details=where) from error
+                if "\0" in source or "\0" in new:
+                    raise AppError("invalid_text", f"No se admite contenido binario: {filename}"
+                                   if es else f"Binary content is not supported: {filename}", details=where)
+                if not old:
+                    raise AppError("invalid_match", "El texto que se busca no puede estar vacío."
+                                   if es else "The old text must not be empty.", details=where)
+
+                first = match = source.find(old)
+                count = 0
+                while match != -1:
+                    count += 1
+                    match = source.find(old, match + 1)
+                if count != 1:
+                    message = (f"Reemplazo {position} en {filename}: {count} apariciones, se esperaba 1."
+                               if es else f"Replacement {position} in {filename}: {count} occurrences, expected 1.")
+                    raise AppError("literal_match", message, details={**where, "occurrences": count})
+                staged[filename] = source[:first] + new + source[first + len(old):]
+
+            changes = {path: text for path, text in staged.items() if text != files[path]}
+            saved = self.update(id, changes, expected_revision, actor=actor, author=author) if changes else current
+            return saved, sorted(changes)
+
     def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None,
                author=None):
         with self.lock:

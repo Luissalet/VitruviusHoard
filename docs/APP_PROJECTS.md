@@ -18,6 +18,8 @@ The checker defaults to a 105-second limit to allow a response inside the Hub CL
 
 If a client reads `project.json` for saved design tokens or library examples, pass `include_files: true` in its initial `app_project_get` call. Use the default receipt for a final check that the project still has the same `revision`.
 
+Use `app_project_patch` with the current `expected_revision` for unique literal replacements in existing CSS, JS, HTML, JSON or Markdown files. Its list of `{file, old, new}` entries is applied in order, including successive edits to one file. A non-unique match or a stale revision leaves the source untouched. One successful batch produces one history step, updates a running preview and returns changed file metadata and an undo call.
+
 `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
 
 Project creation and source edits return an `app_project_undo` call. Use it while the recorded update is still current. Undoing a source edit restores the earlier source and retains both revisions. The creation receipt only applies while the project has had no saved source edits. If you save a revision and then undo it, the history stays and the creation receipt cannot be used to retire the project.
@@ -172,7 +174,7 @@ las plantillas y devuelve un recibo breve con deshacer.
 
 ### Live preview
 
-An open Applications preview follows project source changes saved in the editor or by `app_project_update` and `app_project_edit_source`. Undo through `app_project_undo` follows the same path. Unsaved drafts and an explicitly selected historical revision remain available in the source editor.
+An open Applications preview follows project source changes saved in the editor or by `app_project_update`, `app_project_patch` and `app_project_edit_source`. Undo through `app_project_undo` follows the same path. Unsaved drafts and an explicitly selected historical revision remain available in the source editor.
 
 `GET /api/app-projects/{id}/events` streams `revision` events with the current and previous revision IDs, changed `files`, and inclusive before/after line spans for page HTML. A span with no lines ends before its start. `global_styles` lists changed stylesheets linked by the layout. The event ID is the new revision. A reconnect can use `Last-Event-ID` or the initial `revision` query parameter to recover changes since a saved snapshot.
 

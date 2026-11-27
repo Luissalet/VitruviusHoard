@@ -1772,6 +1772,141 @@
     "module": "design"
   },
   {
+    "name": "app_project_patch",
+    "description": "Patch project text with unique literal matches. Edita texto por coincidencias literales únicas.\nApply ordered replacements to existing CSS, JS, HTML, JSON or Markdown in one undoable revision. Pass the current revision. The receipt lists changed paths and UTF-8 byte sizes without full source.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "$defs": {
+        "AppLiteralReplacement": {
+          "properties": {
+            "file": {
+              "description": "Existing project-relative CSS, JS, HTML, JSON or Markdown file.",
+              "minLength": 1,
+              "title": "File",
+              "type": "string"
+            },
+            "old": {
+              "description": "Nonempty literal text that must occur exactly once.",
+              "minLength": 1,
+              "title": "Old",
+              "type": "string"
+            },
+            "new": {
+              "description": "Replacement text. An empty string removes the match.",
+              "title": "New",
+              "type": "string"
+            }
+          },
+          "required": [
+            "file",
+            "old",
+            "new"
+          ],
+          "title": "AppLiteralReplacement",
+          "type": "object"
+        },
+        "CanvasActor": {
+          "properties": {
+            "id": {
+              "default": "agent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "color": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Color"
+            }
+          },
+          "title": "CanvasActor",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "expected_revision": {
+          "description": "Current project source revision.",
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "id": {
+          "description": "Application project ID.",
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "replacements": {
+          "description": "Literal replacements in application order.",
+          "items": {
+            "$ref": "#/$defs/AppLiteralReplacement"
+          },
+          "minItems": 1,
+          "title": "Replacements",
+          "type": "array"
+        },
+        "actor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanvasActor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agent identity for the preview cursor."
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "id",
+        "replacements"
+      ],
+      "title": "AppProjectPatchArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_add_voice_assistant",
     "description": "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",
     "annotations": {
