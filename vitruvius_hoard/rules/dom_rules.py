@@ -109,15 +109,21 @@ _OVERUSED = {"inter", "roboto", "open sans", "montserrat", "fraunces", "geist", 
 @drule("slop/overused-font")
 def overused_font(cx: Ctx):
     d = cx.wide
-    heads = d.headings(1, 2)
-    body = [e for e in d.tags("p", "li") if e.tl >= 40]
+    heads = [e for e in d.headings(1, 2) if e.painted]
+    body = [e for e in d.tags("p", "li") if e.tl >= 40 and e.painted]
+    typography = (_tokens(cx) or {}).get("typography") or {}
+    measured = {(row["role"], row["declared"].lower()): row["used"][0].lower()
+                for row in cx.probe.get("rendered_fonts", []) if row.get("used")}
 
-    def fam(els: list[El]) -> str:
-        counts: dict[str, int] = {}
+    def fam(role: str, els: list[El]) -> str:
+        counts: dict[tuple[str, str], int] = {}
         for e in els:
-            counts[e.ff] = counts.get(e.ff, 0) + 1
-        return max(counts.items(), key=lambda kv: kv[1])[0] if counts else ""
-    hf, bf = fam(heads), fam(body)
+            pair = (e.ff, measured.get((role, e.ff), e.ff))
+            counts[pair] = counts.get(pair, 0) + 1
+        declared, actual = max(counts, key=counts.get) if counts else ("", "")
+        allowed = _family_names(typography.get(role, ""))
+        return actual if declared not in allowed and actual not in allowed else ""
+    hf, bf = fam("heading", heads), fam("body", body)
     named = [(role, f) for role, f in (("heading", hf), ("body", bf)) if f in _OVERUSED]
     if named:
         return [F("slop/overused-font", "The " + " and ".join(f"{role} face is {f.title()}" for role, f in named) + ".", {role: f for role, f in named})]
@@ -153,7 +159,7 @@ def _small_label(e: El, head: El) -> bool:
 def _label_above(d: Dom, head: El) -> Optional[El]:
     best = None
     for e in d.els:
-        if e is head or e.tl == 0 or e.bottom > head.y + 2 or head.y - e.bottom > 64:
+        if e is head or not e.painted or e.tl == 0 or e.bottom > head.y + 2 or head.y - e.bottom > 64:
             continue
         if abs(e.x - head.x) > max(40, head.w * 0.5) and abs(e.cx - head.cx) > 40:
             continue
@@ -169,7 +175,7 @@ def _label_above(d: Dom, head: El) -> Optional[El]:
 @drule("slop/hero-eyebrow-chip")
 def hero_eyebrow_chip(cx: Ctx):
     d = cx.wide
-    h1s = [h for h in d.headings(1) if d.first_screen(h)]
+    h1s = [h for h in d.headings(1) if h.painted and d.first_screen(h)]
     if not h1s:
         return []
     h1 = max(h1s, key=lambda h: h.fs)
@@ -183,7 +189,7 @@ def kicker_above(cx: Ctx):
     d = cx.wide
     hits = []
     for h in d.headings(1, 2, 3):
-        if h.deep_text_len() < 12:
+        if not h.painted or h.deep_text_len() < 12:
             continue
         lab = _label_above(d, h)
         if lab is not None and not re.fullmatch(r"\s*\d{1,2}\b.*", lab.text or ""):
@@ -289,11 +295,19 @@ def stock_close(cx: Ctx):
     if not cands:
         return []
     last = cands[-1]
-    has_email = any(c.d.get("ctl") == "email" for c in last.descendants())
-    if not has_email:
+    descendants = [e for e in last.descendants() if e.painted]
+    if not any(c.d.get("ctl") == "email" for c in descendants):
+        return []
+    signup = re.compile(r"newsletter|subscri|waitlist|mailing|bolet[ií]n|suscr|lista de espera|"
+                        r"notify|beta|early access|acceso anticipado|(?:get|receive)\s+updates|recib\w+\s+novedades", re.I)
+    transaction = re.compile(r"\breserv\w*\b|\bbook(?:ing)?\b|\bcheckout\b|\bsolicitud\b|\bappointment\b|\bcita\b", re.I)
+    if any(transaction.search(e.text) for e in descendants if e.tag == "button"):
+        return []
+    local_copy = " ".join(e.text for e in descendants if e.tag in ("h2", "h3", "button", "label"))
+    if not signup.search(local_copy):
         return []
     h1 = next((h.text for h in d.headings(1) if h.text), "")
-    if re.search(r"newsletter|subscri|waitlist|mailing|boletín|suscr|lista de espera|notify|beta|early access|acceso anticipado", h1, re.I):
+    if signup.search(h1):
         return []
     return [F("slop/stock-close", "The last section is an e-mail sign-up on a page that is not about a mailing list.", last.label())]
 
@@ -306,11 +320,15 @@ def stock_close(cx: Ctx):
 def nested_cards(cx: Ctx):
     d = cx.wide
     hits = []
+
+    def outlined(e: El) -> bool:
+        return e.painted and e.is_card and (bool(e.s.get("sh")) or sum(b > 0 for b in e.borders) >= 3)
+
     for e in d.els:
-        if not e.is_card or not (e.s.get("sh") or any(b > 0 for b in e.borders)):
+        if not outlined(e):
             continue
         for inner in e.descendants():
-            if inner.is_card and (inner.s.get("sh") or any(b > 0 for b in inner.borders)) and inner.w <= e.w - 8 and inner.w >= 100 and inner.h >= 50 \
+            if outlined(inner) and inner.w <= e.w - 8 and inner.w >= 100 and inner.h >= 50 \
                     and inner.tag not in ("button", "a", "input", "select", "textarea") and inner.deep_text_len() > 0:
                 hits.append(f"{inner.label()} in {e.label()}")
                 break
@@ -694,6 +712,19 @@ def _has_statement(s: El) -> bool:
     return any(e.fs >= 30 and e.tl >= 40 for e in s.descendants()) or (s.tl >= 40 and s.fs >= 30)
 
 
+def _has_form(s: El) -> bool:
+    for form in (e for e in (s, *s.descendants()) if e.tag == "form" and e.painted):
+        controls = [e for e in form.descendants() if e.painted]
+        labels = {e.d["for"] for e in controls if e.tag == "label" and e.d.get("for") and e.deep_text_len()}
+        field = any(e.d.get("ctl") and e.d.get("ctl") not in ("hidden", "submit", "button", "reset")
+                    and (e.d.get("id") in labels or e.d.get("named") or e.in_tag("label")) for e in controls)
+        submit = any((e.tag == "button" and e.d.get("bt", "submit") == "submit") or e.d.get("ctl") == "submit"
+                     for e in controls)
+        if field and submit:
+            return True
+    return False
+
+
 @drule("craft/thin-section")
 def thin_section(cx: Ctx):
     d = cx.desktop or cx.wide
@@ -704,7 +735,7 @@ def thin_section(cx: Ctx):
     for s in secs[1:]:
         if s.deep_text_len() == 0 and not _has_visual(s):
             continue
-        if not (_has_visual(s) or _has_set(s) or _has_statement(s)):
+        if not (_has_visual(s) or _has_set(s) or _has_statement(s) or _has_form(s)):
             hits.append(f"{s.snippet(36)} {s.h}px tall")
     if hits:
         return [F("craft/thin-section", f"{len(hits)} section(s) below the hero with no mass.", hits[:5])]
@@ -749,8 +780,8 @@ def screen_budget(cx: Ctx):
     if not d:
         return []
     out = []
-    spans = [(e.y, e.d.get("tl", 0)) for e in d.els if e.tl and e.text]
-    words = [(y, len(re.findall(r"\S+", t))) for y, t in ((e.y, e.text) for e in d.els if e.tl and e.text)]
+    words = [(e.d.get("ty", e.y), e.d.get("wc", len(e.text.split())))
+             for e in d.els if e.tl and e.text and e.painted]
     worst, at = 0, 0
     for start in range(0, max(1, d.page_height - 400), 150):
         total = sum(n for y, n in words if start <= y < start + 900)
@@ -763,7 +794,8 @@ def screen_budget(cx: Ctx):
         hero = secs[0]
         acts = [e for e in hero.descendants() if e.tag in ("button", "a") and (e.bg or e.has_box) and e.h >= 28]
         stop = min((e.y for e in acts), default=hero.bottom)
-        blocks = [e for e in hero.descendants() if e.tl >= 25 and e.bottom <= stop + 1 and e.tag in ("h1", "h2", "p", "div", "span")]
+        blocks = [e for e in hero.descendants() if e.tl >= 25 and e.painted and e.bottom <= stop + 1
+                  and e.tag in ("h1", "h2", "p", "div", "span")]
         if len(blocks) > 2:
             out.append(f"{len(blocks)} text blocks before the hero's actions")
     if out:
@@ -775,7 +807,7 @@ def button_wrap(cx: Ctx):
     hits = []
     for d in cx.all:
         for e in d.els:
-            if not e.tl or e.d.get("ln", 0) < 2 or e.tl > 40:
+            if not e.painted or e.d.get("ln", 0) < 2 or not 0 < e.deep_text_len() <= 40:
                 continue
             is_button = e.tag == "button" or (e.tag == "a" and e.has_box and e.h < 90) or e.d.get("ctl") in ("submit", "button")
             is_nav = e.tag == "a" and e.in_tag("nav", "header") and d.width >= 1000
@@ -971,14 +1003,31 @@ def ds_scale(cx: Ctx):
     steps = sorted({round(v, 1) for v in (_clamp_at(s, d.width) for s in steps_def.values()) if v})
     if not steps:
         return []
+    heading_sizes: dict[tuple[str, str], dict[int, float]] = {}
+    for snapshot in cx.all:
+        for heading in snapshot.headings(1, 2):
+            if heading.painted and heading.tl:
+                heading_sizes.setdefault((heading.label(), heading.text), {})[snapshot.width] = heading.fs
+    responsive = {key: samples for key, samples in heading_sizes.items()
+                  if len(samples) >= 2 and max(samples.values()) >= 30
+                  and max(samples.values()) - min(samples.values()) >= 2}
     used: dict[float, int] = {}
+    overrides = []
     for e in d.text_els():
-        if e.tl >= 3:
-            used[round(e.fs, 1)] = used.get(round(e.fs, 1), 0) + 1
-    off = {s: n for s, n in used.items() if all(abs(s - st) > 1.0 for st in steps)}
-    if len(off) >= 3 or sum(off.values()) >= 8:
-        return [F("ds/scale", f"{len(off)} font size(s) off the system type scale at {d.width}px ({', '.join(f'{s:g}' for s in steps)}).",
-                  {f"{s:g}px": n for s, n in sorted(off.items())})]
+        size = round(e.fs, 1)
+        if e.tl < 3 or not e.painted or any(abs(size - step) <= 1.0 for step in steps):
+            continue
+        samples = responsive.get((e.label(), e.text))
+        if samples:
+            overrides.append({"heading": e.label(), "sizes": {f"{w}px": round(s, 1) for w, s in sorted(samples.items())}})
+        else:
+            used[size] = used.get(size, 0) + 1
+    if len(used) >= 3 or sum(used.values()) >= 8:
+        evidence = {f"{s:g}px": n for s, n in sorted(used.items())}
+        if overrides:
+            evidence = {"off_scale": evidence, "responsive_headings": overrides}
+        return [F("ds/scale", f"{len(used)} font size(s) off the system type scale at {d.width}px ({', '.join(f'{s:g}' for s in steps)}).",
+                  evidence)]
 
 
 @drule("ds/spacing")

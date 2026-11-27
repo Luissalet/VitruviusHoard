@@ -103,14 +103,27 @@ PROBE_JS = r"""
     return Array.from(document.querySelectorAll("img")).filter(img => !img.hasAttribute("alt")).length;
   });
 
-  safe("small_tap_targets", () => {
+  safe("small_tap_target_details", () => {
     const targets = Array.from(document.querySelectorAll("button,a"));
-    let count = 0;
+    const details = [];
     for (const t of targets) {
+      if (typeof t.checkVisibility === 'function' && !t.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) continue;
       const r = t.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44)) count += 1;
+      if (r.width <= 0 || r.height <= 0 || (r.width >= 44 && r.height >= 44)) continue;
+      const segments = [];
+      for (let el = t; el && el !== document.body; el = el.parentElement) {
+        if (el.id) { segments.unshift('#' + CSS.escape(el.id)); break; }
+        const siblings = el.parentElement ? Array.from(el.parentElement.children).filter(s => s.localName === el.localName) : [el];
+        segments.unshift(el.localName + (siblings.length > 1 ? ':nth-of-type(' + (siblings.indexOf(el) + 1) + ')' : ''));
+      }
+      details.push({selector: segments.join(' > '), width: Math.round(r.width * 10) / 10, height: Math.round(r.height * 10) / 10});
     }
-    return count;
+    return details;
+  });
+  out.small_tap_targets = (out.small_tap_target_details || []).length;
+  safe("page_background", () => {
+    const body = document.body && getComputedStyle(document.body).backgroundColor;
+    return body && body !== 'rgba(0, 0, 0, 0)' ? body : getComputedStyle(document.documentElement).backgroundColor;
   });
 
   safe("contrast_pairs", () => {
@@ -437,46 +450,80 @@ DOM_JS = r"""
   const index = new Map(), refs = [];
   const put = (o, k, v, def) => { if (v !== def && v !== undefined && v !== null && v !== '') o[k] = v; };
   const first4 = (cs, a, b, c, d) => [n(cs[a]), n(cs[b]), n(cs[c]), n(cs[d])];
-  const own = (el) => { let t = ''; for (const c of el.childNodes) if (c.nodeType === 3) t += c.textContent; return t.replace(/\s+/g, ' ').trim(); };
-  const lineCount = (el) => {
-    try {
-      const range = document.createRange(); range.selectNodeContents(el);
-      const tops = new Set(); for (const q of range.getClientRects()) if (q.width > 1 && q.height > 1) tops.add(Math.round(q.top / 4));
-      return tops.size;
-    } catch (e) { return 0; }
+  const painted = (el) => typeof el.checkVisibility !== 'function'
+    || el.checkVisibility({checkOpacity: true, checkVisibilityCSS: true});
+  const textPainted = (el) => {
+    let box = el;
+    while (box && getComputedStyle(box).display === 'contents') box = box.parentElement;
+    return !!box && getComputedStyle(el).visibility === 'visible' && painted(box);
   };
-  const lastLine = (el) => {
-    try {
-      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let node, last = null;
-      while ((node = w.nextNode())) if (node.textContent.trim()) last = node;
-      if (!last) return null;
-      const range = document.createRange(); range.selectNodeContents(last);
-      const rects = Array.from(range.getClientRects()).filter(q => q.width > 1 && q.height > 1);
-      if (!rects.length) return null;
-      const bottom = Math.max(...rects.map(q => q.bottom));
-      const lastRects = rects.filter(q => q.bottom > bottom - 2);
-      const left = Math.min(...lastRects.map(q => q.left)), right = Math.max(...lastRects.map(q => q.right));
-      return {w: Math.round(right - left), words: 0};
-    } catch (e) { return null; }
+  const range = document.createRange();
+  const textRects = (node) => {
+    range.selectNodeContents(node);
+    return Array.from(range.getClientRects()).filter(q => q.width > 0 && q.height > 0);
   };
-  for (const el of all) {
+  const own = (el) => {
+    const rects = [], chunks = [];
+    for (const node of el.childNodes) {
+      if (node.nodeType !== Node.TEXT_NODE || !node.textContent.trim()) continue;
+      const boxes = textRects(node);
+      if (!boxes.length) continue;
+      rects.push(...boxes);
+      chunks.push(node.textContent);
+    }
+    return {text: chunks.join(' ').replace(/\s+/g, ' ').trim(), rects};
+  };
+  const textLines = (el, action) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const rects = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      const parent = node.parentElement;
+      if (!node.textContent.trim() || !textPainted(parent)
+          || (action && parent.closest('[aria-hidden="true"]'))) continue;
+      rects.push(...textRects(node));
+    }
+    const center = (r) => (r.top + r.bottom) / 2;
+    rects.sort((a, b) => center(a) - center(b));
+    const lines = [];
+    for (const q of rects) {
+      const line = lines[lines.length - 1];
+      if (!line || center(q) - line.center > Math.min(q.height, line.height) * 0.5) {
+        lines.push({center: center(q), height: q.height, left: q.left, right: q.right});
+      } else {
+        line.height = Math.min(line.height, q.height);
+        line.left = Math.min(line.left, q.left);
+        line.right = Math.max(line.right, q.right);
+      }
+    }
+    return lines;
+  };
+  for (const [at, el] of all.entries()) {
     if (out.els.length >= CAP) { out.truncated = true; break; }
     if (SKIP.has(el.tagName) || SVG_INNER(el)) continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none') continue;
     const r = el.getBoundingClientRect();
-    const text = own(el);
     const hasBox = r.width >= 1 && r.height >= 1;
-    if (!hasBox && !text) continue;
+    // Preserving boxed, unpainted elements lets visibility diagnostics inspect them.
+    const isPainted = cs.display === 'contents' ? textPainted(el) : painted(el);
+    const {text, rects} = hasBox || isPainted ? own(el) : {text: '', rects: []};
+    if (!hasBox && (!isPainted || !rects.length)) continue;
+    const bounds = hasBox ? r : rects[0];
     const rec = {i: out.els.length, tag: el.localName};
     let p = el.parentElement; while (p && !index.has(p)) p = p.parentElement;
     rec.p = p ? index.get(p) : -1;
     const cls = (typeof el.className === 'string' ? el.className : '').trim();
     put(rec, 'c', cls.slice(0, 80), '');
     put(rec, 'id', el.id, '');
-    rec.r = [Math.round(r.left + sx), Math.round(r.top + sy), Math.round(r.width), Math.round(r.height)];
+    rec.r = [Math.round(bounds.left + sx), Math.round(bounds.top + sy), Math.round(bounds.width), Math.round(bounds.height)];
+    if (!isPainted) rec.painted = false;
     put(rec, 't', text.slice(0, 120), '');
-    if (text) rec.tl = text.length;
+    if (text) {
+      rec.tl = text.length;
+      rec.wc = text.split(' ').length;
+      rec.ty = Math.round(rects[0].top + sy);
+    }
     const s = {};
     put(s, 'color', cs.color, '');
     put(s, 'bg', cs.backgroundColor, 'rgba(0, 0, 0, 0)');
@@ -524,13 +571,23 @@ DOM_JS = r"""
                  alt: el.hasAttribute('alt') ? el.getAttribute('alt') : null};
     }
     if (el.localName === 'svg') rec.svg = {shapes: el.querySelectorAll('path,circle,rect,ellipse,polygon,line,polyline').length};
-    if (el.localName === 'a' || el.localName === 'button') { rec.act = true; const href = el.getAttribute('href'); if (href) rec.href = href.slice(0, 120); }
-    if (el.localName === 'input' || el.localName === 'textarea' || el.localName === 'select') rec.ctl = el.getAttribute('type') || el.localName;
-    if (text && /^h[1-6]$|^p$|^li$|^a$|^button$|^label$|^span$|^div$/.test(el.localName) && r.width > 8) {
-      const lines = lineCount(el);
-      if (lines) rec.ln = lines;
-      if (lines >= 2 && r.width > 8) { const ll = lastLine(el); if (ll) rec.last = ll.w; }
+    const action = el.localName === 'a' || el.localName === 'button';
+    if (action) { rec.act = true; const href = el.getAttribute('href'); if (href) rec.href = href.slice(0, 120); }
+    if (el.localName === 'button') rec.bt = el.type;
+    if (el.localName === 'label') put(rec, 'for', el.htmlFor, '');
+    if (el.localName === 'input' || el.localName === 'textarea' || el.localName === 'select') {
+      rec.ctl = el.getAttribute('type') || el.localName;
+      if (el.getAttribute('aria-label')?.trim() || el.getAttribute('aria-labelledby')?.trim()) rec.named = true;
     }
+    if (isPainted && (action || (text && /^(h[1-6]|p|li|label|span|div)$/.test(el.localName))) && r.width > 8) {
+      const lines = textLines(el, action);
+      if (lines.length) rec.ln = lines.length;
+      if (lines.length >= 2) {
+        const last = lines[lines.length - 1];
+        rec.last = Math.round(last.right - last.left);
+      }
+    }
+    if (text && isPainted) rec.font_node = at;
     out.els.push(rec);
     index.set(el, rec.i); refs.push(el);
   }
@@ -645,6 +702,39 @@ VITALS_COLLECT = """
           transfer_bytes: bytes, requests: res.length + 1, text_chars: (document.body ? document.body.innerText.length : 0)};
 }
 """
+
+
+def _sample_platform_fonts(page, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    """Ask Chromium which faces painted representative text at this viewport."""
+    samples = {}
+    for element in snapshot.get("els", []):
+        if "font_node" not in element:
+            continue
+        family = element["s"].get("ff")
+        kind = "heading" if element["tag"] in {"h1", "h2", "h3"} else "body"
+        if family and (kind, family) not in samples:
+            samples[kind, family] = element
+    if not samples:
+        return []
+    session = page.context.new_cdp_session(page)
+    try:
+        session.send("DOM.enable")
+        session.send("CSS.enable")
+        root = session.send("DOM.getDocument")["root"]["nodeId"]
+        nodes = session.send("DOM.querySelectorAll", {"nodeId": root, "selector": "body *"})["nodeIds"]
+        readings = []
+        for (kind, family), element in list(samples.items())[:24]:
+            index = element["font_node"]
+            if index >= len(nodes):
+                continue
+            faces = session.send("CSS.getPlatformFontsForNode", {"nodeId": nodes[index]}).get("fonts") or []
+            if faces:
+                actual = sorted(faces, key=lambda f: -f["glyphCount"])
+                readings.append({"role": kind, "declared": family, "element": element["tag"],
+                                 "text": element["t"][:40], "used": [f["familyName"] for f in actual]})
+        return readings
+    finally:
+        session.detach()
 
 
 class Job:
@@ -1119,6 +1209,7 @@ class BrowserWorker:
             files = []
             layout: dict[str, Any] = {}
             dom: dict[str, Any] = {}
+            platform_fonts = []
             for w in widths:
                 page.set_viewport_size({"width": w, "height": 900})
                 try:
@@ -1130,6 +1221,13 @@ class BrowserWorker:
                     dom[str(w)] = page.evaluate(DOM_JS)
                 except Exception as error:  # noqa: BLE001 - the snapshot is optional; the rules that need it skip
                     dom[str(w)] = {"error": str(error)[:200]}
+                if w == max(widths):
+                    try:
+                        platform_fonts = _sample_platform_fonts(page, dom[str(w)])
+                    except Exception:  # noqa: BLE001 - a capture can still report the declared CSS stack
+                        log.debug("Could not sample platform fonts", exc_info=True)
+                for element in dom[str(w)].get("els", []):
+                    element.pop("font_node", None)
                 path = out_dir / f"{w}.png"
                 if full_page:
                     # Cap full-page height at 6000px via a clip.
@@ -1151,6 +1249,8 @@ class BrowserWorker:
                 probe["layout"] = layout
             if dom:
                 probe["dom"] = dom
+            if platform_fonts:
+                probe["rendered_fonts"] = platform_fonts
             probe["script_errors"] = script_errors
             if payload.get("keyboard", True):
                 from . import keyboard

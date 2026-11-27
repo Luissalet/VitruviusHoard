@@ -362,8 +362,9 @@ def check_a11y_missing_alt(probe: dict, html: str) -> list[Finding]:
 def check_a11y_small_targets(probe: dict, html: str) -> list[Finding]:
     n = probe.get("small_tap_targets") or 0
     if n > 0:
+        evidence = (probe.get("small_tap_target_details") or [])[:8]
         return [_finding("a11y.small-targets", "a11y", "warn", "Tap targets smaller than 44px",
-                         f"{n} button(s)/link(s) are smaller than 44x44px.", n,
+                         f"{n} button(s)/link(s) are smaller than 44x44px.", evidence or n,
                          "Make interactive targets at least 44x44px, especially on mobile.")]
     return []
 
@@ -581,8 +582,11 @@ def run_lint(probe: dict, html: str, *, tokens: dict | None = None, packs=None, 
         counts[f["severity"]] = counts.get(f["severity"], 0) + 1
         if f.get("tier"):
             tiers[f["tier"]] = tiers.get(f["tier"], 0) + 1
-    return {"findings": findings, "score": score_of(findings), "counts": counts, "tiers": tiers, "rules_run": len(rules),
-            "design_system": bool(tokens)}
+    result = {"findings": findings, "score": score_of(findings), "counts": counts, "tiers": tiers, "rules_run": len(rules),
+              "design_system": bool(tokens)}
+    if probe.get("rendered_fonts"):
+        result["rendered_fonts"] = probe["rendered_fonts"]
+    return result
 
 
 _register_core()

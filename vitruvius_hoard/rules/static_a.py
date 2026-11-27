@@ -136,8 +136,13 @@ def ai_color_palette(page: Page, probe):
 
 @rule("slop/cream-palette")
 def cream_palette(page: Page, probe):
-    bg = page_background(page)
+    bg = parse_color(probe.get("page_background")) or page_background(page)
     if not bg:
+        return []
+    design = probe.get("design_system") or {}
+    tokens = design.get("tokens") or design
+    surfaces = (tokens.get("color") or {}).get("surfaces") or {}
+    if any(bg == parse_color(mode.get("bg")) for mode in surfaces.values() if isinstance(mode, dict)):
         return []
     h, s, l = hsl_of(bg)
     if 0.88 <= l <= 0.985 and 25 <= h <= 75 and s >= 0.18 and 6 <= spread(bg) <= 60:

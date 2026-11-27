@@ -6,6 +6,7 @@ import re
 from typing import Callable
 
 from .base import F, short, uniq
+from .domtree import doms
 from .pagesrc import Page, has_source, hsl_of, colors_in, page_of, parse_color, parse_decls, prose, px
 from .static_a import CHECKS, rule  # the registry of implementations is shared
 
@@ -113,12 +114,14 @@ def template_punctuation(page: Page, probe):
     hits = []
     for n in page.nodes:
         own = n.own_text()
-        if not own or n.tag in ("script", "style", "code", "pre"):
+        if n.tag in ("script", "style", "code", "pre") or n.attrs.get("aria-hidden") == "true":
             continue
         if len(re.findall(r"\s[·•]\s", own)) >= 3:
             hits.append("dots: " + short(own, 60))
-        if n.tag in ("a", "button") and re.search(r"(?:\s|^)[→➔➜⟶»]\s*$|\s->\s*$|\s→$", n.text()):
-            hits.append("arrow: " + short(n.text(), 40))
+        if n.tag in ("a", "button"):
+            label = n.text_without(set(), omit_aria_hidden=True)
+            if re.search(r"(?:\s|^)[→➔➜⟶»]\s*$|\s->\s*$", label):
+                hits.append("arrow: " + short(label, 40))
         if re.match(r"^[●•◉○]\s+\S", own) and len(own) <= 40 and n.tag not in ("li",):
             hits.append("status dot: " + short(own, 40))
     hits = uniq(hits)
@@ -227,21 +230,24 @@ _CODEISH = re.compile(r"\bcode\b|\bpre\b|\bkbd\b|\bsamp\b|terminal|console|snipp
 
 @rule("slop/mono-costume")
 def mono_costume(page: Page, probe):
-    body_ff = ""
-    for r in page.rules:
-        if r.selector.strip().lower() in ("body", "html", ":root"):
-            body_ff = r.decls.get("font-family", body_ff)
-    if _MONO.search(body_ff):
-        return []
-    for r in page.rules:
-        if r.selector.strip().lower() in ("h1", "h2", ".display", ".hero h1", "h1, h2") and _MONO.search(r.decls.get("font-family", "")):
+    snapshots = doms(probe)
+    if snapshots:
+        visible = [e for e in snapshots[0].text_els() if e.painted]
+        samples = {row["declared"].lower(): row["used"][0] for row in probe.get("rendered_fonts", [])
+                   if row.get("role") == "body" and row.get("used")}
+        if any(_MONO.search(e.ff) for e in visible if e.tag in HEADINGS | {"p"} and e.tl >= 20):
             return []
-    hits = []
-    for r in page.rules:
-        ff = r.decls.get("font-family", "")
-        if ff and _MONO.search(ff) and _LABELISH.search(r.selector) and not _CODEISH.search(r.selector):
-            hits.append(r.selector)
-    hits = uniq(hits)
+        hits = [e.label() for e in visible if _MONO.search(samples.get(e.ff, e.ff))
+                and not e.in_tag("code", "pre", "kbd", "samp")]
+    else:
+        def family(n):
+            return (page.style(n, "font-family") or "").split(",")[0]
+
+        if any(_MONO.search(family(n)) for n in page.find_any(HEADINGS | {"html", "body"})):
+            return []
+        hits = [n.label() for n in page.nodes if _LABELISH.search(n.label()) and _MONO.search(family(n))
+                and n.own_text() and not any(a.tag in ("pre", "code", "kbd", "samp") for a in n.ancestors())]
+    hits = uniq([selector for selector in hits if _LABELISH.search(selector) and not _CODEISH.search(selector)])
     if hits:
         return [F("slop/mono-costume", f"{len(hits)} label/meta selector(s) set in monospace without code or data.", hits[:8])]
 
