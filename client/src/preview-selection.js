@@ -15,10 +15,31 @@ export function elementName(item) {
   return (item.tag || "element") + (item.classes && item.classes.length ? "." + item.classes.slice(0, 2).join(".") : "");
 }
 
-/** Short line for a chip: name, trimmed text and where it comes from. */
-export function chipText(item, index) {
-  const text = item.text ? ` "${item.text.length > 32 ? item.text.slice(0, 31) + "…" : item.text}"` : "";
-  return `${index + 1}. ${elementName(item)}${text}`;
+const ELEMENT_LABELS = {
+  a: ["Enlace", "Link"], link: ["Enlace", "Link"], button: ["Botón", "Button"],
+  heading: ["Título", "Heading"], section: ["Sección", "Section"], region: ["Sección", "Section"],
+  article: ["Artículo", "Article"], main: ["Contenido principal", "Main content"], aside: ["Panel", "Panel"],
+  nav: ["Navegación", "Navigation"], navigation: ["Navegación", "Navigation"],
+  header: ["Cabecera", "Header"], footer: ["Pie de página", "Footer"], form: ["Formulario", "Form"],
+  input: ["Campo", "Field"], textarea: ["Campo de texto", "Text field"], textbox: ["Campo de texto", "Text field"],
+  select: ["Lista desplegable", "Dropdown"], combobox: ["Lista desplegable", "Dropdown"],
+  checkbox: ["Casilla", "Checkbox"], radio: ["Opción", "Option"], switch: ["Interruptor", "Switch"],
+  img: ["Imagen", "Image"], figure: ["Figura", "Figure"], p: ["Párrafo", "Paragraph"],
+  ul: ["Lista", "List"], ol: ["Lista", "List"], list: ["Lista", "List"],
+  li: ["Elemento de lista", "List item"], listitem: ["Elemento de lista", "List item"], table: ["Tabla", "Table"],
+  tr: ["Fila", "Row"], td: ["Celda", "Cell"], th: ["Celda de cabecera", "Header cell"],
+};
+const DEFAULT_LABEL = ["Elemento", "Element"];
+
+/** The selected element's type and name as read by the person. */
+export function chipText(item, es) {
+  const tag = /^h[1-6]$/.test(item.tag) ? "heading" : item.tag;
+  const kind = Object.hasOwn(ELEMENT_LABELS, item.role) ? item.role : tag;
+  const type = (Object.hasOwn(ELEMENT_LABELS, kind) ? ELEMENT_LABELS[kind] : DEFAULT_LABEL)[es ? 0 : 1];
+  const text = (item.label || item.text || "").replace(/\s+/g, " ").trim();
+  const characters = Array.from(text);
+  const name = characters.length > 56 ? characters.slice(0, 55).join("").trimEnd() + "…" : text;
+  return name ? `${type} · ${name}` : type;
 }
 
 /** Where the element lives in the source, or what generated it; `null` when the page did not say. */
@@ -50,6 +71,7 @@ export function copilotSelection(items, limit = 8) {
 
 /** What a freshly loaded page needs to find the same elements again: identity, not position alone. */
 export function identitiesOf(items) {
-  return items.map(({ selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box }) => (
-    { selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box })).filter((item) => item.selector);
+  return items.map(({ selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box, label, role }) => (
+    { selector, tag, text, vsrc, own_vsrc, parent, index, near, anchor, revision, expired, classes, vgen, box,
+      ...(label ? { label } : {}), ...(role ? { role } : {}) })).filter((item) => item.selector);
 }

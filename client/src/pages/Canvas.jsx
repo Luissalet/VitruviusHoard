@@ -274,37 +274,39 @@ export default function Canvas({ param }) {
           {running
             ? <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="var(--canvas-height)" />
             : <Empty>{es ? "Abre la vista previa para trabajar sobre la aplicación." : "Open the preview to work on the application."}</Empty>}
-          <aside id="canvas-rail" className="canvas-inspector" hidden={!panelOpen} aria-label={es ? "Panel del lienzo" : "Canvas inspector"}>
-            <div className="canvas-rail-tabs" role="tablist" aria-label={es ? "Vistas del panel" : "Panel views"} onKeyDown={(event) => {
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-              event.preventDefault();
-              const next = event.key === "Home" ? "activity" : event.key === "End" ? "elements"
-                : rail === "activity" ? "elements" : "activity";
-              setRail(next); document.getElementById(`canvas-tab-${next}`)?.focus();
-            }}>
-              {["activity", "elements"].map((tab) => <button key={tab} id={`canvas-tab-${tab}`} type="button" role="tab"
-                aria-selected={rail === tab} aria-controls={`canvas-pane-${tab}`} tabIndex={rail === tab ? 0 : -1}
-                onClick={() => setRail(tab)}>
-                {tab === "activity" ? (es ? "Conversación" : "Conversation") : (es ? "Elementos" : "Elements")}
-              </button>)}
-            </div>
-            <div id="canvas-pane-activity" role="tabpanel" aria-labelledby="canvas-tab-activity" hidden={rail !== "activity"}>
-              <CanvasConversation es={es} projectId={project.id} />
-              <CanvasTimeline steps={liveSteps.filter((step) => step.projectId === param
-                && (step.kind !== "edit" || step.revision === visible?.revision))} es={es} />
-              <ProjectCritiqueLoop key={project.id} project={project} visibleRevision={visible?.revision}
-                lang={lang} onRevision={syncRevision} />
-              <CanvasHistory key={project.id} project={project} visibleRevision={visible?.revision} onChange={updateHistory} es={es} />
-            </div>
-            <div id="canvas-pane-elements" role="tabpanel" aria-labelledby="canvas-tab-elements" hidden={rail !== "elements"}>
-              {running
-                ? <CanvasElements elements={elements} onSelect={selectElement} onRetry={requestElements} es={es} />
-                : <div className="canvas-inspector-section">
-                    <p className="canvas-empty">{es ? "Abre la vista previa para ver los elementos." : "Open the preview to see its elements."}</p>
-                  </div>}
-            </div>
-            <PreviewSelection key={project.id} project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} canvas onComments={setComments} />
-          </aside>
+          <div className="canvas-rail-slot" inert={!panelOpen}>
+            <aside id="canvas-rail" className="canvas-inspector" aria-label={es ? "Panel del lienzo" : "Canvas inspector"}>
+              <div className="canvas-rail-tabs" role="tablist" aria-label={es ? "Vistas del panel" : "Panel views"} onKeyDown={(event) => {
+                if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+                event.preventDefault();
+                const next = event.key === "Home" ? "activity" : event.key === "End" ? "elements"
+                  : rail === "activity" ? "elements" : "activity";
+                setRail(next); document.getElementById(`canvas-tab-${next}`)?.focus();
+              }}>
+                {["activity", "elements"].map((tab) => <button key={tab} id={`canvas-tab-${tab}`} type="button" role="tab"
+                  aria-selected={rail === tab} aria-controls={`canvas-pane-${tab}`} tabIndex={rail === tab ? 0 : -1}
+                  onClick={() => setRail(tab)}>
+                  {tab === "activity" ? (es ? "Conversación" : "Conversation") : (es ? "Elementos" : "Elements")}
+                </button>)}
+              </div>
+              <div id="canvas-pane-activity" role="tabpanel" aria-labelledby="canvas-tab-activity" hidden={rail !== "activity"}>
+                <CanvasConversation es={es} projectId={project.id} />
+                <CanvasTimeline steps={liveSteps.filter((step) => step.projectId === param
+                  && (step.kind !== "edit" || step.revision === visible?.revision))} es={es} />
+                <ProjectCritiqueLoop key={project.id} project={project} visibleRevision={visible?.revision}
+                  lang={lang} onRevision={syncRevision} />
+                <CanvasHistory key={project.id} project={project} visibleRevision={visible?.revision} onChange={updateHistory} es={es} />
+              </div>
+              <div id="canvas-pane-elements" role="tabpanel" aria-labelledby="canvas-tab-elements" hidden={rail !== "elements"}>
+                {running
+                  ? <CanvasElements elements={elements} onSelect={selectElement} onRetry={requestElements} es={es} />
+                  : <div className="canvas-inspector-section">
+                      <p className="canvas-empty">{es ? "Abre la vista previa para ver los elementos." : "Open the preview to see its elements."}</p>
+                    </div>}
+              </div>
+              <PreviewSelection key={project.id} project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} canvas onComments={setComments} />
+            </aside>
+          </div>
         </div>
       </>}
   </div>;
