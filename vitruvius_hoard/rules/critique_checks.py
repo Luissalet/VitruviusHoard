@@ -25,6 +25,7 @@ PATTERN_WEIGHTS = {
     "uniform-card-grid": 2.2,
     "repeated-editorial-bands": 2.2,
     "featured-middle-price": 2.0,
+    "form-step-sidebar": 1.5,
     "split-hero": 0.9,
     "back-to-top-footer": 0.5,
 }
@@ -132,15 +133,50 @@ def _uniform_grid(dom: Dom):
     return None
 
 
-def _primary_form(main: El):
+def _editorial_sections(main: El, form: El) -> bool:
+    ancestors = list(form.ancestors())
+    return any(
+        section.tag in ("section", "article") and _visible(section)
+        and section.w >= main.w * 0.5 and section.w * section.h >= main.w * main.h * 0.10
+        and all(section is not parent for parent in ancestors)
+        and all(parent is not form for parent in section.ancestors())
+        and any(el.tag in HEADINGS and _visible(el) for el in section.descendants())
+        and len(_text(section)) >= 80
+        for section in main.descendants()
+    )
+
+
+def _step_sidebar(form: El, main: El):
+    for branch in _tree_ancestors(form, main):
+        parent = branch.parent
+        if parent.st("disp") not in ("grid", "flex"):
+            continue
+        for aside in parent.children:
+            if (aside is branch or aside.tag not in ("aside", "nav") or not _visible(aside)
+                    or aside.right > branch.x + 2
+                    or min(aside.bottom, branch.bottom) - max(aside.y, branch.y) < 100):
+                continue
+            if any(el.tag == "ol" and sum(child.tag == "li" and _visible(child) for child in el.children) >= 3
+                   for el in aside.descendants()):
+                return aside
+    return None
+
+
+def _form_pattern(main: El):
     forms = [
         el for el in main.descendants() if el.tag == "form" and _visible(el) and not el.in_tag("dialog")
         and sum(c.tag in ("input", "select", "textarea") and _visible(c) for c in el.descendants()) >= 3
     ]
-    if len(forms) == 1:
-        form = forms[0]
-        if form.w * form.h >= main.w * main.h * 0.23 and form.y < main.y + main.h * 0.4:
-            return form
+    if len(forms) != 1:
+        return None
+    form = forms[0]
+    if _editorial_sections(main, form):
+        return None
+    if form.w * form.h >= main.w * main.h * 0.23 and form.y < main.y + main.h * 0.4:
+        return "single-form-card", form
+    sidebar = _step_sidebar(form, main)
+    if sidebar:
+        return "form-step-sidebar", sidebar
     return None
 
 
@@ -219,10 +255,15 @@ def category_composition(cx: Ctx):
             add("uniform-card-grid", parent, f"{count} cards repeat the same dimensions and structure.",
                 f"{count} tarjetas repiten las mismas dimensiones y estructura.")
         if main:
-            form = _primary_form(main)
-            if form:
-                add("single-form-card", form, "One form with at least three controls dominates the main content.",
-                    "Un único formulario con al menos tres controles domina el contenido principal.")
+            form_pattern = _form_pattern(main)
+            if form_pattern:
+                kind, element = form_pattern
+                if kind == "single-form-card":
+                    add(kind, element, "One form with at least three controls dominates the main content.",
+                        "Un único formulario con al menos tres controles domina el contenido principal.")
+                else:
+                    add(kind, element, "A list of steps sits beside a separate card of form fields.",
+                        "Una lista de pasos ocupa el lateral junto a la tarjeta que contiene los campos.")
             hero = _split_hero(main)
             if hero and hero.h >= main.h * 0.8:
                 add("hero-only", hero, "The split headline-and-image hero occupies nearly all of the main content.",

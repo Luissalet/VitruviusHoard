@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 from zipfile import ZipFile
 
 import pytest
@@ -32,6 +33,17 @@ CASES = [
 COMPOSITION = "webcraft/category-composition"
 NATIVE = "webcraft/native-control-chrome"
 SCAFFOLD = "webcraft/scaffold-copy"
+FOLLOW_UPS = [
+    ("02-estaciones", "02-ladera-12.zip", 4, 7, "c84044b6d5cf66c5c04e",
+     "3e808f5fdbd6c8a4251153792e7267e29132e03c1d87da8800bf686d39be60f0",
+     "log/05-tokens.json", "b56cff9cd11c", "da9158186293a9e68050085b6302b49aa06af433546fd2872d52b0a81d39a9ad"),
+    ("04-fisio", "04-fisio.zip", 4, 7, "73fa334c13538d3e0639",
+     "80827eafdacd7b6200c3b44159f029a90eec5ba9c62f8c6e0f0ac631cc7d14da",
+     "tokens.json", "9392c140d0c7", "4cea17f6ec118347791e381daf7d306b965dbef57e29d43daaea42c2db77dcf1"),
+    ("06-alta-autonomo", "06-portico-fiscal.zip", 2, 6, "cffe23925083f967ef6f",
+     "4e2ca3f368e5a3c9023a3b088d0ad6c13fec363bae1844223fa113a1683f77bc",
+     "log/05-tokens.json", "748c4faac62f", "a9b1e7b51f75bb7cf37ebb2781552e2494b2e881144e2673dc9042f9967f3800"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -66,13 +78,13 @@ def reviewed_exports():
     return directory
 
 
-def _critique(services, render):
+def _critique(services, render, **arguments):
     error = render["metrics"].get("error")
     if error == "no browser" and not os.environ.get("VITRUVIUS_CRITIQUE_BANK"):
         pytest.skip("No headless browser available")
     assert not error, render["metrics"]
     assert render["files"], "The browser produced no captures"
-    return call_tool(services, "design_critique", {"render_id": render["id"], "use_vision": False}, cap=False)
+    return call_tool(services, "design_critique", {"render_id": render["id"], "use_vision": False, **arguments}, cap=False)
 
 
 @pytest.mark.parametrize(("name", "filename", "round_seen", "judge", "digest"), CASES, ids=[c[0] for c in CASES])
@@ -127,6 +139,64 @@ def test_export_critique_matches_blind_review(calibration_browser, reviewed_expo
             assert findings[rule]["score_weight"] > 0 and findings[rule]["detail_es"]
     finally:
         calibration_browser.app_projects.stop(project["id"])
+
+
+@pytest.mark.parametrize(("name", "archive_name", "round_seen", "judge", "revision", "digest",
+                          "token_path", "token_id", "token_digest"), FOLLOW_UPS, ids=[row[0] for row in FOLLOW_UPS])
+def test_follow_up_matches_the_judge_with_original_source_and_tokens(
+    calibration_browser, reviewed_exports, name, archive_name, round_seen, judge, revision, digest,
+    token_path, token_id, token_digest,
+):
+    home = reviewed_exports.with_name("bateria-despues") / name
+    archive_path = home / "export" / archive_name
+    assert hashlib.sha256(archive_path.read_bytes()).hexdigest() == digest
+    note = json.loads((home / "revisor.json").read_text(encoding="utf-8-sig"))
+    assert (note["ronda_vista"], note["nota"]) == (round_seen, judge)
+    table = (reviewed_exports / "tabla.md").read_text(encoding="utf-8-sig").split("\n## DESPUÉS\n")[1].split("\n## ")[0]
+    row = next(line for line in table.splitlines() if line.startswith(f"| {name} |"))
+    assert f"| {judge} (R{round_seen}) |" in row
+    metric = json.loads((home / f"ronda-{round_seen}" / "metricas.json").read_text(encoding="utf-8-sig"))
+    assert metric["revision"] == revision
+    receipt = (home / token_path).read_bytes()
+    assert hashlib.sha256(receipt).hexdigest() == token_digest
+    tokens = json.loads(receipt.decode("utf-8-sig"))
+    assert tokens["id"] == token_id
+
+    with ZipFile(archive_path) as archive:
+        manifest = json.loads(archive.read("vitruvius-export.json"))
+        files = {entry: archive.read(entry).decode("utf-8") for entry in archive.namelist()
+                 if not entry.endswith("/") and entry != "vitruvius-export.json"}
+    assert manifest["revision"] == revision and not manifest["includes_data"]
+    assert json.loads(files["project.json"])["biblioteca"]["tokens_id"] == token_id
+
+    services = calibration_browser
+    services.db.execute(
+        "INSERT INTO design_systems(id,name,created_ts,brief,tokens,css,tailwind) VALUES (?,?,?,?,?,?,?)",
+        (token_id, tokens["name"], tokens["created_ts"], json.dumps(tokens["brief"]),
+         json.dumps(tokens["tokens"]), tokens["css"], tokens["tailwind"]),
+    )
+    project = call_tool(services, "app_project_create", {"name": name, "lang": "es", "files": files}, cap=False)
+    assert project["source_sha256"] == manifest["source_sha256"]
+    pid = project["id"]
+    try:
+        preview = call_tool(services, "app_project_preview", {"id": pid}, cap=False)
+        address = urlsplit(preview["url"])
+        assert address.scheme == "http" and address.hostname == "127.0.0.1"
+        assert address.port not in {9, 8810, 5253, 5191, 5232, 5220, 8815, 59018}
+        render = call_tool(services, "render_preview", {"url": preview["url"].rstrip("/") + "/",
+                           "widths": [390, 834, 1440], "wait_ms": 350, "lint": False, "full_page": True}, cap=False)
+        result = _critique(services, render, tokens_id=token_id, lang="es")
+        print(f"{name} R{round_seen}: judge {judge}, critique {result['score']:.2f}, gap {abs(result['score'] - judge):.2f}")
+        assert result["design_system"] and result["heuristic_score"] == result["score"]
+        assert abs(result["score"] - judge) <= 1.5
+        composition = next((item for item in result["findings"] if item["check_id"] == COMPOSITION), {})
+        patterns = {item["kind"] for item in composition.get("evidence", {}).get("patterns", [])}
+        if name == "04-fisio":
+            assert "single-form-card" not in patterns
+        if name == "06-alta-autonomo":
+            assert "form-step-sidebar" in patterns and composition["detail_es"] and composition["score_weight"] > 0
+    finally:
+        services.app_projects.stop(pid)
 
 
 def test_hidden_copy_and_custom_indicators_do_not_count(calibration_browser):
