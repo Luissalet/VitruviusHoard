@@ -291,6 +291,11 @@ class PreviewComments:
         return self._step(project_id, comment_id, "agent", "resolved", ("seen",), summary,
                           {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or self._current_revision(project_id), "reply": None}, require_text=True)
 
+    def resolve_person(self, project_id, comment_id):
+        """Close an open comment from the preview, keeping the step in its undo history."""
+        return self._step(project_id, comment_id, "person", "resolved", ("pending", "seen", "answered"),
+                          fields={"summary": None, "resolved_in": self._current_revision(project_id), "reply": None})
+
     def reply(self, project_id, comment_id, text):
         return self._step(project_id, comment_id, "agent", "answered", ("seen",), text, {"reply": _text(text, MAX_SUMMARY)}, require_text=True)
 

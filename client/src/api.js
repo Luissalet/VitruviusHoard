@@ -16,7 +16,7 @@ async function request(method, path, { params, body } = {}) {
   } catch {
     data = { error: text };
   }
-  if (!response.ok) throw Object.assign(new Error((data && data.error) || `Error ${response.status}`), { status: response.status });
+  if (!response.ok) throw Object.assign(new Error((data && (data.error || (typeof data.detail === "string" && data.detail))) || `Error ${response.status}`), { status: response.status });
   if (data?.download_url?.startsWith('/api/')) data.download_url='/design'+data.download_url;
   if (path.startsWith('/design/api/diagrams') && data?.files) data.files=Object.fromEntries(Object.entries(data.files).map(([k,v])=>[k,typeof v==='string'&&v.startsWith('/api/')?'/design'+v:v]));
   return data;
@@ -146,8 +146,13 @@ export const api = {
   appProjectCreate: (body) => request("POST", "/design/api/app-projects", { body }),
   appProjectArchive: (id, body) => request("POST", "/design/api/app-projects/" + encodeURIComponent(id) + "/archive", { body }),
   appProjectUpdate: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}`, { body }),
+  appProjectUndoChange: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo-change`, { body }),
+  appProjectUndo: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo`, { body }),
   appProjectPreview: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/preview`, { body }),
   appProjectExport: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/export`, { body }),
+  appProjectCritiqueLoop: (id, lang) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}/critique-loop`, { params: { lang } }),
+  appProjectCritiqueRound: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/critique-loop/round`, { body }),
+  appProjectCritiqueUndo: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/critique-loop/undo`, { body }),
   appProjectRender: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/render`, { body }),
   appProjectSelection: (id) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}/selection`),
   appProjectSelectionSet: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}/selection`, { body }),

@@ -888,13 +888,27 @@ class Services:
         return render
 
     # ---------------- application projects ----------------
-    def app_project_render(self, id, revision=None, widths=None):
-        preview, url = self.app_projects.preview_runtime(id, revision)
-        project = self.app_projects.get(id, preview["revision"])
+    def app_project_render(self, id, revision=None, widths=None, *, _expected_updated_ts=None, _lang="en"):
+        with self.app_projects.lock:
+            project = self.app_projects.get(id, revision)
+            if (_expected_updated_ts is not None
+                    and (project["revision"] != revision or project["updated_ts"] != _expected_updated_ts)):
+                raise AppError("conflict", "La versión de la aplicación cambió antes de tomar la captura." if _lang == "es"
+                               else "The application revision changed before capture.", status=409)
+            preview, url = self.app_projects.preview_runtime(id, project["selected_revision"])
         context = {"id": id, "revision": preview["revision"], "source_sha256": project["source_sha256"]}
         result = self.render(url=url, widths=widths or [390, 1440], title=project["name"], _browser=self.app_browser, _app_project=context)
         result["app_project"] = context
         return result
+
+    def app_project_critique_round(self, id, expected_revision, tokens_id=None, lang="en"):
+        from .app_critique_loop import WIDTHS
+
+        projects = self.app_projects
+        receipt = projects.prepare_critique_round(id, expected_revision, tokens_id, lang)
+        render = self.app_project_render(id, expected_revision, list(WIDTHS), _expected_updated_ts=receipt[0], _lang=lang)
+        report = self.critique_render(render["id"], use_vision=False, tokens_id=receipt[2])
+        return projects.record_critique_round(id, expected_revision, receipt, report, render["id"], lang)
 
     def app_project_call(self, id, operation, data=None, record_id=None, query="", *,
                          collection=None, action=None, request_key=None, undo_token=None):

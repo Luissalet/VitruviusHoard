@@ -46,7 +46,10 @@ def edit(projects, project, line, prop="margin-left", pixels=24, **options):
 def test_canvas_edit_emits_the_agent_actor_only_for_a_change(opened, monkeypatch):
     projects, project = opened
     presence = []
-    monkeypatch.setattr(projects.canvas, "prepare_edit", lambda *args: presence.append(args))
+    def record_presence(*args, change):
+        assert change["files"] == ["pages/index.html"]
+        presence.append(args)
+    monkeypatch.setattr(projects.canvas, "prepare_edit", record_presence)
     services = SimpleNamespace(app_projects=projects)
     actor = {"id": "foreman", "name": "Foreman", "color": "#5b42d3"}
     args = {"id": project["id"], "vsrc": "pages/index.html:3:1", "tag": "article",
