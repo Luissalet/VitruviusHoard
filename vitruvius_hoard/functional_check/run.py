@@ -341,7 +341,7 @@ class Browser:
                 with contextlib.suppress(Exception):
                     context.close()
 
-    def perform(self, page, acts, *, on_act=None, settle_ms=150):
+    def perform(self, page, acts, *, on_act=None, settle_ms=150, automatic_labels=None):
         def before_action(action):
             if action["verb"] != "wait" and not self._acting:
                 self._acting = True
@@ -352,7 +352,7 @@ class Browser:
                 on_act(action)
 
         return browser.perform(page, acts, on_act=before_action, navigated=lambda: self._navigated,
-                               settle_ms=settle_ms)
+                               settle_ms=settle_ms, automatic_labels=automatic_labels)
 
 
 #: What a page is called, for a path nobody has written yet.
@@ -813,6 +813,8 @@ def check(folder: str | Path, entry: str = "index.html",
         for n, case in enumerate(cases, 1):
             case.id = f"C{n:03d}"
         progress("plan", plan=cases, startup_blocked_writes=engine.startup_blocked_writes)
+        automatic_labels = {control.selector: {} for control in opened.surface.controls
+                            if control.kind == "cell" and control.enabled}
         # Nothing to press, type into or draw on. A page like that has only
         # one thing to say for itself, so an empty one is empty for good.
         nothing_to_try = not (opened.surface.operable
@@ -862,6 +864,8 @@ def check(folder: str | Path, entry: str = "index.html",
 
                 def perform(acts):
                     options = {"settle_ms": 500} if not case.expect.get("quiet") or case.origin == "criterion" else {}
+                    if case.origin == "derived" and automatic_labels:
+                        options["automatic_labels"] = automatic_labels
                     if on_progress is not None:
                         options["on_act"] = lambda action: progress("perform_action", case=case, action=action)
                     result = engine.perform(page, acts, **options)

@@ -186,6 +186,60 @@ def test_in_progress_fill_names_the_target_without_the_entered_value():
 
 
 
+def test_automatic_label_click_reuses_only_a_current_native_obstruction(tmp_path, monkeypatch):
+    import pytest
+
+    pytest.importorskip("playwright")
+    (tmp_path / "index.html").write_text("""
+        <label style="position:relative; display:inline-block; cursor:pointer">
+          <input id="option" type="radio" style="position:absolute; opacity:0; inset:0; width:100%; height:100%; margin:0">
+          <span id="text">One option</span>
+        </label>
+    """, encoding="utf-8")
+    acts = [{"click": "#text"}]
+    automatic_labels = {"#text": {}}
+    with Browser(tmp_path, "index.html") as engine, engine.open() as (page, *_):
+        click = Mock(wraps=page.click)
+        monkeypatch.setattr(page, "click", click)
+        first, _ = browser.perform(page, acts, timeout=350, settle_ms=0, automatic_labels=automatic_labels)
+        assert "Timeout" in first[0]
+        repeat, _ = browser.perform(page, acts, timeout=350, settle_ms=0, automatic_labels=automatic_labels)
+        assert "covered by its own input #option" in repeat[0]
+        assert click.call_count == 1
+
+        explicit, _ = browser.perform(page, acts, timeout=350, settle_ms=0)
+        assert "Timeout" in explicit[0]
+        assert click.call_count == 2
+
+        page.locator("#option").evaluate("element => element.style.pointerEvents = 'none'")
+        uncovered, _ = browser.perform(page, acts, timeout=1000, settle_ms=0, automatic_labels=automatic_labels)
+        assert uncovered == []
+        assert click.call_count == 3
+        assert page.locator("#option").is_checked()
+
+    result = check(tmp_path)
+    repeated = next(row for row in result.results.values() if row.case.what == "click One option twice")
+    assert repeated.outcome == UNKNOWN
+    assert "covered by its own input #option" in repeated.detail
+
+
+def test_automatic_label_remembers_interception_during_playwright_scroll(monkeypatch):
+    import pytest
+
+    playwright = pytest.importorskip("playwright.sync_api")
+    cover = Mock(side_effect=["option", None, None])
+    monkeypatch.setattr(browser, "_covering_label_input", cover)
+    page = Mock(url="http://127.0.0.1/controls")
+    page.click.side_effect = playwright.TimeoutError(
+        'Page.click: Timeout 4000ms exceeded.\n  - <input id="option"/> intercepts pointer events')
+    results = {}
+    for _ in range(2):
+        with pytest.raises(playwright.TimeoutError):
+            browser._click(page, "#text", "", 4000, results)
+    assert results == {(page.url, "#text"): "option"}
+    assert page.click.call_count == 2
+
+
 def test_navigation_link_is_pressed_once_and_missing_target_returns_immediately(tmp_path):
     import pytest
     from vitruvius_hoard.functional_check.surface import from_page, plan
