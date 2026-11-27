@@ -28,6 +28,7 @@ from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
 from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
+from .transfer_assistant import FORM_ENTRY, form_assistant_files
 
 # Previously shipped starter runtimes, normalized by starter_files' text read.
 # These copies predate the optional template hook.
@@ -422,6 +423,19 @@ class AppProjects:
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
 
+    def add_voice_assistant(self, id, expected_revision, page, form_selector, schema, allow_submit=False):
+        with self.lock:
+            project = self.get(id, expected_revision)
+            if page not in project["files"] or not page.endswith(".html"):
+                raise ValueError("Select an HTML source file in the project")
+            patch = form_assistant_files(page, project["files"][page], form_selector, schema, allow_submit)
+            saved = self.update(id, patch, expected_revision)
+            receipt = {"id": id, "revision": saved["revision"], "page": page, "form_selector": form_selector,
+                       "changed": "undo" in saved}
+            if "undo" in saved:
+                receipt["undo"] = saved["undo"]
+            return receipt
+
     def revision_cursor(self, id, baseline):
         """Read current source and the corresponding subscription cursor atomically."""
         with self.lock:
@@ -550,7 +564,7 @@ class AppProjects:
             previous = self.processes.get(id)
             candidate["url"] = proxy.url
             candidate["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
-            proxy.voice_revision = selected if TRANSFER_ASSISTANT_ENTRY in project["files"] else ""
+            proxy.voice_revision = selected if {TRANSFER_ASSISTANT_ENTRY, FORM_ENTRY} & project["files"].keys() else ""
             proxy.backend = (receipt.port, selected)
             self.processes[id] = candidate
             if previous:

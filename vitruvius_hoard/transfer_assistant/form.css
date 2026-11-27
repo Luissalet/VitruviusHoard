@@ -1,0 +1,83 @@
+.voice-form-assistant {
+  --voice-line: color-mix(in srgb, currentColor 27%, transparent);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem 1rem;
+  min-width: 0;
+  max-width: 100%;
+  margin-block: 1.25rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--voice-line);
+  color: inherit;
+}
+.voice-form-assistant [hidden] { display: none; }
+.voice-form-assistant :is(h2, p, ol) { margin: 0; }
+.voice-form-assistant__title {
+  font: inherit;
+  font-weight: 650;
+}
+.voice-form-assistant__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.voice-form-assistant .voice-form-assistant__composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-column: 1 / -1;
+  gap: .5rem;
+  margin: 0;
+}
+.voice-form-assistant :is(button, input) {
+  min-height: 2.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: .45rem .7rem;
+  border: 1px solid var(--voice-line);
+  border-radius: var(--voice-assistant-radius, .375rem);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.voice-form-assistant button:not(:disabled) { cursor: pointer; }
+.voice-form-assistant button:disabled { opacity: .63; }
+.voice-form-assistant button:is(:hover:not(:disabled), [aria-pressed=true]) {
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.voice-form-assistant :is(button, input, summary):focus-visible {
+  outline: 2px solid var(--voice-assistant-accent, currentColor);
+  outline-offset: 2px;
+}
+.voice-form-assistant__reply,
+.voice-form-assistant__status,
+.voice-form-assistant__trace {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+.voice-form-assistant__reply { font-weight: 600; }
+.voice-form-assistant__status,
+.voice-form-assistant__trace {
+  font-size: .875rem;
+}
+.voice-form-assistant__trace summary { cursor: pointer; }
+.voice-form-assistant__trace > ol {
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+.voice-form-assistant__trace > ol > li {
+  margin-top: .6rem;
+  padding: .6rem 0 0;
+  border-top: 1px solid var(--voice-line);
+}
+.voice-form-assistant__trace ul {
+  padding-inline-start: 1.2rem;
+  margin-block: .3rem;
+}
+@container (max-width: 26rem) {
+  .voice-form-assistant { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 28rem) {
+  .voice-form-assistant { grid-template-columns: minmax(0, 1fr); }
+}

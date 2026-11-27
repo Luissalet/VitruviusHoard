@@ -1633,6 +1633,62 @@
     "module": "design"
   },
   {
+    "name": "app_project_add_voice_assistant",
+    "description": "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "page": {
+          "description": "Existing HTML source, e.g. pages/index.html or public/index.html.",
+          "title": "Page",
+          "type": "string"
+        },
+        "form_selector": {
+          "default": "form",
+          "description": "CSS selector matching one rendered form.",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Form Selector",
+          "type": "string"
+        },
+        "schema": {
+          "additionalProperties": true,
+          "description": "JSON Schema object. Property names match form controls; title and aliases guide dictation.",
+          "title": "Schema",
+          "type": "object"
+        },
+        "allow_submit": {
+          "default": false,
+          "description": "Allow a separate spoken confirmation to submit the form.",
+          "title": "Allow Submit",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "expected_revision",
+        "page",
+        "schema"
+      ],
+      "title": "AppVoiceAssistantArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_edit_source",
     "description": "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
     "annotations": {

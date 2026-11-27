@@ -10,6 +10,8 @@ Use `app_project_canvas_view` to read the project preview open in Applications a
 
 Use `app_project_create` with `files` to create a custom project with a `vitruvius-app/v2` specification. `app_project_call` reads the schema and collection records, runs declared actions in SQLite and returns an undo call on success. Pass the same `request_key` when retrying the same confirmed action. See [the collection schema and routes](docs/APP_PROJECTS.md#collections-and-declared-actions).
 
+Use `app_project_add_voice_assistant` with the project `id`, `expected_revision`, HTML `page`, optional `form_selector` and field `schema`. One call installs the panel for a matching form and returns `app_project_undo`. Preview it with `app_project_preview`. The panel fills fields from speech or text, supports corrections and reads the full reply with the configured Boltagon Qwen voice. Set `allow_submit` if the project accepts a separate explicit spoken confirmation. [Voice assistant for forms](docs/APP_VOICE_ASSISTANT.md)
+
 `app_transfer_assistant_assets` supplies the panel and its streamed voice client. Save the complete asset set with `app_project_update` and keep its undo call. The owned preview relays full Spanish and English replies to the resident voice service while the panel keeps the written reply available. [Transfer assistant](docs/APP_TRANSFER_ASSISTANT.md)
 
 ## Web guides and craft library
