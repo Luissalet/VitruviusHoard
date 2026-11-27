@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -67,6 +68,7 @@ def renders_file(request: Request, render_id: str, name: str):
 class CritiqueBody(BaseModel):
     focus: Optional[str] = None
     use_vision: bool = True
+    timeout_s: Optional[float] = Field(None, ge=1, le=900, description="Optional model-work budget in seconds.")
     tokens_id: Optional[str] = None
     waivers: list[dict] = Field(default_factory=list, description="[{rule, reason}]: Reflex-tier rules left standing on the record (reason: 24+ characters, never repeated).")
     clean_review: bool = False
@@ -75,8 +77,10 @@ class CritiqueBody(BaseModel):
 @router.post("/renders/{render_id}/critique")
 def renders_critique(request: Request, render_id: str, body: CritiqueBody):
     try:
+        deadline = time.monotonic() + body.timeout_s if body.timeout_s is not None else None
         return services(request).critique_render(render_id, focus=body.focus, use_vision=body.use_vision, tokens_id=body.tokens_id,
-                                                 waivers=body.waivers, clean_review=body.clean_review)
+                                                 waivers=body.waivers, clean_review=body.clean_review,
+                                                 deadline=deadline)
     except LookupError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:

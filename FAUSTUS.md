@@ -4,6 +4,12 @@
 
 `design_library_prepare` enables Design if needed and provisions the bundled library offline. It indexes the packaged presets, guides, design patterns and showcase recipes, installs the showcase reference cards and saves editable motion examples. The result reports available counts and what it added. Calls that leave data unchanged return no new undo token. A call that writes returns `design_library_undo` with a token for that preparation. Undo preserves pre-existing data and motion examples that have since been edited. The workbench button uses the same path. Remote source registrations keep their own separate ingest workflow.
 
+## Critique a captured render
+
+Call `design_critique` with your project's `render_id`. The default 110-second model budget works with the same scoped call. For deterministic checks on every iteration, pass `use_vision: false` and leave `clean_review: false`. A report with `partial: true` still supplies findings, a score and a gate. Check `missing` before reporting that the model judged the design.
+
+Llama a `design_critique` con el `render_id` de tu proyecto. Para corregir entre rondas, puedes usar `use_vision: false` con `clean_review: false`. Si el informe devuelve `partial: true`, consulta `missing` y sigue con los hallazgos deterministas disponibles.
+
 ## App project canvas
 
 `app_project_preview` returns the current preview `url` and the stable `open_path` relative to the Design mount. Use `/design` plus `open_path` on the workbench host for a reusable browser link. Opening it reuses the running preview or starts the latest saved revision. The agent tool can also start a specific revision or stop the preview.

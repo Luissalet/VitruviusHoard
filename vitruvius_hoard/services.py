@@ -737,7 +737,7 @@ class Services:
         return str(result.get("text") or "")
 
     def critique_render(self, render_id: str, *, focus: Optional[str] = None, use_vision: bool = True, tokens_id: Optional[str] = None,
-                        waivers: Any = None, clean_review: bool = False) -> dict[str, Any]:
+                        waivers: Any = None, clean_review: bool = False, deadline: Optional[float] = None) -> dict[str, Any]:
         row = self.db.one("SELECT * FROM renders WHERE id = ?", (render_id,))
         if row is None:
             raise LookupError(f"Unknown render '{render_id}'.")
@@ -754,7 +754,7 @@ class Services:
         result = critique_mod.critique(probe=probe, html=html, focus=focus, images=images or None,
                                        link=self.link_sync if (use_vision or clean_review) else None, use_vision=use_vision,
                                        tokens=tokens, waivers=waivers, prior_waivers=waivers_mod.stored(self.db, render_id),
-                                       clean_review=clean_review)
+                                       clean_review=clean_review, deadline=deadline)
         waivers_mod.store(self.db, render_id, result["waivers"]["accepted"])
         if result.get("review") and result["review"].get("verdict"):
             rv = result["review"]
