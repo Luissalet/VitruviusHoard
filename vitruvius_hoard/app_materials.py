@@ -18,9 +18,13 @@ def _label(kind, es, en):
 
 
 @cache
-def _showcase_titles():
+def _example_titles():
+    from .design_patterns import catalogue
     from .showcase import library
-    return {row["id"]: (row["title"], row["title_en"]) for row in library._rows()}
+
+    patterns = {row["id"]: (row["name_es"], row["name"]) for row in catalogue()}
+    showcases = {row["id"]: (row["title"], row["title_en"]) for row in library._rows()}
+    return {**patterns, **showcases}
 
 
 @lru_cache(maxsize=128)
@@ -54,7 +58,7 @@ def _reference(value):
 
     for prefix in ("showcase/", "recipe/"):
         reference = reference.removeprefix(prefix)
-    title = _showcase_titles().get(reference)
+    title = _example_titles().get(reference)
     if not title and reference.startswith("craft/"):
         title = _craft_title(reference)
     if title:

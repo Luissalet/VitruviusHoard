@@ -69,3 +69,11 @@ def test_saved_token_title_and_known_quality_rule():
     assert materials["references"] == [{"kind": "tokens", "es": "Reading room palette", "en": "Reading room palette"}]
     warning = materials["warnings"][0]
     assert warning["kind"] == "lint" and warning["es"] != warning["en"]
+
+
+def test_html_patterns_and_showcases_have_bilingual_history_names():
+    materials = describe_materials({"examples": ["constellation", "showcase/book"]}, lambda _: None)
+    assert materials["references"] == [
+        {"kind": "example", "es": "Mapa de constelaciones", "en": "Constellation map"},
+        {"kind": "example", "es": "Libro a doble página", "en": "Double-page book"},
+    ]
