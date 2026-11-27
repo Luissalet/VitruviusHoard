@@ -11,10 +11,12 @@ export function previewAllow(project) {
 
 export function refreshKind(change, visible, next) {
   if (change.reset || change.previous_revision !== visible || change.revision !== next ||
-      !change.files.length || change.global_styles?.length) return "full";
-  if (change.files.every((file) => /\.css$/i.test(file))) return "css";
-  if (change.files.every((file) => /^pages\/.+\.html$/i.test(file))) return "html";
-  return "full";
+      !change.files.length) return "full";
+  const css = (file) => /\.css$/i.test(file);
+  const page = (file) => /^pages\/.+\.html$/i.test(file);
+  if (change.files.every(css)) return "css";
+  if (change.files.every(page)) return "html";
+  return change.files.every((file) => css(file) || page(file)) ? "mixed" : "full";
 }
 
 export function previewNavigationUrl(previewUrl, route) {
@@ -109,6 +111,7 @@ export function useProjectLivePreview(id, initialPreview, baseline, activeFrame,
         ? await frameRequest(frame, src, "canvas/refresh", { mode, change }, signal, 5000)
         : null;
       if (signal.aborted) return;
+      if (patch?.stylesheetFailed) throw new Error("Preview styles did not finish loading");
       if (patch?.applied) {
         visible = { ...visible, ...next };
         setFrames([visible]);
