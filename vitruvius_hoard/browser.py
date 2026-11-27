@@ -542,29 +542,38 @@ DOM_JS = r"""
     return {text: chunks.join(' ').replace(/\s+/g, ' ').trim(), rects};
   };
   const textLines = (el, action) => {
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node) => node.nodeType === Node.TEXT_NODE || node.localName === 'br'
+        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
+    });
     const rects = [];
+    let segment = 0;
     let node;
     while ((node = walker.nextNode())) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        // A laid-out line break separates text even when the line boxes overlap.
+        if (node.getClientRects().length) segment++;
+        continue;
+      }
       const parent = node.parentElement;
       if (!node.textContent.trim() || !textPainted(parent)
           || (action && parent.closest('[aria-hidden="true"]'))) continue;
-      for (const box of textRects(node)) rects.push({box, node});
+      for (const box of textRects(node)) rects.push({box, node, segment});
     }
     const center = (r) => (r.top + r.bottom) / 2;
-    rects.sort((a, b) => center(a.box) - center(b.box));
+    rects.sort((a, b) => a.segment - b.segment || center(a.box) - center(b.box));
     const lines = [];
-    for (const {box: q, node} of rects) {
+    for (const {box: q, node, segment} of rects) {
       const line = lines[lines.length - 1];
       const prior = line?.nodes.get(node);
-      if (prior ? Math.abs(prior.top - q.top) <= 0.5 : line && sharesLine(line, q)) {
+      if (line?.segment === segment && (prior ? Math.abs(prior.top - q.top) <= 0.5 : sharesLine(line, q))) {
         line.nodes.set(node, q);
         if (q.height > line.anchor.height) line.anchor = q;
         line.left = Math.min(line.left, q.left);
         line.right = Math.max(line.right, q.right);
         continue;
       }
-      lines.push({anchor: q, nodes: new Map([[node, q]]), left: q.left, right: q.right});
+      lines.push({anchor: q, nodes: new Map([[node, q]]), left: q.left, right: q.right, segment});
     }
     return lines;
 

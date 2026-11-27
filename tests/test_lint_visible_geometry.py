@@ -48,23 +48,26 @@ def test_browser_counts_inline_small_text_and_genuine_action_wraps():
                   #mixed { white-space: nowrap; font-size: 28px; line-height: 1.1 }
                   #mixed small { font-size: 9px }
                   #wrapped, #tight { width: 76px; font-size: 17px }
-                  #tight { line-height: 8px }
+                  #tight, #split { font-size: 17px; line-height: 8px }
+                  #hidden br { display: none }
                 </style>
                 <header>
                   <a id="mixed" href="#catalogue">Catálogo <small>nuevo</small></a>
                   <a id="wrapped" href="#reserve">Confirmar reserva</a>
                   <a id="tight" href="#reserve">Confirmar reserva</a>
+                  <a id="split" href="#reserve">Confirmar<br>reserva</a>
+                  <a id="hidden" href="#reserve">Confirmar <br>reserva</a>
                 </header>
             """)
             dom = page.evaluate(DOM_JS)
         finally:
             browser.close()
     counts = {entry["id"]: entry.get("ln") for entry in dom["els"] if entry.get("act")}
-    assert counts == {"mixed": 1, "wrapped": 2, "tight": 2}
+    assert counts == {"mixed": 1, "wrapped": 2, "tight": 2, "split": 2, "hidden": 1}
     findings = check("craft/button-wrap", {"dom": {"1440": dom}})
     evidence = str([finding["evidence"] for finding in findings])
-    assert "a#wrapped" in evidence and "a#tight" in evidence
-    assert "a#mixed" not in evidence
+    assert all(name in evidence for name in ("a#wrapped", "a#tight", "a#split"))
+    assert "a#mixed" not in evidence and "a#hidden" not in evidence
 
 
 def test_reservation_email_is_functional_content_and_subscription_stays_detectable():
