@@ -166,6 +166,7 @@ def test_shared_transcription_handles_provisional_and_final_audio(monkeypatch):
                               "audio/webm;codecs=opus", b"synthetic audio")
         assert result[0] == 200 and payload(result) == {
             "text": "Treinta euros", "final": not partial, "provider": "Funes / Talos (reserva)",
+            "fallback_reason": "resident_unavailable",
         }
     assert all(not source.exists() for source, _ in calls)
     assert [args["local_fallback"] for _, args in calls] == [False, False]
