@@ -1,6 +1,10 @@
 # Native application projects
 
-The Applications page and `/api/app-projects` expose a complete source workspace. `app_templates` lists work board, reference library, inventory and booking. `app_project_create` saves pages, global layout, styles, client, typed declarations and a standalone Python server. No framework repository, external CLI, generated model or workbench installation is required to run the exported app.
+The Applications page and `/api/app-projects` expose a complete source workspace. `app_templates` lists work board, reference library, inventory, booking and static page. `app_project_create` saves the source and the standalone Python server. No framework repository, external CLI, generated model or workbench installation is required to run the exported app.
+
+Use `template: "static-page"` for a landing page, article or other standalone page. It starts with a single editable page, its layout and a stylesheet. Use `files` at creation to supply source you already have in one call. The work-board starter remains the default for projects that need a records interface.
+
+For a browser capture, static floor checks for colour and style skip stylesheet selectors whose required elements, IDs or classes are absent from the captured widths and page source. Selectors with interactive or more complex conditions retain their usual lint coverage. Source-only lint still checks the declared stylesheet.
 
 `page_check` checks an owned preview in a browser. Writes blocked while the page loads and before the case acts appear in `startup_blocked_writes`. This includes `fetch` and XMLHttpRequest writes from timers or frame callbacks scheduled at startup, including native async callbacks resumed after an `await` in Chromium. A case that hits the read-only preview boundary after acting names the blocked request and stays unverified. When this blocks an explicit criterion, the checker still runs the other requested criteria and marks automatic cases as unchecked. A run that reaches its deadline returns completed cases and `stopped_at` with the current phase, case and action when available.
 

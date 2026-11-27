@@ -909,6 +909,8 @@ TOOLS: list[Tool] = [
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
     Tool("app_project_create", "Create an editable application project. Crear aplicación.\n"
+        "Use template='static-page' for a standalone page without a records interface. Supply files to save authored source in one call.\n"
+        "Para una página suelta usa static-page. Si ya tienes el código fuente, pásalo en files al crear el proyecto.\n"
         "For a new custom design, pass the decided art-direction study from the brief.",
         AppCreateArgs, ann(False, False, True), run_app_project_create, capped=False),
     Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
