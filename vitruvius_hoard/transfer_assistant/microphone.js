@@ -108,7 +108,9 @@ export async function recordDictation({
     try {
       const signal = AbortSignal.any([final.signal, AbortSignal.timeout(finalTimeoutMs)]);
       const result = accepted || (blob.size ? await request(blob, {partial: false, signal}) : {text: ""});
-      if (!final.signal.aborted) onFinal(result, {speechEnd, captureStoppedAt, stopReason, transcriptAt: performance.now()});
+      if (!final.signal.aborted) onFinal(result, {
+        speechEnd, captureStoppedAt, stopReason, transcriptAt: result.transcribedAt ?? performance.now(),
+      });
     } catch {
       if (!final.signal.aborted) onError("stt_unavailable");
     }

@@ -81,10 +81,10 @@ class ReplyRelay:
         self.closed = False
 
     def _client(self, origin, **kwargs):
-        return self.client_factory(base_url=origin, follow_redirects=False, trust_env=False, **kwargs)
+        return self.client_factory(base_url=origin, follow_redirects=False, trust_env=False, verify=False, **kwargs)
 
     @contextmanager
-    def stream(self, arguments, request_id=None):
+    def stream(self, arguments, request_id=None, *, trace=None):
         key = request_id or uuid4().hex
         with self.lock:
             self._prune_cancellations()
@@ -98,7 +98,8 @@ class ReplyRelay:
         finished = False
         try:
             origin = _loopback_origin(self.origin())
-            with self._client(origin, timeout=httpx.Timeout(4, read=None)) as client:
+            headers = {"X-Hoard-Trace": trace} if trace else {}
+            with self._client(origin, timeout=httpx.Timeout(4, read=None), headers=headers) as client:
                 self._check_pending(pending)
                 receipt = client.post("/api/voice/speak", json=arguments, timeout=4)
                 _check_response(receipt)

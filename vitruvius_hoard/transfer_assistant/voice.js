@@ -49,13 +49,18 @@ export async function voiceAvailability() {
   return response.json();
 }
 
-async function understand(body, signal) {
-  const response = await fetch(API + "/understand", {
+function voiceURL(operation, trace) {
+  return API + "/" + operation + (trace ? "?trace=" + encodeURIComponent(trace) : "");
+}
+
+async function understand(body, signal, diagnostic) {
+  const response = await fetch(voiceURL("understand", diagnostic?.trace), {
     method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body), signal,
   });
-  if (!response.ok) throw new Error("dictation_unavailable");
   const result = await response.json();
-  if (!validInterpretation(result, true)) throw new Error("dictation_version");
+  if (diagnostic) diagnostic.serviceMs = result.service_ms;
+  if (!response.ok) throw new Error(result.code || "boltagon_failed");
+  if (!validInterpretation(result, true)) throw new Error("boltagon_contract_invalid");
   return result;
 }
 
@@ -71,7 +76,7 @@ export async function assessTransferEndTurn(turn, {state, context, locale, signa
     return {silenceMs: CONFIRMATION_SILENCE_MS};
   }
   const started = performance.now();
-  const response = await fetch(API + "/end-turn", {
+  const response = await fetch(voiceURL("end-turn", turn.traceId), {
     method: "POST", headers: {"Content-Type": "application/json"}, signal,
     body: JSON.stringify({...descriptor(state, context, locale), text: turn.text,
       dialogue: state.phase === "ready" ? "confirm" : "slots"}),
@@ -90,6 +95,7 @@ export async function assessTransferEndTurn(turn, {state, context, locale, signa
   }
   return {silenceMs, result: {
     ...turn, provisionalInterpretation: provisional, understandingMs: performance.now() - started,
+    understandingStartedAt: started,
   }};
 }
 
@@ -98,30 +104,56 @@ export function finishProvisionalTransfer(turn) {
   return {...final, interpretation: provisionalInterpretation ? {...provisionalInterpretation, is_final: true} : null};
 }
 
-export function understandText(text, state, context, locale, signal) {
-  const deadline = AbortSignal.timeout(3500);
+export function understandText(text, state, context, locale, signal, diagnostic) {
+  const deadline = AbortSignal.timeout(1800);
   return understand({...descriptor(state, context, locale), text},
-    signal ? AbortSignal.any([signal, deadline]) : deadline).catch(() => null);
+    signal ? AbortSignal.any([signal, deadline]) : deadline, diagnostic).catch(error => {
+    if (diagnostic) {
+      diagnostic.reason = deadline.aborted ? "boltagon_timeout"
+        : error instanceof TypeError ? "boltagon_unreachable" : error.message;
+    }
+    return null;
+  });
 }
 
-export async function transcribeTransferSpeech(blob, {partial, adaptive, signal, state, context, locale}) {
+export async function transcribeTransferSpeech(blob, {partial, adaptive, signal, state, context, locale, traceId}) {
   const started = performance.now();
   const query = new URLSearchParams({language: locale.slice(0, 2), partial: String(partial)});
   if (adaptive && partial) query.set("adaptive", "true");
+  if (traceId) query.set("trace", traceId);
   const prompt = vocabulary(context || undefined).join(", ").slice(0, 1000);
   if (prompt) query.set("initial_prompt", prompt);
   const response = await fetch(API + "/transcribe?" + query, {method: "POST", body: blob, signal});
   if (!response.ok) throw new Error("stt_unavailable");
-  const {text: transcript, provider: transcriptionProvider, fallback_reason: fallbackReason} = await response.json();
+  const {text: transcript, provider: transcriptionProvider, fallback_reason: fallbackReason, timing} = await response.json();
   const text = transcript.trim();
   const transcribed = performance.now();
   const turn = {text, provider: "shared", transcriptionProvider};
+  if (traceId) turn.traceId = traceId;
+  if (!partial || adaptive) turn.transcribedAt = transcribed;
   if (fallbackReason) turn.fallbackReason = fallbackReason;
-  if (!partial || adaptive) turn.transcriptionMs = transcribed - started;
+  if (!partial || adaptive) {
+    const elapsed = transcribed - started;
+    turn.transcriptionStartedAt = started;
+    turn.uploadMs = Math.max(0, elapsed - (timing?.gateway_ms ?? elapsed));
+    turn.transcriptionMs = timing?.service_ms ?? elapsed;
+    if (Number.isFinite(timing?.primary_ms)) turn.primaryMs = timing.primary_ms;
+  }
   if (partial || !text || isTransferCommand(text)) return turn;
-  const interpretation = await understandText(text, state, context, locale, signal);
+  const diagnostic = {trace: traceId};
+  const interpretation = await understandText(text, state, context, locale, signal, diagnostic);
   signal.throwIfAborted();
-  return {...turn, interpretation, understandingMs: performance.now() - transcribed};
+  return {...turn, interpretation, understandingStartedAt: transcribed,
+    understandingMs: performance.now() - transcribed, understandingFailure: diagnostic.reason,
+    understandingServiceMs: diagnostic.serviceMs};
+}
+
+export function publishVoiceTrace(traceId, stages) {
+  if (!traceId) return;
+  const body = JSON.stringify({trace_id: traceId, stages: stages.map(([stage, startedAt, elapsed, outcome]) =>
+    [stage, (performance.timeOrigin + startedAt) / 1000, Math.max(0, elapsed), outcome])});
+  void fetch(API + "/trace", {method: "POST", headers: {"Content-Type": "application/json"},
+    body, keepalive: true}).catch(() => {});
 }
 
 
