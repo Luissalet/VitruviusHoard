@@ -15,6 +15,7 @@ Life cycle (who moves it):
     pending|seen|answered  --dismiss (person)-->  dismissed
     answered  --respond (person)-->  pending
     resolved|dismissed  --reopen (person)-->  pending
+    resolved  --undo the source fix (system)-->  pending
     any step  --undo-->  the state before it
 
 The agent acknowledges a comment before it answers it, so the person always sees "seen" first. A batch of
@@ -71,13 +72,54 @@ class PreviewComments:
 
     def _load(self, project_id):
         from json import loads
-        path = self._path(project_id)
+        root, index = self.app_projects._load_index(project_id)
+        path = root / "comments.json"
         if not path.is_file():
             return {"format": FORMAT, "next": 1, "comments": []}
         data = loads(path.read_text(encoding="utf-8"))
         if data.get("format") != FORMAT or not isinstance(data.get("comments"), list):
             raise ValueError("comments.json is not a Vitruvius comment file")
+        self._apply_source_undos(data["comments"], index.get("history") or ())
         return data
+
+    def _apply_source_undos(self, comments, history):
+        """Read source rollbacks from the project journal. The next comment write saves any projected steps."""
+        revisions = {}
+        undos = []
+        for pos, row in enumerate(history):
+            earlier = revisions.setdefault(row["revision"], [])
+            if row.get("action") in ("undo", "critique-undo") and earlier:
+                undos.append((pos, earlier[-1][0], row))
+            elif row.get("action") == "undo-change":
+                undos.append((pos, None, row))
+            earlier.append((pos, row))
+        if not undos:
+            return
+
+        for comment in comments:
+            resolution = comment["history"][-1]
+            if comment["status"] != "resolved" or resolution["by"] != "agent" or not comment.get("resolved_in"):
+                continue
+            # A content hash can recur. Locate the occurrence the agent could have resolved against at the time.
+            occurrences = revisions.get(comment["resolved_in"], ())
+            fix = next(((pos, row) for pos, row in reversed(occurrences)
+                        if comment["created_ts"] <= row.get("ts", 0) <= resolution["ts"]), None)
+            if fix is None:
+                continue
+            fix_pos, fix_row = fix
+            after = max(resolution["ts"], comment.get("source_undo_ts", 0))
+            for undo_pos, target_pos, undo in undos:
+                if undo["ts"] <= after:
+                    continue
+                if target_pos is None:
+                    removes_fix = bool(fix_row.get("id")) and undo.get("reverted_change") == fix_row["id"]
+                else:
+                    removes_fix = target_pos < fix_pos < undo_pos
+                if removes_fix:
+                    self._move(comment, "system", "pending", comment["summary"],
+                               dict.fromkeys(_FIELDS), ts=undo["ts"])
+                    comment["history"][-1]["source_undo"] = True
+                    break
 
     def _save(self, project_id, data):
         write_json_atomic(self._path(project_id), data)
@@ -113,7 +155,7 @@ class PreviewComments:
                 raise StaleSelection(f"{what} is from an earlier opening of the preview: it is dropped")
 
     def _view(self, comment, current):
-        item = {key: value for key, value in comment.items() if key != "history"}
+        item = {key: value for key, value in comment.items() if key not in ("history", "source_undo_ts")}
         item["stale"] = comment["revision"] != current
         item["has_crop"] = bool(comment.get("crop"))
         item["history"] = [dict(entry) for entry in comment["history"]]
@@ -248,8 +290,8 @@ class PreviewComments:
         if comment["status"] not in allowed:
             raise ValueError(f"Comment {comment['id']} is {comment['status']}: it can go to {to} only from {', '.join(allowed)}")
 
-    def _move(self, comment, by, to, text, fields):
-        now = time.time()
+    def _move(self, comment, by, to, text, fields, *, ts=None):
+        now = time.time() if ts is None else ts
         before = {"status": comment["status"], **{key: comment.get(key) for key in _FIELDS}}
         comment["history"].append({"ts": now, "by": by, "status": to, "text": text, "before": before})
         comment["status"], comment["updated_ts"] = to, now
@@ -317,12 +359,15 @@ class PreviewComments:
             last = comment["history"][-1]
             if not last.get("before"):
                 raise ValueError("Nothing to undo: the comment is as it was created")
+            now = time.time()
             comment["history"].pop()
+            if last.get("source_undo"):
+                comment["source_undo_ts"] = now
             before = last["before"]
             comment["status"] = before["status"]
             for key in _FIELDS:
                 comment[key] = before.get(key)
-            comment["updated_ts"] = time.time()
+            comment["updated_ts"] = now
             self._save(project_id, data)
             return self._view(comment, self._current_revision(project_id))
 

@@ -72,6 +72,59 @@ def test_the_life_cycle_pending_seen_resolved_with_a_summary(services, project):
     assert store.list(project["id"])["count"] == 0 and store.list(project["id"], "resolved")["count"] == 1
 
 
+@pytest.mark.parametrize("undo_step", [False, True])
+def test_source_undo_reopens_its_resolved_comment_and_keeps_the_summary(services, project, undo_step):
+    projects, store = services.app_projects, services.preview_comments
+    pid = project["id"]
+    add(services, project, "Add the year to the introduction")
+    add(services, project, "Checked by the person")
+    add(services, project, "Already there")
+    store.acknowledge(pid, ["c1", "c3"])
+    store.resolve(pid, "c3", "Already present")
+
+    changed = projects.update(pid, {"pages/index.html": project["files"]["pages/index.html"] + "<p>1911</p>"}, project["revision"])
+    store.resolve(pid, "c1", "Added 1911 to the introduction")
+    store.resolve_person(pid, "c2")
+    assert store.list(pid, "resolved")["count"] == 3
+
+    if undo_step:
+        # Undo the edit after a later change to a different file.
+        later = projects.update(pid, {"layout.html": changed["files"]["layout.html"] + "\n<!-- retained -->"}, changed["revision"])
+        undone = projects.undo_change(pid, changed["history"][-1]["id"], later["revision"], later["updated_ts"])
+        assert undone["files"]["layout.html"].endswith("<!-- retained -->")
+    else:
+        undone = projects.undo(pid, changed["revision"], changed["updated_ts"], project["revision"])
+    assert undone["files"]["pages/index.html"] == project["files"]["pages/index.html"]
+
+    result = call_tool(services, "app_project_comments", {"id": pid})
+    [reopened] = result["comments"]
+    assert reopened["id"] == "c1" and reopened["status"] == "pending" and reopened["resolved_in"] is None
+    assert reopened["history"][-1]["source_undo"] is True
+    assert reopened["history"][-1]["text"] == "Added 1911 to the introduction"
+    assert reopened["history"][-1]["before"]["status"] == "resolved"
+    assert store.list(pid)["comments"] == [reopened]
+    assert [item["id"] for item in store.list(pid, "resolved")["comments"]] == ["c2", "c3"]
+
+    # Explicitly undoing the comment step remains possible and does not replay it on the next read.
+    assert store.undo(pid, "c1")["status"] == "resolved"
+    assert store.list(pid)["count"] == 0
+
+
+def test_rolling_back_an_unrelated_edit_does_not_reopen_the_comment(services, project):
+    projects, store = services.app_projects, services.preview_comments
+    pid = project["id"]
+    add(services, project)
+    store.acknowledge(pid, ["c1"])
+    fixed = projects.update(pid, {"pages/index.html": project["files"]["pages/index.html"] + "<p>Fixed</p>"}, project["revision"])
+    store.resolve(pid, "c1", "Fixed the introduction")
+    later = projects.update(pid, {"layout.html": fixed["files"]["layout.html"] + "\n<!-- later -->"}, fixed["revision"])
+    restored = projects.undo(pid, later["revision"], later["updated_ts"], fixed["revision"])
+    assert store.list(pid, "resolved")["count"] == 1
+    undone = projects.undo(pid, restored["revision"], restored["updated_ts"], project["revision"])
+    projects.update(pid, {"layout.html": undone["files"]["layout.html"] + "\n<!-- after undo -->"}, undone["revision"])
+    assert store.list(pid)["comments"][0]["status"] == "pending"
+
+
 def test_the_agent_can_answer_and_the_person_replies_back_to_pending(services, project):
     store = services.preview_comments
     add(services, project)

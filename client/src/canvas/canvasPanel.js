@@ -47,6 +47,17 @@ export function elementLabel(item) {
   return name + text;
 }
 
+/** Number history transitions in order even when a rollback reuses an older source snapshot. */
+export function canvasHistoryEntries({ revisions, history }) {
+  const journal = history || [];
+  const recorded = new Set(journal.map((entry) => entry.revision));
+  const entries = [
+    ...revisions.filter((revision) => !recorded.has(revision)).map((revision) => ({ revision })),
+    ...journal,
+  ];
+  return entries.map((entry, index) => ({ ...entry, step: index + 1 })).reverse();
+}
+
 /**
  * The screen context the Dock bridge sends to the host (Faustus) with each change. The host keeps `focus` as
  * `{kind, id, label}` and `summary` up to 400 characters, so the selection and the open comments travel as short text

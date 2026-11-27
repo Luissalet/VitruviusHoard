@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { CanvasMaterials } from "./CanvasActivity.jsx";
+import { canvasHistoryEntries } from "./canvasPanel.js";
 
 export function CanvasElements({ elements, onSelect, onRetry, es }) {
   const items = elements?.items || [];
@@ -52,11 +53,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   const focusAfterUndo = useRef(false);
   const heading = useRef(null);
   const history = project.history || [];
-  const recorded = new Set(history.map((entry) => entry.revision));
-  const entries = [
-    ...project.revisions.filter((revision) => !recorded.has(revision)).map((revision) => ({ revision })),
-    ...history,
-  ].reverse();
+  const entries = canvasHistoryEntries(project);
   const recentCount = 2;
   const visibleEntries = showAll ? entries : entries.slice(0, recentCount);
   const last = history.at(-1);
@@ -71,6 +68,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
     return es ? "Autor sin registrar" : "Author unrecorded";
   };
   const revisionLabel = (revision) => (es ? "Versión " : "Revision ") + (project.revisions.indexOf(revision) + 1);
+  const stepLabel = (step) => (es ? "Paso " : "Step ") + step;
   const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
     : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
   const date = new Intl.DateTimeFormat(es ? "es-ES" : "en-GB", { dateStyle: "short", timeStyle: "short" });
@@ -122,11 +120,11 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
     {entries.length ? <ol className="canvas-history-list" id="canvas-history-entries">
       {visibleEntries.map((entry, index) => <li key={entry.id || `${entry.revision}-${entry.ts || "legacy"}`}>
         <div className="canvas-history-line">
-          <strong>{revisionLabel(entry.revision)}</strong>
+          <strong>{stepLabel(entry.step)}</strong>
           {index === currentIndex && <span className="chip chip-accent">{entry.revision === visibleRevision ? (es ? "Actual" : "Current") : (es ? "Guardada" : "Saved")}</span>}
         </div>
         <div className="canvas-history-meta">
-          <span>{labels[entry.action || "legacy"]} · {authorLabel(entry)}</span>
+          <span>{labels[entry.action || "legacy"]} · {revisionLabel(entry.revision)} · {authorLabel(entry)}</span>
           {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
         </div>
         {(entry.target || entry.files?.length > 0) && <p className="canvas-step-target" title={entry.files?.join(", ")}>
@@ -135,7 +133,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
         </p>}
         <CanvasMaterials materials={entry.materials} es={es} />
         {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"
-          aria-disabled={undoing} aria-label={`${es ? "Deshacer paso" : "Undo step"} · ${revisionLabel(entry.revision)}`}
+          aria-disabled={undoing} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
           onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
       </li>)}
     </ol> : <p className="canvas-empty">{es ? "Aún no hay revisiones." : "No revisions yet."}</p>}
