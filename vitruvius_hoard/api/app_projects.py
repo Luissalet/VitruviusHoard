@@ -244,13 +244,13 @@ def project_preview_open(request: Request, id: str, path: str = "/", lang: str =
         message = "Indica una ruta de la aplicación, como /transferir." if es else "Enter an application path, such as /transferir."
         return PlainTextResponse(message, status_code=400, headers=headers)
     try:
-        url = services(request).app_projects.running_preview_url(id)
-    except (LookupError, ValueError):
+        url = services(request).app_projects.open_preview_url(id)
+    except LookupError:
         message = "No se encuentra el proyecto." if es else "Application project not found."
         return PlainTextResponse(message, status_code=404, headers=headers)
-    if not url:
-        message = ("La vista previa está detenida. Ábrela desde Aplicaciones y vuelve a cargar este enlace."
-                   if es else "The preview is stopped. Start it in Applications and reload this link.")
+    except (OSError, ValueError):
+        message = ("No se pudo iniciar la vista previa. Vuelve a cargar este enlace o consulta el proyecto en Aplicaciones."
+                   if es else "The preview could not start. Reload this link or check the project in Applications.")
         return PlainTextResponse(message, status_code=503, headers=headers)
     return RedirectResponse(url + path, status_code=307, headers=headers)
 

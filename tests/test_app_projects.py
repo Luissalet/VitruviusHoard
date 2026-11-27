@@ -166,30 +166,59 @@ def test_native_api_and_tools(client):
     assert client.post(f"/api/app-projects/{id}/preview", json={"operation": "stop"}).json()["state"] == "stopped"
 
 
-def test_stable_preview_link_follows_the_running_project(client):
+def test_stable_preview_link_starts_and_reuses_the_project(client):
+    from concurrent.futures import ThreadPoolExecutor
+
     project = client.post("/api/app-projects", json={"name": "Preview link"}).json()
-    base = f"/api/app-projects/{project['id']}/preview"
+    id = project["id"]
+    projects = client.svc.app_projects
+    base = f"/api/app-projects/{id}/preview"
     stable = base + "/open"
+    path = "/records?q=hola%20mundo"
 
-    stopped = client.get(stable, params={"lang": "es"}, follow_redirects=False)
-    assert stopped.status_code == 503 and "vista previa está detenida" in stopped.text
-    assert stopped.headers["cache-control"] == "no-store"
-    assert client.get("/api/app-projects/0000000000000000/preview/open").status_code == 404
-
-    def start_and_resolve():
-        running = client.post(base, json={"operation": "start"}).json()
-        assert running["open_path"] == stable
-        response = client.get(stable, params={"path": "/records?q=hola%20mundo"}, follow_redirects=False)
-        assert response.status_code == 307 and response.headers["cache-control"] == "no-store"
-        assert response.headers["location"] == running["url"] + "/records?q=hola%20mundo"
-        return running
-
-    first = start_and_resolve()
+    for missing in ("0" * 16, "invalid"):
+        assert client.get(f"/api/app-projects/{missing}/preview/open").status_code == 404
     for invalid in ("https://example.test", "//example.test", "/\\example.test"):
         assert client.get(stable, params={"path": invalid}, follow_redirects=False).status_code == 400
+    assert projects.status(id)["state"] == "stopped"
+
+    def open_link():
+        return client.get(stable, params={"path": path}, follow_redirects=False)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = [pool.submit(open_link) for _ in range(2)]
+    first = projects.status(id)
+    assert first["open_path"] == stable and first["revision"] == project["revision"]
+    assert len(list((projects.root / id / "runs").iterdir())) == 1
+    for future in responses:
+        response = future.result()
+        assert response.status_code == 307 and response.headers["cache-control"] == "no-store"
+        assert response.headers["location"] == first["url"] + path
+
+    updated = projects.update(id, {"pages/index.html": "<h1>Current revision</h1>"}, project["revision"])
+    assert open_link().headers["location"] == first["url"] + path
+    assert projects.status(id) == first
     client.post(base, json={"operation": "stop"})
-    assert "The preview is stopped" in client.get(stable, follow_redirects=False).text
-    assert start_and_resolve()["session"] != first["session"]
+    assert open_link().status_code == 307
+    current = projects.status(id)
+    assert current["session"] != first["session"] and current["revision"] == updated["revision"]
+    projects.archive(id, updated["revision"], confirm=True)
+    assert open_link().status_code == 404
+
+
+def test_stable_preview_link_reports_a_start_failure(client, monkeypatch):
+    project = client.post("/api/app-projects", json={"name": "Unavailable preview"}).json()
+    stable = f"/api/app-projects/{project['id']}/preview/open"
+
+    def fail_start(*args):
+        raise ValueError("Private startup diagnostics")
+
+    monkeypatch.setattr(client.svc.app_projects, "preview", fail_start)
+    for lang, message in (("es", "No se pudo iniciar"), ("en", "The preview could not start")):
+        response = client.get(stable, params={"lang": lang}, follow_redirects=False)
+        assert response.status_code == 503 and response.text.startswith(message)
+        assert response.headers["cache-control"] == "no-store"
+        assert "Private startup diagnostics" not in response.text
 
 
 def test_app_render_retains_source_context(services):
