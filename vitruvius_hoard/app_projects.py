@@ -378,11 +378,16 @@ class AppProjects:
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
-               description_es=None, files=None, *, author=None):
+               description_es=None, files=None, *, author=None, art_direction=None):
         if files is None:
             files = starter_files(name, template, description, accent, fields, items, lang, description_es)
         elif "server.py" not in files:
             files = {**files, "server.py": _standalone_runtime()}
+        if art_direction and "project.json" in files:
+            spec = json.loads(files["project.json"])
+            if isinstance(spec, dict):
+                spec["art_direction"] = art_direction
+                files = {**files, "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n"}
         project = self.create_from_files(name, template, files, author=author)
         return {**project, "undo": self._undo_call(project)}
 

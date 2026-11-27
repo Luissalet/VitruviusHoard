@@ -70,12 +70,15 @@ class BriefBody(BaseModel):
     text: Optional[str] = Field(None, max_length=20000)
     use_model: bool = True
     lang: Optional[str] = Field(None, max_length=8)
+    product_type: Optional[str] = Field(None, max_length=120)
+    show_simulation_notice: Optional[bool] = None
+    allow_typical_direction: bool = False
 
 
 @router.post("/direction-brief")
 def direction_brief(request: Request, body: BriefBody):
-    return _run(slop_audit.direction_brief, services(request), render_id=body.render_id, html=body.html, url=body.url, text=body.text,
-                use_model=body.use_model, lang=_lang(request, body.lang))
+    return _run(slop_audit.direction_brief, services(request),
+                **body.model_dump(exclude={"lang"}), lang=_lang(request, body.lang))
 
 
 # ---------------- presets and the registry ----------------

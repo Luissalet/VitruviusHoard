@@ -20,6 +20,7 @@ Language-model work in the app uses only the globally selected model through Fau
 - **Prepare library** in the workbench adds the bundled Design examples offline and reports what is available. It can be run again after the first start to add missing bundled examples.
 - Searchable library of design criteria, styles, palettes and font pairings, plus a reference gallery with collections, original HTML patterns and curated design galleries that can be captured as references.
 - The Form controls pattern provides a token-styled select, localised date and time fields, and a keyboard-accessible option group. Render recommends it when a form is detected. The browser lint reports visible controls that still use the default appearance on pages with design tokens.
+- Briefs return domain-specific copy drafts, showcase recipes and three distinct library directions. Record the art direction in Alternatives before building a new design. [Alternatives workflow](docs/ALTERNATIVES.md)
 - A lint rule registry (static, browser and visual engines) with severities, packs and Spanish text; `design_lint` can run the static engine alone after every edit. An interaction pack checks keyboard, focus and ARIA: controls without a name, click handlers on elements that are not controls, widgets missing what their role requires, and, in a real browser, a Tab walk that finds controls only a pointer can use and tab stops with no visible focus indicator. `design_critique` scores them and reports the walk.
 - Critique in three tiers: Floor (never waived), Reflex (waivable with a reasoned justification) and Finish (advice). The gate passes only without Floor findings and open Reflex findings; a clean-context review gives a fresh second look.
 - Slop audit: renders a page at eight widths and scores generic-AI-look signs from 0 to 100, with a fix plan and a design direction brief.
@@ -38,7 +39,7 @@ The `render_preview` tool opens public or loopback URLs and local HTML files wit
 - Visual parity: frozen-browser comparison of a candidate against a reference, screen by screen, with noise masking.
 - Remake: rebuild a public page from its URL or a screenshot until it reaches visual parity, as a copy or a rebuild, with downloadable code and a report. Every round gets a fidelity score (normalized SSIM per screen plus the reference's headings, links, buttons and fields) with the zones that differ most outlined on the capture, and a remake can keep going until a fidelity target is reached.
 - A versioned reconstruction benchmark over pinned reference pages with scores by version, runtime and source hash. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
-- Design by comparable alternatives: frozen criteria, measured alternatives, Pareto frontier, re-weightable ranking and a recorded decision.
+- Design by comparable alternatives: frozen criteria, measured alternatives, Pareto frontier, re-weightable ranking and a recorded decision. A custom app can keep that decision in its project metadata.
 
 ### Motion, diagrams and marks
 - Motion compositions (timeline, templates) rendered to MP4 or HTML, with sound events mixed to -14 LUFS.
