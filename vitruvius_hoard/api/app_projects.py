@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -191,7 +191,14 @@ def project_events(request: Request, id: str, revision: str | None = None):
 
 @router.put("/{id}")
 def project_update(request: Request, id: str, body: AppUpdateArgs):
-    return execute(lambda: services(request).app_projects.update(id, body.files, body.expected_revision))
+    return execute(lambda: services(request).app_projects.update(
+        id, body.files, body.expected_revision, examples=body.examples, tokens_id=body.tokens_id))
+
+
+@router.post("/{id}/undo-change")
+def project_undo_change(request: Request, id: str, body: AppChangeUndoArgs):
+    return execute(lambda: services(request).app_projects.undo_change(
+        id, body.change_id, body.expected_revision, body.expected_updated_ts, author={"kind": "person"}))
 
 
 @router.post("/{id}/undo")

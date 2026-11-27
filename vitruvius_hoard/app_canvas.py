@@ -107,12 +107,14 @@ class CanvasSessions:
                 if session.project == project:
                     self._detach(session)
 
-    def prepare_edit(self, project: str, revision: str, actor: dict, target: dict, *, timeout=PRESENCE_WAIT):
+    def prepare_edit(self, project: str, revision: str, actor: dict, target: dict, *, timeout=PRESENCE_WAIT, change: dict | None = None):
         """Give attached previews a bounded chance to show the cursor before committing."""
         id = uuid.uuid4().hex
         event = {"hoardDock": 1, "type": "canvas/presence", "id": id,
                  "actor": actor, "revision": revision, "target": target,
                  "expires_at": int((time.time() + timeout) * 1000)}
+        if change:
+            event["change"] = change
         pending = {}
         with self._lock:
             for session in self._sessions.values():

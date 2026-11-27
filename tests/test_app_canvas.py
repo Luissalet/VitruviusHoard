@@ -212,6 +212,7 @@ async def test_source_presence_precedes_committed_revision(tmp_path):
         ))
         event = await asyncio.wait_for(session.next_event(), 1)
         assert event["target"] == {"vsrc": vsrc, "box": None}
+        assert event["change"]["files"] == ["pages/index.html"]
         index = json.loads((projects.root / id / "project-index.json").read_text(encoding="utf-8"))
         assert index["revision"] == revision
         assert changes.empty()
