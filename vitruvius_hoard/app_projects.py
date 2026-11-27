@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
 from .app_canvas_edits import plan_canvas_edit
+from .app_materials import describe_materials
 from .app_preview import PreviewProxy
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
@@ -155,13 +156,14 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir, host_port=5191):
+    def __init__(self, data_dir, host_port=5191, *, token_name=None):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.processes = {}
         self.proxies = {}
         self.host_port = host_port
+        self.token_name = token_name or (lambda _: None)
         self.canvas = CanvasSessions()
         self.revision_events = RevisionEvents()
 
@@ -192,7 +194,14 @@ class AppProjects:
             if selected not in index["revisions"]:
                 raise LookupError("Project revision not found")
             snapshot = json.loads((root / "revisions" / selected / "snapshot.json").read_text(encoding="utf-8"))
+            if "history" in index:
+                index["history"] = [self._with_materials(entry) for entry in index["history"]]
             return {**index, "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
+
+    def _with_materials(self, entry):
+        if not entry.get("examples") and not entry.get("tokens_id"):
+            return entry
+        return {**entry, "materials": describe_materials(entry, self.token_name)}
 
     def list(self, archived=False):
         with self.lock:
@@ -446,7 +455,8 @@ class AppProjects:
                             if position:
                                 sources.append(position)
                     hint["sources"] = sources
-                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint}, change=details)
+                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint},
+                                         change=self._with_materials(details))
                 # Whole-frame refreshes can still outline a caller-supplied selector.
                 if hint.get("selector"):
                     change["selectors"] = [hint["selector"]]
@@ -473,7 +483,11 @@ class AppProjects:
 
     @staticmethod
     def _index(project):
-        return {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
+        index = {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
+        if "history" in index:
+            index["history"] = [{key: value for key, value in entry.items() if key != "materials"}
+                                for entry in index["history"]]
+        return index
 
     def undo(self, id, expected_revision, expected_updated_ts, revision=None, *, author=None):
         with self.lock:

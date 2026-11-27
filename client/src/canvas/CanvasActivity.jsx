@@ -52,16 +52,34 @@ export function CanvasLiveSteps({ steps, es }) {
         <span className="chip">{entry.state === "active" ? (es ? "En curso" : "In progress")
           : entry.state === "failed" ? (es ? "Con error" : "Failed") : (es ? "Hecho" : "Done")}</span>
         {target && <code>{target}</code>}
-        <CanvasMaterials examples={entry.target?.examples} tokensId={entry.target?.tokens_id} />
+        <CanvasMaterials materials={entry.target?.materials} es={es} />
       </li>;
     })}
   </ul>;
 }
 
-export function CanvasMaterials({ examples, tokensId }) {
-  if (!examples?.length && !tokensId) return null;
+export function CanvasMaterials({ materials, es }) {
+  const { references = [], warnings = [] } = materials || {};
+  if (!references.length && !warnings.length) return null;
+  const labels = es
+    ? { example: "Ejemplo", motion: "Movimiento", preset: "Preajuste", rule: "Regla", tokens: "Tokens" }
+    : { example: "Example", motion: "Motion", preset: "Preset", rule: "Rule", tokens: "Tokens" };
+  const title = (item) => es ? item.es : item.en;
+  const chip = (item, index) => (
+    <span key={index} className="chip chip-wrap">{labels[item.kind]}: {title(item)}</span>
+  );
+  const extra = references.slice(3);
   return <div className="canvas-materials">
-    {examples?.map((value) => <span key={value} className="chip chip-wrap">{value}</span>)}
-    {tokensId && <span className="chip chip-wrap">Tokens · {tokensId}</span>}
+    {references.slice(0, 3).map(chip)}
+    {extra.length > 0 && <details className="canvas-materials-more">
+      <summary className="chip" aria-label={es ? `Ver ${extra.length} referencias más` : `Show ${extra.length} more references`}>
+        +{extra.length}
+      </summary>
+      <div className="canvas-materials-extra">{extra.map(chip)}</div>
+    </details>}
+    {warnings.length > 0 && <p className="canvas-materials-warnings">
+      <strong>{es ? "Avisos del lint" : "Lint findings"}</strong>
+      <span>{warnings.map(title).join(" · ")}</span>
+    </p>}
   </div>;
 }

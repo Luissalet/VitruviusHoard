@@ -231,6 +231,11 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 .canvas-live-steps li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 .canvas-live-steps code, .canvas-step-target { display: block; flex-basis: 100%; color: var(--muted); font-size: 11px; margin: 0; }
 .canvas-materials { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 4px; margin-block: 3px; }
+.canvas-materials-more summary { cursor: pointer; list-style: none; }
+.canvas-materials-more summary::-webkit-details-marker { display: none; }
+.canvas-materials-more[open] { flex-basis: 100%; min-width: 0; }
+.canvas-materials-extra { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.canvas-materials-warnings { flex-basis: 100%; display: grid; gap: 2px; margin: 2px 0 0; color: var(--muted); font-size: 11px; }
 .canvas-step-undo { margin-block: 3px; font-size: 12px; }
 .canvas-focus-toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); background: var(--accent-soft); }
 @media (min-width: 768px) {
