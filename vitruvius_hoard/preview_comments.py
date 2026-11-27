@@ -161,26 +161,33 @@ class PreviewComments:
     def _current_revision(self, project_id):
         return self.app_projects.get(project_id)["revision"]
 
-    def _check_revision(self, project_id, revision, what, live=False, session=None):
-        """A revision a comment or anchor names must be one of this project and, while a preview runs, the one it serves.
-        ``live`` (anchor reports) also needs the preview to be running and ``session`` (the opening of the preview the page
-        was served from, stamped by the preview proxy: it survives live refreshes) to be the one open now. A report without
-        it, or from a stopped or reopened preview, is refused."""
+    def _check_revision(self, project_id, revision, what, *, anchor_report=False, session=None):
+        """Validate the revision and return False for a superseded report from this preview session."""
         if not isinstance(revision, str) or not revision:
             raise ValueError(f"{what} needs the source revision the preview was served from")
-        if revision not in self.app_projects.get(project_id)["revisions"]:
+        _, index = self.app_projects._load_index(project_id)
+        if revision not in index["revisions"]:
             raise ValueError(f"Unknown revision {revision}: {what} must name a revision of this project")
         status = self.app_projects.status(project_id)
         running = status.get("state") == "running"
-        if live and not running:
-            raise StaleSelection(f"The preview is not running: {what} from a stopped preview is dropped")
-        if running and status.get("revision") and status["revision"] != revision:
-            raise StaleSelection(f"The preview now serves revision {status['revision']}, not {revision}: pick the element again on the page that is shown")
-        if live:
+        if anchor_report:
+            if not running:
+                raise StaleSelection(f"The preview is not running: {what} from a stopped preview is dropped")
             if not session:
                 raise ValueError(f"{what} needs the preview session the page was served from")
             if session != status.get("session"):
                 raise StaleSelection(f"{what} is from an earlier opening of the preview: it is dropped")
+        served = status.get("revision")
+        if running and served and served != revision:
+            if anchor_report:
+                # A restored snapshot can reuse a revision hash. Use the latest journal occurrence.
+                history = index.get("history")
+                revisions = [entry["revision"] for entry in history] if history else index["revisions"]
+                last = next((item for item in reversed(revisions) if item in (served, revision)), None)
+                if last == served:
+                    return False
+            raise StaleSelection(f"The preview now serves revision {served}, not {revision}: pick the element again on the page that is shown")
+        return True
 
     def _view(self, comment, current):
         item = {key: value for key, value in comment.items() if key not in ("history", "source_undo_ts")}
@@ -288,11 +295,12 @@ class PreviewComments:
 
     def set_anchors(self, project_id, revision, anchors, session=None):
         """The page says which pins it found on screen, and on which revision. A pin whose element is gone keeps its
-        comment, flagged ``lost``. A report for a revision the preview no longer serves is refused."""
+        comment, flagged ``lost``. A superseded report from the same opening of the preview is acknowledged without writing."""
         if not isinstance(anchors, list):
             raise ValueError("anchors must be a list")
-        with self._lock:
-            self._check_revision(project_id, revision, "an anchor report", live=True, session=session)
+        with self._lock, self.app_projects.lock:
+            if not self._check_revision(project_id, revision, "an anchor report", anchor_report=True, session=session):
+                return {"id": project_id, "changed": 0, "stale": True}
             data = self._load(project_id)
             changed = 0
             for raw in anchors[:MAX_COMMENTS]:

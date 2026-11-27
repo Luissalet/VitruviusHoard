@@ -355,16 +355,73 @@ def test_revisions_named_in_writes_must_be_revisions_of_the_project(services, pr
     assert store.list(pid, "lost")["count"] == 0
 
 
-def test_a_comment_or_anchor_from_a_revision_the_preview_no_longer_serves_is_refused(services, project, monkeypatch):
+def test_a_new_comment_from_a_revision_the_preview_no_longer_serves_is_refused(services, project, monkeypatch):
     from vitruvius_hoard.preview_inspector import StaleSelection
     newer = services.app_projects.update(project["id"], {"pages/index.html": "<h1>Changed</h1>\n"}, project["revision"])
     monkeypatch.setattr(services.app_projects, "status", lambda id: {"state": "running", "revision": newer["revision"], "url": "http://127.0.0.1:1"})
     with pytest.raises(StaleSelection, match="pick the element again"):
         add(services, project)  # the element was picked on the older revision
-    with pytest.raises(StaleSelection):
-        services.preview_comments.set_anchors(project["id"], project["revision"], [])
     made = services.preview_comments.add(project["id"], "On what is shown", newer["revision"], "/", element())
     assert made["revision"] == newer["revision"] and made["stale"] is False
+
+
+def test_api_acknowledges_an_anchor_report_overtaken_by_a_source_edit(client, monkeypatch):
+    service = client.svc
+    project = service.app_projects.create("Commented", files={"pages/index.html": "<h1>Board</h1>\n"})
+    project_id, original = project["id"], project["revision"]
+    base = f"/api/app-projects/{project_id}"
+    position = "pages/index.html:1:1"
+    serving(service, project, monkeypatch)
+    created = client.post(f"{base}/comments", json={
+        "note": "Make the title bigger", "revision": original, "page": "/", "element": element(vsrc=position),
+    })
+    assert created.status_code == 200
+    late = {"revision": original, "session": "opening-1", "anchors": [{"id": created.json()["id"], "state": "lost"}]}
+
+    edit = client.post(f"{base}/source-edit", json={
+        "expected_revision": original, "vsrc": position, "tag": "h1",
+        "change": {"kind": "text", "original": "Board", "value": "Updated board"},
+    })
+    assert edit.status_code == 200
+    newer = edit.json()["revision"]
+    assert newer != original
+    endpoint = f"{base}/comments/anchors"
+
+    # A saved revision that the preview has yet to serve still conflicts.
+    assert client.put(endpoint, json={**late, "revision": newer}).status_code == 409
+    serving(service, project, monkeypatch, revision=newer)
+    fresh = client.put(endpoint, json={**late, "revision": newer, "anchors": [
+        {"id": created.json()["id"], "state": "ok", "vsrc": position},
+    ]})
+    assert fresh.status_code == 200 and fresh.json()["changed"] == 1
+
+    data_file = service.app_projects._directory(project_id) / "comments.json"
+    before = data_file.read_bytes()
+    result = client.put(endpoint, json=late)
+    assert result.status_code == 200
+    assert result.json() == {"id": project_id, "changed": 0, "stale": True}
+    assert data_file.read_bytes() == before
+
+    assert client.put(endpoint, json={**late, "session": "opening-0"}).status_code == 409
+    assert client.put(endpoint, json={**late, "session": None}).status_code == 400
+    assert client.put(endpoint, json={**late, "revision": "unknown"}).status_code == 400
+    monkeypatch.setattr(service.app_projects, "status", lambda id: {"state": "stopped"})
+    assert client.put(endpoint, json=late).status_code == 409
+    assert data_file.read_bytes() == before
+
+
+def test_anchor_reports_follow_revision_history_when_a_snapshot_is_restored(services, project, monkeypatch):
+    projects, project_id = services.app_projects, project["id"]
+    add(services, project)
+    newer = projects.update(project_id, {"pages/index.html": "<h1>New board</h1>\n"}, project["revision"])
+    restored = projects.undo(project_id, newer["revision"], newer["updated_ts"], project["revision"])
+    assert restored["revision"] == project["revision"]
+    serving(services, restored, monkeypatch)
+    result = services.preview_comments.set_anchors(
+        project_id, newer["revision"], [{"id": "c1", "state": "lost"}], "opening-1",
+    )
+    assert result == {"id": project_id, "changed": 0, "stale": True}
+    assert services.preview_comments.list(project_id)["comments"][0]["anchor"]["state"] == "ok"
 
 
 PNG = "data:image/png;base64," + __import__("base64").b64encode(b"\x89PNG\r\n\x1a\n" + b"x" * 40).decode()
