@@ -223,9 +223,29 @@ One error carries more weight than two warnings. A waived finding contributes ze
 a penalty of 10 scores 5, and larger penalties approach zero gradually. Fixing a finding or lowering its
 severity raises the unrounded score. Very small changes can tie at the displayed precision.
 
-Critique scores the combined findings after deduplication and waivers. Without a model rating its `score` equals
-`heuristic_score`. With a model rating it averages the two. Use `gate.state` for shipping. Floor findings and
-unwaived Reflex findings block shipping, and Finish findings are advisory.
+Critique scores the combined findings after deduplication and waivers. Its rendered design checks include these
+calibrated weights, returned as `score_weight` on the finding with the browser evidence and the reason.
+
+| Finding | Contribution to `P` |
+| --- | ---: |
+| Headings and reading text actually render in default faces | 2.65 |
+| Select or date controls retain default native indicators | 1.65 |
+| Prototype or sample copy appears in rendered text | 1.30 |
+| Stock category composition | 0.50–3.40, strongest observed pattern |
+
+The composition check measures repeated geometry and structure, such as matching cards, three price columns with
+a highlighted middle plan, a dominant form, an image beside an opening heading, repeated sections with a heading
+on the left and the same column split, or a short back-to-top footer.
+The typography check compares the requested face with rendered fallback metrics, so an unavailable custom font
+cannot hide the browser default. The native-control finding identifies closed-dialog evidence separately and
+reports a possible date-locale mismatch when the browser and page use different languages.
+
+Without a model rating `score` equals `heuristic_score`. With a model rating it averages the two.
+Use `gate.state` for shipping. Floor findings and unwaived Reflex findings block shipping. Finish findings are advisory.
+
+Set `VITRUVIUS_CRITIQUE_BANK` to the external calibration bank directory and run
+`python -m pytest tests/test_critique_calibration.py` to replay the ten pinned exports and compare the deterministic scores
+with the blind review. The replay uses the project's preview runtime and headless Chrome via Playwright.
 
 ### `POST /api/lint`
 

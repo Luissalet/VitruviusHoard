@@ -63,8 +63,9 @@ def localize_finding(f: dict, lang: str) -> dict:
     if not texts:
         return f
     g = dict(f)
-    g["title"], g["fix"] = texts["name"], texts["fix"]
-    g["detail"] = _detail_es(f.get("detail") or "", texts)
+    g["title"] = f.get("title_es") or texts["name"]
+    g["fix"] = f.get("fix_es") or texts["fix"]
+    g["detail"] = f.get("detail_es") or _detail_es(f.get("detail") or "", texts)
     return g
 
 

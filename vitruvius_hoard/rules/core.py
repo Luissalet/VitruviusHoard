@@ -7,7 +7,7 @@ from __future__ import annotations
 # (id, engine, scope, severity, name, description, reference, fix)
 CORE_RULES = [
     ("font.generic-only", "browser", "type", "warning", "Only default system fonts",
-     "Every font on the page is a stock system or default face.", "Vitruvius", "Pick a distinctive heading face paired with a readable body face."),
+     "Headings and reading text render in stock system or default faces.", "Vitruvius", "Load the chosen faces and check the heading and body fonts in the browser."),
     ("font.too-many-families", "browser", "type", "warning", "Too many font families",
      "More than four font families are loaded.", "Vitruvius", "Keep one heading face, one body face and one mono face."),
     ("color.low-contrast", "browser", "color", "error", "Low text contrast",

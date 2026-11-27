@@ -53,9 +53,18 @@ def _finding(check_id: str, area: str, severity: str, title: str, detail: str, e
 def check_font_generic_only(probe: dict, html: str) -> list[Finding]:
     gd = probe.get("generic_defaults") or {}
     if gd.get("fonts_only_generic"):
-        return [_finding("font.generic-only", "typography", "warn", "Only default system fonts",
-                         "The page only uses Inter/Roboto/Arial/-apple-system, the default the model reaches for.",
-                         gd, "Pick a distinctive heading font paired with a readable body font.")]
+        families = ", ".join(dict.fromkeys(font["rendered"] for font in gd.get("fonts", [])))
+        detail = f"Headings and reading text resolve to default faces ({families})." if families else (
+            "Headings and reading text use only default faces.")
+        finding = _finding("font.generic-only", "typography", "warn", "Only default system fonts", detail, gd,
+                           "Load the chosen faces and check the heading and body fonts in the browser.")
+        finding.update(
+            title_es="Solo tipografías predeterminadas",
+            detail_es=f"Los titulares y el texto se renderizan con tipografías predeterminadas ({families})."
+            if families else "Los titulares y el texto usan solo tipografías predeterminadas.",
+            fix_es="Carga las fuentes elegidas y comprueba en el navegador las de los titulares y el cuerpo.",
+        )
+        return [finding]
     return []
 
 
@@ -541,7 +550,8 @@ CHECK_IDS = [
 
 def score_of(findings: list[Finding]) -> float:
     """Weight open findings on a curve that reaches 5/10 at a penalty of 10."""
-    penalty = sum(_SEVERITY_WEIGHT.get(f.get("severity"), 1.0) for f in findings if not f.get("waived"))
+    penalty = sum(f.get("score_weight", _SEVERITY_WEIGHT.get(f.get("severity"), 1.0))
+                  for f in findings if not f.get("waived"))
     return round(10.0 / (1.0 + penalty / 10.0), 2)
 
 
