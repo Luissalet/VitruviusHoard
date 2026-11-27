@@ -46,6 +46,14 @@ _STARTUP_WRITE_HEADER = "x-vitruvius-check-startup"
 _TRACK_STARTUP_WRITES = r"""([header, marker]) => {
   let acted = false;
   let startupCallback = false;
+  const asyncStartupFrame = "vitruviusStartupTimer_" + marker;
+  const NativePromise = Promise;
+  // Await the result so Chromium can keep this frame in the callback's
+  // async stack, even when an ordinary function returns an async helper.
+  const awaitStartup = {
+    async [asyncStartupFrame](result) { return await result; },
+  }[asyncStartupFrame];
+  const inStartupCallback = () => startupCallback || String(new Error().stack).includes(asyncStartupFrame);
   window.__vitruviusBeginCheckAction = () => { acted = true; };
 
   // A timer keeps the phase in which it was scheduled, including timers
@@ -54,14 +62,18 @@ _TRACK_STARTUP_WRITES = r"""([header, marker]) => {
     const schedule = window[name];
     if (!schedule) continue;
     window[name] = function(callback, ...args) {
-      if (typeof callback !== "function" || (acted && !startupCallback)) {
+      if (typeof callback !== "function" || (acted && !inStartupCallback())) {
         return schedule.call(this, callback, ...args);
       }
       return schedule.call(this, function(...values) {
         const previous = startupCallback;
         startupCallback = true;
-        try { return callback.apply(this, values); }
-        finally { startupCallback = previous; }
+        try {
+          const result = callback.apply(this, values);
+          return result instanceof NativePromise ? awaitStartup(result) : result;
+        } finally {
+          startupCallback = previous;
+        }
       }, ...args);
     };
   }
@@ -77,7 +89,7 @@ _TRACK_STARTUP_WRITES = r"""([header, marker]) => {
     const requestInput = input instanceof Request;
     const method = init?.method ?? (requestInput ? input.method : "GET");
     const url = requestInput ? input.url : input;
-    if (!startupCallback || !sameOriginWrite(method, url)) return sendFetch.call(this, input, init);
+    if (!sameOriginWrite(method, url) || !inStartupCallback()) return sendFetch.call(this, input, init);
     try {
       const request = new Request(input, init);
       request.headers.set(header, marker);
@@ -96,7 +108,7 @@ _TRACK_STARTUP_WRITES = r"""([header, marker]) => {
     else writes.delete(this);
   };
   xhr.send = function(...args) {
-    if (startupCallback && writes.has(this)) setHeader.call(this, header, marker);
+    if (writes.has(this) && inStartupCallback()) setHeader.call(this, header, marker);
     return send.apply(this, args);
   };
 }"""

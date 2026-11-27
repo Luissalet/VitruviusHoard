@@ -87,15 +87,24 @@ def test_background_timers_do_not_invalidate_visible_help_but_action_timers_do(t
         <script>
         const ping = (path) => fetch(path, {method: "POST"}).catch(() => {});
         setTimeout(() => ping("/startup-ping"), 2300);
-        setTimeout(() => {
+        setTimeout(async () => {
+          await Promise.resolve();
+          await ping("/startup-after-await");
+        }, 2300);
+        async function postStartupStatus() {
+          await new Promise(resolve => setTimeout(resolve, 2500));
           const status = new XMLHttpRequest();
           status.open("POST", "/startup-status");
           status.send();
-        }, 2500);
+        }
+        setTimeout(() => postStartupStatus(), 0);
         document.querySelector("#help").onclick = () => {
           document.querySelector("#note").textContent = "Help is visible";
         };
-        document.querySelector("#save").onclick = () => setTimeout(() => ping("/reservations"), 50);
+        document.querySelector("#save").onclick = () => setTimeout(async () => {
+          await Promise.resolve();
+          await ping("/reservations");
+        }, 50);
         </script>
     """
     projects = AppProjects(tmp_path, host_port=9)
@@ -115,7 +124,9 @@ def test_background_timers_do_not_invalidate_visible_help_but_action_timers_do(t
         assert cases["Show local help"].outcome == "passed"
         assert cases["Save through the preview"].outcome == UNKNOWN
         assert "POST /reservations" in cases["Save through the preview"].detail
-        assert result.startup_blocked_writes == ["POST /startup-ping", "POST /startup-status"]
+        assert set(result.startup_blocked_writes) == {
+            "POST /startup-ping", "POST /startup-after-await", "POST /startup-status",
+        }
     finally:
         projects.close()
 
