@@ -4,7 +4,8 @@ from hashlib import sha256
 
 
 def source_summary(project, *, changed_path=None, edit=False):
-    keys = ("id", "name", "template", "revision", "selected_revision", "updated_ts", "source_sha256", "preview", "undo")
+    keys = ("id", "name", "template", "revision", "selected_revision", "updated_ts", "source_sha256",
+            "preview", "preview_warning", "undo")
     summary = {key: project[key] for key in keys if key in project}
     files = project["files"]
     paths = [changed_path] if changed_path is not None else []

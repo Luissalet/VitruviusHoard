@@ -303,13 +303,11 @@ class AppProjects:
                     expected_count=None, root_font_px=16, lang="en", *, actor=None):
         with self.lock:
             current = self.get(id)
-            preview = current["preview"]
-            if (current["revision"] != expected_revision or preview.get("revision") != expected_revision
-                    or preview["state"] != "running"):
+            if current["revision"] != expected_revision or current["preview"]["state"] != "running":
                 raise ValueError("La revisión cambió. Selecciona el elemento en la vista previa actual." if lang == "es"
                                  else "The revision changed. Select the element in the current preview.")
             try:
-                _, html = self._preview_html(id, path)
+                _, html = self._preview_html(id, path, revision=expected_revision)
                 changes, target, scale, token, count = plan_canvas_edit(
                     current["files"], html, path, vsrc, tag, change, root_font_px,
                 )
@@ -326,9 +324,10 @@ class AppProjects:
             if operation == "plan" or confirmation or not changes:
                 return result
             updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc})
-            return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"]}
+            return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"],
+                    **{key: updated[key] for key in ("preview_warning",) if key in updated}}
 
-    def _preview_html(self, id, path):
+    def _preview_html(self, id, path, *, revision=None):
         route = urlsplit(path)
         if not path.startswith("/") or path.startswith("//") or route.netloc or route.fragment:
             raise ValueError("Provide a page path in this preview, such as /records?q=search.")
@@ -337,6 +336,8 @@ class AppProjects:
             preview = self.status(id)
             if preview["state"] != "running":
                 raise ValueError("Start this project's preview before counting served elements.")
+            if revision is not None and preview["revision"] != revision:
+                preview = self.preview(id, revision)
             origin = urlsplit(preview["url"])
             if origin.scheme != "http" or origin.hostname != "127.0.0.1" or not origin.port:
                 raise ValueError("The project's preview did not provide a loopback address.")
@@ -406,7 +407,15 @@ class AppProjects:
         if before_commit is not None:
             before_commit(revision)
         write_json_atomic(root / "project-index.json", updated)
-        return self.get(updated["id"])
+        id = updated["id"]
+        saved = self.get(id)
+        if revision != previous and id in self.processes and saved["preview"]["state"] == "running":
+            try:
+                self.preview(id, revision)
+            except (OSError, ValueError) as error:
+                saved["preview_warning"] = str(error)
+            saved["preview"] = self.status(id)
+        return saved
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
                description_es=None, files=None, *, author=None, art_direction=None):
@@ -451,7 +460,8 @@ class AppProjects:
             if not files:
                 return {"id": id, "revision": expected_revision, "changed": False, "files": []}
             saved = self.update(id, {path: assets[path] for path in files}, expected_revision)
-            return {"id": id, "revision": saved["revision"], "changed": True, "files": files, "undo": saved["undo"]}
+            return {"id": id, "revision": saved["revision"], "changed": True, "files": files, "undo": saved["undo"],
+                    **{key: saved[key] for key in ("preview_warning",) if key in saved}}
 
     @staticmethod
     def _change_details(current, files, target=None, examples=None, tokens_id=None):
@@ -664,12 +674,7 @@ class AppProjects:
         saved = self._save(root, index, files, action=action, author={"kind": "system"},
                            details=self._change_details(current, files))
         self.revision_events.publish(id, revision_change(current, saved))
-        if current["preview"]["state"] == "running":
-            try:
-                self.preview(id, target)
-            except (OSError, ValueError) as error:
-                return saved, str(error)
-        return saved, None
+        return saved, saved.get("preview_warning")
 
     def status(self, id):
         item = self.processes.get(id)
@@ -781,7 +786,10 @@ class AppProjects:
                 time.sleep(.02)
             if not ready.exists() or process.poll() is not None:
                 raise ValueError("Application did not start: " + output.read_text(encoding="utf-8", errors="replace"))
-            receipt = urlsplit(json.loads(ready.read_text(encoding="utf-8"))["url"])
+            payload = json.loads(ready.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict) or not isinstance(payload.get("url"), str):
+                raise ValueError("Invalid preview process address")
+            receipt = urlsplit(payload["url"])
             if receipt.scheme != "http" or receipt.hostname != "127.0.0.1" or not receipt.port:
                 raise ValueError("Invalid preview process address")
             runtime["runtime_url"] = f"http://127.0.0.1:{receipt.port}"
