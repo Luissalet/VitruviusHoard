@@ -335,21 +335,26 @@
     layer.setAttribute('style', LAYER_STYLE);
     root = layer.attachShadow({mode: 'open'});
     root.innerHTML = `<style>
-      .box{position:absolute;box-sizing:border-box;pointer-events:none}
-      .margin{background:rgba(246,178,107,.35)} .pad{background:rgba(147,196,125,.40)} .content{background:rgba(111,168,220,.40)}
-      .hover{outline:2px solid #1a73e8;outline-offset:-1px}
-      .picked{outline:2px solid #e8441a;outline-offset:-1px;background:rgba(232,68,26,.08)}
-      .tag{position:absolute;max-width:60vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 11px/1.4 system-ui,sans-serif;
-        background:#1a73e8;color:#fff;padding:1px 6px;border-radius:3px}
-      .badge{position:absolute;min-width:18px;height:18px;border-radius:9px;background:#e8441a;color:#fff;font:700 11px/18px system-ui,sans-serif;text-align:center}
-      .pin{position:absolute;pointer-events:auto;cursor:pointer;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border:2px solid #fff;border-radius:10px;
-        font:700 11px/16px system-ui,sans-serif;color:#fff;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.45)}
-      .pin.s-pending{background:#b45309}.pin.s-seen{background:#1a73e8;box-shadow:0 0 0 2px #1a73e8,0 1px 3px rgba(0,0,0,.45)}
-      .pin.s-answered{background:#7b3fc4}.pin.s-resolved{background:#2e7d32}.pin.s-dismissed{background:#6b7280}
-      .pin.flash{outline:3px solid #111;outline-offset:2px}
-      .draft{outline:2px dashed #b45309;outline-offset:-1px;background:rgba(180,83,9,.10)}
-      .fade{transition:opacity .12s} @media (prefers-reduced-motion:reduce){.fade{transition:none}}
-    </style><div id="stage" aria-hidden="true"></div>`;
+      :host{--inspection-ink:#1a2740;--inspection-blue:#3559b7;--inspection-amber:#8a5315;--inspection-paper:#fff}
+      .box{position:absolute;box-sizing:border-box;pointer-events:none;background:transparent;
+        border:1px solid var(--edge);box-shadow:inset 0 0 0 1px #fff}
+      .hover{--edge:#526580}
+      .picked{--edge:var(--inspection-blue)}
+      .draft{--edge:var(--inspection-amber);border-style:dashed}
+      .tag{position:absolute;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+        color:var(--inspection-ink);background:var(--inspection-paper);border:1px solid var(--edge);border-radius:4px;
+        font:600 12px/16px system-ui,sans-serif;padding:1px 5px;pointer-events:none}
+      .tag.draft{border-style:solid}
+      .pin{position:absolute;pointer-events:auto;cursor:pointer;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;
+        border:1px solid var(--pin);border-radius:5px;background:var(--inspection-paper);color:var(--pin);
+        font:700 12px/19px system-ui,sans-serif;box-shadow:0 1px 3px #131b2b40}
+      .pin.s-pending{--pin:var(--inspection-amber)}
+      .pin.s-seen{--pin:var(--inspection-blue);box-shadow:inset 0 0 0 1px var(--pin),0 1px 3px #131b2b40}
+      .pin.s-answered{--pin:#69469a}
+      .pin.s-resolved{--pin:#266249}
+      .pin.s-dismissed{--pin:#545e70}
+      .pin.flash,.pin:focus-visible{outline:2px solid var(--pin);outline-offset:2px}
+    </style><div id="stage" aria-hidden="true"></div><div id="pins"></div>`;
     document.documentElement.appendChild(layer);
     edits = installCanvasEdits(root, post, schedule);
     edits?.setLanguage(hostLanguage);
@@ -375,14 +380,13 @@
     style.textContent = [
       '.canvas-control{pointer-events:auto;box-sizing:border-box;font:600 13px/1.35 system-ui,sans-serif}',
       '.canvas-handle{position:absolute;z-index:1;width:22px;height:22px;padding:0;display:grid;place-items:center;',
-      'border:0;background:none;color:#20458f;transform:translate(-50%,-50%);touch-action:none}',
-      '.canvas-handle::before{content:"";width:8px;height:8px;border:2px solid #fff;background:currentColor;',
-      'border-radius:2px;box-shadow:0 0 0 1px currentColor;box-sizing:content-box}',
-      '.canvas-handle[data-kind=padding]{color:#246d51} .canvas-handle[data-kind=margin]{color:#a44d21}',
+      'border:0;background:none;color:var(--inspection-blue);transform:translate(-50%,-50%);touch-action:none}',
+      '.canvas-handle::before{content:"";width:6px;height:6px;border:1px solid currentColor;background:var(--inspection-paper);',
+      'border-radius:1px;box-shadow:0 0 0 1px #fff;box-sizing:content-box}',
       '.canvas-handle[data-kind=padding]::before{border-radius:50%;width:5px;height:5px}',
       '.canvas-handle[data-kind=margin]::before{transform:rotate(45deg);width:5px;height:5px}',
-      '.canvas-handle:focus-visible,.canvas-action:focus-visible,.canvas-text:focus-visible{outline:2px solid #20458f;outline-offset:2px}',
-      '.canvas-handle:hover::before,.canvas-handle:focus-visible::before{border-color:#dbe8ff}',
+      '.canvas-handle:focus-visible,.canvas-action:focus-visible,.canvas-text:focus-visible{outline:2px solid var(--inspection-blue);outline-offset:2px}',
+      '.canvas-handle:hover::before,.canvas-handle:focus-visible::before{background:currentColor}',
       '.canvas-tip,.canvas-panel,.canvas-text{position:absolute;z-index:2;border:1px solid #9cb1d5;',
       'border-radius:6px;background:#f7f9ff;color:#182946;box-shadow:0 3px 12px #18294626}',
       '.canvas-tip{padding:4px 8px;font:600 12px/1.3 system-ui,sans-serif;pointer-events:none;max-width:calc(100vw - 16px)}',
@@ -930,33 +934,49 @@
     edits?.paint(mode && selected.length === 1 ? selected[0] : null);
   }
 
-  const px = value => (parseFloat(value) || 0);
+  function drawOutline(drawings, element, kind, number) {
+    const r = element.getBoundingClientRect();
+    if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return;
+
+    const box = document.createElement('div');
+    box.className = `box ${kind}`;
+    box.setAttribute('aria-hidden', 'true');
+    Object.assign(box.style, {left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px'});
+
+    const name = compact(attrOf(element, 'aria-label'));
+    const id = attrOf(element, 'id');
+    const firstClass = element.classList?.[0];
+    const label = name || (tagOf(element) + (id ? '#' + id : firstClass ? '.' + firstClass : ''));
+    const tag = document.createElement('div');
+    tag.className = `tag ${kind}`;
+    tag.setAttribute('aria-hidden', 'true');
+    tag.dir = 'auto';
+    tag.textContent = number ? `${number} · ${label}` : label;
+    const left = Math.max(4, Math.min(r.left, innerWidth - 112));
+    const top = Math.max(4, Math.min(r.top >= 25 ? r.top - 23 : r.top + 4, innerHeight - 24));
+    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: Math.min(220, innerWidth - left - 4) + 'px'});
+    drawings.append(box, tag);
+  }
+
+  const commentLabels = {
+    en: {comment: 'Comment', pending: 'pending', seen: 'seen', answered: 'answered', resolved: 'resolved', dismissed: 'dismissed'},
+    es: {comment: 'Comentario', pending: 'pendiente', seen: 'visto', answered: 'respondido', resolved: 'resuelto', dismissed: 'descartado'},
+  };
   function paint() {
     frame = 0;
     if (!layer) return;
     const stage = root.getElementById('stage');
-    let html = '';
-    if (active() && hovered && hovered.isConnected) {
-      const r = hovered.getBoundingClientRect(); const s = getComputedStyle(hovered);
-      const m = ['Top', 'Right', 'Bottom', 'Left'].map(side => px(s['margin' + side]));
-      const p = ['Top', 'Right', 'Bottom', 'Left'].map(side => px(s['padding' + side]));
-      const b = ['Top', 'Right', 'Bottom', 'Left'].map(side => px(s['border' + side + 'Width']));
-      html += `<div class="box margin fade" style="left:${r.left - m[3]}px;top:${r.top - m[0]}px;width:${r.width + m[1] + m[3]}px;height:${r.height + m[0] + m[2]}px"></div>`;
-      html += `<div class="box pad hover fade" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
-      html += `<div class="box content" style="left:${r.left + b[3] + p[3]}px;top:${r.top + b[0] + p[0]}px;width:${Math.max(0, r.width - b[1] - b[3] - p[1] - p[3])}px;height:${Math.max(0, r.height - b[0] - b[2] - p[0] - p[2])}px"></div>`;
-      const label = tagOf(hovered) + (hovered.classList && hovered.classList.length ? '.' + [...hovered.classList].slice(0, 3).join('.') : '');
-      html += `<div class="tag" style="left:${Math.max(0, r.left)}px;top:${r.top > 22 ? r.top - 20 : r.top + 2}px">${label.replace(/[<>&]/g, '')}</div>`;
-    }
+    const pinLayer = root.getElementById('pins');
+    const stalePins = new Map([...pinLayer.children].map(button => [button.dataset.pin, button]));
+    const drawings = document.createDocumentFragment();
+    if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) drawOutline(drawings, hovered, 'hover');
     selected.forEach((element, index) => {
-      const r = element.getBoundingClientRect();
-      html += `<div class="box picked" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
-      html += `<div class="badge" style="left:${Math.max(0, r.left - 6)}px;top:${Math.max(0, r.top - 9)}px">${index + 1}</div>`;
+      if (element !== draft && element.isConnected) drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0);
     });
-    if (draft && draft.isConnected) {
-      const r = draft.getBoundingClientRect();
-      html += `<div class="box draft" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"></div>`;
-    }
+    if (draft?.isConnected) drawOutline(drawings, draft, 'draft');
+
     const anchors = []; const slots = new Map(); const now = revision();
+    const labels = hostLanguage === 'es' ? commentLabels.es : commentLabels.en;
     for (const pin of pins) {
       const found = locatePin(pin, all, now);
       if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
@@ -965,10 +985,25 @@
       anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null,
         box: {x: Math.round(r.left + window.scrollX), y: Math.round(r.top + window.scrollY), w: Math.round(r.width), h: Math.round(r.height)}});
       if (!r.width && !r.height) continue;
+
+      let button = stalePins.get(pin.id);
+      if (button) {
+        stalePins.delete(pin.id);
+      } else {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.pin = pin.id;
+        pinLayer.append(button);
+      }
+      button.className = `pin s-${pin.status}${flash === pin.id ? ' flash' : ''}`;
+      button.style.left = Math.max(0, Math.min(r.right, innerWidth - 18) - 12 - slot * 26) + 'px';
+      button.style.top = Math.max(0, r.top - 10) + 'px';
+      button.setAttribute('aria-label', `${labels.comment} ${pin.n} · ${labels[pin.status]}`);
       const glyph = {resolved: '\u2713', answered: '?', dismissed: '\u00d7'}[pin.status] || '';
-      html += `<button type="button" class="pin s-${pin.status}${flash === pin.id ? ' flash' : ''}" data-pin="${pin.id}" style="left:${Math.max(0, r.right - 12 - slot * 24)}px;top:${Math.max(0, r.top - 10)}px" aria-label="${pin.n} ${pin.status}">${pin.n}${glyph}</button>`;
+      button.textContent = `${pin.n}${glyph}`;
     }
-    stage.innerHTML = html;
+    for (const button of stalePins.values()) button.remove();
+    stage.replaceChildren(drawings);
     const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || ''])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
     paintEdits();
@@ -1015,10 +1050,12 @@
   }
 
   const swallow = event => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.(); };
-  function onMove(event) {
-    if (!active() || (mode && edits?.hit(event))) return;
-    const element = elementAt(event);
+  function updateHover(element) {
     if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); }
+  }
+  function onMove(event) {
+    if (!active()) return;
+    updateHover((mode && edits?.hit(event)) || pinOf(event) ? null : elementAt(event));
   }
   const pinOf = event => { const path = event.composedPath ? event.composedPath() : []; const pin = path.find(node => node && node.dataset && node.dataset.pin); return pin ? pin.dataset.pin : null; };
   // The crop is the clip the selection already makes (captureClip); a page that cannot draw it gives none, and the comment is kept anyway.
@@ -1121,6 +1158,8 @@
     else if (data.type === 'inspect/restore') restore(data.items);
   });
   document.addEventListener('mousemove', onMove, true);
+  document.addEventListener('mouseout', event => { if (!event.relatedTarget) updateHover(null); }, true);
+  window.addEventListener('blur', () => updateHover(null));
   document.addEventListener('click', onClick, true);
   for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) document.addEventListener(type, onBlock, true);
   document.addEventListener('keydown', onKey, true);
