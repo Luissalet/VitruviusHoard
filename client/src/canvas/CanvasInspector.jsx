@@ -67,12 +67,13 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   const undoTarget = legacy && savedIndex > 0 ? project.revisions[savedIndex - 1] : last?.undo_revision;
   const authorLabel = ({ author }) => {
     if (author?.kind === "person") return es ? "Persona" : "Person";
+    if (author?.kind === "system") return es ? "Sistema" : "System";
     if (author?.kind === "agent") return author.name || (author.id !== "agent" && author.id) || (es ? "Agente" : "Agent");
     return es ? "Autor sin registrar" : "Author unrecorded";
   };
   const revisionLabel = (revision) => (es ? "Versión " : "Revision ") + (project.revisions.indexOf(revision) + 1);
-  const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", legacy: "Guardada" }
-    : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", legacy: "Saved" };
+  const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
+    : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
   const date = new Intl.DateTimeFormat(es ? "es-ES" : "en-GB", { dateStyle: "short", timeStyle: "short" });
 
   useEffect(() => {

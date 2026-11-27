@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 from .app_canvas import CanvasSessions
 from .app_canvas_edits import plan_canvas_edit
 from .app_preview import PreviewProxy
+from . import app_critique_loop
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
 from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position
@@ -192,7 +193,7 @@ class AppProjects:
             if selected not in index["revisions"]:
                 raise LookupError("Project revision not found")
             snapshot = json.loads((root / "revisions" / selected / "snapshot.json").read_text(encoding="utf-8"))
-            return {**index, "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
+            return {**self._public_index(index), "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
 
     def list(self, archived=False):
         with self.lock:
@@ -200,7 +201,9 @@ class AppProjects:
             for path in sorted(self.root.glob("*/project-index.json")):
                 item = json.loads(path.read_text(encoding="utf-8"))
                 if self._archived(path.parent, item) == archived:
-                    metadata = {**item, "archived": True} if archived else item
+                    metadata = self._public_index(item)
+                    if archived:
+                        metadata["archived"] = True
                     result.append({**metadata, "preview": self.status(item["id"])})
             return sorted(result, key=lambda item: item["updated_ts"], reverse=True)
 
@@ -458,7 +461,8 @@ class AppProjects:
 
             author = {"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")} if actor else {"kind": "person"}
             details = self._change_details(current, merged, target, examples, tokens_id)
-            saved = self._save(self._directory(id), self._index(current), merged, author=author, details=details,
+            root, index = self._load_index(id)
+            saved = self._save(root, index, merged, author=author, details=details,
                                before_commit=before_commit if actor is not None else None)
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
@@ -477,22 +481,22 @@ class AppProjects:
             return self.revision_events.sequence, current["revision"], change
 
     @staticmethod
-    def _index(project):
-        return {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
+    def _public_index(index):
+        return {key: value for key, value in index.items() if key != "critique_loop"}
 
     def undo(self, id, expected_revision, expected_updated_ts, revision=None, *, author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["updated_ts"] != expected_updated_ts:
                 raise ValueError("Application revision changed after the original operation")
-            root = self._directory(id)
+            root, index = self._load_index(id)
             if revision is None:
                 if current["revisions"] != [expected_revision]:
                     raise ValueError("The application has retained edits")
-                self._set_archived(root, self._index(current), True)
+                self._set_archived(root, index, True)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            saved = self._save(root, self._index(current), previous["files"], action="undo", author=author)
+            saved = self._save(root, index, previous["files"], action="undo", author=author)
             if saved["revision"] != current["revision"]:
                 self.revision_events.publish(id, revision_change(current, saved))
             return saved
@@ -524,10 +528,83 @@ class AppProjects:
             if files == current["files"]:
                 return {**current, "already_undone": True}
             details = {**self._change_details(current, files), "reverted_change": change_id}
-            saved = self._save(self._directory(id), self._index(current), files,
+            root, index = self._load_index(id)
+            saved = self._save(root, index, files,
                                action="undo-change", author=author, details=details)
             self.revision_events.publish(id, revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
+
+    def critique_loop(self, id, lang="en"):
+        with self.lock:
+            _, index = self._load_index(id)
+            loop = index.get("critique_loop", app_critique_loop.empty_loop())
+            return app_critique_loop.loop_view(id, index["revision"], loop, lang)
+
+    def prepare_critique_round(self, id, expected_revision, tokens_id, lang="en"):
+        with self.lock:
+            _, index = self._load_index(id)
+            loop = index.get("critique_loop", app_critique_loop.empty_loop())
+            if index["revision"] != expected_revision:
+                raise AppError("conflict", "La versión de la aplicación ha cambiado. Vuelve a cargarla." if lang == "es"
+                               else "The application revision changed. Read the current source before scoring.", status=409)
+            if loop["rounds"] and tokens_id is not None and tokens_id != loop["tokens_id"]:
+                raise AppError("critique_settings_changed", "Mantén el mismo sistema de diseño en todo el bucle." if lang == "es"
+                               else "Use the same design system throughout the critique loop.", status=409)
+            return (index["updated_ts"], loop["rounds"][-1]["id"] if loop["rounds"] else None,
+                    loop["tokens_id"] if loop["rounds"] else tokens_id)
+
+    def record_critique_round(self, id, revision, receipt, report, render_id, lang="en"):
+        updated_ts, previous_round, tokens_id = receipt
+        with self.lock:
+            root, index = self._load_index(id)
+            loop = index.get("critique_loop", app_critique_loop.empty_loop())
+            latest = loop["rounds"][-1]["id"] if loop["rounds"] else None
+            if index["revision"] != revision or index["updated_ts"] != updated_ts or latest != previous_round:
+                raise AppError("conflict", "La fuente o las rondas han cambiado durante la evaluación. Vuelve a cargar la aplicación." if lang == "es"
+                               else "Source or critique rounds changed while scoring. Read the application and retry.", status=409)
+            current = self.get(id)
+            best = loop["best_round"]
+            baseline = self.get(id, loop["rounds"][best]["revision"]) if best is not None else None
+            loop, entry = app_critique_loop.add_round(loop, current, baseline, report, render_id, tokens_id)
+            final, preview_warning = self._save_critique_loop(root, index, current, loop, entry["active_revision"], "critique-restore")
+            view = app_critique_loop.loop_view(id, final["revision"], loop, lang)
+            return {**view, "preview_warning": preview_warning, "undo": {
+                "tool": "app_project_critique_round_undo", "arguments": {
+                    "id": id, "expected_round_id": entry["id"], "expected_revision": final["revision"],
+                    "expected_updated_ts": final["updated_ts"], "lang": lang,
+                },
+            }}
+
+    def undo_critique_round(self, id, expected_round_id, expected_revision, expected_updated_ts, lang="en"):
+        with self.lock:
+            root, index = self._load_index(id)
+            loop = index.get("critique_loop", app_critique_loop.empty_loop())
+            if (not loop["rounds"] or loop["rounds"][-1]["id"] != expected_round_id
+                    or index["revision"] != expected_revision or index["updated_ts"] != expected_updated_ts):
+                raise AppError("conflict", "La fuente o las rondas han cambiado desde esta evaluación." if lang == "es"
+                               else "Source or critique rounds changed after this round.", status=409)
+            current = self.get(id)
+            target = loop["rounds"][-1]["revision"]
+            loop = app_critique_loop.remove_round(loop)
+            final, preview_warning = self._save_critique_loop(root, index, current, loop, target, "critique-undo")
+            return {**app_critique_loop.loop_view(id, final["revision"], loop, lang), "preview_warning": preview_warning}
+
+    def _save_critique_loop(self, root, index, current, loop, target, action):
+        index = {**index, "critique_loop": loop}
+        if current["revision"] == target:
+            write_json_atomic(root / "project-index.json", index)
+            return current, None
+        id = current["id"]
+        files = self.get(id, target)["files"]
+        saved = self._save(root, index, files, action=action, author={"kind": "system"},
+                           details=self._change_details(current, files))
+        self.revision_events.publish(id, revision_change(current, saved))
+        if current["preview"]["state"] == "running":
+            try:
+                self.preview(id, target)
+            except (OSError, ValueError) as error:
+                return saved, str(error)
+        return saved, None
 
     def status(self, id):
         item = self.processes.get(id)

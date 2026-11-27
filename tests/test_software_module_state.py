@@ -116,6 +116,8 @@ async def test_failed_save_leaves_running_state_intact(module_profile, monkeypat
 async def test_host_controls_use_saved_module_settings(module_profile, monkeypatch):
     from vitruvius_hoard.software.host import create_app
 
+    module_profile.write_text('{"version":1,"modules":{}}', encoding="utf-8")
+
     monkeypatch.setenv("VITRUVIUS_TOKEN_FILE", str(module_profile.with_name("mcp-token")))
     app = create_app()
     async with app.router.lifespan_context(app):
