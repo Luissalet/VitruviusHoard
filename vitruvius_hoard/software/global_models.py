@@ -11,13 +11,14 @@ import asyncio
 import threading
 import time
 import httpx
-from hoard_link import Link
+from hoard_link import Link, LinkConfig, where
 from hoard_link._sync import SyncFacade
 from hoard_link.types import Resolution
 from .owned_http import OwnedAsyncClient,close_client
 
 _job = ContextVar('vitruvius_global_job', default=None)
 VISION_RESOLUTION_TIMEOUT_S = 3.0
+_DEFAULT_FAUSTUS_URLS = LinkConfig().faustus_urls
 
 
 class VisionUnavailable(ValueError):
@@ -129,9 +130,17 @@ class GlobalLink(Link):
         future.set_result(selected)
         return selected
 
+    def _origin(self, urls):
+        if urls != _DEFAULT_FAUSTUS_URLS:
+            return self.config.faustus_origin()
+        # The SDK appends the active Spark placement after the local candidates.
+        # Try it before the implicit loopbacks, which can each take 1.5 s to fail.
+        candidates = self.config.faustus_candidates()
+        ordered = candidates[len(urls):] + candidates[:len(urls)]
+        return where.reachable(ordered, token=self.config.faustus_token or "") or urls[0]
+
     async def _selection(self, urls):
-        # The Hub may have moved Faustus to a Spark: the origin is the first configured or placed address that is healthy.
-        base = await asyncio.to_thread(self.config.faustus_origin)
+        base = await asyncio.to_thread(self._origin, urls)
         headers = {'Authorization': 'Bearer ' + self.config.faustus_token} if self.config.faustus_token else {}
         response = await self._client.get(base + '/api/global-model', headers=headers)
         response.raise_for_status()

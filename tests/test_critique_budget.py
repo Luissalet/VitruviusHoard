@@ -1,15 +1,17 @@
 """The captured-render critique reports what finished within its model budget."""
 
 import asyncio
+import io
 import json
 from pathlib import Path
 from threading import Event
 import time
+import urllib.request
 
 import httpx
 import pytest
 
-from hoard_link import LinkConfig
+from hoard_link import LinkConfig, where
 from vitruvius_hoard.agent_tools import call_tool, tool_catalog
 from vitruvius_hoard.critique import DEFAULT_TIMEOUT_S
 from vitruvius_hoard.software import global_models
@@ -135,6 +137,59 @@ def test_missing_vision_is_classified_before_generation(services, monkeypatch, d
     assert report["missing"] == ["vision", "clean_review"] and report["score_source"] == "heuristic"
     assert report["review"]["status"] == "unavailable" and report["review"]["reason"] == reason
     assert "use_vision=false" in report["next_action"]["es"]
+
+
+@pytest.mark.parametrize("explicit_origin", [False, True], ids=["default-loopbacks", "explicit-loopback"])
+def test_cold_vision_resolution_reaches_the_announced_spark(monkeypatch, explicit_origin):
+    hub = "http://hub-fixture.invalid"
+    spark = "http://spark-fixture.invalid"
+    defaults = LinkConfig(hub_url=hub)
+    first_local = defaults.faustus_urls[0]
+    config = LinkConfig(hub_url=hub, faustus_urls=(first_local,)) if explicit_origin else defaults
+    expected_origin = first_local if explicit_origin else spark
+    expected_model = "fixture-local" if explicit_origin else "fixture-spark"
+    probes = []
+
+    class PlacementAndHealth:
+        def open(self, request, timeout):
+            url = request.full_url
+            probes.append(url)
+            if url == hub + "/api/placement":
+                body = {"location": "sparks", "urls": {"faustus": spark}}
+            elif url in {origin + "/api/health" for origin in defaults.faustus_urls} and not explicit_origin:
+                time.sleep(0.3)
+                raise TimeoutError("Slow implicit loopback")
+            else:
+                assert url == expected_origin + "/api/health"
+                body = {"status": "healthy"}
+            response = io.BytesIO(json.dumps(body).encode())
+            response.status = 200
+            return response
+
+    async def provider(request):
+        assert request.method == "GET" and str(request.url) == expected_origin + "/api/global-model"
+        return httpx.Response(200, json={"endpoint_id": "fixture", "model": expected_model,
+                                         "connection_revision": "1", "vision": True,
+                                         "chat_path": "/api/global-model/v1/chat/completions"})
+
+    async def resolve_and_pin():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(provider)) as client:
+            link = GlobalLink(config, client=client)
+
+            async def verify_selected_model(*args, **kwargs):
+                return (await link.resolve("vision")).model
+
+            monkeypatch.setattr(link, "chat", verify_selected_model)
+            return await link.vision_chat([], images=[], effort="high", timeout=2)
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: PlacementAndHealth())
+    monkeypatch.setattr(global_models, "VISION_RESOLUTION_TIMEOUT_S", 0.5)
+    where.forget()
+    try:
+        assert asyncio.run(resolve_and_pin()) == expected_model
+    finally:
+        where.forget()
+    assert probes == [hub + "/api/placement", expected_origin + "/api/health"]
 
 
 def test_published_critique_schema_matches_the_native_tool():
