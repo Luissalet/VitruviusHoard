@@ -218,18 +218,22 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
   padding: 6px; background: var(--surface); border-bottom: 1px solid var(--line);
 }
 .canvas-rail-tabs button {
-  flex: 1; border-radius: 5px; padding: 6px 8px; color: var(--muted); cursor: pointer;
+  flex: 1 0 auto; border-radius: 5px; padding: 6px; color: var(--muted); cursor: pointer;
+  white-space: nowrap;
 }
 .canvas-rail-tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
-.canvas-conversation-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 8px; }
-.canvas-conversation-heading .canvas-inspector-heading { margin: 0; }
 #canvas-conversation:not(:empty) { margin-top: 8px; }
-.canvas-live-steps {
-  margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line);
-  list-style: none; display: grid; gap: 6px;
-}
-.canvas-live-steps li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
-.canvas-live-steps code, .canvas-step-target { display: block; flex-basis: 100%; color: var(--muted); font-size: 11px; margin: 0; }
+.canvas-timeline { padding: 8px 12px 12px; border-bottom: 1px solid var(--line); }
+.canvas-timeline ol, .canvas-interactions ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.canvas-speech { padding: 7px 4px; min-width: 0; }
+.canvas-speech[data-role="user"] { background: var(--surface-2); border-radius: 6px; padding: 8px 10px; }
+.canvas-speech strong { color: var(--muted); font-size: 12px; }
+.canvas-speech p { margin: 4px 0 0; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.canvas-interactions { border-block: 1px solid var(--line); }
+.canvas-interactions summary { padding: 7px 4px; cursor: pointer; color: var(--muted); }
+.canvas-interactions ul { padding: 4px 4px 8px; }
+.canvas-step { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.canvas-step code, .canvas-step-target { display: block; flex-basis: 100%; color: var(--muted); font-size: 11px; margin: 0; }
 .canvas-materials { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 4px; margin-block: 3px; }
 .canvas-step-undo { margin-block: 3px; font-size: 12px; }
 .canvas-focus-toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); background: var(--accent-soft); }

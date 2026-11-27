@@ -71,23 +71,26 @@ LAUNCHER_JS = r"""
   // relay like any other call of their own page; apps that do not check it ignore the header.
   const APP_HEADERS = { 'X-Hoard-Request': '1' };
 
-  function relayFetch(input, init = {}) {
+  function relayFetch(input, init = {}, onTurn) {
     const request = new Request(input, init);
     return (async () => {
       const url = new URL(request.url);
+      // Keep the upstream chat path stable when the workbench rewrites local API routes.
+      const isChatTurn = url.pathname === ["", "api", "chat_stream"].join("/");
       const envelope = { path: url.pathname + url.search, method: request.method, headers: {} };
       for (const name of ['X-Faustus-Client-Version', 'X-Odysseus-Run-Id']) {
         const value = request.headers.get(name);
         if (value) envelope.headers[name] = value;
       }
+      let bytes;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
-        const bytes = new Uint8Array(await request.arrayBuffer());
+        bytes = new Uint8Array(await request.arrayBuffer());
         const type = request.headers.get('Content-Type') || '';
         if (type.startsWith('application/json')) {
           envelope.body = JSON.parse(new TextDecoder().decode(bytes) || 'null');
           // Someone typing in an app waits for the answer: a turn queued behind another agent on the shared model
           // lane keeps its place (the panel shows the queue) instead of failing at the endpoint's short default.
-          if (url.pathname === '/api/chat_stream' && envelope.body && typeof envelope.body === 'object'
+          if (isChatTurn && envelope.body && typeof envelope.body === 'object'
               && envelope.body.initial_response_timeout_s == null) envelope.body.initial_response_timeout_s = TURN_WAIT_S;
         }
         else {
@@ -95,6 +98,26 @@ LAUNCHER_JS = r"""
           for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
           envelope.content_type = type;
           envelope.raw_body = btoa(binary);
+        }
+      }
+      if (onTurn && request.method === 'POST' && isChatTurn) {
+        if (envelope.body) onTurn(envelope.body);
+        else if (envelope.content_type?.startsWith('multipart/form-data')) {
+          try {
+            const data = await new Response(bytes, {
+              headers: {'Content-Type': envelope.content_type},
+            }).formData();
+            const body = {};
+            for (const field of ['message', 'user_message', 'user_input', 'prompt', 'text', 'input']) {
+              if (typeof data.get(field) === 'string') body[field] = data.get(field);
+            }
+            for (const field of ['context', 'hoard_context']) {
+              if (typeof data.get(field) === 'string') {
+                try { body[field] = JSON.parse(data.get(field)); } catch { /* the chat still handles its own payload */ }
+              }
+            }
+            onTurn(body);
+          } catch { /* an attachment must never prevent the native chat from sending */ }
         }
       }
       return fetch('/api/copilot/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json', ...APP_HEADERS },
@@ -245,14 +268,81 @@ LAUNCHER_JS = r"""
     return ctx;
   }
 
+  function messageText(value) {
+    if (typeof value === 'string') return value;
+    const content = value?.content ?? value;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      return content.filter(part => ['text', 'input_text', 'output_text'].includes(part?.type))
+        .map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\n');
+    }
+    return typeof value?.text === 'string' ? value.text : '';
+  }
+
+  function requestText(body) {
+    const messages = Array.isArray(body?.messages) ? body.messages : Array.isArray(body?.input) ? body.input : [];
+    const user = messages.findLast(message => message?.role === 'user');
+    const candidates = [body?.message, body?.user_message, body?.user_input, user, body?.text,
+      typeof body?.input === 'string' ? body.input : null, body?.prompt];
+    return candidates.filter(value => !value?.role || value.role === 'user').map(messageText).find(text => text.trim()) || '';
+  }
+
+  let turnSequence = 0;
+  const textEvents = new Set(['text', 'text_delta', 'assistant_delta', 'assistant_text', 'content_block_delta']);
+  const textBoundaries = new Set(['tool_input', 'tool_start', 'tool_call', 'tool_use', 'tool_output', 'tool_result', 'text_end', 'message_stop']);
+
+  function publishConversation(turn, role, text, speaker) {
+    const part = role === 'user' ? 'request' : turn.part;
+    window.dispatchEvent(new CustomEvent('hoard:copilot-conversation', {
+      detail: { projectId: turn.projectId, id: 'copilot:' + turn.id + ':' + part, role, text, speaker },
+    }));
+  }
+
+  function recordAssistantText(turn, event) {
+    if (!turn || (event.role && event.role !== 'assistant')) return;
+    if (textBoundaries.has(event.type)) {
+      if (turn.text) { turn.part++; turn.text = ''; }
+      return;
+    }
+    const full = event.type === 'assistant_message' || event.type === 'message' && event.message?.role === 'assistant';
+    if (!full && !textEvents.has(event.type)) return;
+    if (event.type === 'content_block_delta' && event.delta?.type !== 'text_delta') return;
+    const delta = typeof event.delta === 'string' ? event.delta : event.delta?.text;
+    const text = typeof delta === 'string' ? delta : messageText(event.message || event);
+    if (!text) return;
+    if (full) {
+      if (turn.text && !text.startsWith(turn.text)) turn.part++;
+      turn.text = text;
+    } else if (event.type === 'assistant_text' && typeof delta !== 'string') {
+      turn.text = text;
+    } else {
+      turn.text += text;
+    }
+    if (turn.text.trim()) publishConversation(turn, 'assistant', turn.text, event.actor?.name);
+    if (full) { turn.part++; turn.text = ''; }
+  }
+
   function buildPanel(sessionId) {
     const element = document.createElement('faustus-chat');
     element.server = window.location.origin;
     element.locale = lang();
     element.theme = 'dark';
-    element.fetch = relayFetch;
+    let requestProject = '';
+    let turn;
+    element.fetch = (input, init) => relayFetch(input, init, (body) => {
+      const projectId = projectKey(body.context) || projectKey(body.hoard_context) || requestProject;
+      const text = requestText(body);
+      if (!projectId || !text) return;
+      if (turn?.projectId === projectId && turn.request === text) return;
+      turn = { projectId, request: text, id: ++turnSequence, part: 0, text: '' };
+      publishConversation(turn, 'user', text);
+    });
     element.onOpenSettings = () => window.open(info.settings_url, '_blank', 'noopener');
-    element.contextProvider = context;
+    element.contextProvider = async () => {
+      const value = await context();
+      requestProject = projectKey(value);
+      return value;
+    };
     if (sessionId) element.session = sessionId;
     element.addEventListener('faustus:session-change', (event) => {
       if (currentKey) store.set(currentKey, event.detail && event.detail.sessionId);
@@ -262,6 +352,7 @@ LAUNCHER_JS = r"""
     // Keep the panel and turn mounted; hosts only reload their own saved views.
     element.addEventListener('faustus:event', (event) => {
       const detail = event.detail || {};
+      recordAssistantText(turn, detail);
       if (detail.type !== 'tool_output') return;
       window.dispatchEvent(new CustomEvent('hoard:copilot-change', { detail }));
       try {
@@ -272,6 +363,7 @@ LAUNCHER_JS = r"""
     });
     element.addEventListener('faustus:turn-end', (event) => {
       busy = false;
+      turn = undefined;
       window.dispatchEvent(new CustomEvent('hoard:copilot-turn-end', { detail: event.detail || {} }));
       try { window.hoardCopilot && typeof window.hoardCopilot.onTurnEnd === 'function' && window.hoardCopilot.onTurnEnd(event.detail || {}); }
       catch { /* the app's refresh must never break the panel */ }

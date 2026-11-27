@@ -5,7 +5,8 @@ import { useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
 import { CanvasElements, CanvasHistory } from "../canvas/CanvasInspector.jsx";
-import { CanvasConversation, CanvasLiveSteps } from "../canvas/CanvasActivity.jsx";
+import { CanvasConversation, CanvasTimeline } from "../canvas/CanvasActivity.jsx";
+import { conversationEntry, recordCanvasActivity } from "../canvas/canvasConversation.js";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
 
@@ -63,13 +64,12 @@ export default function Canvas({ param }) {
     }
   };
   const syncRevision = async () => { if (currentId.current) loadProject(currentId.current); };
+  const reportActivity = (step) => {
+    if (step && step.projectId === currentId.current) setLiveSteps((steps) => recordCanvasActivity(steps, step));
+  };
   const { frameRef, attachFrame, frames, visible } = useProjectPreviewCanvas({
     projectId: project?.id === param ? param : null, preview, baseline: project?.revision, lang, onRevision: syncRevision,
-    onActivity: (step) => {
-      if (step.projectId === currentId.current) {
-        setLiveSteps((steps) => [step, ...steps.filter((value) => value.id !== step.id)].slice(0, 5));
-      }
-    },
+    onActivity: reportActivity,
     onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
   });
   const running = preview?.state === "running" && Boolean(visible);
@@ -94,6 +94,12 @@ export default function Canvas({ param }) {
   useCopilotRefresh(() => { if (param) loadProject(param); });
   useCopilotObjects(project ? [{ kind: "app_project", id: project.id }] : [],
     project ? { external_project_id: project.id, title: project.name } : null);
+
+  useEffect(() => {
+    const onConversation = (event) => reportActivity(conversationEntry(event.detail, event.detail?.projectId));
+    window.addEventListener("hoard:copilot-conversation", onConversation);
+    return () => window.removeEventListener("hoard:copilot-conversation", onConversation);
+  }, []);
 
   useEffect(() => {
     const expiries = liveSteps.map((step) => step.expiresAt).filter(Number.isFinite);
@@ -245,9 +251,9 @@ export default function Canvas({ param }) {
       : !project ? (projectError
         ? <Empty><p role="alert">{es ? "No se pudo cargar la aplicación." : "Could not load the application."}</p><button type="button" className="btn" onClick={() => loadProject(param)}>{es ? "Reintentar" : "Retry"}</button></Empty>
         : <p className="help" role="status">{es ? "Cargando…" : "Loading…"}</p>)
-      : !running ? <Empty>{es ? "Abre la vista previa para trabajar sobre la aplicación." : "Open the preview to work on the application."}</Empty>
       : <>
         <div className="canvas-mode-bar">
+          {running && <>
           <div role="toolbar" aria-label={es ? "Modo del lienzo" : "Canvas mode"} className="canvas-modes" onKeyDown={moveModeFocus}>
             {modes.map((item) => <button key={item} type="button" className="canvas-mode" aria-pressed={mode === item}
               aria-keyshortcuts={item === "select" ? "Alt+Shift+S" : item === "comment" ? "Alt+Shift+C" : undefined}
@@ -257,13 +263,16 @@ export default function Canvas({ param }) {
             ? (elements?.error ? (es ? "Esta vista previa solo admite navegar." : "This preview only supports navigating.")
               : (es ? "Conectando con la vista previa…" : "Connecting to the preview…"))
             : MODE_TEXT[mode][es ? 2 : 3]}</p>
+          </>}
           <button className="btn btn-sm" type="button" aria-expanded={panelOpen} aria-controls="canvas-rail"
             onClick={() => setPanelOpen((held) => !held)}>
             {panelOpen ? (es ? "Recoger panel" : "Collapse panel") : (es ? "Mostrar panel" : "Expand panel")}
           </button>
         </div>
         <div className="canvas-workspace" data-panel-closed={!panelOpen || undefined}>
-          <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="var(--canvas-height)" />
+          {running
+            ? <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="var(--canvas-height)" />
+            : <Empty>{es ? "Abre la vista previa para trabajar sobre la aplicación." : "Open the preview to work on the application."}</Empty>}
           <aside id="canvas-rail" className="canvas-inspector" hidden={!panelOpen} aria-label={es ? "Panel del lienzo" : "Canvas inspector"}>
             <div className="canvas-rail-tabs" role="tablist" aria-label={es ? "Vistas del panel" : "Panel views"} onKeyDown={(event) => {
               if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -275,16 +284,21 @@ export default function Canvas({ param }) {
               {["activity", "elements"].map((tab) => <button key={tab} id={`canvas-tab-${tab}`} type="button" role="tab"
                 aria-selected={rail === tab} aria-controls={`canvas-pane-${tab}`} tabIndex={rail === tab ? 0 : -1}
                 onClick={() => setRail(tab)}>
-                {tab === "activity" ? (es ? "Actividad" : "Activity") : (es ? "Elementos" : "Elements")}
+                {tab === "activity" ? (es ? "Conversación" : "Conversation") : (es ? "Elementos" : "Elements")}
               </button>)}
             </div>
             <div id="canvas-pane-activity" role="tabpanel" aria-labelledby="canvas-tab-activity" hidden={rail !== "activity"}>
               <CanvasConversation es={es} projectId={project.id} />
-              <CanvasLiveSteps steps={liveSteps.filter((step) => step.kind !== "edit" || step.revision === visible.revision)} es={es} />
-              <CanvasHistory key={project.id} project={project} visibleRevision={visible.revision} onChange={updateHistory} es={es} />
+              <CanvasTimeline steps={liveSteps.filter((step) => step.projectId === param
+                && (step.kind !== "edit" || step.revision === visible?.revision))} es={es} />
+              <CanvasHistory key={project.id} project={project} visibleRevision={visible?.revision} onChange={updateHistory} es={es} />
             </div>
             <div id="canvas-pane-elements" role="tabpanel" aria-labelledby="canvas-tab-elements" hidden={rail !== "elements"}>
-              <CanvasElements elements={elements} onSelect={selectElement} onRetry={requestElements} es={es} />
+              {running
+                ? <CanvasElements elements={elements} onSelect={selectElement} onRetry={requestElements} es={es} />
+                : <div className="canvas-inspector-section">
+                    <p className="canvas-empty">{es ? "Abre la vista previa para ver los elementos." : "Open the preview to see its elements."}</p>
+                  </div>}
             </div>
             <PreviewSelection key={project.id} project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} canvas onComments={setComments} />
           </aside>
