@@ -41,6 +41,12 @@ class El:
     def cx(self) -> float:
         return self.x + self.w / 2
 
+    @property
+    def painted(self) -> bool:
+        return (self.d.get("painted", True) and self.w > 0 and self.h > 0
+                and self.st("vis", "visible") == "visible"
+                and all(e.st("op", 1) > 0 for e in (self, *self.ancestors())))
+
     # -- style
     def st(self, key: str, default: Any = None) -> Any:
         return self.s.get(key, default)
