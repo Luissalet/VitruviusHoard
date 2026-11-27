@@ -107,6 +107,55 @@ test("a reply computed while a newer turn is queued cannot start audio or be rep
 });
 
 
+test("playback and replay shorten the IBAN while the written reply and form keep it", async t => {
+  const iban = "ES8200000000000000000000";
+  const field = new Element();
+  field.dataset.transferSlot = "iban";
+  const spoken = [];
+  const conversation = [];
+  globalThis.HTMLSelectElement = class extends Element {};
+  globalThis.document = Object.assign(new EventTarget(), {
+    documentElement: {lang: "es"},
+    createElement: () => new Element(),
+    querySelectorAll: selector => selector === "[data-transfer-slot]" ? [field] : [],
+  });
+  globalThis.window = Object.assign(new EventTarget(), {
+    HoardApp: {reportConversation: entry => conversation.push(entry)},
+  });
+  globalThis.AudioContext = class { state = "running"; };
+  t.after(() => {
+    for (const name of ["window", "document", "HTMLSelectElement", "AudioContext"]) delete globalThis[name];
+  });
+  t.mock.method(globalThis, "fetch", async (url, request) => {
+    if (url.endsWith("/capabilities")) return Response.json({dictation: false, stt: false});
+    if (url.endsWith("/reply")) spoken.push(JSON.parse(request.body).text);
+    return Response.json({code: "offline"}, {status: 503});
+  });
+
+  const {mountTransferAssistant} = await import("../vitruvius_hoard/transfer_assistant/assistant.js");
+  const root = new Element();
+  const assistant = mountTransferAssistant(root, {loadContext: async () => ({
+    accounts: [{id: "daily", name: "Cuenta diaria", aliases: ["diaria"], balanceCents: 10000}],
+    contacts: [{id: "marta", name: "Marta Vidal", iban}],
+  })});
+  assert.equal(await assistant.submit(`A ${iban} por 40 euros, concepto cena desde diaria`), true);
+  const written = root.children[1].textContent;
+  assert.ok(written.includes(iban));
+  assert.equal(field.value, iban);
+  assert.equal(root.children[4].children[0].children[1].textContent, iban);
+  assert.equal(conversation.find(entry => entry.role === "assistant").text, written);
+  const listen = root.children.flatMap(element => element.children).find(element => element.textContent === "Escuchar respuesta");
+  listen.dispatchEvent(new Event("click"));
+  assert.deepEqual(spoken, Array(2).fill(written.replace(iban, "la cuenta terminada en 0000")));
+  assert.equal(root.children[1].textContent, written);
+
+  assert.equal(await assistant.submit("A Marta"), true);
+  assert.equal(field.value, "");
+  assert.match(spoken.at(-1), /a Marta Vidal desde/u);
+  assert.equal(spoken.at(-1), root.children[1].textContent);
+});
+
+
 function mockCapture(t) {
   let voiced = false;
   let time = 0;

@@ -9,6 +9,7 @@ const COPY = {
     concept: "¿Qué concepto quieres indicar?",
     source: "¿Desde qué cuenta quieres transferir?",
     ambiguous: names => "¿Te refieres a " + names.join(" o ") + "?",
+    accountEnding: digits => "la cuenta terminada en " + digits,
     unknownRecipient: "Indica otro contacto o un IBAN válido.",
     unknownSource: "No encuentro esa cuenta de origen.",
     badAmount: "Indica un importe mayor que cero, con un máximo de dos decimales.",
@@ -24,6 +25,7 @@ const COPY = {
     concept: "What reference would you like to use?",
     source: "Which account should the money come from?",
     ambiguous: names => "Do you mean " + names.join(" or ") + "?",
+    accountEnding: digits => "the account ending in " + digits,
     unknownRecipient: "Enter another contact or a valid IBAN.",
     unknownSource: "I couldn't find that source account.",
     badAmount: "Enter an amount greater than zero, with up to two decimal places.",
@@ -312,6 +314,20 @@ function splitSlots(raw, lang, state, contacts) {
 
 export function initialTransfer() {
   return {slots: {}, candidates: [], phase: "collecting", next: "recipient"};
+}
+
+export function transferSpeech(message, {slots, candidates}, lang) {
+  const copy = COPY[lang === "en" ? "en" : "es"];
+  const recipients = slots.recipient ? [slots.recipient, ...candidates] : candidates;
+  for (const {iban: number} of recipients) {
+    if (!number) continue;
+    // Validated IBANs are canonical ASCII. Also match a grouped copy in the reference.
+    const grouped = [...number].join("[\\s-]*");
+    const pattern = new RegExp("(?<![A-Z0-9])" + grouped + "(?![A-Z0-9])", "giu");
+    const ending = number.replace(/\D/gu, "").slice(-4);
+    message = message.replace(pattern, copy.accountEnding(ending));
+  }
+  return message;
 }
 
 export function transferTurn(state, text, {contacts, accounts, lang = "es", allowConfirm = true, interpretation, recipientChoice}) {

@@ -1,4 +1,4 @@
-import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
+import {initialTransfer, isTransferCommand, transferSpeech, transferTurn} from "./dialogue.js";
 import {
   assessTransferEndTurn, finishProvisionalTransfer, publishVoiceTrace, transcribeTransferSpeech, understandText, voiceAvailability,
 } from "./voice.js";
@@ -343,7 +343,7 @@ export function mountTransferAssistant(root, options = {}) {
     const replyAt = performance.now();
     let audioAt;
     show(voiceStatus);
-    void speaker.speak(message, {
+    void speaker.speak(transferSpeech(message, state, lang), {
       locale, signal, traceId: timing?.traceId,
       onPending: () => {
         show(voiceStatus, copy.written_pending);
