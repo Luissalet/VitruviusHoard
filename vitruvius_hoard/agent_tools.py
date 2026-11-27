@@ -756,13 +756,7 @@ def run_vitruvius_status(services: Services, args: Empty) -> dict:
 def run_app_project_create(services: Services, args: AppCreateArgs, *, author=None) -> dict:
     receipt = None
     if args.art_direction_study_id:
-        study = services.alternatives.get(args.art_direction_study_id)
-        decision = study.get("decision")
-        if not study.get("art_direction") or not decision:
-            raise ValueError("Choose an art direction in Alternatives before creating the project")
-        direction = next(a for a in study["alternatives"] if a["id"] == decision["alternative_id"])
-        receipt = {"study_id": study["id"], "study_revision": decision["revision"],
-                   "pattern_id": direction["pattern_id"], "reason": decision["reason"]}
+        receipt = services.alternatives.art_direction_receipt(args.art_direction_study_id)
     return services.app_projects.create(**args.model_dump(exclude={"art_direction_study_id"}),
                                         art_direction=receipt, author=author or {"kind": "agent"})
 

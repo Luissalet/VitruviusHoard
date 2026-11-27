@@ -80,6 +80,11 @@ def test_real_alternatives_decision_and_project_receipt(tmp_path, allows_typical
     plan = response["art_direction"]
     args = StudyCreateArgs(**plan["create"]["arguments"])
     study = services.alternatives.create(**args.model_dump())
+    for extra in ({"label": "Custom form", "html": "<form><input><button>Send</button></form>"},
+                  {"label": "Fourth pattern", "pattern_id": "pulse"}):
+        with pytest.raises(ValueError, match="keeps its three library patterns"):
+            services.alternatives.add_alternative(study["id"], extra)
+    assert len(services.alternatives.get(study["id"])["alternatives"]) == 3
     submitted = AppCreateArgs(name="Taller", art_direction_study_id=study["id"])
     with pytest.raises(ValueError, match="Choose an art direction"):
         run_app_project_create(services, submitted)
@@ -101,6 +106,15 @@ def test_real_alternatives_decision_and_project_receipt(tmp_path, allows_typical
     assert json.loads(project["files"]["project.json"])["art_direction"] == {
         "study_id": study["id"], "study_revision": 1, "pattern_id": chosen["pattern_id"], "reason": reason,
     }
+    valid = services.alternatives._load(study["id"])
+    legacy = json.loads(json.dumps(valid))
+    next(a for a in legacy["alternatives"] if a["id"] == chosen["id"]).pop("pattern_id")
+    services.alternatives._save(legacy)
+    with pytest.raises(ValueError, match="three distinct patterns"):
+        services.alternatives.decide(study["id"], chosen["id"], reason)
+    with pytest.raises(ValueError, match="three distinct patterns"):
+        run_app_project_create(services, submitted)
+    services.alternatives._save(valid)
     reverted = services.alternatives.set_criteria(**chosen_study["undo_call"]["arguments"])
     assert reverted["decision"] is None and reverted["history"][0]["decision"]["alternative_id"] == chosen["id"]
 
