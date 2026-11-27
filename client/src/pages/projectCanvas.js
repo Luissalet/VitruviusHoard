@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { conversationEntry } from "../canvas/canvasConversation.js";
 
 // Vitruvius hosts a second Dock frame while its own Dock bridge remains a page.
 export function useProjectCanvas(frameRef, projectId, previewUrl, revision, locale, onActivity) {
@@ -37,6 +38,10 @@ export function useProjectCanvas(frameRef, projectId, previewUrl, revision, loca
     function onMessage(event) {
       const message = event.data;
       if (event.source !== frame.contentWindow || event.origin !== origin || message?.hoardDock !== 1) return;
+      if (message.type === "dock/conversation") {
+        const entry = conversationEntry(message.entry, projectId);
+        if (entry) report.current?.(entry);
+      }
       if (message.type === "dock/ready" && !events) {
         const query = revision ? "?revision=" + encodeURIComponent(revision) : "";
         events = new EventSource(route + "/events" + query);

@@ -6,6 +6,8 @@ import html
 import json
 import re
 
+from . import form_controls
+
 _PATTERNS = [
     ("editorial", "Editorial grid", "Retícula editorial", "Typography, asymmetric grid and a live scale control.", ["layout", "typography"]),
     ("diorama", "Layered landscape", "Paisaje por capas", "Own SVG landscape with pointer parallax and depth control.", ["svg", "layers"]),
@@ -15,6 +17,7 @@ _PATTERNS = [
     ("halftone", "Halftone field", "Campo de semitonos", "Procedural Canvas dots with adjustable density.", ["canvas", "texture"]),
     ("pulse", "Pulse study", "Estudio de pulsos", "Adjust wave frequency and amplitude; pause or resume motion.", ["canvas", "motion"]),
     ("holographic", "Prismatic card", "Tarjeta prismática", "Pointer tilt, keyboard rotation and a reduced-motion alternative.", ["css", "interaction"]),
+    (form_controls.ID, "Form controls", "Controles de formulario", "Token-styled select, local date and time, and accessible option groups.", ["forms", "accessibility", "tokens"]),
 ]
 
 
@@ -23,12 +26,39 @@ def catalogue():
             for key, name, spanish, description, tags in _PATTERNS]
 
 
-def generate(id: str, text: str = "FORM / FIELD", accent: str = "#e36a39"):
+def recommend(source: str = "", *, has_form: bool | None = None) -> list[dict]:
+    """Suggest the form recipe for rendered or authored forms and their native fields."""
+    if has_form is None and source and re.search(r"<(?:form|select|input|fieldset)\b|\brole\s*=", source, re.I):
+        from .rules.pagesrc import Page
+
+        for node in Page(source).nodes:
+            is_control = node.tag == "select" or (node.tag == "input" and node.attrs.get("type", "").lower() in {
+                "date", "time", "radio", "checkbox",
+            })
+            if node.tag != "form" and node.attrs.get("role") != "form" and not is_control:
+                continue
+            parent = node
+            while parent is not None and "hidden" not in parent.attrs and parent.tag != "template":
+                parent = parent.parent
+            if parent is None:
+                has_form = True
+                break
+    return [pattern for pattern in catalogue() if pattern["id"] == form_controls.ID] if has_form else []
+
+
+def generate(id: str, text: str = "FORM / FIELD", accent: str = "#e36a39", lang: str | None = None):
     pattern = next((item for item in catalogue() if item["id"] == id), None)
     if not pattern:
         raise ValueError(f"Unknown design pattern: {id}")
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", accent):
         raise ValueError("accent must be a six-digit hex colour")
+    if id == form_controls.ID:
+        locale = lang or "es-ES"
+        if not re.fullmatch(r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*", locale):
+            raise ValueError("lang must be a BCP 47 language tag")
+        source, recipe = form_controls.recipe(text, accent, locale)
+        return {"pattern": pattern, "parameters": {"text": text, "accent": accent, "lang": locale},
+                "html": source, "recipe": recipe, "sha256": hashlib.sha256(source.encode("utf-8")).hexdigest()}
     title = html.escape(text)
     literal = json.dumps(text, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     common = """*{box-sizing:border-box}body{margin:0;background:#f1ede3;color:#232521;font:16px/1.5 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:clamp(20px,5vw,64px)}h1{font-size:clamp(36px,8vw,96px);line-height:1.02;overflow-wrap:anywhere;margin:0 0 30px}button,input{font:inherit}button{min-height:44px;padding:8px 16px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.controls{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:24px 0}label{display:flex;gap:10px;align-items:center;flex-wrap:wrap}canvas,svg{display:block;width:100%;max-width:100%;height:auto}p{max-width:55ch}output{font-variant-numeric:tabular-nums}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}"""

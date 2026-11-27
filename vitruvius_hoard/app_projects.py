@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
 from .app_canvas_edits import plan_canvas_edit
+from .app_materials import describe_materials
 from .app_preview import PreviewProxy
 from . import app_critique_loop
 from .app_revision_events import RevisionEvents, revision_change
@@ -156,13 +157,14 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir, host_port=5191):
+    def __init__(self, data_dir, host_port=5191, *, token_name=None):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.processes = {}
         self.proxies = {}
         self.host_port = host_port
+        self.token_name = token_name or (lambda _: None)
         self.canvas = CanvasSessions()
         self.revision_events = RevisionEvents()
 
@@ -193,7 +195,15 @@ class AppProjects:
             if selected not in index["revisions"]:
                 raise LookupError("Project revision not found")
             snapshot = json.loads((root / "revisions" / selected / "snapshot.json").read_text(encoding="utf-8"))
-            return {**self._public_index(index), "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
+            public = self._public_index(index)
+            if "history" in index:
+                public["history"] = [self._with_materials(entry) for entry in index["history"]]
+            return {**public, "selected_revision": selected, "files": snapshot["files"], "source_sha256": snapshot["source_sha256"], "preview": self.status(id)}
+
+    def _with_materials(self, entry):
+        if not entry.get("examples") and not entry.get("tokens_id"):
+            return entry
+        return {**entry, "materials": describe_materials(entry, self.token_name)}
 
     def list(self, archived=False):
         with self.lock:
@@ -378,11 +388,16 @@ class AppProjects:
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
-               description_es=None, files=None, *, author=None):
+               description_es=None, files=None, *, author=None, art_direction=None):
         if files is None:
             files = starter_files(name, template, description, accent, fields, items, lang, description_es)
         elif "server.py" not in files:
             files = {**files, "server.py": _standalone_runtime()}
+        if art_direction and "project.json" in files:
+            spec = json.loads(files["project.json"])
+            if isinstance(spec, dict):
+                spec["art_direction"] = art_direction
+                files = {**files, "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n"}
         project = self.create_from_files(name, template, files, author=author)
         return {**project, "undo": self._undo_call(project)}
 
@@ -449,7 +464,8 @@ class AppProjects:
                             if position:
                                 sources.append(position)
                     hint["sources"] = sources
-                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint}, change=details)
+                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint},
+                                         change=self._with_materials(details))
                 # Whole-frame refreshes can still outline a caller-supplied selector.
                 if hint.get("selector"):
                     change["selectors"] = [hint["selector"]]
@@ -477,7 +493,11 @@ class AppProjects:
 
     @staticmethod
     def _public_index(index):
-        return {key: value for key, value in index.items() if key != "critique_loop"}
+        public = {key: value for key, value in index.items() if key != "critique_loop"}
+        if "history" in public:
+            public["history"] = [{key: value for key, value in entry.items() if key != "materials"}
+                                 for entry in public["history"]]
+        return public
 
     def undo(self, id, expected_revision, expected_updated_ts, revision=None, *, author=None):
         with self.lock:

@@ -83,7 +83,7 @@
   },
   {
     "name": "design_brief",
-    "description": "Design brief for a page/app: style, palette, fonts, rules, motion, anti-patterns. Brief de diseño.\nDeterministic composition (2-3 styles, one palette, one font pairing, rules by area, anti-patterns, checklist), all cited.\nSinónimos: brief, dirección de arte, vibe, paleta, tipografía, para una landing, para una app.",
+    "description": "Design brief for a page/app: style, palette, fonts, rules, motion, anti-patterns. Brief de diseño.\nDomain copy, library references and the mandatory three-direction Alternatives study to complete before building.\nSinónimos: brief, dirección de arte, vibe, paleta, tipografía, para una landing, para una app.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -93,7 +93,8 @@
     "inputSchema": {
       "properties": {
         "subject": {
-          "maxLength": 200,
+          "description": "The full commission, including required content and actions.",
+          "maxLength": 2000,
           "minLength": 1,
           "title": "Subject",
           "type": "string"
@@ -159,6 +160,41 @@
         "use_model": {
           "default": false,
           "title": "Use Model",
+          "type": "boolean"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "enum": [
+                "es",
+                "en"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lang"
+        },
+        "show_simulation_notice": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set true when the commission explicitly requests a simulation notice.",
+          "title": "Show Simulation Notice"
+        },
+        "allow_typical_direction": {
+          "default": false,
+          "description": "Set true when the commission explicitly requests the typical direction.",
+          "title": "Allow Typical Direction",
           "type": "boolean"
         }
       },
@@ -1283,7 +1319,7 @@
   },
   {
     "name": "app_project_create",
-    "description": "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
+    "description": "Create an editable application project. Crear aplicación.\nFor a new custom design, pass the decided art-direction study from the brief.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -1387,6 +1423,20 @@
           "default": null,
           "description": "Custom UTF-8 source files. Omit server.py to use the built-in runtime.",
           "title": "Files"
+        },
+        "art_direction_study_id": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For a new custom design, pass the decided study from the brief.",
+          "title": "Art Direction Study Id"
         }
       },
       "required": [
@@ -3327,7 +3377,7 @@
   },
   {
     "name": "design_patterns",
-    "description": "List eight original editable HTML design studies. Patrones de diseño propios.",
+    "description": "List HTML patterns and suggest controls for a form. Patrones y controles de formulario.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -3335,9 +3385,22 @@
       "openWorldHint": false
     },
     "inputSchema": {
-      "description": "A tool without arguments.",
-      "properties": {},
-      "title": "Empty",
+      "properties": {
+        "html": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Page or fragment to suggest relevant form controls for.",
+          "title": "Html"
+        }
+      },
+      "title": "DesignPatternsArgs",
       "type": "object"
     },
     "module": "design"
@@ -3367,6 +3430,20 @@
           "pattern": "^#[0-9a-fA-F]{6}$",
           "title": "Accent",
           "type": "string"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Page language for the form recipe, e.g. es-ES.",
+          "title": "Lang"
         }
       },
       "required": [
@@ -6980,7 +7057,7 @@
   },
   {
     "name": "design_direction_brief",
-    "description": "Write the five-line design direction of a page from its own text. Dirección de diseño.\nProduct / Character / Bright moment / Signature / Avoid, by the family model; falls back to the theme catalogue when no model answers. Avoid lists the slop signs already found on that render.\nSinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
+    "description": "Write the five-line design direction of a page from its own text. Dirección de diseño.\nProduct / Character / Bright moment / Signature / Avoid, by the family model; falls back to the theme catalogue when no model answers. Includes domain copy and the required library Alternatives workflow before building.\nSinónimos: dirección de arte, carácter, brief de rediseño, qué evitar.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -7077,6 +7154,38 @@
           "default": null,
           "description": "Language the brief is written in: es (Spanish, Spain; default) or en.",
           "title": "Lang"
+        },
+        "product_type": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Type"
+        },
+        "show_simulation_notice": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set true when the commission explicitly requests a simulation notice.",
+          "title": "Show Simulation Notice"
+        },
+        "allow_typical_direction": {
+          "default": false,
+          "description": "Set true when the commission explicitly requests the typical direction.",
+          "title": "Allow Typical Direction",
+          "type": "boolean"
         }
       },
       "title": "DirectionBriefArgs",
@@ -7428,7 +7537,7 @@
   },
   {
     "name": "design_alternatives_create",
-    "description": "Compare structurally different alternatives on frozen criteria. Crear estudio de alternativas.\nBrief + criteria (each with a measurable source, direction and weight) + 2..12 pages, app projects or diagrams. Refuses colour-only variants: structural fingerprints of the DOM/outline must differ in element structure or layout. check_only reports distances without creating.\nSinónimos: alternativas, comparar diseños, opciones, variantes, criterios, decisión de diseño.",
+    "description": "Compare structurally different alternatives on frozen criteria. Crear estudio de alternativas.\nBrief + criteria (each with a measurable source, direction and weight) + 2..12 pages, app projects or diagrams. Refuses colour-only variants: structural fingerprints of the DOM/outline must differ in element structure or layout. check_only reports distances without creating. For a new design, pass the art_direction.create.arguments from design_brief.\nSinónimos: alternativas, comparar diseños, opciones, variantes, criterios, decisión de diseño.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -7532,6 +7641,52 @@
               "maxLength": 400,
               "title": "Intent",
               "type": "string"
+            },
+            "pattern_id": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "A page study from design_patterns, used instead of html or path.",
+              "title": "Pattern Id"
+            },
+            "pattern_text": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Pattern Text"
+            },
+            "pattern_accent": {
+              "anyOf": [
+                {
+                  "maxLength": 7,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Pattern Accent"
+            },
+            "typical": {
+              "default": false,
+              "description": "The familiar direction used as the baseline of an art-direction study.",
+              "title": "Typical",
+              "type": "boolean"
             }
           },
           "required": [
@@ -7638,6 +7793,18 @@
           "default": false,
           "description": "Only report structural distances; create nothing.",
           "title": "Check Only",
+          "type": "boolean"
+        },
+        "art_direction": {
+          "default": false,
+          "description": "A pre-build study of three library patterns, one marked typical.",
+          "title": "Art Direction",
+          "type": "boolean"
+        },
+        "allow_typical": {
+          "default": false,
+          "description": "Allow the typical direction to win when the commission specifically requests it.",
+          "title": "Allow Typical",
           "type": "boolean"
         }
       },

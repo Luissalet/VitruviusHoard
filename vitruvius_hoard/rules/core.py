@@ -70,4 +70,7 @@ CORE_RULES = [
      "No <meta name=\"viewport\">.", "Vitruvius", "Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">."),
     ("dark.no-scheme", "browser", "color", "advisory", "No color-scheme declared",
      "Neither color-scheme nor prefers-color-scheme is used.", "Vitruvius", "Declare color-scheme and support light and dark."),
+    ("form.native-unstyled", "browser", "layout", "warning", "Unstyled form controls",
+     "Visible native controls use their default appearance on a page with design tokens.",
+     "Vitruvius form-controls", "Apply the project's surface, border and focus tokens. See the form-controls design pattern."),
 ]
