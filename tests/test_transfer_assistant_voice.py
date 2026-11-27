@@ -379,3 +379,79 @@ def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):
     result = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
     assert result == {"stt": True, "tts": False, "dictation": False, "dictation_route": "local",
                       "dictation_name": "Boltagon"}
+
+
+def test_end_turn_relays_the_provisional_result_and_preserves_its_status(monkeypatch):
+    relay = voice.TransferVoice()
+    calls = []
+
+    def service(tool, arguments, *, timeout):
+        calls.append((tool, arguments, timeout))
+        return {"decision": "short", "silence_ms": 650, "reason": "amount",
+                "interpretation": {"is_final": False, "raw_transcript": "Veinte euros"}}, "common"
+
+    monkeypatch.setattr(relay, "_dictation_call", service)
+    request = {"version": voice.DICTATION_VERSION, "text": "Veinte euros",
+               "dialogue": "slots", "context": {"field": "amount_cents"}}
+    response = relay.handle("POST", "end-turn", "", "application/json", json.dumps(request).encode())
+    assert response[0] == 200
+    assert calls == [(voice.END_TURN_TOOL, request, 0.75)]
+    assert payload(response)["interpretation"] == {
+        "is_final": False, "raw_transcript": "Veinte euros",
+        "dictation_route": "common", "dictation_name": "Boltagon",
+    }
+    request["text"] = ""
+    assert relay.handle("POST", "end-turn", "", "application/json", json.dumps(request).encode())[0] == 400
+
+
+def test_speculative_probe_does_not_send_a_job_to_the_common_reserve(monkeypatch):
+    relay = voice.TransferVoice()
+    calls = []
+    monkeypatch.setattr(relay, "_common_dictation", lambda: False)
+    monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: {
+        "ok": False, "error": {"details": {"cause": "resident_prewarming"}},
+    })
+
+    def common(*_args, **_kwargs):
+        calls.append("fallback")
+        return {"ok": True, "text": "Veinte euros"}
+
+    monkeypatch.setattr(voice.fam_media, "transcribe", common)
+    route = "language=es&partial=true&adaptive=true"
+    result = relay.handle("POST", "transcribe", route, "audio/wav", b"fixture")
+    assert result[0] == 503
+    assert payload(result)["fallback_reason"] == "resident_prewarming"
+    assert calls == []
+    final = relay.handle("POST", "transcribe", "language=es", "audio/wav", b"fixture")
+    assert final[0] == 200
+    assert payload(final)["fallback_reason"] == "resident_prewarming"
+    assert calls == ["fallback"]
+
+
+def test_provisional_tool_uses_the_discovered_route_without_refreshing_catalogue(monkeypatch):
+    relay = voice.TransferVoice()
+    relay.discovered_at, relay.registered = 1, True
+    calls = []
+
+    def offline_discovery():
+        raise AssertionError("A known provisional route should not wait on catalogue discovery")
+
+    monkeypatch.setattr(relay, "_common_dictation", offline_discovery)
+    monkeypatch.setattr(voice._famsvc, "call_tool", lambda owner, tool, args, **kw: (
+        calls.append((owner, tool, args, kw)) or {"ok": True, "data": {"decision": "long"}}
+    ))
+    response, route = relay._dictation_call(voice.END_TURN_TOOL, {"text": "Treinta y"}, timeout=0.75)
+    assert response == {"decision": "long"} and route == "common"
+    assert len(calls) == 1 and calls[0][1] == voice.END_TURN_TOOL
+
+
+def test_successful_resident_alternate_carries_the_primary_failure_reason(monkeypatch):
+    relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_dictation_details", lambda **_: ("Boltagon", {}))
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_a, **_kw: ({
+        "text": "A Lucía", "engine": "faster-whisper", "model": "small", "gpu": 1,
+        "trace": {"fallback_reason": "resident_model_load_failed"},
+    }, "app"))
+    result = payload(relay.handle("POST", "transcribe", "language=es", "audio/wav", b"fixture"))
+    assert result["provider"] == "Boltagon · GPU 1 · small"
+    assert result["fallback_reason"] == "resident_model_load_failed"

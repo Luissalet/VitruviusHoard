@@ -1,7 +1,30 @@
 import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
-import {transcribeTransferSpeech, understandText, voiceAvailability} from "./voice.js";
+import {
+  assessTransferEndTurn, finishProvisionalTransfer, transcribeTransferSpeech, understandText, voiceAvailability,
+} from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 import {createTransferReplyVoice} from "./reply_audio.js";
+
+const STT_FALLBACK = {
+  es: {
+    resident_prewarming: "El residente se está calentando",
+    resident_lease_timeout: "Se agotó la espera del arriendo de GPU",
+    resident_queue_timeout: "Se agotó la espera en la cola del residente",
+    resident_timeout: "Se agotó la espera de la transcripción",
+    resident_model_load_failed: "No se pudo cargar el modelo principal",
+    resident_inference_failed: "Falló el reconocimiento residente",
+    unavailable: "El residente no respondió",
+  },
+  en: {
+    resident_prewarming: "The resident engine is warming up",
+    resident_lease_timeout: "Waiting for a GPU lease timed out",
+    resident_queue_timeout: "Waiting for the resident queue timed out",
+    resident_timeout: "Transcription timed out",
+    resident_model_load_failed: "The primary model could not load",
+    resident_inference_failed: "Resident recognition failed",
+    unavailable: "The resident engine did not respond",
+  },
+};
 
 const COPY = {
   es: {
@@ -348,7 +371,12 @@ export function mountTransferAssistant(root, options = {}) {
     traceList.replaceChildren();
     traceRows.clear();
     trace.hidden = true;
-    if (spoken && timing) track(currentTrace, 0, timing.transcriptionProvider, timing.transcriptionMs);
+    if (spoken && timing) {
+      const {transcriptionProvider, transcriptionMs, fallbackReason} = timing;
+      const reasons = STT_FALLBACK[lang];
+      const reason = fallbackReason && (Object.hasOwn(reasons, fallbackReason) ? reasons[fallbackReason] : reasons.unavailable);
+      track(currentTrace, 0, reason ? transcriptionProvider + " · " + reason : transcriptionProvider, transcriptionMs);
+    }
     const previous = state.slots;
     const previousPhase = state.phase;
     const previousNext = state.next;
@@ -411,10 +439,16 @@ export function mountTransferAssistant(root, options = {}) {
     return true;
   }
 
+  let adaptiveTurn = false;
+  let captureVersion;
+  let captureState;
+  let captureContext;
+
   function checkVoice() {
     if (!voiceCheck) {
       voiceCheck = voiceAvailability().catch(() => null).then(available => {
         dictation = Boolean(available?.dictation);
+        adaptiveTurn = Boolean(available?.adaptive_turn);
         showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
         show(captureStatus, sttWarning);
@@ -438,13 +472,22 @@ export function mountTransferAssistant(root, options = {}) {
     language: locale,
     finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
-    request: (blob, options) => transcribeTransferSpeech(blob, {...options, state, context, locale}),
+    request: (blob, options) => transcribeTransferSpeech(blob, {
+      ...options, state: captureState, context: captureContext, locale,
+    }),
+    adaptive: () => adaptiveTurn,
+    endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {
+      state: captureState, context: captureContext, locale, signal,
+    }),
     beforeStart: async () => {
       speaker.activate();
       stopPlayback();
       show(transcript);
       if (!dictation || sttWarning || voiceCheck) await checkVoice();
       if (!context) await refreshData().catch(() => {});
+      captureVersion = formVersion;
+      captureState = state;
+      captureContext = context;
       return !sttWarning;
     },
     onStatus: phase => show(captureStatus, copy[phase] || sttWarning),
@@ -454,11 +497,14 @@ export function mountTransferAssistant(root, options = {}) {
     },
     onPartial: result => show(transcript, provisional + " · " + result.text),
     onFinal: (result, timing) => {
+      if (captureVersion !== formVersion) return;
+      if (timing.stopReason === "adaptive") result = finishProvisionalTransfer(result);
       if (result.interpretation && result.interpretation.is_final !== true) return;
       showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {
         ...timing, inputProvider: result.provider, transcriptionProvider: result.transcriptionProvider,
+        fallbackReason: result.fallbackReason,
         transcriptionMs: result.transcriptionMs,
         understandingMs: result.understandingMs,
       }, interpretation: result.interpretation});
