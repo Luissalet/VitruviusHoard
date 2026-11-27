@@ -72,6 +72,94 @@ def test_refresh_rest_leaves_projects_without_an_assistant_as_they_were(client):
     assert client.get(f"/api/app-projects/{project['id']}").json()["revision"] == project["revision"]
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("route", "expected"), [
+    ("agent", {"kind": "agent", "id": "editing-agent"}),
+    ("mounted-agent", {"kind": "agent", "id": "editing-agent"}),
+    ("compat-agent", {"kind": "agent", "id": "editing-agent"}),
+    ("anonymous-agent", {"kind": "agent"}),
+    ("workbench", {"kind": "person"}),
+    ("canvas", {"kind": "person"}),
+])
+async def test_project_history_attributes_source_edits_to_the_calling_route(client, tmp_path, monkeypatch,
+                                                                         route, expected):
+    from vitruvius_hoard.software.host import create_app
+
+    svc = client.svc
+    token_file = tmp_path / "design" / "mcp-token"
+    token_file.parent.mkdir()
+    token_file.write_text(svc.token, encoding="utf-8")
+    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
+    owner = create_app()
+    design = owner.state.runtime.modules["design"]
+    design.app, design.state = client.app, "on"
+
+    path = "pages/index.html"
+    assets = assistant_assets()["files"]
+    refreshed_paths = sorted({ENTRY, ENTRY.replace("assistant.js", "dialogue.js"),
+                              ENTRY.replace("assistant.js", "microphone.js")})
+    files = {**source_files(transfer_spec()), **assets}
+    for asset in refreshed_paths:
+        files[asset] = LEGACY
+    project = call_tool(svc, "app_project_create", {
+        "name": "Project history fixture", "template": "custom", "files": files, "include_files": True,
+    })
+    id = project["id"]
+    rest = f"/design/api/app-projects/{id}"
+    headers = {"Authorization": f"Bearer {svc.token}"}
+    if route in ("mounted-agent", "compat-agent", "workbench"):
+        headers["X-Agent-Id"] = "editing-agent"
+    caller = {"caller": "editing-agent"} if route == "agent" else {}
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=owner), base_url="http://127.0.0.1:9") as api:
+        async def write(name, arguments, ui_path, method="POST"):
+            if route == "canvas":
+                response = await api.request(method, rest + ui_path, json=arguments)
+            else:
+                endpoint = {
+                    "mounted-agent": "/design/api/agent/call",
+                    "compat-agent": "/compat/design/api/agent/call",
+                    "workbench": "/api/ui/call",
+                }.get(route, "/api/agent/call")
+                response = await api.post(endpoint, headers=headers, json={
+                    "name": name, "arguments": {"id": id, **arguments}, **caller,
+                })
+            assert response.is_success, response.text
+            return response.json()
+
+        refresh_args = {"expected_revision": project["revision"]}
+        refreshed = await write(TOOL, refresh_args, "/voice-assistant/refresh")
+        assert refreshed["changed"] and refreshed["files"] == refreshed_paths
+        repeated = await write(TOOL, {"expected_revision": refreshed["revision"]}, "/voice-assistant/refresh")
+        assert not repeated["changed"] and len(svc.app_projects.get(id)["history"]) == 2
+
+        undo = refreshed["undo"]["arguments"]
+        undone = await write("app_project_undo", {key: value for key, value in undo.items() if key != "id"}, "/undo")
+        assert undone["revision"] == project["revision"]
+
+        updated = await write("app_project_update", {"files": {path: "<h1>Updated</h1>", "notes.txt": "Review"},
+                                                     "expected_revision": undone["revision"]}, "", "PUT")
+        source_edit = {"vsrc": f"{path}:1:1", "tag": "h1", "expected_revision": updated["revision"],
+                       "change": {"kind": "text", "value": "Edited"}}
+        if route in ("agent", "canvas", "workbench"):
+            source_edit["actor"] = {"id": "cursor-alias", "name": "Editor"}
+        await write("app_project_edit_source", source_edit, "/source-edit")
+
+        response = await api.get(rest)
+        assert response.is_success, response.text
+        history = response.json()["history"]
+        assert history[0] == project["history"][0]
+        assert [entry["action"] for entry in history[1:]] == ["edit", "undo", "edit", "edit"]
+        assert [entry["files"] for entry in history[1:]] == [
+            refreshed_paths, refreshed_paths, ["notes.txt", path], [path],
+        ]
+        assert [
+            {key: value for key, value in entry["author"].items() if key != "name"} for entry in history[1:]
+        ] == [expected] * 4
+        assert history[-1]["target"] == f"{path}:1:1"
+
+
+
 @pytest.mark.skipif(find_spec("vitruvius_hoard.transfer_assistant.voice_directory") is None,
                     reason="Direct dictation activates when its preview transport is integrated")
 def test_refresh_uses_direct_preview_when_transport_is_integrated(services, monkeypatch):

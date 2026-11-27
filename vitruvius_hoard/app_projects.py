@@ -267,7 +267,8 @@ class AppProjects:
                 }}
             return result
 
-    def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None):
+    def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None,
+                    author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -289,7 +290,7 @@ class AppProjects:
             if updated == source:
                 return current
             return self.update(id, {filename: updated}, expected_revision, actor=actor,
-                               target={**(target or {}), "vsrc": vsrc})
+                               target={**(target or {}), "vsrc": vsrc}, author=author)
 
     def canvas_scale(self, id, revision, path="/", root_font_px=16):
         with self.lock:
@@ -300,7 +301,7 @@ class AppProjects:
             return {"scale": canvas_token_scale(current["files"], html, path, root_font_px)}
 
     def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
-                    expected_count=None, root_font_px=16, lang="en", *, actor=None):
+                    expected_count=None, root_font_px=16, lang="en", *, actor=None, author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["preview"]["state"] != "running":
@@ -323,7 +324,7 @@ class AppProjects:
                 result.update(affects_scope="page", shared_stylesheet=True)
             if operation == "plan" or confirmation or not changes:
                 return result
-            updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc})
+            updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc}, author=author)
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"],
                     **{key: updated[key] for key in ("preview_warning",) if key in updated}}
 
@@ -448,7 +449,7 @@ class AppProjects:
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
             return self._save(root, index, files, action="create", author=author)
 
-    def refresh_voice_assistant(self, id, expected_revision):
+    def refresh_voice_assistant(self, id, expected_revision, *, author=None):
         """Update the installed assistant bundles in one reversible source revision."""
         with self.lock:
             current = self.get(id)
@@ -459,7 +460,7 @@ class AppProjects:
             files = sorted(path for path, content in assets.items() if current["files"].get(path) != content)
             if not files:
                 return {"id": id, "revision": expected_revision, "changed": False, "files": []}
-            saved = self.update(id, {path: assets[path] for path in files}, expected_revision)
+            saved = self.update(id, {path: assets[path] for path in files}, expected_revision, author=author)
             return {"id": id, "revision": saved["revision"], "changed": True, "files": files, "undo": saved["undo"],
                     **{key: saved[key] for key in ("preview_warning",) if key in saved}}
 
@@ -483,7 +484,8 @@ class AppProjects:
             "tokens_id": tokens[:120] if isinstance(tokens, str) else None,
         }
 
-    def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None):
+    def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None,
+               author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -517,7 +519,9 @@ class AppProjects:
                 if hint.get("selector"):
                     change["selectors"] = [hint["selector"]]
 
-            author = {"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")} if actor else {"kind": "person"}
+            if author is None:
+                author = ({"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")}
+                          if actor else {"kind": "person"})
             details = self._change_details(current, merged, target, examples, tokens_id)
             root, index = self._load_index(id)
             saved = self._save(root, index, merged, author=author, details=details,
@@ -525,13 +529,14 @@ class AppProjects:
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
 
-    def add_voice_assistant(self, id, expected_revision, page, form_selector, schema, allow_submit=False):
+    def add_voice_assistant(self, id, expected_revision, page, form_selector, schema, allow_submit=False, *,
+                            author=None):
         with self.lock:
             project = self.get(id, expected_revision)
             if page not in project["files"] or not page.endswith(".html"):
                 raise ValueError("Select an HTML source file in the project")
             patch = form_assistant_files(page, project["files"][page], form_selector, schema, allow_submit)
-            saved = self.update(id, patch, expected_revision)
+            saved = self.update(id, patch, expected_revision, author=author)
             receipt = {"id": id, "revision": saved["revision"], "page": page, "form_selector": form_selector,
                        "changed": "undo" in saved}
             if "undo" in saved:
@@ -571,9 +576,11 @@ class AppProjects:
                 self._set_archived(root, index, True)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            saved = self._save(root, index, previous["files"], action="undo", author=author)
+            change = revision_change(current, {**previous, "revision": revision})
+            saved = self._save(root, index, previous["files"], action="undo", author=author,
+                               details={"files": change["files"]})
             if saved["revision"] != current["revision"]:
-                self.revision_events.publish(id, revision_change(current, saved))
+                self.revision_events.publish(id, change)
             return saved
 
     def undo_change(self, id, change_id, expected_revision, expected_updated_ts, *, author=None):

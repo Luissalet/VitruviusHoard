@@ -133,8 +133,10 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
           {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
         </div>
         {(entry.target || entry.files?.length > 0) && <p className="canvas-step-target" title={entry.files?.join(", ")}>
-          <code>{entry.target || entry.files[0]}</code>
-          {!entry.target && entry.files.length > 1 && <span> +{entry.files.length - 1}</span>}
+          {(entry.target || entry.files?.length === 1) && <code>{entry.target || entry.files[0]}</code>}
+          {entry.files?.length > 1 && <span>{entry.target && " · "}
+            {es ? `${entry.files.length} ficheros` : `${entry.files.length} files`}
+          </span>}
         </p>}
         <CanvasMaterials materials={entry.materials} es={es} />
         {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"

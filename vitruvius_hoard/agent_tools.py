@@ -11,6 +11,7 @@ from .hoard_link.agentkit import AppError, Empty, Tool, ann, call_tool as run_to
 from .services import Services
 from .assay import DEFAULT_TIMEOUT_S as PAGE_CHECK_TIMEOUT_S
 from .transfer_assistant import assistant_assets
+from .app_canvas import project_tool_caller
 from .app_project_results import render_summary, source_summary
 from .app_projects import templates as app_templates
 from .app_source_map import source_position
@@ -806,8 +807,21 @@ def run_app_project_create(services: Services, args: AppCreateArgs, *, author=No
                                         art_direction=receipt, author=author or {"kind": "agent"})
 
 
+def project_tool_author(actor: CanvasActor | None = None) -> dict:
+    caller = project_tool_caller.get()
+    if caller is None:
+        return {"kind": "person"}
+    author = {"kind": "agent"}
+    agent_id = caller or (actor.id if actor else "")
+    if agent_id:
+        author["id"] = agent_id
+    if actor and actor.name:
+        author["name"] = actor.name
+    return author
+
+
 def run_app_project_create_tool(services: Services, args: AppCreateToolArgs) -> dict:
-    project = run_app_project_create(services, args)
+    project = run_app_project_create(services, args, author=project_tool_author())
     return project if args.include_files else source_summary(project)
 
 
@@ -820,7 +834,8 @@ def run_app_project_update(services: Services, args: AppUpdateArgs) -> dict:
     projects = services.app_projects
     projects.canvas.wait_for_revision(args.id, args.expected_revision)
     return projects.update(**args.model_dump(exclude_none=True, exclude={"actor"}),
-                           actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
+                           actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+                           author=project_tool_author(args.actor))
 
 
 def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs) -> dict:
@@ -829,6 +844,7 @@ def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs)
     project = projects.edit_source(
         **args.model_dump(exclude={"actor", "target", "include_files"}),
         actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+        author=project_tool_author(args.actor),
         target=args.target.model_dump(exclude_none=True) if args.target else None,
     )
     if args.include_files:
@@ -847,7 +863,8 @@ def run_app_project_canvas_edit(services: Services, args: AppCanvasEditArgs) -> 
     if args.operation == "apply":
         projects.canvas.wait_for_revision(args.id, args.expected_revision)
     return projects.canvas_edit(**args.model_dump(exclude={"actor"}),
-                                actor=(args.actor or CanvasActor()).model_dump(exclude_none=True))
+                                actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+                                author=project_tool_author(args.actor))
 
 
 def run_app_project_canvas_act(services: Services, args: CanvasActArgs) -> dict:
@@ -960,13 +977,15 @@ TOOLS: list[Tool] = [
     Tool("app_project_refresh_voice_assistant",
          "Update embedded voice assistant assets with undo. Actualizar el asistente de voz incrustado con deshacer.",
          AppVoiceAssistantRefreshArgs, ann(False, False, True),
-         lambda s, a: s.app_projects.refresh_voice_assistant(a.id, a.expected_revision)),
+         lambda s, a: s.app_projects.refresh_voice_assistant(a.id, a.expected_revision,
+                                                             author=project_tool_author())),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
     Tool("app_project_add_voice_assistant", "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",
         AppVoiceAssistantArgs, ann(False, False, True),
         lambda services, args: services.app_projects.add_voice_assistant(
-            args.id, args.expected_revision, args.page, args.form_selector, args.field_schema, args.allow_submit
+            args.id, args.expected_revision, args.page, args.form_selector, args.field_schema, args.allow_submit,
+            author=project_tool_author(),
         ), capped=False),
     Tool("app_project_edit_source", "Edit literal HTML by source position with undo. Editar un elemento por su posición.\n"
         "Returns changed file metadata. Pass include_files=true for full source.",
@@ -979,10 +998,11 @@ TOOLS: list[Tool] = [
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
     Tool("app_project_change_undo", "Undo one recorded project edit. Deshacer un cambio del historial.",
         AppChangeUndoArgs, ann(False, False, True),
-        lambda services, args: services.app_projects.undo_change(**args.model_dump(), author={"kind": "agent"}),
+        lambda services, args: services.app_projects.undo_change(**args.model_dump(), author=project_tool_author()),
         capped=False),
     Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
-        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump(), author={"kind": "agent"}), capped=False),
+        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump(), author=project_tool_author()),
+        capped=False),
     Tool("app_project_preview", "Start or stop the local preview. Start returns its stable open_path. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_selection",

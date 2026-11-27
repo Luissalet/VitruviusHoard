@@ -7,7 +7,7 @@ from fastapi import FastAPI,Request,HTTPException
 from fastapi.responses import FileResponse,JSONResponse
 from fastapi.staticfiles import StaticFiles
 from jsonschema import validate, ValidationError
-from ..app_canvas import ACTOR_TOOLS
+from ..app_canvas import CALLER_TOOLS, PROJECT_HISTORY_TOOLS, project_tool_caller
 from .runtime import Runtime,profile,token_path,ROOT,NativeError
 from .cancellation import owned
 
@@ -139,10 +139,16 @@ def create_app(runtime=None):
                 raise HTTPException(401,'Invalid bridge token')
         body = await request.json()
         name, arguments = body['name'], body.get('arguments', {})
-        agent = ''
-        if request.url.path == '/api/agent/call' and name in ACTOR_TOOLS:
-            agent = caller_id(request.headers, body)
-        return await execute(name, arguments, agent=agent)
+        if request.url.path == '/api/agent/call':
+            agent = caller_id(request.headers, body) if name in CALLER_TOOLS else ''
+            return await execute(name, arguments, agent=agent)
+        if name not in PROJECT_HISTORY_TOOLS:
+            return await execute(name, arguments)
+        context = project_tool_caller.set(None)
+        try:
+            return await execute(name, arguments)
+        finally:
+            project_tool_caller.reset(context)
     @app.exception_handler(ValueError)
     @app.exception_handler(LookupError)
     @app.exception_handler(ValidationError)
