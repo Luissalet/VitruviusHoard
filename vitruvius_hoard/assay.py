@@ -70,13 +70,22 @@ def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
         "planned": run.get("planned", len(cases)),
         "passed": run.get("passed", len(cases) - len(failing)),
         "failed": run.get("failed", len(failing)),
+        **({"startup_blocked_writes": run["startup_blocked_writes"]} if run.get("startup_blocked_writes") else {}),
         "surface": [{"kind": s.get("kind"), "label": s.get("label"), "selector": s.get("selector"), "enabled": s.get("enabled")}
                     for s in (run.get("surface") or [])][:80],
         "failing": [{"id": c.get("id"), "what": c.get("what"), "detail": c.get("detail"), "measured": c.get("measured"),
                      "acts": c.get("acts"), "environment": c.get("environment", {})} for c in failing][:max_cases],
         "cases_sample": [{"id": c.get("id"), "what": c.get("what"), "outcome": c.get("outcome"),
-                          "environment": c.get("environment", {}), "measured": c.get("measured")} for c in cases[:max_cases]],
+                          "environment": c.get("environment", {}), "measured": c.get("measured"),
+                          "detail": c.get("detail", "")} for c in cases[:max_cases]],
     }
+
+
+def _read_progress(path: Path) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = None,
@@ -92,21 +101,32 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
     cmd = _command(folder, entry)
     if url:
         cmd.extend(["--url", url])
+    run_dir = data_dir / "assay" / run_id
+    progress = run_dir / "progress.json"
+    run_dir.mkdir(parents=True, exist_ok=True)
     if criteria:
-        criterion_dir = data_dir / "assay" / run_id
-        criterion_dir.mkdir(parents=True, exist_ok=True)
-        criterion_path = criterion_dir / "criteria.json"
+        criterion_path = run_dir / "criteria.json"
         criterion_path.write_text(json.dumps(criteria, ensure_ascii=False), encoding="utf-8")
         cmd.extend(["--criteria", str(criterion_path)])
     t0 = time.monotonic()
     if runner is None:
+        cmd.extend(["--progress", str(progress)])
         try:
             done = proc.run(cmd, timeout=timeout_s, cwd=folder)  # the whole process tree is killed on a timeout
             code, out, err = done.returncode, done.stdout, done.stderr
         except subprocess.TimeoutExpired:
-            return {"works": False, "error": "assay timed out",
-                    "hint": f"The browser did not finish in {timeout_s} s. Use explicit criteria for the interactions to check.",
-                    "id": run_id}
+            snapshot = _read_progress(progress)
+            finished = snapshot.get("cases", [])
+            result = reduce_run({**snapshot, "works": False,
+                                 "passed": sum(c["outcome"] == "passed" for c in finished),
+                                 "failed": sum(c["outcome"] == "failed" for c in finished)})
+            result.update({
+                "id": run_id, "ms": int((time.monotonic() - t0) * 1000), "timed_out": True,
+                "stopped_at": snapshot.get("stopped_at", {"stage": "start_worker"}),
+                "unchecked": max(0, result["planned"] - len(finished))
+                + sum(c["outcome"] == "unknown" for c in finished),
+            })
+            return result
         except OSError as error:
             return {"error": f"assay could not start: {error}", "hint": INSTALL_HINT, "id": run_id}
     else:
@@ -118,7 +138,11 @@ def run(data_dir: Path, *, html: Optional[str] = None, path: Optional[str] = Non
         payload = None
     if payload is None:
         tail = (err or out or "").strip().splitlines()[-3:]
-        return {"error": "assay gave no JSON", "hint": " | ".join(tail) or f"exit code {code}", "id": run_id, "ms": ms}
+        last = _read_progress(progress).get("stopped_at")
+        hint = " | ".join(tail) or f"exit code {code}"
+        if last:
+            hint += f" (last step: {last['stage']})"
+        return {"error": "assay gave no JSON", "hint": hint, "id": run_id, "ms": ms}
     if not isinstance(payload, dict) or "cases" not in payload:
         tail = (err or "").strip().splitlines()[-2:]
         return {"error": "assay could not check this page", "hint": " | ".join(tail) or "not a page assay can open", "id": run_id, "ms": ms}
