@@ -166,6 +166,13 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 }
 .canvas-inspector-section { min-width: 0; padding: 12px; border-bottom: 1px solid var(--line); }
 .canvas-inspector > .canvas-inspector-section:last-child { border-bottom: 0; }
+/* Keep a track for live activity even when the preview has nothing to report. */
+#canvas-pane-activity:not([hidden]) { display: grid; grid-template-rows: auto 72px; }
+#canvas-pane-activity > :first-child { grid-row: 1; }
+#canvas-pane-activity:not(:has(> .canvas-live-steps, > .canvas-timeline))::before { content: ""; grid-row: 2; }
+#canvas-pane-activity > :is(.canvas-live-steps, .canvas-timeline) {
+  grid-row: 2; min-block-size: 0; overflow: auto; scrollbar-gutter: stable; align-content: start;
+}
 .canvas-inspector-heading {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   margin: 0 0 8px; color: var(--ink); font: inherit; font-weight: 700;
@@ -190,6 +197,18 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 .canvas-comment-list { gap: 8px; }
 .canvas-inspector :is(.canvas-history-list, .canvas-comment-list) { max-height: none; overflow: visible; }
 .canvas-comment-list .panel { min-width: 0; background: var(--surface-2); }
+.preview-comment-draft { scroll-margin-block: 8px; }
+.preview-comment-quote {
+  margin: 0; padding: 6px 9px; border-inline-start: 2px solid var(--accent);
+  border-radius: 4px; background: var(--surface-2); color: var(--ink); font: inherit;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.preview-comment-crop {
+  align-self: flex-start; max-inline-size: min(240px, 100%); max-block-size: 120px;
+  object-fit: contain; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2);
+}
+.preview-comment-draft .preview-comment-crop { block-size: 56px; object-fit: scale-down; object-position: left center; }
+textarea.field.preview-comment-text { font-family: inherit; font-size: 13px; }
 .canvas-history-list li { padding: 5px 4px; border-bottom: 1px solid var(--line); }
 .canvas-history-list li:last-child { border-bottom: 0; }
 .canvas-history-line, .canvas-history-meta { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 1px 8px; }
@@ -200,7 +219,9 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 .canvas-undo + .canvas-empty { margin-top: 6px; }
 @media (min-width: 820px) {
   .canvas-workspace { grid-template-columns: minmax(0, 1fr) clamp(219px, 23vw, 304px); }
-  .canvas-inspector { max-height: var(--canvas-height); overflow-y: auto; }
+  .canvas-inspector {
+    max-height: var(--canvas-height); overflow-y: auto; scrollbar-gutter: stable; scroll-padding-block-start: 44px;
+  }
 }
 @media (min-width: 820px) and (max-width: 960px) {
   main:has(.canvas-workspace) { padding-inline: 18px; }
