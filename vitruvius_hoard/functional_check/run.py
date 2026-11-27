@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 from vitruvius_hoard.functional_check import browser
 from vitruvius_hoard.functional_check.qa import FAILED, PASSED, UNKNOWN, QA, Result
@@ -40,6 +41,65 @@ SLOW_LOOKS, SLOW_POLL_MS = 8, 500
 #: More than one because a program is allowed to behave differently on each
 #: load, and the verdict it is guarding is the most expensive one here.
 SLOW_TRIES = 3
+
+_STARTUP_WRITE_HEADER = "x-vitruvius-check-startup"
+_TRACK_STARTUP_WRITES = r"""([header, marker]) => {
+  let acted = false;
+  let startupCallback = false;
+  window.__vitruviusBeginCheckAction = () => { acted = true; };
+
+  // A timer keeps the phase in which it was scheduled, including timers
+  // created by another startup timer after a gesture has begun.
+  for (const name of ["setTimeout", "setInterval", "requestAnimationFrame", "requestIdleCallback"]) {
+    const schedule = window[name];
+    if (!schedule) continue;
+    window[name] = function(callback, ...args) {
+      if (typeof callback !== "function" || (acted && !startupCallback)) {
+        return schedule.call(this, callback, ...args);
+      }
+      return schedule.call(this, function(...values) {
+        const previous = startupCallback;
+        startupCallback = true;
+        try { return callback.apply(this, values); }
+        finally { startupCallback = previous; }
+      }, ...args);
+    };
+  }
+
+  const sameOriginWrite = (method, url) => {
+    if (["GET", "HEAD"].includes(String(method).toUpperCase())) return false;
+    try { return new URL(url, document.baseURI).origin === location.origin; }
+    catch (_) { return false; }
+  };
+  // These marked requests still go through the read-only route and are aborted.
+  const sendFetch = window.fetch;
+  window.fetch = function(input, init) {
+    const requestInput = input instanceof Request;
+    const method = init?.method ?? (requestInput ? input.method : "GET");
+    const url = requestInput ? input.url : input;
+    if (!startupCallback || !sameOriginWrite(method, url)) return sendFetch.call(this, input, init);
+    try {
+      const request = new Request(input, init);
+      request.headers.set(header, marker);
+      return sendFetch.call(this, request);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
+  const xhr = XMLHttpRequest.prototype;
+  const open = xhr.open, send = xhr.send, setHeader = xhr.setRequestHeader;
+  const writes = new WeakSet();
+  xhr.open = function(method, url, ...args) {
+    open.call(this, method, url, ...args);
+    if (sameOriginWrite(method, url)) writes.add(this);
+    else writes.delete(this);
+  };
+  xhr.send = function(...args) {
+    if (startupCallback && writes.has(this)) setHeader.call(this, header, marker);
+    return send.apply(this, args);
+  };
+}"""
 
 
 @dataclass
@@ -165,6 +225,8 @@ class Browser:
             from vitruvius_hoard.browser import _origin
 
             origin = _origin(self.url)
+            marker = uuid4().hex
+            page.add_init_script(f"({_TRACK_STARTUP_WRITES})({json.dumps([_STARTUP_WRITE_HEADER, marker])})")
 
             def read_only(route):
                 request = route.request
@@ -181,7 +243,7 @@ class Browser:
                     if same_origin and request.method not in ("GET", "HEAD"):
                         path = urlsplit(request.url).path
                         entry = f"{request.method} {path}"[:200]
-                        if self._acting:
+                        if self._acting and request.headers.get(_STARTUP_WRITE_HEADER) != marker:
                             self.blocked_writes.append(entry)
                         elif entry not in self.startup_blocked_writes and len(self.startup_blocked_writes) < 20:
                             self.startup_blocked_writes.append(entry)
@@ -219,8 +281,11 @@ class Browser:
 
     def perform(self, page, acts, *, on_act=None):
         def before_action(action):
-            if action["verb"] != "wait":
+            if action["verb"] != "wait" and not self._acting:
                 self._acting = True
+                if self.url:
+                    with contextlib.suppress(Exception):
+                        page.evaluate("() => window.__vitruviusBeginCheckAction?.()")
             if on_act is not None:
                 on_act(action)
 

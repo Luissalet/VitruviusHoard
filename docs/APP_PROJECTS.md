@@ -2,7 +2,7 @@
 
 The Applications page and `/api/app-projects` expose a complete source workspace. `app_templates` lists work board, reference library, inventory and booking. `app_project_create` saves pages, global layout, styles, client, typed declarations and a standalone Python server. No framework repository, external CLI, generated model or workbench installation is required to run the exported app.
 
-`page_check` checks an owned preview in a browser. Writes blocked while the page loads and before the case acts appear in `startup_blocked_writes`. A case that hits the read-only preview boundary after acting names the blocked request and stays unverified. When this blocks an explicit criterion, the checker still runs the other requested criteria and marks automatic cases as unchecked. A run that reaches its deadline returns completed cases and `stopped_at` with the current phase, case and action when available.
+`page_check` checks an owned preview in a browser. Writes blocked while the page loads and before the case acts appear in `startup_blocked_writes`. This includes `fetch` and XMLHttpRequest writes sent directly from timers or frame callbacks scheduled at startup, even if the callback runs during a case. A case that hits the read-only preview boundary after acting names the blocked request and stays unverified. When this blocks an explicit criterion, the checker still runs the other requested criteria and marks automatic cases as unchecked. A run that reaches its deadline returns completed cases and `stopped_at` with the current phase, case and action when available.
 
 ## Source and data
 

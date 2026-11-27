@@ -7,7 +7,7 @@ from unittest.mock import Mock
 from vitruvius_hoard import assay
 from vitruvius_hoard.functional_check import browser
 from vitruvius_hoard.functional_check.qa import UNKNOWN
-from vitruvius_hoard.functional_check.run import Browser, judge
+from vitruvius_hoard.functional_check.run import Browser, check, judge
 from vitruvius_hoard.functional_check.surface import Case
 
 
@@ -44,7 +44,7 @@ def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeyp
     monkeypatch.setattr(browser, "answer_dialogs", lambda page: None)
 
     def post(path):
-        route = Mock(request=SimpleNamespace(method="POST", url=url + path))
+        route = Mock(request=SimpleNamespace(method="POST", url=url + path, headers={}))
         handler = page.route.call_args.args[1]
         handler(route)
         route.abort.assert_called_once()
@@ -73,6 +73,51 @@ def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeyp
     with engine.open():
         assert engine.blocked_writes == []
         assert engine.startup_blocked_writes == ["POST /startup-ping", "POST /loaded-ping"]
+
+
+def test_background_timers_do_not_invalidate_visible_help_but_action_timers_do(tmp_path):
+    import pytest
+
+    pytest.importorskip("playwright")
+    from vitruvius_hoard.app_projects import AppProjects
+
+    page = """
+        <h1>Help and reservation</h1><button id="help">Show help</button>
+        <button id="save">Save reservation</button><p id="note"></p>
+        <script>
+        const ping = (path) => fetch(path, {method: "POST"}).catch(() => {});
+        setTimeout(() => ping("/startup-ping"), 2300);
+        setTimeout(() => {
+          const status = new XMLHttpRequest();
+          status.open("POST", "/startup-status");
+          status.send();
+        }, 2500);
+        document.querySelector("#help").onclick = () => {
+          document.querySelector("#note").textContent = "Help is visible";
+        };
+        document.querySelector("#save").onclick = () => setTimeout(() => ping("/reservations"), 50);
+        </script>
+    """
+    projects = AppProjects(tmp_path, host_port=9)
+    project = projects.create("Read-only preview")
+    id = project["id"]
+    projects.update(id, {"pages/index.html": page}, project["revision"])
+    criteria = [
+        Case(id="help", what="Show local help", origin="criterion", control="#help",
+             acts=[{"click": "#help"}, {"wait": "3"}], expect={"want": "Help is visible"}),
+        Case(id="save", what="Save through the preview", origin="criterion", control="#save",
+             acts=[{"click": "#save"}, {"wait": "0.2"}], expect={"want": "Reservation saved"}),
+    ]
+    try:
+        preview = projects.preview(id)
+        result = check(tmp_path, criteria=criteria, url=preview["url"])
+        cases = {row.case.what: row for row in result.results.values()}
+        assert cases["Show local help"].outcome == "passed"
+        assert cases["Save through the preview"].outcome == UNKNOWN
+        assert "POST /reservations" in cases["Save through the preview"].detail
+        assert result.startup_blocked_writes == ["POST /startup-ping", "POST /startup-status"]
+    finally:
+        projects.close()
 
 
 def test_missing_second_click_is_unknown_and_preserves_first_press():
