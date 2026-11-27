@@ -126,6 +126,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   const draft = () => Object.fromEntries(entries.map(([name, spec]) => [name, readField(controlsFor(form, name), spec)]));
   const validated = new Map();
   const dateFormat = new Intl.DateTimeFormat(locale, {dateStyle: "long", timeZone: "UTC"});
+  const labelMatch = new Intl.Collator(locale, {usage: "search", sensitivity: "base"});
   let pending;
   let speech;
   let lastChanged;
@@ -236,7 +237,11 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
           const date = new Date(display + "T00:00:00Z");
           if (!Number.isNaN(date.valueOf())) display = dateFormat.format(date);
         }
-        return label(name) + " " + display.replace(/[.?!]+$/u, "") + ".";
+        const title = label(name).trim();
+        display = display.trim().replace(/[.?!]+$/u, "");
+        const beginsWithTitle = labelMatch.compare(display.slice(0, title.length), title) === 0
+          && /^(?:$|[\s:\-–—])/u.test(display.slice(title.length));
+        return (beginsWithTitle ? display : title + " " + display) + ".";
       }).join(" ");
   }
 
@@ -293,20 +298,27 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       trace(turn, "understand", understood.dictation_name || "Boltagon", performance.now() - started,
         understood.dictation_fallback === true);
       const began = performance.now();
-      const changed = entries.filter(([name, spec]) => {
+      const cited = [];
+      let lastApplied;
+      for (const [name, spec] of entries) {
         const result = understood.fields?.[name];
-        return result?.validation === "valid" && result.quote && setField(controlsFor(form, name), spec, result.value);
-      }).map(([name]) => name);
-      for (const name of changed) validated.set(name, understood.fields[name].value);
-      lastChanged = changed.at(-1) || lastChanged;
+        if (result?.validation !== "valid" || typeof result.quote !== "string" || !result.quote.trim()) continue;
+        const controls = controlsFor(form, name);
+        if (setField(controls, spec, result.value)) lastApplied = name;
+        if (controls.length && result.value !== undefined && Object.is(readField(controls, spec), result.value)) {
+          validated.set(name, result.value);
+          cited.push(name);
+        }
+      }
+      lastChanged = lastApplied || cited.at(-1) || lastChanged;
       trace(turn, "execute", "Vitruvius", performance.now() - began);
       const current = draft();
       const ambiguous = understood.ambiguous?.find(({field}) => Object.hasOwn(schema.properties, field));
       asked = ambiguous?.field || required.find(name => current[name] === undefined);
-      ready = !asked && changed.length ? JSON.stringify(current) : undefined;
+      ready = !asked && cited.length ? JSON.stringify(current) : undefined;
       const question = asked && (ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)));
-      const message = [changed.length && (summarize(current) || copy.changed), question ||
-        (changed.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
+      const message = [cited.length && (summarize(current) || copy.changed), question ||
+        (cited.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
       respond(turn, message.filter(Boolean).join(" "));
     } finally {
       pending = undefined;
