@@ -2,6 +2,7 @@ import json
 from hashlib import sha256
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from vitruvius_hoard.agent_tools import call_tool, tool_catalog
@@ -108,3 +109,46 @@ def test_cold_catalogue_has_the_same_template_editor_contract():
     native = next(row for row in tool_catalog() if row["name"] == name)
     frozen = next(row for row in catalog() if row["name"] == name)
     assert native == {key: value for key, value in frozen.items() if key != "module"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("endpoint", "body_identity", "header_identity", "actor", "expected_author"), [
+    ("/api/agent/call", {"caller": "copy-editor"}, None, None, {"kind": "agent", "id": "copy-editor"}),
+    ("/design/api/agent/call", {}, "copy-editor", None, {"kind": "agent", "id": "copy-editor"}),
+    ("/compat/design/api/agent/call", {}, "copy-editor", None, {"kind": "agent", "id": "copy-editor"}),
+    ("/api/agent/call", {}, None, None, {"kind": "agent"}),
+    ("/api/agent/call", {"caller": "copy-editor"}, None, {"id": "cursor"}, {"kind": "agent", "id": "copy-editor"}),
+    ("/api/ui/call", {}, None, None, {"kind": "person"}),
+])
+async def test_http_template_edit_records_the_project_author(client, tmp_path, monkeypatch, endpoint,
+                                                       body_identity, header_identity, actor, expected_author):
+    from vitruvius_hoard.software.host import create_app
+
+    token_file = tmp_path / "design" / "mcp-token"
+    token_file.parent.mkdir()
+    token_file.write_text(client.svc.token, encoding="utf-8")
+    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
+    owner = create_app()
+    design = owner.state.runtime.modules["design"]
+    design.app, design.state = client.app, "on"
+
+    project = create(client.svc)
+    args = {"id": project["id"], "expected_revision": project["revision"], "description": "Updated project text"}
+    if actor is not None:
+        args["actor"] = actor
+    headers = {"Authorization": f"Bearer {client.svc.token}"}
+    if header_identity:
+        headers["X-Agent-Id"] = header_identity
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=owner), base_url="http://127.0.0.1:9") as api:
+        response = await api.post(endpoint, headers=headers, json={
+            "name": "app_project_edit_template_data", "arguments": args, **body_identity,
+        })
+        assert response.status_code == 200, response.text
+        result = response.json()
+        stored = (await api.get(f"/design/api/app-projects/{project['id']}")).json()
+
+    assert result["changed"] and stored["revision"] == result["revision"]
+    event = stored["history"][-1]
+    assert event["files"] == ["project.json"]
+    assert {key: value for key, value in event["author"].items() if key != "name"} == expected_author

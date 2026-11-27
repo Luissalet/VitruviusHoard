@@ -43,7 +43,7 @@ def _validate_text_uses(files, changed):
                            status=400, details={"path": path})
 
 
-def edit_project_template_data(projects, project_id, expected_revision, fields, actor):
+def edit_project_template_data(projects, project_id, expected_revision, fields, *, actor, author):
     """Save a single reversible revision of project.json."""
     with projects.lock:
         current = projects.get(project_id)
@@ -58,5 +58,5 @@ def edit_project_template_data(projects, project_id, expected_revision, fields, 
             return source_summary(current, edit=True)
         _validate_text_uses(files, patch)
         data = json.dumps({**spec, **patch}, ensure_ascii=False, indent=2) + "\n"
-        saved = projects.update(project_id, {path: data}, expected_revision, actor=actor)
+        saved = projects.update(project_id, {path: data}, expected_revision, actor=actor, author=author)
         return source_summary(saved, changed_path=path, edit=True)

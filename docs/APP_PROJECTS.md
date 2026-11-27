@@ -165,7 +165,7 @@ where the saved templates use them. Use ordinary text or a quoted text attribute
 `description` to an empty string. Generated content, record fields and request parameters continue to use their own data.
 
 The receipt lists the saved revision and `changed_files` with a path, byte count and SHA-256. Apply the returned
-`undo.tool` with its `undo.arguments` once to restore the previous data. Passing identical values leaves the revision in place.
+`undo.tool` with its `undo.arguments` once to restore the previous data. Passing identical values leaves the revision in place. The project history uses the caller supplied by the agent transport and records an unidentified agent for anonymous agent calls.
 
 En castellano, indica `name` o `description` y la revisión vigente. La herramienta cambia los datos del proyecto, conserva
 las plantillas y devuelve un recibo breve con deshacer.

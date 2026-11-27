@@ -868,8 +868,11 @@ def run_app_project_edit_template_data(services: Services, args: AppTemplateData
         raise AppError("invalid_input", "Supply a name or description. / Indica un nombre o una descripción.", status=400)
     projects = services.app_projects
     projects.canvas.wait_for_revision(args.id, args.expected_revision)
-    return edit_project_template_data(projects, args.id, args.expected_revision, fields,
-                                      (args.actor or CanvasActor()).model_dump(exclude_none=True))
+    return edit_project_template_data(
+        projects, args.id, args.expected_revision, fields,
+        actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+        author=project_tool_author(args.actor),
+    )
 
 
 def run_app_project_render(services: Services, args: AppProjectRenderToolArgs) -> dict:
