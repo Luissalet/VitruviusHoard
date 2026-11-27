@@ -3,6 +3,44 @@ from conftest import default_probe
 from vitruvius_hoard.lint import CHECKS, CHECK_IDS, run_lint
 
 
+def test_floor_colour_ignores_styles_for_elements_absent_at_all_captured_widths():
+    source = "<main><h1>Field notes</h1></main>"
+    css = "input, select, table { background: #fff; } .unused { color: #000; }"
+    probe = {
+        "css_text": css,
+        "dom": {
+            "390": {"els": [{"tag": "main"}, {"tag": "h1"}]},
+            "1440": {"els": [{"tag": "main"}, {"tag": "h1"}]},
+        },
+    }
+    only = ["slop/pure-black-white"]
+    assert run_lint(probe, source, only=only)["findings"] == []
+
+    # The capture can include a control only at a smaller viewport.
+    probe["dom"]["390"]["els"].append({"tag": "input"})
+    active, = run_lint(probe, source, only=only)["findings"]
+    assert active["evidence"] == ["input: background: #fff"]
+
+    static, = run_lint({"css_text": css}, source, only=only)["findings"]
+    assert "table: background: #fff" in static["evidence"]
+
+
+def test_floor_colour_keeps_uncertain_selectors_and_nonfloor_checks():
+    css = """
+        body { background: #fff; }
+        input:hover { color: #000; }
+        .palette { color: #6366f1; background: #f59e0b; border-color: #10b981; }
+    """
+    probe = {"css_text": css, "dom": {"1440": {"els": [{"tag": "main"}]}}}
+    report = run_lint(probe, "<main>Notes</main>", only=["slop/pure-black-white", "slop/stock-swatch"])
+    found = {item["check_id"]: item for item in report["findings"]}
+    assert set(found) == {"slop/pure-black-white", "slop/stock-swatch"}
+    assert found["slop/pure-black-white"]["evidence"] == ["body: background: #fff", "input:hover: color: #000"]
+
+    probe = {"css_text": ".unseen {color:#000}", "dom": {"1440": {"els": [], "truncated": True}}}
+    assert run_lint(probe, "<main>Notes</main>", only=["slop/pure-black-white"])["findings"]
+
+
 def ids_of(result):
     return {f["check_id"] for f in result["findings"]}
 

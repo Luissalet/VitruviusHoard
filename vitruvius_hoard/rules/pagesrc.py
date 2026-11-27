@@ -408,6 +408,27 @@ def specificity(selector: str) -> tuple[int, int, int]:
 _DYNAMIC = re.compile(r"::?(?:hover|focus|focus-within|focus-visible|active|visited|checked|disabled|before|after|placeholder|selection|"
                       r"first-line|first-letter|target|marker|backdrop|-webkit-[\w-]+|-moz-[\w-]+|file-selector-button)", re.I)
 _COMPOUND = re.compile(r"^((?:[a-zA-Z][\w-]*|\*)?)((?:[.#][\w-]+|\[[^\]]+\]|:[\w-]+(?:\([^)]*\))?)*)$")
+_STRUCTURAL_SELECTOR = re.compile(r"[\w.#* >+~\t\r\n-]+")
+
+
+def _missing_required_element(selector: str, features: set[str], complete_classes: bool) -> bool:
+    # State-dependent and complex selectors keep their existing lint coverage.
+    if not _STRUCTURAL_SELECTOR.fullmatch(selector):
+        return False
+    parts = _parse_selector(selector)
+    if not parts:
+        return False
+    for _, part in parts:
+        match = _COMPOUND.fullmatch(part)
+        if match is None:
+            return False
+        tag, rest = match.groups()
+        if tag and tag != "*" and tag.lower() not in features:
+            return True
+        for feature in re.findall(r"[.#][\w-]+", rest):
+            if feature not in features and (feature.startswith("#") or complete_classes):
+                return True
+    return False
 
 
 def _parse_selector(selector: str) -> Optional[list[tuple[str, str]]]:
@@ -523,7 +544,8 @@ INHERITED = {"color", "font-family", "font-size", "font-style", "font-weight", "
 class Page:
     """A parsed page: HTML tree, style rules and keyframes, with a small cascade."""
 
-    def __init__(self, html: str = "", extra_css: str = ""):
+    def __init__(self, html: str = "", extra_css: str = "", *,
+                 captured_features: tuple[frozenset[str], bool] | None = None):
         self.html = html or ""
         builder = _TreeBuilder()
         try:
@@ -535,6 +557,16 @@ class Page:
         self.nodes = builder.nodes
         self.css = "\n".join([*builder.styles, extra_css or ""])
         self.rules, self.keyframes, self.font_faces = parse_css(self.css)
+        if captured_features is not None:
+            captured, complete_classes = captured_features
+            features = set(captured)
+            for node in self.nodes:
+                features.add(node.tag)
+                if node.id:
+                    features.add("#" + node.id)
+                features.update("." + name for name in node.classes)
+            self.rules = [rule for rule in self.rules
+                          if not _missing_required_element(rule.selector, features, complete_classes)]
         self._parsed: list[tuple[CssRule, Any, tuple[int, int, int]]] = []
         self._index: dict[str, list[tuple[CssRule, Any, tuple[int, int, int]]]] = {}
         for r in self.rules:
@@ -657,21 +689,42 @@ def prose(page: Page) -> str:
     return (body or page.root).text_without(PROSE_SKIP)
 
 
-_PAGE_CACHE: dict[str, Page] = {}
+_PAGE_CACHE: dict[tuple[str, tuple[frozenset[str], bool] | None], Page] = {}
 
 
-def page_of(probe: Optional[dict], html: str) -> Page:
+def _captured_features(probe: dict) -> tuple[frozenset[str], bool] | None:
+    widths = probe.get("dom")
+    if not isinstance(widths, dict) or not widths:
+        return None
+    features = {"html", "head", "body"}
+    complete_classes = True
+    for viewport in widths.values():
+        if viewport.get("error") or viewport.get("truncated") or "els" not in viewport:
+            return None
+        for element in viewport["els"]:
+            features.add(element["tag"].lower())
+            if ident := element.get("id"):
+                features.add("#" + ident)
+            classes = element.get("c", "")
+            # The geometry probe clips class strings to 80 characters.
+            complete_classes = complete_classes and len(classes) < 80
+            features.update("." + name for name in classes.split())
+    return frozenset(features), complete_classes
+
+
+def page_of(probe: Optional[dict], html: str, *, floor_styles: bool = False) -> Page:
     """The parsed page for a lint run (cached: a dozen static rules read the same page). For a captured URL the browser
     hands back its serialised DOM and stylesheet text in the probe, so static rules work there too."""
     probe = probe or {}
     source = html or probe.get("html_text") or ""
     extra = probe.get("css_text") or ""
-    key = hashlib.sha1((source + "\x00" + extra).encode("utf-8", "ignore")).hexdigest()
+    observed = _captured_features(probe) if floor_styles else None
+    key = (hashlib.sha1((source + "\x00" + extra).encode("utf-8", "ignore")).hexdigest(), observed)
     page = _PAGE_CACHE.get(key)
     if page is None:
         if len(_PAGE_CACHE) > 6:
             _PAGE_CACHE.pop(next(iter(_PAGE_CACHE)))
-        page = _PAGE_CACHE[key] = Page(source, extra)
+        page = _PAGE_CACHE[key] = Page(source, extra, captured_features=observed)
     return page
 
 

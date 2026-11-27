@@ -12,6 +12,7 @@ from typing import Callable
 from .base import F, gradients_in, shadow_layers, short, uniq
 from .pagesrc import (Page, colors_in, has_source, hsl_of, is_chromatic, page_of, parse_color, parse_decls, prose, px,
                       spread)
+from .registry import get_rule
 
 CHECKS: dict[str, Callable] = {}
 
@@ -21,7 +22,11 @@ def rule(rule_id: str):
         def run(probe, html):
             if not has_source(probe, html):
                 return []
-            return fn(page_of(probe, html), probe) or []
+            registered = get_rule(rule_id)
+            floor_styles = registered is not None and registered.tier == "floor" and registered.scope in {
+                "color", "layout", "type", "imagery", "system",
+            }
+            return fn(page_of(probe, html, floor_styles=floor_styles), probe) or []
         run.__name__ = fn.__name__
         CHECKS[rule_id] = run
         return run

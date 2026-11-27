@@ -4,6 +4,8 @@ The Applications page and `/api/app-projects` expose a complete source workspace
 
 Use `template: "static-page"` for a landing page, article or other standalone page. It starts with a single editable page, its layout and a stylesheet. Use `files` at creation to supply source you already have in one call. The work-board starter remains the default for projects that need a records interface.
 
+For a browser capture, static floor checks for colour and style skip stylesheet selectors whose required elements, IDs or classes are absent from the captured widths and page source. Selectors with interactive or more complex conditions retain their usual lint coverage. Source-only lint still checks the declared stylesheet.
+
 ## Source and data
 
 `app_project_get` returns every source file and its selected revision. `app_project_update` accepts a file patch and `expected_revision`; unchanged files are preserved. Disjoint edits merge across newer revisions. A conflicting edit to the same file reports the affected path and preserves both the current saved revision and the caller's draft. Earlier revisions remain readable/exportable. The UI retains drafts while switching files, revisions and projects, and keeps edits made after an asynchronous save started.
