@@ -9,7 +9,8 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppCritiqueRoundBody,
+    AppCritiqueUndoBody, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -271,6 +272,21 @@ def project_bundle(request: Request, id: str, filename: str):
     if not path.is_file():
         raise HTTPException(404, "Bundle not found")
     return FileResponse(path, media_type="application/zip", filename="application.zip")
+
+
+@router.get("/{id}/critique-loop")
+def project_critique_loop(request: Request, id: str, lang: str = "en"):
+    return execute(lambda: services(request).app_projects.critique_loop(id, lang))
+
+
+@router.post("/{id}/critique-loop/round")
+def project_critique_round(request: Request, id: str, body: AppCritiqueRoundBody):
+    return execute(lambda: services(request).app_project_critique_round(id, **body.model_dump()))
+
+
+@router.post("/{id}/critique-loop/undo")
+def project_critique_undo(request: Request, id: str, body: AppCritiqueUndoBody):
+    return execute(lambda: services(request).app_projects.undo_critique_round(id, **body.model_dump()))
 
 
 @router.post("/{id}/render")

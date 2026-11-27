@@ -51,6 +51,8 @@ def test_read_only_hints_correct():
     write_names.update({"benchmark_start", "benchmark_stop", "benchmark_resume"})
     read_only_names.update({"app_project_source_count", "app_transfer_assistant_assets"})
     write_names.update({"app_project_edit_source", "app_project_canvas_edit", "app_project_change_undo"})
+    read_only_names.add("app_project_critique_loop")
+    write_names.update({"app_project_critique_round", "app_project_critique_round_undo"})
     assert read_only_names | write_names == set(TOOLS_BY_NAME)
     for name in read_only_names:
         assert TOOLS_BY_NAME[name].annotations["readOnlyHint"] is True

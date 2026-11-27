@@ -54,6 +54,7 @@ async def test_project_tools_and_stable_preview_paths_with_other_modules_off(tmp
         "app_project_edit_source", "app_project_export", "app_project_get", "app_project_list",
         "app_project_preview", "app_project_render", "app_project_selection", "app_project_source_count",
         "app_project_undo", "app_project_update", "app_transfer_assistant_assets",
+        "app_project_critique_loop", "app_project_critique_round", "app_project_critique_round_undo",
     }
     try:
         await runtime.set_module("design", True)
