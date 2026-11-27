@@ -97,6 +97,7 @@
     field.dataset.enhanced = "";
     field.append(input);
     field.after(error);
+    let committedValue = native.value;
 
     function reflect(message) {
       input.setCustomValidity(message);
@@ -120,22 +121,34 @@
       if (commit || !error.hidden) reflect(message);
       if (commit && !message) input.value = display(native.value);
       if (native.value !== previous) native.dispatchEvent(new Event("input", { bubbles: true }));
+      if (commit && !message && native.value !== committedValue) {
+        committedValue = native.value;
+        native.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       return !message;
     }
 
     input.addEventListener("input", () => sync(false));
+    input.addEventListener("change", (event) => {
+      event.stopPropagation();
+      sync(true);
+    });
     input.addEventListener("blur", () => sync(true));
     input.addEventListener("invalid", () => sync(true));
     native.addEventListener("change", () => {
+      committedValue = native.value;
       input.value = display(native.value);
       sync(true);
     });
-    native.form?.addEventListener("reset", () => {
-      queueMicrotask(() => {
+    native.form?.addEventListener("reset", (event) => {
+      // Read the field after the browser restores its default value.
+      setTimeout(() => {
+        if (event.defaultPrevented) return;
+        committedValue = native.value;
         input.value = display(native.value);
         reflect("");
         sync(false);
-      });
+      }, 0);
     });
 
     sync(false);

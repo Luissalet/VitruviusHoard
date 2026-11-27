@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from vitruvius_hoard.design_patterns import catalogue, generate, recommend
@@ -43,3 +45,59 @@ def test_form_recommendation_handles_fragments_and_ignores_hidden_templates():
     assert recommend("<form hidden><select></select></form>") == []
     assert recommend("<script>const code = '<form>';</script>") == []
     assert recommend("<form></form>", has_form=False) == []
+
+
+
+def test_temporal_fields_emit_one_canonical_change_on_confirmation():
+    if os.environ.get("VITRUVIUS_BROWSER_TESTS") != "1":
+        pytest.skip("Set VITRUVIUS_BROWSER_TESTS=1 to run the real browser flow")
+    from playwright.sync_api import expect, sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(channel="chrome", headless=True, args=["--disable-gpu"])
+        try:
+            page = browser.new_page(viewport={"width": 834, "height": 900}, locale="en-US")
+            page.route("**/*", lambda route: route.abort())
+            page.set_content(generate("form-controls")["html"])
+            date = page.get_by_role("textbox", name="Fecha")
+            time = page.get_by_role("textbox", name="Hora")
+            expect(date).to_have_value("30/11/2026")
+            page.get_by_label("Sala").select_option("library")
+            page.locator("form").evaluate("""form => {
+              window.commits = [];
+              form.addEventListener("change", event => window.commits.push([event.target.name, event.target.value]));
+            }""")
+
+            date.fill("31/02/2027")
+            date.press("Tab")
+            assert page.evaluate("window.commits") == []
+            date.fill("31/12/2026")
+            assert page.evaluate("window.commits") == []
+            date.press("Tab")
+            expected = [["date", "2026-12-31"]]
+            assert page.evaluate("window.commits") == expected
+            date.focus()
+            date.press("Tab")
+            assert page.evaluate("window.commits") == expected
+
+            page.locator('input[type=date][name=date]').evaluate("""field => {
+              field.value = "2027-01-15";
+              field.dispatchEvent(new Event("change", { bubbles: true }));
+            }""")
+            expected.append(["date", "2027-01-15"])
+            expect(date).to_have_value("15/01/2027")
+            assert page.evaluate("window.commits") == expected
+
+            time.fill("2030")
+            time.press("Enter")
+            expected.append(["time", "20:30"])
+            assert page.evaluate("window.commits") == expected
+            assert page.locator("form").evaluate("form => new FormData(form).get('time')") == "20:30"
+
+            page.get_by_role("button", name="Restablecer").click()
+            expect(date).to_have_value("30/11/2026")
+            date.fill("15/01/2027")
+            date.press("Tab")
+            assert page.evaluate("window.commits") == [*expected, ["date", "2027-01-15"]]
+        finally:
+            browser.close()
