@@ -69,7 +69,9 @@ def test_a_second_start_reports_the_running_app_and_leaves_the_token_alone(tmp_p
     env = {**os.environ, "VITRUVIUS_PROFILE_DIR": str(tmp_path / "data"), "VITRUVIUS_TOKEN_FILE": str(tmp_path / "data" / "mcp-token"),
            "VITRUVIUS_PORT": str(port), "VITRUVIUS_AUTOSTART": "0", "HOARD_EVENTS": "0", "HOARD_COPILOT": "0",
            "VITRUVIUS_EMBED": "none", "PYTHONUNBUFFERED": "1", "HOARD_NO_BROWSER": "1"}
-    first = subprocess.Popen([sys.executable, "-m", "vitruvius_hoard"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    command = [sys.executable, "-m", "vitruvius_hoard"]
+    process_options = {"cwd": ROOT, "env": env, "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+    first = subprocess.Popen(command, **process_options, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         deadline = time.time() + 60
         while time.time() < deadline:
@@ -83,14 +85,18 @@ def test_a_second_start_reports_the_running_app_and_leaves_the_token_alone(tmp_p
                 time.sleep(0.2)
         token_file = tmp_path / "data" / "mcp-token"
         before = token_file.read_text()
-        second = subprocess.run([sys.executable, "-m", "vitruvius_hoard"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+        second = subprocess.run(command, **process_options, capture_output=True, text=True, timeout=60)
         assert second.returncode == 0 and "already running" in second.stdout
         assert token_file.read_text() == before
         request = Request(f"http://127.0.0.1:{port}/api/agent/call", data=json.dumps({"name": "software_modules", "arguments": {}}).encode(),
                           headers={"Authorization": f"Bearer {before.strip()}", "Content-Type": "application/json"})
         with urlopen(request, timeout=10) as reply:
             assert reply.status == 200
-            assert all(not module["enabled"] for module in json.load(reply)["modules"])
+            status = json.load(reply)
+        # A fresh profile prepares the bundled library and enables only Design.
+        assert {module["module"] for module in status["modules"] if module["enabled"]} == {"design"}
+        assert not any(module["automatic"] for module in status["modules"])
+        assert status["library"]["ok"], status["library"]
     finally:
         first.terminate()
         try:
