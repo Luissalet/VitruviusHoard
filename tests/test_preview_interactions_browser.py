@@ -41,6 +41,7 @@ def preview_frame(page):
               <script>window.inertScriptRan = true;</script>
             </template>
             <section id="first" data-vsrc="pages/index.html:5:1">Programa</section>
+            <input id="draft" aria-label="Borrador" data-vsrc="pages/index.html:7:1">
             {view['extra']}
           </main><script>{script}</script>"""
         return request.fulfill(content_type="text/html", body=body, headers={"X-Vitruvius-Revision": view["revision"]})
@@ -89,9 +90,11 @@ def test_section_appended_beside_template_preserves_the_document(page):
 
 def test_template_contents_are_refreshed_and_stay_inert(page):
     frame, refresh = preview_frame(page)
+    frame.locator("#draft").fill("Pendiente")
     result = refresh("before", "after", template="Después")
     assert result["applied"]
     assert frame.locator("#entry").evaluate("template => template.content.querySelector('p').textContent") == "Después"
+    assert frame.locator("#draft").input_value() == "Pendiente"
     assert frame.evaluate("window.documentStamp") == "original"
     assert frame.evaluate("Boolean(window.inertScriptRan)") is False
 
@@ -116,3 +119,23 @@ def test_date_focus_segments_do_not_end_the_tab_walk(page):
         "input#concierto", "input#fecha", "input#plazas", "input#grupo", "button#pedir",
     ]
     assert all(s["ring"] for s in result["stops"])
+
+def test_identically_named_date_fields_remain_distinct_when_focus_wraps(page):
+    page.set_content("""<!doctype html><form>
+      <input type="date" aria-label="Fecha" name="salida">
+      <input type="date" aria-label="Fecha" name="regreso">
+      <button id="pedir">Pedir reserva</button>
+      </form><script>
+        document.querySelector('button').addEventListener('keydown', event => {
+          if (event.key !== 'Tab') return;
+          event.preventDefault();
+          document.querySelector('input').focus();
+        });
+      </script>""")
+    result = walk(page)
+    assert result["complete"] and result["unreached"] == []
+    assert [(stop["label"], stop["name"], stop["mark"]) for stop in result["stops"]] == [
+        ("input", "Fecha", "1"),
+        ("input", "Fecha", "2"),
+        ("button#pedir", "Pedir reserva", "3"),
+    ]
