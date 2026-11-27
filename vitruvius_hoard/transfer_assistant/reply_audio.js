@@ -51,7 +51,13 @@ export async function playReplyStream(body, context, {signal, job, engine, onSta
     source.start(nextAt);
     playing.add(source);
     nextAt += buffer.duration;
-    if (first) onStart();
+    if (first) {
+      const output = context.getOutputTimestamp?.();
+      const firstAudioAt = output?.performanceTime
+        ? output.performanceTime + (nextAt - buffer.duration - output.contextTime) * 1000
+        : performance.now() + (LEAD_SECONDS + (context.outputLatency || 0)) * 1000;
+      onStart(firstAudioAt);
+    }
   }
 
   function stop() {
@@ -115,10 +121,10 @@ export async function playReplyStream(body, context, {signal, job, engine, onSta
   }
 }
 
-export function createTransferReplyVoice() {
+export function createTransferReplyVoice({engine: preferredEngine} = {}) {
   let context;
   let activation;
-  let engine;
+  let engine = preferredEngine;
 
   function activate() {
     if (!globalThis.AudioContext || globalThis.navigator?.userActivation?.hasBeenActive === false) return;
@@ -184,9 +190,9 @@ export function createTransferReplyVoice() {
       signal.throwIfAborted();
       engine = selected;
       await waitForAudio(signal);
-      const end = await playReplyStream(response.body, context, {signal, job, engine, onStart: () => {
+      const end = await playReplyStream(response.body, context, {signal, job, engine, onStart: firstAudioAt => {
         clearTimeout(timer);
-        onStart?.(engine);
+        onStart?.(engine, firstAudioAt);
       }});
       signal.throwIfAborted();
       completed = true;
@@ -203,5 +209,5 @@ export function createTransferReplyVoice() {
     }
   }
 
-  return {activate, speak};
+  return {activate, speak, close() { void context?.close().catch(() => {}); }};
 }

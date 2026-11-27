@@ -212,7 +212,7 @@ export function mountTransferAssistant(root, options = {}) {
 
   function showDictation(route, name) {
     if (name) dictationName = dictationLabel(name);
-    const label = route === "app" || route === "common" ? copy.dictation_remote : copy.dictation_fallback;
+    const label = ["app", "common", "direct"].includes(route) ? copy.dictation_remote : copy.dictation_fallback;
     show(dictationStatus, label(dictationName));
   }
 

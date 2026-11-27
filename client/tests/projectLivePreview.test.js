@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { previewNavigationUrl, refreshKind } from "../src/pages/projectLivePreview.js";
+import { previewAllow, previewNavigationUrl, refreshKind } from "../src/pages/projectLivePreview.js";
+
+test("iframe microphone permission is limited to the preview origin for both voice assistants", () => {
+  for (const marker of ["assets/voice-assistant/microphone.js", "assets/transfer-assistant/assistant.js"]) {
+    assert.equal(previewAllow({ files: { [marker]: "" } }), "microphone 'src'");
+  }
+  assert.equal(previewAllow({ files: { "pages/index.html": "<form></form>" } }), undefined);
+  assert.equal(previewAllow({}), undefined);
+  assert.equal(previewAllow(null), undefined);
+});
 
 test("only compatible page and sheet changes can patch the loaded document", () => {
   const event = { previous_revision: "a", revision: "b" };
