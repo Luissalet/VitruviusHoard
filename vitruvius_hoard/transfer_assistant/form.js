@@ -15,7 +15,7 @@ const COPY = {
     sttDown: "La transcripción no responde. Puedes escribir la instrucción.",
     dictationDown: "El servicio que interpreta la instrucción no responde. Puedes rellenar el formulario a mano.",
     ask: name => "¿Qué pongo en «" + name + "»?", ambiguous: name => "¿Puedes concretar «" + name + "»?",
-    changed: "He actualizado el formulario.", review: "Revisa los datos.",
+    changed: "He actualizado el formulario.", yes: "Sí", no: "No", review: "Revisa los datos.",
     confirm: "Si están bien, di «sí, confirmo» para enviarlo.",
     noChanges: "No he encontrado un cambio para el formulario. Di el nombre del campo y el valor.",
     submitted: "He solicitado el envío del formulario.", invalid: "Revisa los campos marcados antes de enviar.",
@@ -33,7 +33,7 @@ const COPY = {
     sttDown: "Transcription is unavailable. You can type the instruction.",
     dictationDown: "The dictation service is unavailable. You can fill in the form by hand.",
     ask: name => "What should I enter for “" + name + "”?", ambiguous: name => "Can you clarify “" + name + "”?",
-    changed: "I’ve updated the form.", review: "Check the details.",
+    changed: "I’ve updated the form.", yes: "Yes", no: "No", review: "Check the details.",
     confirm: "If they’re correct, say “I confirm” to submit.",
     noChanges: "I couldn’t find a change to make. Say the field name and its value.",
     submitted: "I’ve requested submission of the form.", invalid: "Check the highlighted fields before submitting.",
@@ -124,6 +124,8 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     .filter(value => typeof value === "string" && value.trim() && value.length <= 128).slice(0, 128);
   const label = name => schema.properties[name]?.title || name;
   const draft = () => Object.fromEntries(entries.map(([name, spec]) => [name, readField(controlsFor(form, name), spec)]));
+  const validated = new Map();
+  const dateFormat = new Intl.DateTimeFormat(locale, {dateStyle: "long", timeZone: "UTC"});
   let pending;
   let speech;
   let lastChanged;
@@ -221,6 +223,23 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     void say(turn, text);
   }
 
+  function summarize(current) {
+    return entries
+      .filter(([name]) => validated.has(name) && Object.is(current[name], validated.get(name)))
+      .map(([name, spec]) => {
+        const value = current[name];
+        const field = controlsFor(form, name)[0];
+        let display = String(value);
+        if (typeof value === "boolean") display = value ? copy.yes : copy.no;
+        if (field?.tagName === "SELECT") display = field.selectedOptions[0]?.label || display;
+        if (spec.format === "date" && /^\d{4}-\d{2}-\d{2}$/.test(display)) {
+          const date = new Date(display + "T00:00:00Z");
+          if (!Number.isNaN(date.valueOf())) display = dateFormat.format(date);
+        }
+        return label(name) + " " + display.replace(/[.?!]+$/u, "") + ".";
+      }).join(" ");
+  }
+
   async function interpret(text, transcription, timing) {
     speech?.abort();
     speech = undefined;
@@ -278,6 +297,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
         const result = understood.fields?.[name];
         return result?.validation === "valid" && result.quote && setField(controlsFor(form, name), spec, result.value);
       }).map(([name]) => name);
+      for (const name of changed) validated.set(name, understood.fields[name].value);
       lastChanged = changed.at(-1) || lastChanged;
       trace(turn, "execute", "Vitruvius", performance.now() - began);
       const current = draft();
@@ -285,7 +305,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       asked = ambiguous?.field || required.find(name => current[name] === undefined);
       ready = !asked && changed.length ? JSON.stringify(current) : undefined;
       const question = asked && (ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)));
-      const message = [changed.length && copy.changed, question ||
+      const message = [changed.length && (summarize(current) || copy.changed), question ||
         (changed.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
       respond(turn, message.filter(Boolean).join(" "));
     } finally {
