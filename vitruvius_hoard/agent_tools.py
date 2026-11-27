@@ -141,7 +141,7 @@ class TokensGenerateArgs(BaseModel):
     vibe: Optional[str] = Field(None, max_length=120)
     mode: str = Field("both", pattern="^(light|dark|both)$")
     knobs: Optional[dict[str, Any]] = None
-    fonts: Optional[dict[str, str]] = None
+    fonts: Optional[dict[str, str]] = Field(None, description="Font families or CSS stacks for heading, body and mono. With a preset, supplied roles override its fonts.")
     radius: Optional[str] = Field(None, max_length=20)
     density: Optional[str] = Field(None, pattern="^(compact|comfortable|spacious)$")
     theme: Optional[str] = Field(None, max_length=60, description="A theme slug (theme_list). Refused when it is one of the last three built or shares their paper/display/accent triple, unless force_theme.")
@@ -150,7 +150,7 @@ class TokensGenerateArgs(BaseModel):
     seed: Optional[str] = Field(None, max_length=200)
     reroll: Optional[int] = Field(None, ge=0, le=20)
     force_theme: Optional[bool] = None
-    preset: Optional[str] = Field(None, max_length=80, description="Build the whole system from a preset instead (design_preset_list), e.g. 'flexoki' or 'flexoki-orange'; the other fields except name are ignored.")
+    preset: Optional[str] = Field(None, max_length=80, description="Build from a preset (design_preset_list), e.g. 'flexoki'. Accepts name and optional fonts overrides. Other generation fields are ignored.")
 
 
 class TokensGetArgs(BaseModel):
@@ -677,7 +677,7 @@ def _resolve_style(services: Services, style: Optional[str], brief: dict) -> Opt
 def run_tokens_generate(services: Services, args: TokensGenerateArgs) -> dict:
     if args.preset:
         from . import presets
-        applied = presets.apply(services, args.preset, title=args.name)
+        applied = presets.apply(services, args.preset, title=args.name, fonts=args.fonts)
         row = services.tokens_get(applied["tokens_id"])
         out = {**row, "preset": applied["preset"]}
         pairs = applied.get("contrast_pairs")
