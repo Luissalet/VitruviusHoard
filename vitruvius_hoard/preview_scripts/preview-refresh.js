@@ -35,12 +35,21 @@
     return byKey;
   }
 
-  const unsafe = "script, style, link, template, [data-vgen]";
+  const unsafe = "script, style, link, template[shadowrootmode], [data-vgen]";
   const attributes = (node) => [...node.attributes]
     .filter(({ name }) => name !== "data-vsrc")
     .map(({ name, value }) => [name, value]).sort();
   const text = (node) => [...node.childNodes].filter(({ nodeType }) => nodeType === Node.TEXT_NODE)
     .map(({ nodeValue }) => nodeValue);
+
+  function sameTemplateContents(before, after) {
+    // Template contents live in separate fragments that isEqualNode does not compare.
+    if (before.localName === "template") return before.innerHTML === after.innerHTML;
+    const previous = before.querySelectorAll("template");
+    if (!previous.length) return true;
+    const next = after.querySelectorAll("template");
+    return [...previous].every((template, index) => template.innerHTML === next[index]?.innerHTML);
+  }
 
   function planHtml(next, files) {
     if (!rendered.querySelector("[data-vsrc]") || !next.querySelector("[data-vsrc]")) return null;
@@ -63,7 +72,8 @@
       return [{ node, after, replace: true }];
     };
     const plan = (before, after) => {
-      if (before.isEqualNode(after)) return [];
+      if (before.isEqualNode(after) && sameTemplateContents(before, after)) return [];
+      if (before.localName === "template" || after.localName === "template") return replace(before, after);
       const beforeKey = before.getAttribute("data-vsrc");
       const afterKey = after.getAttribute("data-vsrc");
       const node = beforeKey !== afterKey ? liveNode(before) : null;
@@ -110,7 +120,7 @@
         const copy = document.importNode(after, true);
         node.replaceWith(copy);
         touched.push(copy);
-        if (!reduced) {
+        if (!reduced && copy.localName !== "template") {
           const opacity = Number(getComputedStyle(copy).opacity);
           copy.animate([{ opacity: opacity * 0.65 }, { opacity }], { duration: 180, easing: "ease-out" });
         }
