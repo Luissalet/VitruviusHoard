@@ -45,8 +45,11 @@ function findingsByArea(findings) {
   return groups;
 }
 
-function RenderView({ render, t }) {
-  const es = useApp().lang === "es";
+function findingText(finding, field, lang) {
+  return (lang === "es" && finding[field + "_es"]) || finding[field];
+}
+
+function RenderView({ render, t, lang }) {
   if (!render) return null;
   if (render.metrics?.error) {
     return (
@@ -114,11 +117,11 @@ function RenderView({ render, t }) {
                 {findings.map((f, i) => (
                   <div key={i} className="card">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-[13px]">{(es && f.title_es) || f.title}</span>
+                      <span className="font-semibold text-[13px]">{findingText(f, "title", lang)}</span>
                       <span className="flex gap-1"><TierChip tier={f.tier} t={t} /><SeverityChip severity={f.severity} t={t} /></span>
                     </div>
-                    <div className="text-[13px] mt-1">{(es && f.detail_es) || f.detail}</div>
-                    {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {(es && f.fix_es) || f.fix}</div>}
+                    <div className="text-[13px] mt-1">{findingText(f, "detail", lang)}</div>
+                    {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {findingText(f, "fix", lang)}</div>}
                   </div>
                 ))}
               </div>
@@ -130,7 +133,7 @@ function RenderView({ render, t }) {
   );
 }
 
-function CritiqueView({ critique, t }) {
+function CritiqueView({ critique, t, lang }) {
   if (!critique) return null;
   const groups = findingsByArea(critique.findings);
   return (
@@ -150,11 +153,14 @@ function CritiqueView({ critique, t }) {
             {findings.map((f, i) => (
               <div key={i} className="card mb-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-[13px]">{f.title}</span>
+                  <span className="font-semibold text-[13px]">{findingText(f, "title", lang)}</span>
                   <span className="flex gap-1"><TierChip tier={f.tier} t={t} />{f.waived && <span className="chip">{t("dq_waived")}</span>}<SeverityChip severity={f.severity} t={t} /></span>
                 </div>
-                <div className="text-[13px] mt-1">{f.detail}</div>
-                {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {f.fix}</div>}
+                <div className="text-[13px] mt-1">{findingText(f, "detail", lang)}</div>
+                {f.score_weight > 0 && !f.waived && (
+                  <div className="help mt-1">{t("critique_score_weight")} {new Intl.NumberFormat(lang).format(f.score_weight)}</div>
+                )}
+                {f.fix && <div className="help mt-1"><strong>{t("critique_fix")}:</strong> {findingText(f, "fix", lang)}</div>}
               </div>
             ))}
           </div>
@@ -447,10 +453,10 @@ export default function Critique({ param }) {
           </div>
 
           {!render && <div className="mt-4"><Empty>{t("critique_empty")}</Empty></div>}
-          <RenderView render={render} t={t} />
+          <RenderView render={render} t={t} lang={lang} />
           <SlopAudit render={render} html={html} url={url} lang={lang} notify={notify} t={t} initialId={/^[0-9a-f]{12}$/.test(param || "") ? param : null} />
           <GatePanel critique={critique} t={t} waivers={waivers} setWaivers={setWaivers} onApply={() => doCritique(true)} busy={busyCritique} />
-          <CritiqueView critique={critique} t={t} />
+          <CritiqueView critique={critique} t={t} lang={lang} />
           <AssayView assay={assay} t={t} />
         </div>
 

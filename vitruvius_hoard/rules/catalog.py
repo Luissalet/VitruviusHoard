@@ -443,6 +443,15 @@ def specs_for(pack: str) -> list[dict[str, Any]]:
 
 # (name_id, engine, scope, severity, name, description, fix)
 _WEBCRAFT = [
+    ("native-control-chrome", "browser", "layout", "advisory", "Default native control indicators",
+     "Select and date inputs still use the browser's default indicators, including controls in closed native dialogs.",
+     "Integrate the indicators with the interface and verify date formatting in the page language."),
+    ("scaffold-copy", "browser", "copy", "advisory", "Visible scaffold copy",
+     "Rendered English or Spanish text describes a prototype, test environment or sample data.",
+     "Remove internal copy or explain what the simulation means for the user."),
+    ("category-composition", "browser", "layout", "advisory", "Stock category composition",
+     "The rendered page repeats a common category layout: uniform cards, middle-featured pricing, a dominant single form, a split hero or a generic footer.",
+     "Give the product's distinctive content prominence and vary the rhythm where the content changes."),
     ("legacy-pattern", "static", "layout", "advisory", "Older pattern with a native replacement",
      "Code that a web platform feature now replaces: float layouts, div modals, click-outside scripts, jQuery animation, scroll listeners for visual effects, moment.js and similar. Each finding cites the guide with the native alternative.",
      "Read the cited guide with web_guide_read and use the native feature, keeping the old code only as the fallback the guide asks for."),

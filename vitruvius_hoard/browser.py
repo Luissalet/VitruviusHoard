@@ -328,17 +328,56 @@ PROBE_JS = r"""
   });
 
   safe("generic_defaults", () => {
-    const fontsUsed = new Set();
-    try { document.fonts.forEach(f => fontsUsed.add(f.family.replace(/["']/g, ""))); } catch (e) {}
-    // The first family actually resolved for the text that matters.
-    for (const sel of ["h1", "h2", "h3", "p", "a", "button", "li", "body"]) {
-      const el = document.querySelector(sel);
-      if (!el) continue;
-      const fam = (getComputedStyle(el).fontFamily || "").split(",")[0].replace(/["']/g, "").trim();
-      if (fam) fontsUsed.add(fam);
+    // A computed font-family is the requested stack, even when its first
+    // face never loaded. Resolve the first available face against two fallbacks.
+    const generic = new Set(["serif", "sans-serif", "monospace", "system-ui",
+      "ui-serif", "ui-sans-serif", "ui-monospace", "ui-rounded", "cursive", "fantasy"]);
+    const stockSans = new Set(["inter", "roboto", "arial", "helvetica", "helvetica neue",
+      "-apple-system", "system-ui", "segoe ui", "sans-serif", "blinkmacsystemfont",
+      "ui-sans-serif", "verdana", "tahoma"]);
+    const stock = new Set([...generic, ...stockSans, "times new roman", "georgia", "courier new"]);
+    const canvas = document.createElement("canvas").getContext("2d");
+    const sample = "Hamburgefonts 0123456789 ÁçMWil";
+    const widths = (family, base, weight) => {
+      canvas.font = weight + " 40px " + (family ? family + ", " : "") + base;
+      return canvas.measureText(sample).width;
+    };
+    const resolved = new Map();
+    const renderedFamily = (cs) => {
+      const key = cs.fontWeight + " " + cs.fontFamily;
+      if (resolved.has(key)) return resolved.get(key);
+      let used = "";
+      for (const part of cs.fontFamily.match(/"[^"]*"|'[^']*'|[^,]+/g) || []) {
+        const css = part.trim();
+        const name = css.replace(/["']/g, "").toLowerCase();
+        const available = canvas && ["monospace", "serif"].some(base =>
+          widths(css, base, cs.fontWeight) !== widths("", base, cs.fontWeight));
+        if (available || generic.has(name) && !name.startsWith("ui-")) {
+          used = name;
+          break;
+        }
+      }
+      resolved.set(key, used);
+      return used;
+    };
+    const text = Array.from(document.querySelectorAll("h1,h2,h3,h4,p,li,label,blockquote,td"))
+      .filter(el => el.getClientRects().length && el.textContent.trim().length > 3)
+      .slice(0, 160);
+    const families = new Map();
+    for (const el of text) {
+      const cs = getComputedStyle(el);
+      if (cs.visibility !== "visible" || +cs.opacity === 0) continue;
+      const rendered = renderedFamily(cs);
+      if (!rendered) continue;
+      const row = families.get(rendered) || {rendered, requested: new Set(), elements: new Set()};
+      row.requested.add(cs.fontFamily);
+      row.elements.add(el.localName + (el.id ? "#" + el.id : ""));
+      families.set(rendered, row);
     }
-    const GENERIC = ["inter", "roboto", "arial", "helvetica", "helvetica neue", "-apple-system", "system-ui", "segoe ui", "sans-serif", "blinkmacsystemfont", "ui-sans-serif", "times new roman", "serif"];
-    const onlyGeneric = fontsUsed.size > 0 && Array.from(fontsUsed).every(f => GENERIC.includes(f.toLowerCase()));
+    const fonts = [...families.values()].map(({rendered, requested, elements}) =>
+      ({rendered, requested: [...requested].slice(0, 4), elements: [...elements].slice(0, 6)}));
+    const onlyGeneric = fonts.length > 0 && (fonts.every(f => stockSans.has(f.rendered)) ||
+      fonts.length === 1 && stock.has(fonts[0].rendered));
     const buttons = Array.from(document.querySelectorAll("button, .btn, [class*=button], a[class*=cta], [role=button]")).slice(0, 30);
     let purpleBlueGradient = false;
     const hueOf = (rgb) => {
@@ -357,7 +396,32 @@ PROBE_JS = r"""
     }
     const emojiIcons = /\p{Extended_Pictographic}/u.test((document.body && document.body.innerText || "").slice(0, 4000));
     const sections = document.querySelectorAll("section, main > div").length;
-    return { fonts_only_generic: onlyGeneric, purple_blue_gradient_buttons: purpleBlueGradient, emoji_icons: emojiIcons, section_count: sections };
+    return { fonts_only_generic: onlyGeneric, fonts, purple_blue_gradient_buttons: purpleBlueGradient, emoji_icons: emojiIcons, section_count: sections };
+  });
+
+  safe("native_controls", () => {
+    const controls = [];
+    const language = (document.documentElement.lang || "").toLowerCase();
+    const browserLanguage = navigator.language.toLowerCase();
+    const dateTypes = ["date", "datetime-local", "month", "week", "time"];
+    const selector = "select," + dateTypes.map(type => 'input[type="' + type + '"]').join(",");
+    for (const el of Array.from(document.querySelectorAll(selector)).slice(0, 60)) {
+      const cs = getComputedStyle(el);
+      if (cs.appearance !== "auto" || cs.visibility !== "visible" || +cs.opacity === 0 ||
+          cs.display === "none" || el.closest("[hidden], [inert]")) continue;
+      const dialog = el.closest("dialog:not([open])");
+      const rect = el.getBoundingClientRect();
+      if (!(rect.width > 0 && rect.height > 0) && !dialog) continue;
+      const type = el.localName === "select" ? "select" : el.type;
+      controls.push({
+        type, selector: el.localName + (el.id ? "#" + el.id : ""),
+        label: el.getAttribute("aria-label") || Array.from(el.labels || []).map(label => label.textContent.trim()).join(" "),
+        state: dialog ? "closed_dialog" : "rendered",
+        locale_mismatch: type !== "select" && language !== "" &&
+          language.split("-")[0] !== browserLanguage.split("-")[0],
+      });
+    }
+    return {controls, language, browser_language: browserLanguage};
   });
 
   return out;
@@ -654,6 +718,10 @@ DOM_JS = r"""
     if (cs.display.includes('flex')) { s.fd = cs.flexDirection; s.fwrap = cs.flexWrap; }
     put(s, 'gap', n(cs.rowGap) || n(cs.columnGap) || 0, 0);
     rec.s = s;
+    if (hasBox && /^(h[1-6]|p|li|dt|dd|label|summary|small|footer)$/.test(el.localName)) {
+      const renderedText = (el.innerText || "").replace(/\s+/g, " ").trim();
+      if (renderedText && renderedText !== text) rec.rendered_text = renderedText.slice(0, 220);
+    }
     // direct element children that carry boxes
     rec.n = el.children.length;
     if (el.localName === 'img') {

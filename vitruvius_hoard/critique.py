@@ -10,6 +10,30 @@ from typing import Any, Optional
 from . import review as review_mod
 from . import waivers as waivers_mod
 from .lint import run_lint, score_of
+from .rules.critique_checks import PATTERN_WEIGHTS
+
+_REVIEW_WEIGHTS = {
+    "font.generic-only": 2.65,
+    "webcraft/native-control-chrome": 1.65,
+    "webcraft/scaffold-copy": 1.3,
+}
+
+
+def _with_review_weights(findings: list[dict]) -> list[dict]:
+    """Use calibrated penalty points while leaving lint and the shipping gate intact."""
+    weighted = []
+    default_faces = any(f.get("check_id") == "font.generic-only" and not f.get("waived") for f in findings)
+    for finding in findings:
+        rule = finding.get("check_id")
+        weight = _REVIEW_WEIGHTS.get(rule)
+        if rule == "webcraft/category-composition":
+            patterns = (finding.get("evidence") or {}).get("patterns") or []
+            weight = max((PATTERN_WEIGHTS.get(pattern["kind"], 0) for pattern in patterns), default=None)
+        elif rule == "unslop/single-default-sans" and default_faces:
+            weight = 0
+        weighted.append({**finding, "score_weight": weight} if weight is not None else finding)
+    return weighted
+
 
 RUBRIC_AREAS = ["hierarchy", "typography", "color", "spacing", "motion", "distinctiveness", "a11y", "content"]
 
@@ -157,6 +181,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
     checked = waivers_mod.validate(waivers, findings, prior_waivers)
     waivers_mod.apply(findings, checked["accepted"])
     gate = waivers_mod.gate(findings)
+    findings = _with_review_weights(findings)
     heuristic_score = score_of(findings)
     if vision_score is not None:
         try:
