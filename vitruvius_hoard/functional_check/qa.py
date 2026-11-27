@@ -162,6 +162,7 @@ class QA:
         self.surface: Surface = Surface()
         self.plan: List[Case] = []
         self.results: Dict[str, Result] = {}
+        self.startup_blocked_writes: List[str] = []
         self.ladders: Dict[str, Ladder] = {}
         #: Every repair proposed, so the same one twice is recognised before it
         #: costs an apply. Fingerprinted on the *change*, never on the reason,

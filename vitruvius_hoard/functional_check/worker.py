@@ -29,11 +29,14 @@ def main():
     cases = [Case(**{**row, "origin": "criterion"}) for row in criteria]
     completed = {}
     planned_count = 0
+    startup_writes = []
 
-    def checkpoint(stage, *, case=None, result=None, action=None, planned=None):
-        nonlocal planned_count
+    def checkpoint(stage, *, case=None, result=None, action=None, planned=None, startup_blocked_writes=None):
+        nonlocal planned_count, startup_writes
         if planned is not None:
             planned_count = planned
+        if startup_blocked_writes is not None:
+            startup_writes = startup_blocked_writes
         if result is not None:
             completed[case.id] = case_row(result)
         position = {"stage": stage}
@@ -41,7 +44,8 @@ def main():
             position.update(case_id=case.id, what=case.what)
         if action is not None:
             position["action"] = action
-        data = {"stopped_at": position, "planned": planned_count, "cases": list(completed.values())}
+        data = {"stopped_at": position, "planned": planned_count, "cases": list(completed.values()),
+                "startup_blocked_writes": startup_writes}
         scratch = args.progress.with_suffix(".tmp")
         scratch.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         scratch.replace(args.progress)
@@ -53,6 +57,7 @@ def main():
         "planned": len(result.plan), "passed": sum(row.outcome == PASSED for row in result.results.values()),
         "failed": sum(row.failed for row in result.results.values()), "works": result.works and not result.unchecked,
         "unchecked": len(result.unchecked),
+        "startup_blocked_writes": result.startup_blocked_writes,
         "surface": [{"kind": row.kind, "selector": row.selector, "label": row.label, "enabled": row.enabled} for row in result.surface.controls] if result.surface else [],
         "cases": [case_row(row) for row in result.results.values()],
     }

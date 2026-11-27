@@ -108,6 +108,8 @@ class Browser:
         self._base = ""
         self.url = url
         self.blocked_writes: List[str] = []
+        self.startup_blocked_writes: List[str] = []
+        self._acting = False
         #: How the last page opened came to rest. See `browser.Settled`: the
         #: three facts in it are kept apart because only one of them is a
         #: fault, and the other two are ordinary properties of working pages.
@@ -152,6 +154,7 @@ class Browser:
     def open(self, environment=None) -> Any:
         """One tab, loaded and settled, with its faults collected."""
         self.blocked_writes = []
+        self._acting = False
         options = {"viewport": {"width": 1100, "height": 760}, **(environment or {})}
         if set(options) - {"viewport", "reduced_motion", "color_scheme"}:
             raise ValueError("Case environment supports viewport, reduced_motion and color_scheme")
@@ -167,11 +170,21 @@ class Browser:
                 request = route.request
                 same_origin = _origin(request.url) == origin
                 if request.method in ("GET", "HEAD") and same_origin:
+                    if self._acting and request.is_navigation_request():
+                        # The next document's startup has its own phase. A
+                        # navigation can be reported before its frame exists.
+                        with contextlib.suppress(Exception):
+                            if request.frame == page.main_frame:
+                                self._acting = False
                     route.continue_()
                 else:
                     if same_origin and request.method not in ("GET", "HEAD"):
                         path = urlsplit(request.url).path
-                        self.blocked_writes.append(f"{request.method} {path}"[:200])
+                        entry = f"{request.method} {path}"[:200]
+                        if self._acting:
+                            self.blocked_writes.append(entry)
+                        elif entry not in self.startup_blocked_writes and len(self.startup_blocked_writes) < 20:
+                            self.startup_blocked_writes.append(entry)
                     route.abort()
 
             page.route("**/*", read_only)
@@ -203,6 +216,15 @@ class Browser:
         finally:
             with contextlib.suppress(Exception):
                 page.close()
+
+    def perform(self, page, acts, *, on_act=None):
+        def before_action(action):
+            if action["verb"] != "wait":
+                self._acting = True
+            if on_act is not None:
+                on_act(action)
+
+        return browser.perform(page, acts, on_act=before_action)
 
 
 #: What a page is called, for a path nobody has written yet.
@@ -654,14 +676,14 @@ def check(folder: str | Path, entry: str = "index.html",
             progress("discover_controls_after_input")
             with contextlib.suppress(Exception):
                 with engine.open() as (page, *_):
-                    browser.perform(page, _twice(seed))
+                    engine.perform(page, _twice(seed))
                     page.wait_for_timeout(300)
                     grown = from_page(_Shot(browser.elements(page)))
                 cases += _once_there_is_data(opened.surface, grown, seed,
                                              criteria)
         for n, case in enumerate(cases, 1):
             case.id = f"C{n:03d}"
-        progress("plan", planned=len(cases))
+        progress("plan", planned=len(cases), startup_blocked_writes=engine.startup_blocked_writes)
         # Nothing to press, type into or draw on. A page like that has only
         # one thing to say for itself, so an empty one is empty for good.
         nothing_to_try = not (opened.surface.operable
@@ -713,7 +735,7 @@ def check(folder: str | Path, entry: str = "index.html",
                     options = {}
                     if on_progress is not None:
                         options["on_act"] = lambda action: progress("perform_action", case=case, action=action)
-                    result = browser.perform(page, acts, **options)
+                    result = engine.perform(page, acts, **options)
                     progress("inspect_case", case=case)
                     return result
 
@@ -935,7 +957,7 @@ def check(folder: str | Path, entry: str = "index.html",
                     with contextlib.suppress(Exception):
                         typed = setup[-1].get("fill", "").split("=")[0]
                         page.focus(typed)
-                        page.keyboard.press("Enter")
+                        perform([{"press": "Enter"}])
                         page.wait_for_timeout(500)
                         after = browser.signature(page)
                 if was_quiet and browser.moved(before, after) is False:
@@ -1010,6 +1032,7 @@ def check(folder: str | Path, entry: str = "index.html",
 
         run = QA(measure=lambda: opened.surface, build_plan=lambda _: cases,
                  carry_out=record_case)
+        run.startup_blocked_writes = engine.startup_blocked_writes
         run.run()
         if blocked_criterion:
             progress("close_browser")
@@ -1508,7 +1531,7 @@ def _one_look(engine: Browser) -> bool:
             # cannot speak for.
             if not pressable:
                 return True
-            browser.perform(page, [{"click": c.selector} for c in pressable])
+            engine.perform(page, [{"click": c.selector} for c in pressable])
             for _ in range(SLOW_LOOKS):
                 page.wait_for_timeout(SLOW_POLL_MS)
                 if browser.moved(before, browser.signature(page)):

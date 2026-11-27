@@ -70,6 +70,7 @@ def reduce_run(run: dict[str, Any], *, max_cases: int = 40) -> dict[str, Any]:
         "planned": run.get("planned", len(cases)),
         "passed": run.get("passed", len(cases) - len(failing)),
         "failed": run.get("failed", len(failing)),
+        **({"startup_blocked_writes": run["startup_blocked_writes"]} if run.get("startup_blocked_writes") else {}),
         "surface": [{"kind": s.get("kind"), "label": s.get("label"), "selector": s.get("selector"), "enabled": s.get("enabled")}
                     for s in (run.get("surface") or [])][:80],
         "failing": [{"id": c.get("id"), "what": c.get("what"), "detail": c.get("detail"), "measured": c.get("measured"),
