@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from vitruvius_hoard.keyboard import walk
+from vitruvius_hoard.hoard_link.app_bridge import BRIDGE_JS
 
 
 pytestmark = pytest.mark.skipif(os.environ.get("VITRUVIUS_BROWSER_TESTS") != "1",
@@ -139,3 +140,48 @@ def test_identically_named_date_fields_remain_distinct_when_focus_wraps(page):
         ("input", "Fecha", "2"),
         ("button#pedir", "Pedir reserva", "3"),
     ]
+
+
+def test_highlight_finds_svg_and_figure_by_accessible_name(page):
+    title = "Lámpara Lumbre: globo de vidrio sobre pie de latón"
+    preview = f"""<!doctype html><meta charset="utf-8"><main>
+      <figure aria-label="Producto principal">
+        <svg role="img" aria-labelledby="piece-title" aria-label="Fallback" width="100" height="80">
+          <title id="piece-title">{title}</title><circle cx="40" cy="40" r="30"/>
+        </svg>
+      </figure>
+      <svg width="80" height="60"><title>Detalle del latón</title><rect width="40" height="40"/></svg>
+      <svg hidden style="display:none" width="80" height="60"><title>{title}</title></svg>
+    </main><script>{BRIDGE_JS}</script>"""
+
+    def route(request):
+        if request.request.url == ORIGIN + "/":
+            return request.fulfill(content_type="text/html", body='<iframe src="/preview" width="370" height="640"></iframe>')
+        if request.request.url == ORIGIN + "/preview":
+            return request.fulfill(content_type="text/html; charset=utf-8", body=preview)
+        return request.abort()
+
+    page.emulate_media(reduced_motion="reduce")
+    page.route("**/*", route)
+    page.goto(ORIGIN + "/", wait_until="load")
+
+    def highlight(label):
+        return page.evaluate("""label => new Promise((resolve, reject) => {
+          const frame = document.querySelector("iframe").contentWindow;
+          const timer = setTimeout(() => reject(new Error(label)), 6000);
+          function receive(event) {
+            if (event.source !== frame || event.data?.type !== "dock/result" || event.data.id !== "highlight") return;
+            clearTimeout(timer);
+            window.removeEventListener("message", receive);
+            resolve(event.data);
+          }
+          window.addEventListener("message", receive);
+          frame.postMessage({hoardDock: 1, type: "dock/hello", host: "faustus"}, location.origin);
+          frame.postMessage({hoardDock: 1, type: "dock/call", id: "highlight", tool: "app_highlight",
+            args: {label, note: "Pieza de la página"}}, location.origin);
+        })""", label)
+
+    for name in (title, "Detalle del latón", "Producto principal"):
+        reply = highlight(name)
+        assert reply["ok"], (name, reply.get("error"))
+        assert reply["result"]["highlighted"] == name

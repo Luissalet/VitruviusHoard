@@ -22,7 +22,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
   const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const controls = 'button,a[href],input:not([type=hidden]),textarea,select,[contenteditable=true],[role=button],[role=tab],[role=checkbox],[role=radio],[role=combobox],[role=switch]';
   const readable = `${controls},h1,h2,h3,h4,h5,h6,p,li,td,th,dt,dd,label,[data-hoard-ref]`;
-  const targets = `${readable},div,span,section,article,main,header,footer`;
+  const targets = `${readable},div,span,section,article,main,header,footer,figure,img,svg,[role=img]`;
 
   function fail(code, message, candidates) {
     const error = new Error(message);
@@ -41,7 +41,8 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
 
   function labels(element) {
     const labelled = (element.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ');
-    return [element.getAttribute('aria-label'), labelled, ...(element.labels || []), element.getAttribute('placeholder'),
+    const svgTitle = element.localName === 'svg' ? [...element.children].find(child => child.localName === 'title') : null;
+    return [labelled, element.getAttribute('aria-label'), ...(element.labels || []), svgTitle, element.getAttribute('alt'), element.getAttribute('placeholder'),
       element.getAttribute('title'), element.innerText || element.textContent, ['button', 'submit'].includes(element.type) ? element.value : '']
       .map(value => compact(value?.textContent ?? value)).filter(Boolean);
   }
