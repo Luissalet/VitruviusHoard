@@ -1,5 +1,8 @@
+import {isTransferCommand, isTransferConfirmation} from "./dialogue.js";
+
 const API = "/__vitruvius_preview__/transfer-voice";
 const VERSION = "cyrano.dictation/v0";
+const CONFIRMATION_SILENCE_MS = 1500;
 const WIRE_FIELDS = {
   recipient: "destination_contact_id",
   amountCents: "amount_cents",
@@ -52,10 +55,47 @@ async function understand(body, signal) {
   });
   if (!response.ok) throw new Error("dictation_unavailable");
   const result = await response.json();
-  if (result.version !== VERSION || typeof result.raw_transcript !== "string"
-      || result.is_final !== true || !result.fields || Array.isArray(result.fields)
-      || !["changed", "missing", "ambiguous"].every(key => Array.isArray(result[key]))) throw new Error("dictation_version");
+  if (!validInterpretation(result, true)) throw new Error("dictation_version");
   return result;
+}
+
+function validInterpretation(value, final) {
+  return value?.version === VERSION && typeof value.raw_transcript === "string"
+    && value.is_final === final && value.fields && typeof value.fields === "object"
+    && !Array.isArray(value.fields) && ["changed", "missing", "ambiguous"].every(key => Array.isArray(value[key]));
+}
+
+export async function assessTransferEndTurn(turn, {state, context, locale, signal}) {
+  if (state.phase === "ready" && isTransferConfirmation(turn.text)) {
+    // Keep listening for a correction and require a fresh transcript of the closed recording.
+    return {silenceMs: CONFIRMATION_SILENCE_MS};
+  }
+  const started = performance.now();
+  const response = await fetch(API + "/end-turn", {
+    method: "POST", headers: {"Content-Type": "application/json"}, signal,
+    body: JSON.stringify({...descriptor(state, context, locale), text: turn.text,
+      dialogue: state.phase === "ready" ? "confirm" : "slots"}),
+  });
+  if (!response.ok) return null;
+  const verdict = await response.json();
+  signal.throwIfAborted();
+  const silenceMs = verdict.silence_ms;
+  const short = verdict.decision === "short" && silenceMs >= 500 && silenceMs <= 700;
+  const long = verdict.decision === "long" && silenceMs >= 1500 && silenceMs <= 2500;
+  if (!Number.isInteger(silenceMs) || (!short && !long)) return null;
+  const provisional = verdict.interpretation;
+  if (provisional == null ? !isTransferCommand(turn.text)
+    : !validInterpretation(provisional, false) || provisional.raw_transcript !== turn.text) {
+    return long ? {silenceMs} : null;
+  }
+  return {silenceMs, result: {
+    ...turn, provisionalInterpretation: provisional, understandingMs: performance.now() - started,
+  }};
+}
+
+export function finishProvisionalTransfer(turn) {
+  const {provisionalInterpretation, ...final} = turn;
+  return {...final, interpretation: provisionalInterpretation ? {...provisionalInterpretation, is_final: true} : null};
 }
 
 export function understandText(text, state, context, locale, signal) {
@@ -64,22 +104,24 @@ export function understandText(text, state, context, locale, signal) {
     signal ? AbortSignal.any([signal, deadline]) : deadline).catch(() => null);
 }
 
-export async function transcribeTransferSpeech(blob, {partial, signal, state, context, locale}) {
+export async function transcribeTransferSpeech(blob, {partial, adaptive, signal, state, context, locale}) {
   const started = performance.now();
   const query = new URLSearchParams({language: locale.slice(0, 2), partial: String(partial)});
+  if (adaptive && partial) query.set("adaptive", "true");
   const prompt = vocabulary(context || undefined).join(", ").slice(0, 1000);
   if (prompt) query.set("initial_prompt", prompt);
   const response = await fetch(API + "/transcribe?" + query, {method: "POST", body: blob, signal});
   if (!response.ok) throw new Error("stt_unavailable");
-  const {text: transcript, provider: transcriptionProvider} = await response.json();
+  const {text: transcript, provider: transcriptionProvider, fallback_reason: fallbackReason} = await response.json();
   const text = transcript.trim();
-  const turn = {text, provider: "shared", transcriptionProvider};
-  if (partial || !text) return turn;
   const transcribed = performance.now();
+  const turn = {text, provider: "shared", transcriptionProvider};
+  if (fallbackReason) turn.fallbackReason = fallbackReason;
+  if (!partial || adaptive) turn.transcriptionMs = transcribed - started;
+  if (partial || !text || isTransferCommand(text)) return turn;
   const interpretation = await understandText(text, state, context, locale, signal);
   signal.throwIfAborted();
-  return {...turn, interpretation,
-    transcriptionMs: transcribed - started, understandingMs: performance.now() - transcribed};
+  return {...turn, interpretation, understandingMs: performance.now() - transcribed};
 }
 
 
