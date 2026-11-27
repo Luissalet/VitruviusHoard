@@ -14,8 +14,10 @@ and scrolling in the preview leave the history in place.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. The element's
 text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
 editor use the same theme. History numbers each action in order and shows the source revision separately.
-Undoing the source change that an agent resolved a comment in reopens the comment and keeps the previous
-summary visible with the undo. Closing a comment by hand does not link it to a source edit.
+Undoing the edit that resolved a comment reopens the comment and keeps the previous summary visible. The agent
+can name the exact revision of the fix, including a change in another file. Without an explicit revision the
+comment follows an unambiguous edit at its anchor or in the anchored file. Closing a comment by hand does not
+link it to a source edit.
 
 Vitruvius owns the reverse proxy and starts a separate copy of the source runtime for each displayed revision. The current runtime stays available until its successor is ready. The proxy adds the shared App Dock bridge and any installed scripts listed in `app_preview.PREVIEW_SCRIPTS` to HTML. A response exposes its actual revision through `X-Vitruvius-Revision` and the `vitruvius-preview-revision` meta tag. It also names the opening of the preview (one per proxy, unchanged by revision refreshes) through `X-Vitruvius-Session` and `vitruvius-preview-session` meta tag; `app_project_preview` status carries it as `session`. The script list affects served previews. The source files, standalone runtime and export ZIP preserve the project's own content.
 

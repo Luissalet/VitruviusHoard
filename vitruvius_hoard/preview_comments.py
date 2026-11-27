@@ -61,6 +61,31 @@ def _page(value):
     return page if page.startswith("/") else "/" + page if page else "/"
 
 
+def _source_fix(history, resolved_pos, comment, explicit):
+    if explicit:
+        return resolved_pos, history[resolved_pos]
+
+    # The snapshot at resolution can include later saves. Attribute an implicit
+    # resolution only to an edit we can identify from the comment's anchor.
+    positions = {comment.get("vsrc"), (comment.get("anchor") or {}).get("vsrc")} - {None, ""}
+    paths = {position.rsplit(":", 2)[0] for position in positions}
+    targets = positions | {comment["selector"]}
+    opened = next(entry["ts"] for entry in reversed(comment["history"]) if entry["status"] == "pending")
+    exact, in_file = [], []
+    for pos in range(resolved_pos, -1, -1):
+        entry = history[pos]
+        if entry.get("ts", 0) < opened:
+            break
+        if entry.get("action") != "edit":
+            continue
+        if entry.get("target") in targets:
+            exact.append((pos, entry))
+        if paths.intersection(entry.get("files") or ()):
+            in_file.append((pos, entry))
+    matches = exact or in_file
+    return matches[0] if len(matches) == 1 else None
+
+
 class PreviewComments:
     def __init__(self, app_projects):
         self.app_projects = app_projects
@@ -102,8 +127,11 @@ class PreviewComments:
                 continue
             # A content hash can recur. Locate the occurrence the agent could have resolved against at the time.
             occurrences = revisions.get(comment["resolved_in"], ())
-            fix = next(((pos, row) for pos, row in reversed(occurrences)
-                        if comment["created_ts"] <= row.get("ts", 0) <= resolution["ts"]), None)
+            resolved_pos = next((pos for pos, row in reversed(occurrences)
+                                 if comment["created_ts"] <= row.get("ts", 0) <= resolution["ts"]), None)
+            if resolved_pos is None:
+                continue
+            fix = _source_fix(history, resolved_pos, comment, explicit=bool(resolution.get("source_revision")))
             if fix is None:
                 continue
             fix_pos, fix_row = fix
@@ -297,7 +325,7 @@ class PreviewComments:
         comment["status"], comment["updated_ts"] = to, now
         comment.update(fields or {})
 
-    def _step(self, project_id, comment_id, by, to, allowed, text=None, fields=None, require_text=False):
+    def _step(self, project_id, comment_id, by, to, allowed, text=None, fields=None, require_text=False, *, history_details=None):
         text = _text(text, MAX_SUMMARY)
         if require_text and not text:
             raise ValueError("This step needs a text")
@@ -306,6 +334,8 @@ class PreviewComments:
             comment = self._find(data, comment_id)
             self._check_step(comment, to, allowed)
             self._move(comment, by, to, text, fields)
+            if history_details:
+                comment["history"][-1].update(history_details)
             self._save(project_id, data)
             return self._view(comment, self._current_revision(project_id))
 
@@ -331,7 +361,8 @@ class PreviewComments:
         if revision is not None and revision not in self.app_projects.get(project_id)["revisions"]:
             raise ValueError(f"Unknown revision {revision}: a comment is resolved in a revision of this project")
         return self._step(project_id, comment_id, "agent", "resolved", ("seen",), summary,
-                          {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or self._current_revision(project_id), "reply": None}, require_text=True)
+                          {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or self._current_revision(project_id), "reply": None},
+                          require_text=True, history_details={"source_revision": revision} if revision else None)
 
     def resolve_person(self, project_id, comment_id):
         """Close an open comment from the preview, keeping the step in its undo history."""

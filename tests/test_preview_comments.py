@@ -125,6 +125,35 @@ def test_rolling_back_an_unrelated_edit_does_not_reopen_the_comment(services, pr
     assert store.list(pid)["comments"][0]["status"] == "pending"
 
 
+def test_undoing_a_save_between_the_fix_and_resolution_keeps_the_comment_resolved(services, project):
+    projects, store = services.app_projects, services.preview_comments
+    pid = project["id"]
+    add(services, project, "Add the year to the introduction")
+    store.acknowledge(pid, ["c1"])
+    fixed = projects.update(pid, {"pages/index.html": project["files"]["pages/index.html"] + "<p>1911</p>"}, project["revision"])
+    other = projects.update(pid, {"layout.html": fixed["files"]["layout.html"] + "\n<!-- unrelated -->"}, fixed["revision"])
+    assert store.resolve(pid, "c1", "Added 1911")["resolved_in"] == other["revision"]
+    restored = projects.undo_change(pid, other["history"][-1]["id"], other["revision"], other["updated_ts"])
+    assert "1911" in restored["files"]["pages/index.html"]
+    [comment] = call_tool(services, "app_project_comments", {"id": pid, "status": "resolved"})["comments"]
+    assert comment["status"] == "resolved" and "source_undo" not in comment["history"][-1]
+
+    projects.undo_change(pid, fixed["history"][-1]["id"], restored["revision"], restored["updated_ts"])
+    [comment] = call_tool(services, "app_project_comments", {"id": pid, "status": "open"})["comments"]
+    assert comment["status"] == "pending" and comment["history"][-1]["source_undo"]
+
+
+def test_explicit_resolution_identifies_a_fix_in_another_file(services, project):
+    projects, store = services.app_projects, services.preview_comments
+    pid = project["id"]
+    add(services, project)
+    store.acknowledge(pid, ["c1"])
+    fixed = projects.update(pid, {"assets/style.css": project["files"]["assets/style.css"] + "\nh1{font-size:2rem}"}, project["revision"])
+    store.resolve(pid, "c1", "Adjusted the stylesheet", revision=fixed["revision"])
+    projects.undo_change(pid, fixed["history"][-1]["id"], fixed["revision"], fixed["updated_ts"])
+    assert store.list(pid)["comments"][0]["status"] == "pending"
+
+
 def test_the_agent_can_answer_and_the_person_replies_back_to_pending(services, project):
     store = services.preview_comments
     add(services, project)
