@@ -22,6 +22,7 @@ MEDIA = {"figure", "img", "svg", "canvas", "video", "picture"}
 PATTERN_WEIGHTS = {
     "single-form-card": 3.4,
     "hero-only": 3.0,
+    "unfilled-split-hero": 2.35,
     "uniform-card-grid": 2.2,
     "repeated-editorial-bands": 2.2,
     "featured-middle-price": 2.0,
@@ -198,6 +199,35 @@ def _split_hero(main: El):
     return None
 
 
+def _split_action_gaps(snapshots: list[Dom], main: El) -> list[dict]:
+    gaps = []
+    for view in snapshots:
+        if not 0 < view.width <= 900 or view.truncated or not 0 < view.page_height <= view.vh + 2:
+            continue
+        content = [
+            el for el in view.els if el.painted and view.first_screen(el)
+            and (el.tl or el.d.get("act") or el.tag in MEDIA)
+        ]
+        last = max(content, key=lambda el: (el.bottom, bool(el.d.get("act"))), default=None)
+        if last is None or not last.d.get("act") or last.cx < view.width * 0.65 or last.w > view.width * 0.5:
+            continue
+        if not any(el.tag == "main" and el.d.get("id") == main.d.get("id") for el in last.ancestors()):
+            continue
+        if last.d.get("href") and last.in_tag("footer"):
+            continue
+        if any(
+            el is not last and el.d.get("act") and el.bottom > last.y and el.y < last.bottom
+            for el in content
+        ):
+            continue
+        empty = view.vh - last.bottom
+        if empty >= view.vh * 0.18:
+            gaps.append({"width": view.width, "height": view.vh, "empty_below_px": empty, "action": last.label()})
+    if any(gap["width"] <= 600 for gap in gaps) and any(gap["width"] > 600 for gap in gaps):
+        return gaps
+    return []
+
+
 def _repeated_editorial_bands(main: El) -> bool:
     count = 0
     split = 0.0
@@ -239,8 +269,8 @@ def category_composition(cx: Ctx):
     main = next((el for el in dom.tags("main") if _visible(el)), None)
     patterns, en, es = [], [], []
 
-    def add(kind, element, reason, reason_es):
-        patterns.append({"kind": kind, "element": element.label()})
+    def add(kind, element, reason, reason_es, **evidence):
+        patterns.append({"kind": kind, "element": element.label(), **evidence})
         en.append(reason)
         es.append(reason_es)
 
@@ -265,10 +295,17 @@ def category_composition(cx: Ctx):
                     add(kind, element, "A list of steps sits beside a separate card of form fields.",
                         "Una lista de pasos ocupa el lateral junto a la tarjeta que contiene los campos.")
             hero = _split_hero(main)
+            gaps = _split_action_gaps(cx.all, main) if hero and cx.desktop else []
+            if gaps:
+                sizes = ", ".join(f"{gap['width']}px: {gap['empty_below_px']}px" for gap in gaps)
+                add("unfilled-split-hero", hero,
+                    f"The main content with a split heading and image ends in a lone action on the right, leaving unused space below ({sizes}).",
+                    f"El contenido principal con titular e imagen en paralelo termina en una acción aislada a la derecha y deja espacio vacío debajo ({sizes}).",
+                    scope=main.label(), viewports=gaps)
             if hero and hero.h >= main.h * 0.8:
                 add("hero-only", hero, "The split headline-and-image hero occupies nearly all of the main content.",
                     "La cabecera dividida entre titular e imagen ocupa casi todo el contenido principal.")
-            elif hero:
+            elif hero and not gaps:
                 add("split-hero", hero, "The opening uses the common side-by-side headline-and-image layout.",
                     "La apertura usa la composición habitual de titular e imagen en paralelo.")
             if _repeated_editorial_bands(main):

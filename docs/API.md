@@ -237,6 +237,9 @@ The composition check measures repeated geometry and structure, such as matching
 a highlighted middle plan, a dominant form, a form with a separate step sidebar, an image beside an opening heading,
 repeated sections with a heading on the left and the same column split, or a short back-to-top footer.
 An independent editorial section can keep a page from being classified as a standalone form.
+When the desktop capture shows a split heading and image, complete single-screen phone and tablet captures can trigger a
+stronger penalty. A lone action on the right must end the main content and leave at least 18% of each viewport empty below it.
+Independent footer links are excluded. The finding reports the main region, viewport sizes, action and unused pixels.
 The typography check compares the requested face with rendered fallback metrics, so an unavailable custom font
 cannot hide the browser default. The native-control finding identifies closed-dialog evidence separately and
 reports a possible date-locale mismatch when the browser and page use different languages.
@@ -247,7 +250,7 @@ Use `gate.state` for shipping. Floor findings and unwaived Reflex findings block
 Set `VITRUVIUS_CRITIQUE_BANK` to the external calibration bank directory and run
 `python -m pytest tests/test_critique_calibration.py` to replay the ten pinned exports and compare the deterministic scores
 with the blind review. The replay uses the project's preview runtime and headless Chrome via Playwright.
-When the bank is configured, the suite also checks the three follow-up exports and their design-system receipts
+When the bank is configured, the suite also checks five follow-up exports and their design-system receipts
 in the sibling `bateria-despues` folder.
 
 ### `POST /api/lint`

@@ -15,6 +15,7 @@ import pytest
 from vitruvius_hoard import browser
 from vitruvius_hoard.agent_tools import call_tool
 from vitruvius_hoard.config import Config
+from vitruvius_hoard.lint import run_lint
 from vitruvius_hoard.services import Services
 
 
@@ -43,6 +44,12 @@ FOLLOW_UPS = [
     ("06-alta-autonomo", "06-portico-fiscal.zip", 2, 6, "cffe23925083f967ef6f",
      "4e2ca3f368e5a3c9023a3b088d0ad6c13fec363bae1844223fa113a1683f77bc",
      "log/05-tokens.json", "748c4faac62f", "a9b1e7b51f75bb7cf37ebb2781552e2494b2e881144e2673dc9042f9967f3800"),
+    ("07-precios", "07-pliegue-facturas.zip", 3, 7, "0cf18f543e8feda7f85e",
+     "58c0f25a609b64b04728da395790e5f489662e314d8dd3c302c9182a8fe200c7",
+     "log/08-tokens.json", "d5c7839ff7ec", "e1a41a6b7143bf465d25ad113a90d3f4b6571f85aa6570d9a7193666c37cfa57"),
+    ("08-plantas", "08-umbral.zip", 4, 7, "303e5b348381b821d68a",
+     "1a1a66033cefca85bc7872cc670f745f0b9c99c898ac940141d2a5d52cceedb5",
+     "tokens-aplicados.json", "31b8740a2d66", "ee43935f30372f9290ae8a1adf856ffadf1eda66ba4d47af5dd0d16179a173a0"),
 ]
 
 
@@ -108,7 +115,7 @@ def test_export_critique_matches_blind_review(calibration_browser, reviewed_expo
         preview = call_tool(calibration_browser, "app_project_preview", {"id": project["id"]}, cap=False)
         assert preview["state"] == "running"
         render = call_tool(calibration_browser, "app_project_render", {
-            "id": project["id"], "revision": project["revision"], "widths": [390, 834, 1440],
+            "id": project["id"], "revision": project["revision"], "widths": [390, 834, 1440], "detail": True,
         }, cap=False)
         assert render["app_project"]["revision"] == project["revision"]
         result = _critique(calibration_browser, render)
@@ -195,8 +202,65 @@ def test_follow_up_matches_the_judge_with_original_source_and_tokens(
             assert "single-form-card" not in patterns
         if name == "06-alta-autonomo":
             assert "form-step-sidebar" in patterns and composition["detail_es"] and composition["score_weight"] > 0
+        if name == "08-plantas":
+            gap = next(item for item in composition["evidence"]["patterns"] if item["kind"] == "unfilled-split-hero")
+            assert gap["scope"] == "main#welcome"
+            assert {view["width"] for view in gap["viewports"]} == {390, 834}
+            assert all(view["action"].startswith("button#next") for view in gap["viewports"])
+            assert "acción aislada" in composition["detail_es"] and composition["score_weight"] > 0.9
+        if name == "07-precios":
+            assert "unfilled-split-hero" not in patterns
     finally:
         services.app_projects.stop(pid)
+
+
+@pytest.mark.parametrize(("scope", "height", "footer_link", "truncated", "scrolls", "matches"), [
+    ("main", 900, False, False, False, True),
+    ("main", 800, False, False, False, False),
+    ("main", 1000, False, False, False, True),
+    ("body", 900, True, False, False, False),
+    ("main", 900, True, False, False, False),
+    ("main", 900, False, True, False, False),
+    ("main", 900, False, False, True, False),
+])
+def test_split_hero_gap_requires_a_main_action_on_complete_single_screens(scope, height, footer_link,
+                                                                            truncated, scrolls, matches):
+    desktop = {
+        "width": 1440, "height": 900, "page_height": 900, "els": [
+            {"tag": "main", "id": "content", "p": -1, "r": [100, 50, 1240, 780]},
+            {"tag": "section", "p": 0, "r": [100, 100, 1240, 360], "s": {"disp": "grid"}},
+            {"tag": "h1", "p": 1, "r": [120, 140, 450, 160], "tl": 12},
+            {"tag": "img", "p": 1, "r": [640, 100, 680, 360]},
+        ],
+    }
+    views = {"1440": desktop}
+    for width in (390, 834):
+        action = {"tag": "button", "id": "continue", "act": True}
+        if footer_link:
+            action = {"tag": "a", "id": "contact", "act": True, "href": "/contact"}
+        views[str(width)] = {
+            "width": width, "height": height, "page_height": height + (12 if scrolls else 0),
+            "truncated": truncated, "els": [
+                {"tag": "body", "p": -1, "r": [0, 0, width, height]},
+                {"tag": "main", "id": "content", "p": 0, "r": [0, 0, width, 760]},
+                {"tag": "h1", "p": 1, "r": [20, 100, width - 40, 160], "tl": 12},
+                {"tag": "img", "p": 1, "r": [20, 280, width - 40, 240]},
+                {"tag": "footer", "p": 1 if scope == "main" else 0, "r": [0, 640, width, 70]},
+                {**action, "p": 4, "r": [width - 100, 650, 70, 30]},
+            ],
+        }
+    for snapshot in views.values():
+        for index, element in enumerate(snapshot["els"]):
+            element["i"] = index
+    (finding,) = run_lint({"dom": views}, "", only=[COMPOSITION])["findings"]
+    patterns = {pattern["kind"]: pattern for pattern in finding["evidence"]["patterns"]}
+    assert ("unfilled-split-hero" in patterns) is matches
+    if matches:
+        gap = patterns["unfilled-split-hero"]
+        assert gap["scope"] == "main#content"
+        assert {(view["width"], view["height"], view["empty_below_px"]) for view in gap["viewports"]} == {
+            (390, height, height - 680), (834, height, height - 680),
+        }
 
 
 def test_hidden_copy_and_custom_indicators_do_not_count(calibration_browser):
