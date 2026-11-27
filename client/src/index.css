@@ -184,7 +184,10 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
   padding: 3px 6px; border-radius: 5px; text-align: start; cursor: pointer;
 }
 .canvas-layer-list button code { color: var(--muted); font-size: 11px; }
-.canvas-layer-list button span { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.canvas-layer-list button :is(code, span) {
+  min-width: 0; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+}
+.canvas-layer-list button span { flex: 1 1 0; }
 .canvas-layer-list button:hover { background: var(--surface-2); }
 .canvas-layer-list button[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent); }
 .canvas-comment-list { gap: 8px; }
@@ -207,6 +210,9 @@ textarea.field.preview-comment-text { font-family: inherit; font-size: 13px; }
 .canvas-history-line, .canvas-history-meta { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 1px 8px; }
 .canvas-history-meta { font-size: 11px; color: var(--muted); }
 .canvas-history-meta time { white-space: nowrap; }
+.canvas-history-legacy { font-size: 12px; }
+.canvas-history-legacy summary { cursor: pointer; }
+.canvas-history-legacy time { color: var(--muted); white-space: nowrap; }
 .canvas-history-more { display: block; margin-top: 8px; font-size: 12px; }
 .canvas-undo { margin-top: 8px; }
 .canvas-undo + .canvas-empty { margin-top: 6px; }

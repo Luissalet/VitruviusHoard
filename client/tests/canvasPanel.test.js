@@ -1,3 +1,4 @@
+import { partitionLegacyHistory } from "../src/canvas/canvasPanel.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { canvasContext, canvasHistoryEntries, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../src/canvas/canvasPanel.js";
@@ -39,6 +40,19 @@ test("the Dock context fits what the host keeps: focus and a short summary with 
   });
   assert.deepEqual(context.focus, { kind: "app_project", id: "p1", label: "Board" });
   assert.equal(context.summary, 'Board @r2 · mode select · selected 1: h1 "Current records" pages/index.html:3:1 x3 · open comments 1: #1 Bigger');
+});
+
+test("history groups only earlier unattributed snapshots and preserves their order", () => {
+  const current = { revision: "r5", action: "legacy" };
+  const authoredSave = { revision: "r4", action: "legacy", author: { kind: "person" } };
+  const edit = { revision: "r3", action: "edit", id: "edit-1" };
+  const earlier = [{ revision: "r2", action: "legacy" }, { revision: "r1" }];
+  const entries = [current, authoredSave, edit, ...earlier];
+  assert.deepEqual(partitionLegacyHistory(entries, "r5"), {
+    recordedEntries: [current, authoredSave, edit],
+    previous: earlier,
+  });
+  assert.deepEqual(partitionLegacyHistory(entries, "missing"), { recordedEntries: entries, previous: [] });
 });
 
 test("open comments keep their place when a long selection fills the summary", () => {
