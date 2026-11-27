@@ -2,12 +2,7 @@
 
 from importlib.resources import files
 
-from . import ENTRY, assistant_assets
-
-
-FORM_ROOT = "assets/voice-assistant/"
-FORM_ENTRY = FORM_ROOT + "form.js"
-FORM_ASSETS = ("form.js", "form.css", "microphone.js", "reply_audio.js")
+from . import ENTRY, FORM_ASSETS, FORM_ENTRY, FORM_ROOT, assistant_assets
 
 
 def embedded_assistant_assets(source):

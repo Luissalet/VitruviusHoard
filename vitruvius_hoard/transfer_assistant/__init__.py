@@ -15,6 +15,7 @@ ENTRY = ASSET_ROOT + "assistant.js"
 ASSETS = ("assistant.js", "dialogue.js", "voice.js", "reply_audio.js", "microphone.js", "assistant.css")
 FORM_ROOT = "assets/voice-assistant/"
 FORM_ENTRY = FORM_ROOT + "form.js"
+FORM_ASSETS = ("form.js", "form.css", "microphone.js", "reply_audio.js")
 
 
 def assistant_assets():
@@ -74,5 +75,5 @@ def form_assistant_files(page, source, form_selector, schema, allow_submit):
         updated = source[:index] + block + source[index:]
     package = files(__package__)
     assets = {FORM_ROOT + name: package.joinpath(name).read_text(encoding="utf-8")
-              for name in ("form.js", "form.css", "microphone.js", "reply_audio.js")}
+              for name in FORM_ASSETS}
     return {**assets, page: updated}
