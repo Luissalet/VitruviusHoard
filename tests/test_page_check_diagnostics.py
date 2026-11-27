@@ -41,12 +41,13 @@ def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeyp
     engine._engine = Mock()
     engine._engine.new_context.return_value.new_page.return_value = page
     page.query_selector.return_value = object()
+    engine._engine.new_context.return_value.pages = [page]
     monkeypatch.setattr(browser, "settle", lambda *args, **kwargs: None)
     monkeypatch.setattr(browser, "answer_dialogs", lambda page: None)
 
     def post(path):
         route = Mock(request=SimpleNamespace(method="POST", url=url + path, headers={}))
-        handler = page.route.call_args.args[1]
+        handler = engine._engine.new_context.return_value.route.call_args.args[1]
         handler(route)
         route.abort.assert_called_once()
         route.continue_.assert_not_called()
@@ -56,7 +57,7 @@ def test_read_only_preview_separates_startup_and_action_writes(tmp_path, monkeyp
     def navigate(*args, **kwargs):
         navigation = Mock(request=SimpleNamespace(method="GET", url=url, frame=page.main_frame,
                                                  is_navigation_request=lambda: True))
-        page.route.call_args.args[1](navigation)
+        engine._engine.new_context.return_value.route.call_args.args[1](navigation)
         navigation.continue_.assert_called_once()
 
     page.click.side_effect = lambda target, **kwargs: (
@@ -150,3 +151,49 @@ def test_in_progress_fill_names_the_target_without_the_entered_value():
     browser.perform(page, [{"fill": "#email=qa@example.invalid"}], on_act=actions.append)
     assert entered == [("#email", "qa@example.invalid")]
     assert actions == [{"verb": "fill", "target": "#email"}]
+
+
+
+def test_navigation_link_is_pressed_once_and_missing_target_returns_immediately(tmp_path):
+    import pytest
+    from vitruvius_hoard.functional_check.surface import from_page, plan
+
+    pytest.importorskip("playwright")
+    (tmp_path / "index.html").write_text(
+        '<h1>Home</h1><a id="away" href="destination.html">Continue</a>'
+        '<button id="toggle">Toggle</button>', encoding="utf-8")
+    (tmp_path / "destination.html").write_text(
+        '<h1>Destination</h1><button id="next" onclick="this.textContent = \'Done\'">Next</button>',
+        encoding="utf-8")
+    with Browser(tmp_path, "index.html") as engine:
+        with engine.open() as (page, *_):
+            surface = from_page(SimpleNamespace(elements=browser.elements(page)))
+            labels = {case.what for case in plan(surface)}
+            assert "press Continue" in labels and "press Continue twice" not in labels
+            assert "press Toggle twice" in labels
+            could_not, disabled = engine.perform(page, [
+                {"click": "#away"}, {"click": "#away"}, {"click": "#next"},
+            ])
+            assert could_not == ["click #away: target is absent after navigation"]
+            assert disabled == []
+            assert page.locator("#next").inner_text() == "Done"
+
+
+def test_cases_reuse_context_but_clear_page_storage(tmp_path):
+    import pytest
+
+    pytest.importorskip("playwright")
+    (tmp_path / "index.html").write_text("<button>Start</button>", encoding="utf-8")
+    with Browser(tmp_path, "index.html") as engine:
+        with engine.open() as (page, *_):
+            context = page.context
+            page.evaluate("""() => {
+                localStorage.setItem('prior', 'local');
+                sessionStorage.setItem('prior', 'session');
+                document.cookie = 'prior=cookie; path=/';
+            }""")
+        with engine.open() as (page, *_):
+            assert page.context is context
+            assert page.evaluate("""() => [
+                localStorage.getItem('prior'), sessionStorage.getItem('prior'), document.cookie,
+            ]""") == [None, None, ""]

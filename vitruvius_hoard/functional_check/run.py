@@ -175,6 +175,7 @@ class Browser:
         self._storage: Any = None
         self._options: dict = {}
         self._surface_seen = False
+        self._navigated = False
         self._play: Any = None
         self._base = ""
         self.url = url
@@ -235,6 +236,9 @@ class Browser:
             if self._context is not None:
                 self._context.close()
             self._context = self._engine.new_context(**options)
+            if not self.url:
+                # Routing disables the shared HTTP cache between cases.
+                self._context.route("**/*", lambda route: route.continue_())
             self._storage = None
             self._options = options
         context = self._context
@@ -249,7 +253,12 @@ class Browser:
         def watch(tab):
             tab.on("framenavigated", lambda frame: remember(frame.url))
 
+        def main_navigation(frame):
+            if frame == page.main_frame:
+                self._navigated = True
+
         watch(page)
+        page.on("framenavigated", main_navigation)
         context.on("page", watch)
         if self.url:
             from vitruvius_hoard.browser import _origin
@@ -279,7 +288,7 @@ class Browser:
                             self.startup_blocked_writes.append(entry)
                     route.abort()
 
-            page.route("**/*", read_only)
+            context.route("**/*", read_only)
         page.add_init_script("""(() => {
           window.__vitruviusStateShifts = [];
           try { new PerformanceObserver(list => {
@@ -303,6 +312,7 @@ class Browser:
                       wait_until="load", timeout=30000)
             # `load` fires when the document and its scripts are fetched, which
             # on anything framework-rendered is before a single control exists.
+            self._navigated = False
             ready = {"poll_ms": 65, "stable": 2} if self._surface_seen else {}
             self.rest = browser.settle(page, ceiling_ms=SETTLE_CEILING_MS, **ready)
             self._surface_seen = self._surface_seen or bool(self.rest and self.rest.live)
@@ -315,6 +325,8 @@ class Browser:
                 for tab in context.pages:
                     if self._storage is None or tab != self._storage[0]:
                         tab.close()
+                if self.url:
+                    context.unroute("**/*", read_only)
                 context.clear_cookies()
                 if origins and self._storage is None:
                     blank = context.new_page()
@@ -329,7 +341,7 @@ class Browser:
                 with contextlib.suppress(Exception):
                     context.close()
 
-    def perform(self, page, acts, *, on_act=None):
+    def perform(self, page, acts, *, on_act=None, settle_ms=150):
         def before_action(action):
             if action["verb"] != "wait" and not self._acting:
                 self._acting = True
@@ -339,7 +351,8 @@ class Browser:
             if on_act is not None:
                 on_act(action)
 
-        return browser.perform(page, acts, on_act=before_action)
+        return browser.perform(page, acts, on_act=before_action, navigated=lambda: self._navigated,
+                               settle_ms=settle_ms)
 
 
 #: What a page is called, for a path nobody has written yet.
@@ -848,7 +861,7 @@ def check(folder: str | Path, entry: str = "index.html",
                 progress("inspect_case", case=case)
 
                 def perform(acts):
-                    options = {}
+                    options = {"settle_ms": 500} if not case.expect.get("quiet") or case.origin == "criterion" else {}
                     if on_progress is not None:
                         options["on_act"] = lambda action: progress("perform_action", case=case, action=action)
                     result = engine.perform(page, acts, **options)

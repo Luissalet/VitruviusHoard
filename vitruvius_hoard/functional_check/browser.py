@@ -1208,14 +1208,14 @@ def facts(page: Any) -> Dict[str, Any]:
 def can_respond_late(page: Any) -> bool:
     """Allow slow recovery unless the page offers only immediate native behavior."""
     with contextlib.suppress(Exception):
-        immediate = page.evaluate(""" + 'r"""' + """() => {
+        immediate = page.evaluate(r"""() => {
           if (document.querySelector('script,style,link,iframe,object,embed,svg,video,audio,meta[http-equiv]'))
             return false;
           return ![...document.querySelectorAll('*')].some(el =>
             el.localName.includes('-') || !!el.shadowRoot ||
             [...el.attributes].some(attr => attr.name.startsWith('on') ||
               attr.name === 'style' || /^\s*javascript:/i.test(attr.value)));
-        }""" + '"""' + """)
+        }""")
         if immediate is True:
             return False
     return True
@@ -1346,7 +1346,8 @@ def _slide(page: Any, selector: str, timeout: float) -> None:
 
 
 def perform(page: Any, acts: Sequence[Dict[str, str]],
-            timeout: float = 4000, *, on_act=None) -> Tuple[List[str], List[str]]:
+            timeout: float = 4000, *, on_act=None, navigated=None,
+            settle_ms: int = 500) -> Tuple[List[str], List[str]]:
     """Do each act in order. Returns what could not be done, and what was off.
 
     A target may carry `@x,y` to name a point as a fraction of the element's
@@ -1355,7 +1356,7 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
     """
     could_not: List[str] = []
     was_off: List[str] = []
-    start_url = page.url
+    start_url = getattr(page, "url", "")
     for step in acts:
         for verb, raw in step.items():
             if on_act is not None:
@@ -1366,7 +1367,8 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
                 if verb in ("click", "dblclick"):
                     sel, _, spot = arg.partition("@")
                     selector = sel if _found(page, sel) else f"text={sel}"
-                    if page.url != start_url and not _found(page, selector):
+                    changed_document = (navigated is not None and navigated()) or page.url != start_url
+                    if changed_document and not _found(page, selector):
                         raise ValueError("target is absent after navigation")
                     if selector != sel and not _found(page, selector):
                         # Allow a control still mounting on the current page,
@@ -1415,7 +1417,7 @@ def perform(page: Any, acts: Sequence[Dict[str, str]],
             # grid whose two handlers double-toggle, so every click nets to
             # nothing, measure as though it had responded.
             page.mouse.move(1, 1)
-            page.wait_for_timeout(150)
+            page.wait_for_timeout(settle_ms)
     return could_not, was_off
 
 
