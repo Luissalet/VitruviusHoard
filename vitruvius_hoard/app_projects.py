@@ -303,13 +303,11 @@ class AppProjects:
                     expected_count=None, root_font_px=16, lang="en", *, actor=None):
         with self.lock:
             current = self.get(id)
-            preview = current["preview"]
-            if (current["revision"] != expected_revision or preview.get("revision") != expected_revision
-                    or preview["state"] != "running"):
+            if current["revision"] != expected_revision or current["preview"]["state"] != "running":
                 raise ValueError("La revisión cambió. Selecciona el elemento en la vista previa actual." if lang == "es"
                                  else "The revision changed. Select the element in the current preview.")
             try:
-                _, html = self._preview_html(id, path)
+                _, html = self._preview_html(id, path, revision=expected_revision)
                 changes, target, scale, token, count = plan_canvas_edit(
                     current["files"], html, path, vsrc, tag, change, root_font_px,
                 )
@@ -328,7 +326,7 @@ class AppProjects:
             updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc})
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"]}
 
-    def _preview_html(self, id, path):
+    def _preview_html(self, id, path, *, revision=None):
         route = urlsplit(path)
         if not path.startswith("/") or path.startswith("//") or route.netloc or route.fragment:
             raise ValueError("Provide a page path in this preview, such as /records?q=search.")
@@ -337,6 +335,8 @@ class AppProjects:
             preview = self.status(id)
             if preview["state"] != "running":
                 raise ValueError("Start this project's preview before counting served elements.")
+            if revision is not None and preview["revision"] != revision:
+                preview = self.preview(id, revision)
             origin = urlsplit(preview["url"])
             if origin.scheme != "http" or origin.hostname != "127.0.0.1" or not origin.port:
                 raise ValueError("The project's preview did not provide a loopback address.")

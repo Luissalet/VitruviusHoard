@@ -64,6 +64,56 @@ def test_canvas_edit_emits_the_agent_actor_only_for_a_change(opened, monkeypatch
     assert presence == [(project["id"], project["revision"], actor, {"vsrc": args["vsrc"], "box": None})]
 
 
+def test_canvas_tool_syncs_the_running_preview_after_edit_source_and_undo(opened):
+    projects, project = opened
+    services = SimpleNamespace(app_projects=projects)
+    project_id = project["id"]
+    opening = projects.status(project_id)
+    target = {"id": project_id, "vsrc": "pages/index.html:3:1", "tag": "article"}
+
+    def style(revision, operation="plan", pixels=41):
+        return call_tool(services, "app_project_canvas_edit", {
+            **target, "expected_revision": revision, "operation": operation, "expected_count": 1,
+            "change": {"kind": "style", "property": "height", "pixels": pixels},
+        })
+
+    def assert_served(revision):
+        project = call_tool(services, "app_project_get", {"id": project_id})
+        assert project["revision"] == project["preview"]["revision"] == revision
+        assert project["preview"]["url"] == opening["url"]
+        assert project["preview"]["session"] == opening["session"]
+        with urlopen(opening["url"], timeout=5) as response:
+            assert response.headers["X-Vitruvius-Revision"] == revision
+            assert ">Edited</article>" in response.read().decode("utf-8")
+
+    source = call_tool(services, "app_project_edit_source", {
+        **target, "expected_revision": project["revision"], "change": {"kind": "text", "value": "Edited"},
+    })
+    assert source["changed"]
+    assert not style(source["revision"])["changed"]
+    assert_served(source["revision"])
+    applied = style(source["revision"], operation="apply")
+    assert applied["changed"]
+
+    # Serve the new revision first so undo leaves a genuinely older snapshot running.
+    assert not style(applied["revision"], pixels=42)["changed"]
+    assert_served(applied["revision"])
+    undo = applied["undo"]
+    restored = call_tool(services, undo["tool"], undo["arguments"])
+    assert restored["revision"] == source["revision"]
+    assert not style(restored["revision"], pixels=42)["changed"]
+    assert_served(restored["revision"])
+    assert style(restored["revision"], operation="apply", pixels=42)["changed"]
+
+    with pytest.raises(ValueError, match="The revision changed"):
+        style("f" * 20)
+    projects.stop(project_id)
+    current = projects.get(project_id)["revision"]
+    with pytest.raises(ValueError, match="The revision changed"):
+        style(current)
+    assert projects.status(project_id)["state"] == "stopped"
+
+
 def test_token_and_shared_authored_rule_confirm_then_undo(opened):
     projects, project = opened
     plan = edit(projects, project, 1, operation="plan")
