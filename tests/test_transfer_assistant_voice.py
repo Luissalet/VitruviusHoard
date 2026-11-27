@@ -1,14 +1,26 @@
-import base64
+from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+from threading import Event
 
-from vitruvius_hoard.hoard_link.service_contracts import OWNERS
+import httpx
+import pytest
+
 from vitruvius_hoard.transfer_assistant import ASSETS, ENTRY, assistant_assets
-from vitruvius_hoard.transfer_assistant import voice
+from vitruvius_hoard.transfer_assistant import voice, voice_directory, voice_trace
+
+
+ORIGIN = "http://127.0.0.1:59731"
+TRACE_ID = "123456789abcdeff123456789abcdeff"
+JSON = "application/json"
 
 
 def payload(response):
     return json.loads(response[1])
+
+
+def post(relay, route, **body):
+    return relay.handle("POST", route, f"trace={TRACE_ID}", JSON, json.dumps(body).encode())
 
 
 def test_exposed_sources_can_be_saved_as_project_assets():
@@ -18,441 +30,235 @@ def test_exposed_sources_can_be_saved_as_project_assets():
     assert ENTRY in result["script"] and "data-transfer-assistant" in result["mount"]
 
 
-def test_capabilities_probe_callable_owner_even_if_state_is_foreign(monkeypatch):
-    assert OWNERS["dictation"] == "cyrano"
-    reads = []
-    catalogue = {
-        "/api/services/status": {"services": [{"service": "dictation", "owner": "cyrano"}]},
-        "/api/apps/funes": {"state": "foreign"},
-        "/api/apps/cyrano": {"name": "Boltagon's Hoard"},
-        "/api/apps/funes/tools": {"ok": True, "tools": [{"name": name} for name in ("transcribe_file", "transcribe_status")]},
-        "/api/apps/cyrano/tools": {"ok": True, "tools": [{"name": name} for name in voice.DICTATION_TOOLS]},
-        "/api/apps/prospero/tools": {"ok": False},
+@pytest.fixture
+def loopback(monkeypatch, tmp_path):
+    monkeypatch.delenv("CYRANO_URL", raising=False)
+    token = tmp_path / "mcp-token"
+    token.write_text("fixture", encoding="ascii")
+    reads, calls = [], []
+    reject_discovery = Event()
+    tools = {
+        "/api/agent/tools": lambda: {
+            "tools": [{"name": name} for name in sorted(voice.DICTATION_TOOLS | {voice.SPEECH_TOOL, voice.END_TURN_TOOL})],
+        },
+        "/api/speech/transcribe": lambda: {
+            "text": "Cuarenta", "engine": "faster-whisper", "model": "large-v3-turbo", "gpu": 2,
+        },
+        "/api/dictation/understand": lambda: {
+            "version": voice.DICTATION_VERSION, "raw_transcript": "Cuarenta", "is_final": True,
+        },
+        "/api/dictation/end-turn": lambda: {
+            "decision": "short", "silence_ms": 650, "interpretation": {"is_final": False},
+        },
     }
 
-    def hub_get(path, **kwargs):
-        reads.append(path)
-        return 200, catalogue[path]
+    def discover():
+        if reject_discovery.is_set():
+            raise AssertionError("A healthy turn must not consult the Hub")
+        reads.append("directory")
+        return [{"id": "cyrano", "url": ORIGIN, "name": "cyrano"},
+                {"id": "funes", "url": "http://localhost:59732", "token_file": str(token)},
+                {"id": "prospero", "url": "http://[::1]:59733", "token_file": str(token)}]
 
-    monkeypatch.setattr(voice, "_hub_get", hub_get)
-    result = voice.TransferVoice().handle("GET", "capabilities", "", "", b"")
-    assert result[0] == 200
-    assert payload(result) == {"stt": True, "tts": False, "dictation": True, "dictation_route": "common",
-                               "dictation_name": "Boltagon's Hoard"}
-    assert "/api/apps/funes/tools" in reads and "/api/apps/funes" not in reads
+    def request(url, path, **kwargs):
+        calls.append((url, path, kwargs))
+        if path == "/api/agent/tools" and url != ORIGIN:
+            return httpx.Response(200, json={"tools": [
+                {"name": "transcribe_file"} if url.endswith(":59732") else {"name": "voice_tts"}
+            ]})
+        value = tools[path]()
+        return value if isinstance(value, httpx.Response) else httpx.Response(200, json=value)
 
-
-def test_capabilities_distinguish_legacy_app_and_local_paths(monkeypatch):
-    monkeypatch.setattr(voice._famsvc, "call_tool", lambda *_args, **_kwargs: {"ok": False})
-    def hub_get(path, **kwargs):
-        if path == "/api/services/status":
-            return 200, {"services": []}
-        if path == "/api/apps/cyrano/tools":
-            return 200, {"ok": True, "tools": [{"name": name} for name in voice.DICTATION_TOOLS]}
-        return 404, {}
-
-    monkeypatch.setattr(voice, "_hub_get", hub_get)
-    relay = voice.TransferVoice()
-    ready = payload(relay.handle("GET", "capabilities", "", "", b""))
-    assert ready["dictation"] and ready["dictation_route"] == "app"
-    assert ready["dictation_name"] == "Boltagon"
-    monkeypatch.setattr(voice, "_hub_get", lambda path, **kwargs: (503, {}))
-    down = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
-    assert not down["dictation"] and down["dictation_route"] == "local"
+    monkeypatch.setattr(voice_directory, "_hub_apps", discover)
+    monkeypatch.setattr(voice_directory, "_request", request)
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _: {})
+    return voice.TransferVoice(), reads, calls, tools, reject_discovery
 
 
-def test_first_dictation_uses_health_name_and_reuses_it_after_discovery(monkeypatch):
-    calls = []
-    now = 0
+def test_one_discovery_and_zero_hub_reads_during_typed_spoken_and_provisional_turns(loopback):
+    relay, reads, calls, _, reject = loopback
+    assert payload(relay.handle("GET", "capabilities", "", "", b"")) == {
+        "stt": True, "tts": False, "dictation": True, "dictation_route": "direct",
+        "dictation_name": "Boltagon", "adaptive_turn": True,
+    }
+    assert reads == ["directory"]
+    assert [path for _, path, _ in calls] == ["/api/agent/tools"] * 3
+    reject.set()
+    assert relay.replies.origin() == ORIGIN
+    assert relay.handle("GET", "capabilities", "", "", b"")[0] == 200
 
-    def hub_get(path, **kwargs):
-        calls.append(path)
-        return 200, {"url": "http://127.0.0.1:59731", "name": "cyrano", "health": {"name": "cyrano"}}
-
-    def health(url, **kwargs):
-        calls.append(url)
-        if now < voice.DICTATION_NAME_TTL:
-            return 200, {"service": "cyrano-hoard", "name": "  Visible Dictation's Hoard  "}
-        return 503, {}
-
-    monkeypatch.setattr(voice, "monotonic", lambda: now)
-    monkeypatch.setattr(voice, "_hub_get", hub_get)
-    monkeypatch.setattr(voice, "fetch", health)
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"version": voice.DICTATION_VERSION}, "app"))
-    request = json.dumps({"version": voice.DICTATION_VERSION, "text": "treinta"}).encode()
-
-    def name():
-        status, result, _ = relay.handle("POST", "understand", "", "application/json", request)
-        assert status == 200
-        return json.loads(result)["dictation_name"]
-
-    assert name() == name() == "Visible Dictation's Hoard"
-    reads = ["/api/apps/cyrano", "http://127.0.0.1:59731/api/health"]
-    assert calls == reads
-    now = voice.DICTATION_NAME_TTL
-    assert name() == "Visible Dictation's Hoard"
-    assert calls == reads * 2
-
-
-def test_first_dictation_uses_visible_default_when_hub_and_health_are_unavailable(monkeypatch):
-    monkeypatch.setenv("CYRANO_URL", "http://127.0.0.1:9")
-    monkeypatch.setattr(voice, "_hub_get", lambda *_args, **_kwargs: (503, {}))
-    monkeypatch.setattr(voice, "fetch", lambda *_args, **_kwargs: (503, {}))
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"version": voice.DICTATION_VERSION}, "app"))
-    request = json.dumps({"version": voice.DICTATION_VERSION, "text": "treinta"}).encode()
-    assert payload(relay.handle("POST", "understand", "", "application/json", request))["dictation_name"] == "Boltagon"
+    for query in ("partial=true&adaptive=true&", ""):
+        response = payload(relay.handle("POST", "transcribe", query + "trace=" + TRACE_ID, "audio/webm", b"test"))
+        assert response["text"] == "Cuarenta"
+        assert response["provider"] == "Boltagon · GPU 2 · large-v3-turbo"
+        assert 0 <= response["timing"]["service_ms"] <= response["timing"]["gateway_ms"]
+        sent = calls[-1][2]["arguments"]
+        assert sent["audio"] == {"mime_type": "audio/webm", "data_base64": "dGVzdA=="}
+        assert sent["fallback"] is False and "path" not in sent
+    typed = post(relay, "understand", version=voice.DICTATION_VERSION, text="cuarenta",
+                 schema={"type": "object"}, context={"field": "amount_cents"})
+    assert typed[0] == 200 and payload(typed)["dictation_route"] == "direct"
+    audio = {"mime_type": "audio/wav", "data_base64": "dGVzdA=="}
+    assert post(relay, "understand", version=voice.DICTATION_VERSION, audio=audio)[0] == 200
+    assert calls[-2][2]["arguments"]["audio"] == audio
+    assert calls[-2][2]["arguments"]["fallback"] is False
+    assert calls[-1][2]["arguments"]["text"] == "Cuarenta"
+    provisional = post(relay, "end-turn", version=voice.DICTATION_VERSION, text="cuarenta", dialogue="slots")
+    assert payload(provisional)["interpretation"]["is_final"] is False
+    assert all(call[0] == ORIGIN and call[2]["trace"].startswith(TRACE_ID + "/") for call in calls[3:])
+    assert reads == ["directory"]
 
 
-def test_transcription_readiness_accepts_a_call_through_a_hidden_tool_catalogue(monkeypatch):
-    monkeypatch.setattr(voice, "_hub_get", lambda *_args, **_kwargs: (503, {}))
-    calls = []
+def test_local_fallback_reason_only_when_the_direct_contract_fails(loopback):
+    relay, _, _, tools, reject = loopback
+    relay.directory.prepare()
+    reject.set()
 
-    def call(owner, tool, args, **kwargs):
-        calls.append((owner, tool, args))
-        return {"ok": False, "status": 404, "error": "no such job"}
+    def timeout():
+        raise httpx.ReadTimeout("fixture")
 
-    monkeypatch.setattr(voice._famsvc, "call_tool", call)
-    result = voice.TransferVoice().handle("GET", "capabilities", "", "", b"")
-    assert payload(result)["stt"]
-    [(owner, tool, args)] = calls
-    assert (owner, tool) == ("funes", "transcribe_status")
-    assert len(args["job_id"]) == 32
-
-
-def test_registered_service_uses_common_contract_and_never_replays_through_app(monkeypatch):
-    calls = []
-
-    def shared_call(owner, tool, args, timeout_s):
-        calls.append((owner, tool, args, timeout_s))
-        if args["text"] == "fail":
-            return {"ok": False}
-        return {"ok": True, "data": {"version": voice.DICTATION_VERSION, "raw_transcript": "treinta"}}
-
-    monkeypatch.setattr(voice, "_hub_get", lambda path, **kwargs: (200, {"services": [{"service": "dictation"}]}))
-    monkeypatch.setattr(voice._famsvc, "call_tool", shared_call)
-    monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("Unexpected direct call")))
-    relay = voice.TransferVoice()
-    for phrase, status in (("treinta", 200), ("fail", 503)):
-        req = json.dumps({"version": voice.DICTATION_VERSION, "text": phrase}).encode()
-        reply = relay.handle("POST", "understand", "", "application/json", req)
-        assert reply[0] == status
-        if status == 200:
-            assert payload(reply)["dictation_route"] == "common"
-    assert [entry[:2] for entry in calls] == [("cyrano", "dictation_understand")] * 2
+    for double, reason in [
+        (timeout, "boltagon_timeout"),
+        (lambda: httpx.Response(404, json={}), "boltagon_contract_missing"),
+        (lambda: httpx.Response(503, json={}), "boltagon_failed"),
+        (lambda: {"text": "bad contract"}, "boltagon_contract_invalid"),
+    ]:
+        tools["/api/dictation/understand"] = double
+        response = post(relay, "understand", version=voice.DICTATION_VERSION, text="Cuarenta")
+        assert response[0] == 503 and payload(response)["code"] == reason
 
 
-def test_shared_transcription_handles_provisional_and_final_audio(monkeypatch):
-    calls, order = [], []
+def test_refresh_does_not_hold_the_cached_route_or_wait_for_hub(loopback, monkeypatch):
+    relay, _, calls, _, _ = loopback
+    relay.directory.prepare()
+    entered, release, completed = Event(), Event(), Event()
 
-    def cyrano(tool, args, timeout):
-        order.append((tool, args["path"]))
-        assert args["fallback"] is False
-        return None, "common"
+    def discovery():
+        entered.set()
+        assert release.wait(5)
+        completed.set()
+        return None
 
-    def transcribe(path, **arguments):
-        source = Path(path)
-        assert source.suffix == ".webm" and source.read_bytes() == b"synthetic audio"
-        calls.append((source, arguments))
-        order.append(("family", path))
-        return {"ok": True, "text": "Treinta euros"}
-
-    monkeypatch.setattr(voice.fam_media, "transcribe", transcribe)
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_dictation_call", cyrano)
-    for partial in (True, False):
-        result = relay.handle("POST", "transcribe", f"language=es&partial={str(partial).lower()}&initial_prompt=Luc%C3%ADa%2C+Cuenta+diaria",
-                              "audio/webm;codecs=opus", b"synthetic audio")
-        assert result[0] == 200 and payload(result) == {
-            "text": "Treinta euros", "final": not partial, "provider": "Funes / Talos (reserva)",
-            "fallback_reason": "resident_unavailable",
-        }
-    assert all(not source.exists() for source, _ in calls)
-    assert [args["local_fallback"] for _, args in calls] == [False, False]
-    assert [args["vad"] for _, args in calls] == [False, True]
-    assert [args["initial_prompt"] for _, args in calls] == ["Lucía, Cuenta diaria"] * 2
-    assert calls[1][1]["timeout_s"] > 11
-    assert [tool for tool, _ in order] == [voice.SPEECH_TOOL, "family"] * 2
-    assert order[0][1] == order[1][1] and order[2][1] == order[3][1]
+    monkeypatch.setattr(voice_directory, "_hub_apps", discovery)
+    relay.directory._refresh_at = 0
+    relay.directory.prepare()
+    assert entered.wait(2)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            final = pool.submit(post, relay, "understand", version=voice.DICTATION_VERSION, text="cuarenta")
+            assert final.result(timeout=1)[0] == 200
+        assert calls[-1][0] == ORIGIN
+    finally:
+        release.set()
+    assert completed.wait(2)
 
 
-def test_versioned_text_and_audio_follow_the_common_tools(monkeypatch):
-    calls = []
+def test_partial_never_submits_to_the_reserve_and_final_can_use_it_directly(loopback):
+    relay, _, calls, tools, reject = loopback
+    relay.directory.prepare()
+    reject.set()
+    tools["/api/speech/transcribe"] = lambda: httpx.Response(
+        503, json={"detail": {"trace": {"fallback_reason": "resident_queue_timeout"}}},
+    )
+    requests = []
 
-    def call(app, tool, arguments, *, timeout):
-        assert app == "cyrano"
-        calls.append((tool, arguments))
-        if source := arguments.get("path"):
-            assert Path(source).read_bytes() == b"synthetic"
-        return {"ok": True, "result": {"version": voice.DICTATION_VERSION, "raw_transcript": "treinta",
-                                       "is_final": True, "fields": {"amount_cents": {"value": 3000}}}}
+    def reserve():
+        url, _, options = calls[-1]
+        assert url == "http://localhost:59732"
+        assert options["token"] == "fixture"
+        request = options["arguments"]
+        requests.append(request)
+        if request["tool"] == "transcribe_file":
+            assert Path(request["arguments"]["path"]).read_bytes() == b"test"
+            return {"result": {"job_id": "once", "status": "queued"}}
+        return {"result": {"job_id": "once", "status": "done", "text": "Reserva"}}
 
-    monkeypatch.setattr(voice.family, "call", call)
-    monkeypatch.setattr(voice, "_hub_get", lambda path, **kwargs: (
-        200, {"name": "Boltagon's Hoard"} if path == "/api/apps/cyrano" else {"services": []},
-    ))
-    relay = voice.TransferVoice()
-    options = {"version": voice.DICTATION_VERSION, "language": "es-ES", "vocabulary": ["Ana"],
-               "context": {"field": "amount_cents"}, "schema": {"type": "object"}}
-    for item in [{"text": "treinta"}, {"audio": {"mime_type": "audio/wav",
-                                               "data_base64": base64.b64encode(b"synthetic").decode("ascii")}}]:
-        response = relay.handle("POST", "understand", "", "application/json", json.dumps({**options, **item}).encode())
-        assert response[0] == 200 and payload(response)["fields"]["amount_cents"]["value"] == 3000
-        assert payload(response)["dictation_route"] == "app"
-        assert payload(response)["dictation_name"] == "Boltagon's Hoard"
-    assert [call[0] for call in calls] == ["dictation_understand", "dictation_audio"]
-    assert calls[0][1]["text"] == "treinta"
-    assert calls[1][1]["context"] == {"field": "amount_cents"}
-    assert not Path(calls[1][1]["path"]).exists()
-
-
-def test_fallback_and_invalid_local_requests_have_separate_statuses(monkeypatch):
-    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
-    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"saludo": "Hola"})
-    monkeypatch.setattr(voice.fam_media, "speak_bytes", lambda *_args, **_kwargs: {"ok": False})
-    monkeypatch.setattr(voice.fam_media, "transcribe", lambda *_args, **_kwargs: {"ok": False})
-    monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: {"ok": False})
-    monkeypatch.setattr(voice, "_hub_get", lambda path, **kwargs: (404, {}))
-    relay = voice.TransferVoice()
-    cases = [
-        ("transcribe", "", "audio/webm", b"synthetic", 503, "stt_unavailable"),
-        ("transcribe", "", "text/html", b"synthetic", 415, "unsupported_audio"),
-        ("speak", "", "application/json", b'{"text":"Hola","phrase_id":"saludo"}', 503, "tts_unavailable"),
-        ("speak", "", "application/json", b"[]", 400, "invalid_voice_request"),
-        ("understand", "", "application/json", b'{"version":"cyrano.dictation/v0","text":"hola"}', 503, "dictation_unavailable"),
-        ("understand", "", "application/json", b'{"version":"cyrano.dictation/v0","audio":{"mime_type":"audio/wav","data_base64":"?"}}', 400, "invalid_audio"),
-    ]
-    for route, query, media, body, status, code in cases:
-        result = relay.handle("POST", route, query, media, body)
-        assert result[0] == status and payload(result)["code"] == code
-
-
-def test_disabled_voice_generation_preserves_expected_conflict(monkeypatch):
-    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
-    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"saludo": "Hola"})
-    monkeypatch.setattr(voice.fam_media, "speak_bytes",
-                        lambda *_a, **_kw: {"ok": False, "error": "generation is OFF"})
-    reply = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"Hola","phrase_id":"saludo"}')
-    assert reply[0] == 409 and payload(reply)["code"] == "tts_disabled"
-
-
-def test_shared_voice_returns_playable_bytes_without_server_fallback(monkeypatch):
-    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
-    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {"confirmar": "¿Confirmas la transferencia?"})
-    def speak(text, **arguments):
-        assert text == "¿Confirmas la transferencia?"
-        assert arguments["lang"] == "es" and arguments["local_fallback"] is False
-        assert arguments["engine"] == "piper" and arguments["voice"] == voice.SPANISH_TTS_VOICE
-        assert arguments["timeout_s"] >= 8
-        return {"ok": True, "data": b"RIFF synthetic WAV"}
-
-    monkeypatch.setattr(voice.fam_media, "speak_bytes", speak)
-    body = json.dumps({"text": "¿Confirmas la transferencia?", "language": "es", "phrase_id": "confirmar"}).encode()
-    assert voice.TransferVoice().handle("POST", "speak", "", "application/json", body) == (200, b"RIFF synthetic WAV", "audio/wav")
-    by_id = b'{"language":"es","phrase_id":"confirmar"}'
-    assert voice.TransferVoice().handle("POST", "speak", "", "application/json", by_id) == (200, b"RIFF synthetic WAV", "audio/wav")
-    legacy_request = b'{"text":"Confirma esta transferencia de 40 euros","phrase_id":"confirmar"}'
-    assert voice.TransferVoice().handle("POST", "speak", "", "application/json", legacy_request) == (200, b"RIFF synthetic WAV", "audio/wav")
-    unknown = voice.TransferVoice().handle("POST", "speak", "", "application/json", b'{"text":"variable","phrase_id":"unknown"}')
-    assert unknown[0] == 404
-
-
-def test_natural_cache_uses_only_the_matching_manifest_phrase(tmp_path, monkeypatch):
-    monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
-    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path / "other-profile"))
-    monkeypatch.setenv("VITRUVIUS_VOICE_CACHE", str(tmp_path))
-    monkeypatch.setattr(voice.fam_media, "speak_bytes",
-                        lambda *_a, **_kw: (_ for _ in ()).throw(AssertionError("The cache never calls speech generation")))
-    text = "Revisa los datos y dime si la envío."
-    (tmp_path / "frases.json").write_text(json.dumps({"phrases": {"confirmar": text, "saludo": "Dime"}}), encoding="utf-8")
-    wav = b"RIFF1234WAVE"
-    (tmp_path / "confirmar.wav").write_bytes(wav)
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(voice, "_hub_get", lambda *_a, **_kw: (404, {}))
-    monkeypatch.setattr(voice._famsvc, "call_tool", lambda *_a, **_kw: {"ok": False})
-    availability = payload(relay.handle("GET", "capabilities", "", "", b""))
-    assert availability["tts"] and availability["voice_phrases"]["confirmar"] == text
-
-    def speak(phrase, words):
-        body = json.dumps({"text": words, "phrase_id": phrase, "language": "es"}).encode()
-        return relay.handle("POST", "speak", "", "application/json", body)
-
-    assert speak("confirmar", text) == (200, wav, "audio/wav; source=cache-natural")
-    by_id = b'{"language":"es","phrase_id":"confirmar"}'
-    assert relay.handle("POST", "speak", "", "application/json", by_id) == (200, wav, "audio/wav; source=cache-natural")
-    assert speak("confirmar", "Transfiere dinero a María") == (200, wav, "audio/wav; source=cache-natural")
-    assert speak("../confirmar", text)[0] == 404
-    assert speak("saludo", "Dime")[0] == 404
-    monkeypatch.setattr(voice, "VOICE_MODE", "off")
-    assert speak("confirmar", text)[0] == 503
-
-
-def test_natural_cache_defaults_to_the_profile_and_handles_missing_manifest(tmp_path, monkeypatch):
-    monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
-    monkeypatch.delenv("VITRUVIUS_VOICE_CACHE", raising=False)
-    monkeypatch.setenv("VITRUVIUS_PROFILE_DIR", str(tmp_path))
-    monkeypatch.setattr(voice, "_hub_get", lambda *_a, **_kw: (404, {}))
-    monkeypatch.setattr(voice._famsvc, "call_tool", lambda *_a, **_kw: {"ok": False})
-    relay = voice.TransferVoice()
-    cache = tmp_path / "voice-cache"
-    text = "Revisa los datos y dime si la envío."
-    request = json.dumps({"text": text, "phrase_id": "confirmar", "language": "es"}).encode()
-
-    for cache_exists in (False, True):
-        if cache_exists:
-            cache.mkdir()
-        response = relay.handle("GET", "capabilities", "", "", b"")
-        assert response[0] == 200
-        assert not payload(response)["tts"] and "voice_phrases" not in payload(response)
-        assert relay.handle("POST", "speak", "", "application/json", request)[0] == 404
-
-    (cache / "frases.json").write_text(json.dumps({"phrases": {"confirmar": text}}), encoding="utf-8")
-    wav = b"RIFF1234WAVE"
-    (cache / "confirmar.wav").write_bytes(wav)
-    ready = payload(relay.handle("GET", "capabilities", "", "", b""))
-    assert ready["tts"] and ready["voice_phrases"] == {"confirmar": text}
-    assert relay.handle("POST", "speak", "", "application/json", request) == (200, wav, "audio/wav; source=cache-natural")
-
-
-
-def test_raw_voice_prefers_cyrano_for_partials_and_final(monkeypatch):
-    calls, health_reads = [], []
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_common_dictation", lambda: True)
-
-    def call(owner, tool, args, timeout_s):
-        path = Path(args["path"])
-        assert path.suffix == ".webm" and path.read_bytes() == b"synthetic"
-        calls.append((owner, tool, args, timeout_s))
-        data = {"text": "A Lucía" if args["vad"] else "", "engine": "faster-whisper"}
-        if not args["vad"]:
-            data.update(model="small", gpu=0)
-        return {"ok": True, "data": data}
-
-    def health(url, **_kwargs):
-        health_reads.append(url)
-        return 200, {"service": "cyrano-hoard", "name": "Boltagon's Hoard",
-                     "stt": {"model": "large-v3-turbo", "gpu": 1, "warm": True}}
-
-    def forbidden(*_args, **_kwargs):
-        raise AssertionError("Shared STT was called after a valid Cyrano response")
-
-    monkeypatch.setattr(voice._famsvc, "call_tool", call)
-    monkeypatch.setattr(voice.fam_media, "transcribe", forbidden)
-    monkeypatch.setattr(voice, "_hub_get", lambda path, **_kwargs: (
-        200, {"url": "http://127.0.0.1:59731", "name": "Cyrano's Hoard"},
-    ))
-    monkeypatch.setattr(voice, "fetch", health)
-    for partial, provider in (("true", "Boltagon · GPU 0 · small"), ("false", "Boltagon · GPU 1 · large-v3-turbo")):
-        result = relay.handle("POST", "transcribe", f"partial={partial}&initial_prompt=Luc%C3%ADa",
-                              "audio/webm", b"synthetic")
-        assert result[0] == 200
-        assert payload(result) == {"text": "" if partial == "true" else "A Lucía", "final": partial == "false",
-                                   "provider": provider}
-    assert health_reads == ["http://127.0.0.1:59731/api/health"] * 2
-    assert [(owner, tool) for owner, tool, _, _ in calls] == [("cyrano", "speech_transcribe")] * 2
-    assert [args["timeout_s"] for _, _, args, _ in calls] == [1, 6]
-    assert all(args["initial_prompt"] == "Lucía" and args["fallback"] is False
-               and not Path(args["path"]).exists() for _, _, args, _ in calls)
-
-
-def test_cyrano_reporting_family_transcription_is_labelled_as_reserve(monkeypatch):
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"text": "A Lucía", "engine": "family"}, "app"))
-    result = relay.handle("POST", "transcribe", "", "audio/webm", b"synthetic")
-    assert result[0] == 200
-    assert payload(result)["provider"] == "Funes / Talos (reserva)"
-
-
-def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):
-    def get(path, **_kwargs):
-        if path == "/api/services/status":
-            return 200, {"services": [{"service": "dictation"}]}
-        if path == "/api/apps/cyrano":
-            return 200, {}
-        if path != "/api/apps/cyrano/tools":
-            raise AssertionError(f"Unexpected probe {path}")
-        return 200, {"ok": True, "tools": [{"name": voice.SPEECH_TOOL}]}
-
-    monkeypatch.setattr(voice, "_hub_get", get)
-    monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {})
-    result = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
-    assert result == {"stt": True, "tts": False, "dictation": False, "dictation_route": "local",
-                      "dictation_name": "Boltagon"}
-
-
-def test_end_turn_relays_the_provisional_result_and_preserves_its_status(monkeypatch):
-    relay = voice.TransferVoice()
-    calls = []
-
-    def service(tool, arguments, *, timeout):
-        calls.append((tool, arguments, timeout))
-        return {"decision": "short", "silence_ms": 650, "reason": "amount",
-                "interpretation": {"is_final": False, "raw_transcript": "Veinte euros"}}, "common"
-
-    monkeypatch.setattr(relay, "_dictation_call", service)
-    request = {"version": voice.DICTATION_VERSION, "text": "Veinte euros",
-               "dialogue": "slots", "context": {"field": "amount_cents"}}
-    response = relay.handle("POST", "end-turn", "", "application/json", json.dumps(request).encode())
+    tools["/api/agent/call"] = reserve
+    response = relay.handle("POST", "transcribe", "partial=true&adaptive=true", "audio/wav", b"test")
+    assert response[0] == 503
+    assert not requests
+    response = relay.handle("POST", "transcribe", "", "audio/wav", b"test")
     assert response[0] == 200
-    assert calls == [(voice.END_TURN_TOOL, request, 0.75)]
-    assert payload(response)["interpretation"] == {
-        "is_final": False, "raw_transcript": "Veinte euros",
-        "dictation_route": "common", "dictation_name": "Boltagon",
-    }
-    request["text"] = ""
-    assert relay.handle("POST", "end-turn", "", "application/json", json.dumps(request).encode())[0] == 400
+    assert payload(response)["provider"] == voice.FAMILY_TRANSCRIPTION
+    assert payload(response)["fallback_reason"] == "resident_queue_timeout"
+    assert [request["tool"] for request in requests] == ["transcribe_file", "transcribe_status"]
+    assert not Path(requests[0]["arguments"]["path"]).exists()
 
 
-def test_speculative_probe_does_not_send_a_job_to_the_common_reserve(monkeypatch):
-    relay = voice.TransferVoice()
-    calls = []
-    monkeypatch.setattr(relay, "_common_dictation", lambda: False)
-    monkeypatch.setattr(voice.family, "call", lambda *_args, **_kwargs: {
-        "ok": False, "error": {"details": {"cause": "resident_prewarming"}},
-    })
-
-    def common(*_args, **_kwargs):
-        calls.append("fallback")
-        return {"ok": True, "text": "Veinte euros"}
-
-    monkeypatch.setattr(voice.fam_media, "transcribe", common)
-    route = "language=es&partial=true&adaptive=true"
-    result = relay.handle("POST", "transcribe", route, "audio/wav", b"fixture")
-    assert result[0] == 503
-    assert payload(result)["fallback_reason"] == "resident_prewarming"
-    assert calls == []
-    final = relay.handle("POST", "transcribe", "language=es", "audio/wav", b"fixture")
-    assert final[0] == 200
-    assert payload(final)["fallback_reason"] == "resident_prewarming"
-    assert calls == ["fallback"]
-
-
-def test_provisional_tool_uses_the_discovered_route_without_refreshing_catalogue(monkeypatch):
-    relay = voice.TransferVoice()
-    relay.discovered_at, relay.registered = 1, True
-    calls = []
-
-    def offline_discovery():
-        raise AssertionError("A known provisional route should not wait on catalogue discovery")
-
-    monkeypatch.setattr(relay, "_common_dictation", offline_discovery)
-    monkeypatch.setattr(voice._famsvc, "call_tool", lambda owner, tool, args, **kw: (
-        calls.append((owner, tool, args, kw)) or {"ok": True, "data": {"decision": "long"}}
-    ))
-    response, route = relay._dictation_call(voice.END_TURN_TOOL, {"text": "Treinta y"}, timeout=0.75)
-    assert response == {"decision": "long"} and route == "common"
-    assert len(calls) == 1 and calls[0][1] == voice.END_TURN_TOOL
-
-
-def test_successful_resident_alternate_carries_the_primary_failure_reason(monkeypatch):
-    relay = voice.TransferVoice()
-    monkeypatch.setattr(relay, "_dictation_details", lambda **_: ("Boltagon", {}))
-    monkeypatch.setattr(relay, "_dictation_call", lambda *_a, **_kw: ({
-        "text": "A Lucía", "engine": "faster-whisper", "model": "small", "gpu": 1,
-        "trace": {"fallback_reason": "resident_model_load_failed"},
-    }, "app"))
-    result = payload(relay.handle("POST", "transcribe", "language=es", "audio/wav", b"fixture"))
-    assert result["provider"] == "Boltagon · GPU 1 · small"
+def test_resident_silence_does_not_launch_a_duplicate_and_preserves_alternate_details(loopback):
+    relay, _, calls, tools, _ = loopback
+    relay.directory.prepare()
+    tools["/api/speech/transcribe"] = lambda: {"text": "", "model": "small", "gpu": 2,
+                                               "trace": {"fallback_reason": "resident_model_load_failed"}}
+    result = payload(relay.handle("POST", "transcribe", "", "audio/webm", b"test"))
+    assert result["text"] == "" and result["provider"] == "Boltagon · GPU 2 · small"
     assert result["fallback_reason"] == "resident_model_load_failed"
+    assert [path for _, path, _ in calls[3:]] == ["/api/speech/transcribe"]
+
+
+def test_override_ignores_a_discovered_token_and_rejects_remote_origin(loopback, monkeypatch):
+    _, _, calls, _, _ = loopback
+    monkeypatch.setenv("CYRANO_URL", "http://example.test:8810")
+    relay = voice.TransferVoice()
+    assert post(relay, "understand", version=voice.DICTATION_VERSION, text="cuarenta")[0] == 503
+    assert all(not url.startswith("http://example.test") for url, *_ in calls)
+
+
+def test_piper_and_legacy_cache_keep_their_public_route(loopback, monkeypatch, tmp_path):
+    relay, _, calls, tools, _ = loopback
+    relay.directory.prepare()
+    phrases = {"confirmar": "¿Confirmas la transferencia?"}
+    monkeypatch.setattr(voice, "_cache_phrases", lambda _: phrases)
+    monkeypatch.setenv("VITRUVIUS_VOICE_CACHE", str(tmp_path))
+    wav = b"RIFF1234WAVE"
+    path = tmp_path / "confirmar.wav"
+    path.write_bytes(wav)
+    monkeypatch.setattr(voice, "VOICE_MODE", "cache-natural")
+    assert post(relay, "speak", phrase_id="confirmar") == (200, wav, "audio/wav; source=cache-natural")
+    assert post(relay, "speak", phrase_id="../confirmar")[0] == 404
+    monkeypatch.setattr(voice, "VOICE_MODE", "piper")
+    tools["/api/agent/call"] = lambda: {"result": {"path": str(path)}}
+    assert post(relay, "speak", phrase_id="confirmar") == (200, wav, "audio/wav")
+    assert calls[-1][2]["arguments"]["arguments"]["text"] == phrases["confirmar"]
+    tools["/api/agent/call"] = lambda: {"result": {"error": "generation is OFF"}}
+    assert post(relay, "speak", phrase_id="confirmar")[0] == 409
+
+
+@pytest.mark.parametrize(("route", "args", "status"), [
+    ("understand", {"version": "0", "text": "test"}, 400),
+    ("understand", {"version": voice.DICTATION_VERSION, "audio": {"mime_type": "audio/wav", "data_base64": "?"}}, 400),
+    ("end-turn", {"version": voice.DICTATION_VERSION, "text": "", "dialogue": "slots"}, 400),
+    ("speak", {"language": "zz"}, 400),
+])
+def test_input_validation_is_local(route, args, status):
+    assert post(voice.TransferVoice(), route, **args)[0] == status
+
+
+def test_turn_trace_enqueues_without_waiting_and_limits_metadata(monkeypatch):
+    monkeypatch.setattr(voice_trace.family, "status", lambda: {"enabled": True})
+    entered, release, sent = Event(), Event(), []
+
+    def send(batch):
+        entered.set()
+        assert release.wait(5)
+        sent.extend(batch)
+
+    tracer = voice_trace.TurnTrace(send=send)
+    relay = voice.TransferVoice(tracer=tracer)
+    try:
+        response = post(relay, "trace", trace_id=TRACE_ID, ignored="private",
+                        stages=[["voice.turn", 100, 900, "ok"], ["voice.transcribe", 100.2, 300, "ok"]])
+        assert response[0] == 202 and payload(response)["queued"]
+        assert entered.wait(1) and not sent
+        assert not payload(post(relay, "trace", trace_id=TRACE_ID,
+                                stages=[["private transcript", 100, 900, "ok"]]))["queued"]
+    finally:
+        release.set()
+    tracer.queue.join()
+    root, child = sent
+    assert root["parent_id"] is None and child["parent_id"] == root["span_id"]
+    assert root["trace_id"] == child["trace_id"] == TRACE_ID
+    assert (child["caller"], child["callee"], child["operation"], child["duration_ms"]) == (
+        "vitruvius", "cyrano", "voice.transcribe", 300,
+    )
+    assert "private" not in repr(sent)

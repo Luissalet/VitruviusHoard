@@ -51,7 +51,7 @@ export async function playReplyStream(body, context, {signal, job, engine, onSta
     source.start(nextAt);
     playing.add(source);
     nextAt += buffer.duration;
-    if (first) onStart();
+    if (first) onStart(Math.max(0, nextAt - buffer.duration - context.currentTime));
   }
 
   function stop() {
@@ -147,7 +147,7 @@ export function createTransferReplyVoice() {
     }
   }
 
-  async function speak(text, {locale, signal, onPending, onFallback, onStart, onEnd}) {
+  async function speak(text, {locale, signal, onPending, onFallback, onStart, onEnd, onSettled, traceId}) {
     if (signal.aborted) return;
     const requestId = crypto.randomUUID().replaceAll("-", "");
     let response;
@@ -166,7 +166,7 @@ export function createTransferReplyVoice() {
       response = await fetch(API, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({version: VERSION, text, language: locale.slice(0, 2), engine, request_id: requestId}),
+        body: JSON.stringify({version: VERSION, text, language: locale.slice(0, 2), engine, request_id: requestId, trace_id: traceId}),
         signal,
         redirect: "error",
       });
@@ -184,9 +184,9 @@ export function createTransferReplyVoice() {
       signal.throwIfAborted();
       engine = selected;
       await waitForAudio(signal);
-      const end = await playReplyStream(response.body, context, {signal, job, engine, onStart: () => {
+      const end = await playReplyStream(response.body, context, {signal, job, engine, onStart: lead => {
         clearTimeout(timer);
-        onStart?.(engine);
+        onStart?.(engine, lead);
       }});
       signal.throwIfAborted();
       completed = true;
@@ -200,6 +200,7 @@ export function createTransferReplyVoice() {
         cancel();
         if (response?.body && !response.body.locked) void response.body.cancel().catch(() => {});
       }
+      onSettled?.(signal.aborted ? "cancelled" : completed ? "ok" : "error");
     }
   }
 

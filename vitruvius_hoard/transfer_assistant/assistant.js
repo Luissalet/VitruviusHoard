@@ -1,6 +1,6 @@
 import {initialTransfer, isTransferCommand, transferTurn} from "./dialogue.js";
 import {
-  assessTransferEndTurn, finishProvisionalTransfer, transcribeTransferSpeech, understandText, voiceAvailability,
+  assessTransferEndTurn, finishProvisionalTransfer, publishVoiceTrace, transcribeTransferSpeech, understandText, voiceAvailability,
 } from "./voice.js";
 import {mountDictationMicrophone} from "./microphone.js";
 import {createTransferReplyVoice} from "./reply_audio.js";
@@ -32,6 +32,29 @@ const STT_FALLBACK = {
   },
 };
 
+const DICTATION_FAILURE = {
+  es: {
+    boltagon_undiscovered: "Falta descubrir la dirección de Boltagon",
+    boltagon_unreachable: "Boltagon no está accesible",
+    boltagon_timeout: "Boltagon no respondió a tiempo",
+    boltagon_contract_missing: "Boltagon aún no ofrece este contrato",
+    boltagon_contract_invalid: "La respuesta de Boltagon no coincide con el contrato",
+    boltagon_invalid_request: "Boltagon rechazó los datos del turno",
+    boltagon_busy: "Boltagon está ocupado",
+    boltagon_failed: "Falló el dictado de Boltagon",
+  },
+  en: {
+    boltagon_undiscovered: "Boltagon's address is pending discovery",
+    boltagon_unreachable: "Boltagon is unreachable",
+    boltagon_timeout: "Boltagon did not respond in time",
+    boltagon_contract_missing: "Boltagon does not offer this contract yet",
+    boltagon_contract_invalid: "Boltagon's response did not match the contract",
+    boltagon_invalid_request: "Boltagon rejected the turn data",
+    boltagon_busy: "Boltagon is busy",
+    boltagon_failed: "Boltagon dictation failed",
+  },
+};
+
 const COPY = {
   es: {
     title: "Boltagon · Asistente de transferencias", start: "¿A quién quieres hacer una transferencia simulada?",
@@ -49,7 +72,7 @@ const COPY = {
     executing: "Confirmando la transferencia…", success: "Transferencia simulada realizada.",
     rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
     balance: "El saldo es insuficiente para este importe.",
-    trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta"],
+    trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta", "Corte", "Subida y vuelta", "Caché"],
     local_parser: "Análisis local", text_only: "Respuesta escrita", voice_cache: "caché",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
@@ -69,7 +92,7 @@ const COPY = {
     executing: "Confirming the transfer…", success: "Simulated transfer complete.",
     rejected: "Review the details and try confirming the transfer again.",
     balance: "The balance is too low for this amount.",
-    trace: "How this reply was processed", stages: ["Transcribes", "Interprets", "Speaks", "Executes"],
+    trace: "How this reply was processed", stages: ["Transcribes", "Interprets", "Speaks", "Executes", "Endpoint", "Upload and round trip", "Cache"],
     local_parser: "Local parser", text_only: "Written reply", voice_cache: "cache",
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
@@ -210,7 +233,7 @@ export function mountTransferAssistant(root, options = {}) {
 
   function showDictation(route, name) {
     if (name) dictationName = dictationLabel(name);
-    const label = route === "app" || route === "common" ? copy.dictation_remote : copy.dictation_fallback;
+    const label = ["direct", "app", "common"].includes(route) ? copy.dictation_remote : copy.dictation_fallback;
     show(dictationStatus, label(dictationName));
   }
 
@@ -296,7 +319,10 @@ export function mountTransferAssistant(root, options = {}) {
   }
 
   function read(timing, turn = traceTurn) {
-    if (replyTurn !== latestTurn || document.hidden) return;
+    if (replyTurn !== latestTurn || document.hidden) {
+      finishTrace(timing, performance.now(), "cancelled");
+      return;
+    }
     stopPlayback();
     speech = new AbortController();
     const {signal} = speech;
@@ -304,7 +330,7 @@ export function mountTransferAssistant(root, options = {}) {
     let audioAt;
     show(voiceStatus);
     void speaker.speak(message, {
-      locale, signal,
+      locale, signal, traceId: timing?.traceId,
       onPending: () => {
         show(voiceStatus, copy.written_pending);
         track(turn, 2, copy.text_only, performance.now() - replyAt);
@@ -313,8 +339,8 @@ export function mountTransferAssistant(root, options = {}) {
         show(voiceStatus, copy.written_replies);
         if (audioAt === undefined) track(turn, 2, copy.text_only, performance.now() - replyAt);
       },
-      onStart: engine => {
-        audioAt = performance.now();
+      onStart: (engine, lead = 0) => {
+        audioAt = performance.now() + lead * 1000;
         const provider = "Boltagon · " + engine;
         show(voiceStatus);
         track(turn, 2, provider, audioAt - replyAt);
@@ -325,19 +351,40 @@ export function mountTransferAssistant(root, options = {}) {
             detail: {
               inputProvider: timing.inputProvider, outputProvider: provider, stopReason: timing.stopReason,
               speechEndToCaptureStopMs: round(timing.captureStoppedAt - timing.speechEnd),
-              captureStopToTranscriptMs: round(timing.transcriptAt - timing.captureStoppedAt),
+              captureStopToTranscriptMs: round(Math.max(0, timing.transcriptAt - timing.captureStoppedAt)),
               speechEndToTranscriptMs: round(timing.transcriptAt - timing.speechEnd),
               transcriptToReplyMs: round(replyAt - timing.transcriptAt),
               replyToAudioMs: round(audioAt - replyAt),
               speechEndToAudioMs: round(audioAt - timing.speechEnd),
+              uploadMs: round(timing.uploadMs || 0),
+              transcriptionMs: round(timing.transcriptionMs || 0),
+              understandingMs: round(timing.understandingMs || 0),
+              hubWaitMs: 0,
             },
           }));
         }
       },
       onEnd: receipt => {
-        if (receipt.cached) track(turn, 2, `Boltagon · ${receipt.engine_id} · ${copy.voice_cache}`, audioAt - replyAt);
+        if (receipt.cached) {
+          track(turn, 6, "", audioAt - replyAt);
+          timing?.stages.push(["voice.cache", replyAt, audioAt - replyAt, "ok"]);
+          track(turn, 2, `Boltagon · ${receipt.engine_id} · ${copy.voice_cache}`, audioAt - replyAt);
+        }
+      },
+      onSettled: outcome => {
+        const end = audioAt ?? performance.now();
+        timing?.stages.push(["voice.speak", replyAt, end - replyAt, outcome]);
+        finishTrace(timing, end, outcome);
       },
     });
+  }
+
+  function finishTrace(timing, end, outcome) {
+    if (timing?.traceId) {
+      publishVoiceTrace(timing.traceId, [
+        ["voice.turn", timing.speechEnd, end - timing.speechEnd, outcome], ...timing.stages,
+      ]);
+    }
   }
 
   let turnQueue = Promise.resolve();
@@ -368,8 +415,9 @@ export function mountTransferAssistant(root, options = {}) {
     }
     const understandingAt = performance.now();
     const command = isTransferCommand(text);
+    const diagnostic = {};
     if (!spoken && !recipientChoice && !command) {
-      interpretation = await understandText(text, state, context, locale);
+      interpretation = await understandText(text, state, context, locale, undefined, diagnostic);
       showDictation(interpretation?.dictation_route, interpretation?.dictation_name);
     }
     if (version !== formVersion || sending) return false;
@@ -378,7 +426,21 @@ export function mountTransferAssistant(root, options = {}) {
     traceRows.clear();
     trace.hidden = true;
     if (spoken && timing) {
-      const {transcriptionProvider, transcriptionMs, fallbackReason} = timing;
+      const {transcriptionProvider, transcriptionMs, fallbackReason, transcriptionStartedAt, uploadMs, primaryMs} = timing;
+      const cut = timing.captureStoppedAt - timing.speechEnd;
+      track(currentTrace, 4, "", cut);
+      track(currentTrace, 5, "", uploadMs);
+      timing.stages = [["voice.cut", timing.speechEnd, cut, "ok"]];
+      if (Number.isFinite(uploadMs)) timing.stages.push(["voice.upload", transcriptionStartedAt, uploadMs, "ok"]);
+      if (Number.isFinite(transcriptionMs)) {
+        const reserve = transcriptionProvider?.startsWith("Funes");
+        const started = transcriptionStartedAt + (uploadMs || 0);
+        if (reserve && Number.isFinite(primaryMs)) {
+          timing.stages.push(["voice.transcribe", started, primaryMs, /timeout$/.test(fallbackReason) ? "timeout" : "error"]);
+        }
+        timing.stages.push([reserve ? "voice.transcribe_reserve" : "voice.transcribe",
+          started + (primaryMs || 0), transcriptionMs, fallbackReason ? "fallback" : "ok"]);
+      }
       const reasons = STT_FALLBACK[lang];
       const reason = fallbackReason && (Object.hasOwn(reasons, fallbackReason) ? reasons[fallbackReason] : reasons.unavailable);
       track(currentTrace, 0, reason ? transcriptionProvider + " · " + reason : transcriptionProvider, transcriptionMs);
@@ -387,11 +449,20 @@ export function mountTransferAssistant(root, options = {}) {
     const previousPhase = state.phase;
     const previousNext = state.next;
     const allowConfirm = Boolean(reviewed && reviewed === state.summary && (!spoken || context.allowConfirm));
+    const localAt = performance.now();
     const turn = transferTurn(state, text, {...context, lang, allowConfirm, interpretation, recipientChoice});
     if (!command && !recipientChoice) {
       const label = dictationLabel(interpretation?.dictation_name || dictationName);
-      track(currentTrace, 1, interpretation ? label : copy.local_parser,
-        timing?.understandingMs ?? performance.now() - understandingAt);
+      const failure = timing?.understandingFailure || diagnostic.reason;
+      const reason = DICTATION_FAILURE[lang][failure] || DICTATION_FAILURE[lang].boltagon_failed;
+      const duration = timing?.understandingMs ?? performance.now() - understandingAt;
+      track(currentTrace, 1, interpretation ? label : copy.local_parser + " ? " + reason, duration);
+      if (timing) {
+        const started = timing.understandingStartedAt ?? understandingAt;
+        timing.stages.push(["voice.understand", started, timing.understandingServiceMs ?? duration,
+          interpretation ? "ok" : failure === "boltagon_timeout" ? "timeout" : "error"]);
+        if (!interpretation) timing.stages.push(["voice.local_understand", localAt, performance.now() - localAt, "fallback"]);
+      }
     }
     state = turn.state;
     if (turn.message) {
@@ -405,6 +476,7 @@ export function mountTransferAssistant(root, options = {}) {
       waitingForForm = Boolean(fill && state.phase === "ready");
       paint();
       if (turn.message) read(timing, currentTrace);
+      else finishTrace(timing, performance.now(), "ok");
       if (waitingForForm) {
         try { await fill; }
         finally { waitingForForm = false; paint(); }
@@ -418,6 +490,7 @@ export function mountTransferAssistant(root, options = {}) {
     paint();
     const key = requestKey ??= crypto.randomUUID();
     const executionAt = performance.now();
+    let executionOutcome = "ok";
     try {
       const receipt = await execute(turn.action, key);
       state = {...initialTransfer(), phase: "complete"};
@@ -427,6 +500,7 @@ export function mountTransferAssistant(root, options = {}) {
       root.dispatchEvent(new CustomEvent("transfer-assistant:receipt", {bubbles: true, detail: receipt}));
       void refreshData().catch(() => { context = undefined; });
     } catch (error) {
+      executionOutcome = "error";
       if (error.code === "insufficient_balance") {
         state = {...state, phase: "insufficient", next: "amountCents"};
         message = copy.balance;
@@ -437,7 +511,9 @@ export function mountTransferAssistant(root, options = {}) {
         message = copy.rejected;
       }
     } finally {
-      track(currentTrace, 3, "Vitruvius", performance.now() - executionAt);
+      const duration = performance.now() - executionAt;
+      track(currentTrace, 3, "Vitruvius", duration);
+      timing?.stages.push(["voice.execute", executionAt, duration, executionOutcome]);
       sending = false;
       paint();
     }
@@ -449,6 +525,7 @@ export function mountTransferAssistant(root, options = {}) {
   let captureVersion;
   let captureState;
   let captureContext;
+  let captureTrace;
 
   function checkVoice() {
     if (!voiceCheck) {
@@ -479,7 +556,7 @@ export function mountTransferAssistant(root, options = {}) {
     finalTimeoutMs: 53000,
     labels: {start: copy.mic, finish: copy.stop},
     request: (blob, options) => transcribeTransferSpeech(blob, {
-      ...options, state: captureState, context: captureContext, locale,
+      ...options, state: captureState, context: captureContext, locale, traceId: captureTrace,
     }),
     adaptive: () => adaptiveTurn,
     endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {
@@ -492,6 +569,7 @@ export function mountTransferAssistant(root, options = {}) {
       if (!dictation || sttWarning || voiceCheck) await checkVoice();
       if (!context) await refreshData().catch(() => {});
       captureVersion = formVersion;
+      captureTrace = crypto.randomUUID().replaceAll("-", "");
       captureState = state;
       captureContext = context;
       return !sttWarning;
@@ -506,13 +584,16 @@ export function mountTransferAssistant(root, options = {}) {
       if (captureVersion !== formVersion) return;
       if (timing.stopReason === "adaptive") result = finishProvisionalTransfer(result);
       if (result.interpretation && result.interpretation.is_final !== true) return;
-      showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
+      if (!isTransferCommand(result.text)) showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {
         ...timing, inputProvider: result.provider, transcriptionProvider: result.transcriptionProvider,
         fallbackReason: result.fallbackReason,
-        transcriptionMs: result.transcriptionMs,
-        understandingMs: result.understandingMs,
+        transcriptionMs: result.transcriptionMs, uploadMs: result.uploadMs,
+        transcriptionStartedAt: result.transcriptionStartedAt, primaryMs: result.primaryMs,
+        understandingMs: result.understandingMs, understandingStartedAt: result.understandingStartedAt,
+        understandingFailure: result.understandingFailure, understandingServiceMs: result.understandingServiceMs,
+        traceId: result.traceId,
       }, interpretation: result.interpretation});
       else show(captureStatus, copy.empty);
     },
