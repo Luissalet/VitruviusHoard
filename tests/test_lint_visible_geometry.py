@@ -1,3 +1,6 @@
+import pytest
+
+from vitruvius_hoard.browser import DOM_JS
 from vitruvius_hoard.lint import run_lint
 
 
@@ -23,6 +26,45 @@ def test_brand_label_uses_text_lines_even_with_a_decorative_child():
     assert not check("craft/button-wrap", probe(header, brand, dot))
     wrapped = dict(brand, t="", tl=0, ln=2)
     assert check("craft/button-wrap", probe(header, wrapped, node("span", "Ver disponibilidad", parent=1)))
+
+
+def test_browser_counts_inline_small_text_and_genuine_action_wraps():
+    playwright = pytest.importorskip("playwright.sync_api")
+    with playwright.sync_playwright() as runtime:
+        try:
+            browser = runtime.chromium.launch(channel="chrome", headless=True)
+        except playwright.Error as exc:
+            if "Executable doesn't exist" in str(exc) or "distribution 'chrome' is not found" in str(exc):
+                pytest.skip("Chrome is not installed")
+            raise
+        try:
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.set_content("""
+                <!doctype html>
+                <style>
+                  body { font-family: Arial, sans-serif }
+                  header { display: flex; gap: 50px; align-items: flex-start }
+                  a { display: inline-block; }
+                  #mixed { white-space: nowrap; font-size: 28px; line-height: 1.1 }
+                  #mixed small { font-size: 9px }
+                  #wrapped, #tight { width: 76px; font-size: 17px }
+                  #tight { line-height: 8px }
+                </style>
+                <header>
+                  <a id="mixed" href="#catalogue">Catálogo <small>nuevo</small></a>
+                  <a id="wrapped" href="#reserve">Confirmar reserva</a>
+                  <a id="tight" href="#reserve">Confirmar reserva</a>
+                </header>
+            """)
+            dom = page.evaluate(DOM_JS)
+        finally:
+            browser.close()
+    counts = {entry["id"]: entry.get("ln") for entry in dom["els"] if entry.get("act")}
+    assert counts == {"mixed": 1, "wrapped": 2, "tight": 2}
+    findings = check("craft/button-wrap", {"dom": {"1440": dom}})
+    evidence = str([finding["evidence"] for finding in findings])
+    assert "a#wrapped" in evidence and "a#tight" in evidence
+    assert "a#mixed" not in evidence
 
 
 def test_reservation_email_is_functional_content_and_subscription_stays_detectable():

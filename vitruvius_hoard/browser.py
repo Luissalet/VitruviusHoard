@@ -481,22 +481,35 @@ DOM_JS = r"""
       const parent = node.parentElement;
       if (!node.textContent.trim() || !textPainted(parent)
           || (action && parent.closest('[aria-hidden="true"]'))) continue;
-      rects.push(...textRects(node));
+      for (const box of textRects(node)) rects.push({box, node});
     }
     const center = (r) => (r.top + r.bottom) / 2;
-    rects.sort((a, b) => center(a) - center(b));
+    rects.sort((a, b) => center(a.box) - center(b.box));
     const lines = [];
-    for (const q of rects) {
+    for (const {box: q, node} of rects) {
       const line = lines[lines.length - 1];
-      if (!line || center(q) - line.center > Math.min(q.height, line.height) * 0.5) {
-        lines.push({center: center(q), height: q.height, left: q.left, right: q.right});
-      } else {
-        line.height = Math.min(line.height, q.height);
+      const prior = line?.nodes.get(node);
+      if (prior ? Math.abs(prior.top - q.top) <= 0.5 : line && sharesLine(line, q)) {
+        line.nodes.set(node, q);
+        if (q.height > line.anchor.height) line.anchor = q;
         line.left = Math.min(line.left, q.left);
         line.right = Math.max(line.right, q.right);
+        continue;
       }
+      lines.push({anchor: q, nodes: new Map([[node, q]]), left: q.left, right: q.right});
     }
     return lines;
+
+    function sharesLine(line, q) {
+      const a = line.anchor;
+      const smaller = Math.min(q.height, a.height);
+      if (Math.abs(center(q) - center(a)) <= smaller * 0.5) return true;
+      // A smaller inline label can share a baseline with taller text even
+      // when their centres differ. Require side-by-side boxes with vertical overlap.
+      const overlap = Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top);
+      return Math.abs(a.height - q.height) > 1 && overlap >= smaller * 0.5
+        && (q.left >= line.right - 0.5 || q.right <= line.left + 0.5);
+    }
   };
   for (const [at, el] of all.entries()) {
     if (out.els.length >= CAP) { out.truncated = true; break; }
