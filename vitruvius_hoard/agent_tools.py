@@ -200,7 +200,11 @@ class AppCreateArgs(BaseModel):
     items: Optional[list[dict]] = Field(None, description="Booking entries with stable id, title, category and optional description. Text can be an es/en pair.")
     lang: Literal["es", "en"] = "en"
     description_es: Optional[str] = None
-    files: Optional[dict[str, str]] = Field(None, description="Custom UTF-8 source files. Omit server.py to use the built-in runtime.")
+    files: Optional[dict[str, str]] = Field(None, description=(
+        "Partial or complete UTF-8 source files. If project.json, layout.html or pages/index.html is missing, "
+        "the selected starter fills in missing files (work-board for template 'custom'). "
+        "Omit server.py to use the built-in runtime. Supplied files override starter files."
+    ))
     art_direction_study_id: Optional[str] = Field(None, max_length=40, description="For a new custom design, pass the decided study from the brief.")
 
 

@@ -5,9 +5,11 @@ import threading
 import urllib.error
 import urllib.request
 import zipfile
+from types import SimpleNamespace
 
 import pytest
 
+from vitruvius_hoard.agent_tools import call_tool
 from vitruvius_hoard.app_preview import SCRIPT_ROOT
 from vitruvius_hoard.hoard_link.app_bridge import BRIDGE_JS
 from vitruvius_hoard.app_projects import AppProjects, starter_files
@@ -19,6 +21,44 @@ def request(url, method="GET", body=None):
     req = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=10) as response:
         return response.status, response.read()
+
+
+@pytest.mark.parametrize(("template", "starter"), [("inventory", "inventory"), ("custom", "work-board")])
+def test_agent_create_completes_partial_source_from_starter(tmp_path, template, starter):
+    projects = AppProjects(tmp_path)
+    files = {
+        "pages/index.html": "<h1>Field notes</h1>",
+        "assets/style.css": "h1 { color: #285744; }",
+    }
+    arguments = {"name": "Research log", "template": template, "files": files}
+    project = call_tool(SimpleNamespace(app_projects=projects), "app_project_create", arguments)
+
+    expected = {**starter_files("Research log", starter), **files}
+    assert project["files"] == expected
+    assert projects.get(project["id"])["files"] == expected
+    assert project["undo"]["arguments"]["expected_revision"] == project["revision"]
+
+
+def test_agent_create_complete_custom_source_only_adds_runtime(tmp_path):
+    projects = AppProjects(tmp_path)
+    files = {
+        "project.json": json.dumps({
+            "format": "vitruvius-app/v2", "name": "Notes",
+            "collections": {"notes": {"fields": [{"name": "title", "type": "text"}]}}, "actions": {},
+        }),
+        "layout.html": "<html lang='en'><body>{{content}}</body></html>",
+        "pages/index.html": "<h1>Field notes</h1>",
+    }
+    arguments = {"name": "Notes", "template": "custom", "files": files}
+    services = SimpleNamespace(app_projects=projects)
+    builtin = call_tool(services, "app_project_create", arguments)
+
+    assert builtin["files"] == {**files, "server.py": starter_files("Notes")["server.py"]}
+
+    custom_files = {**files, "server.py": "# Supplied standalone runtime\n"}
+    explicit = call_tool(services, "app_project_create", {**arguments, "files": custom_files})
+
+    assert explicit["files"] == custom_files
 
 
 def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):

@@ -39,6 +39,7 @@ _LEGACY_STARTER_RUNTIMES = {
     "29bbdc519e5e42838904793f190e085eca277bf4377b55219becb615cd205fd9",
     "a8eb8d4b158b8147d374880480f02e74e1218c9b0e0a54e0ffaa5facca855ca9",
 }
+_PROJECT_SCAFFOLD_FILES = {"project.json", "layout.html", "pages/index.html"}
 
 _TEMPLATES = [
     {"id": "work-board", "name": "Work board", "name_es": "Tablero de trabajo", "accent": "#355c7d", "fields": [
@@ -356,7 +357,7 @@ class AppProjects:
             if destination in destinations:
                 raise ValueError("Project file paths refer to the same file: " + name)
             destinations.add(destination)
-        required = {"project.json", "server.py", "layout.html", "pages/index.html"}
+        required = _PROJECT_SCAFFOLD_FILES | {"server.py"}
         if not required.issubset(files):
             raise ValueError("Project needs project.json, server.py, layout.html and pages/index.html")
         spec = validate_spec(json.loads(files["project.json"]))
@@ -399,8 +400,10 @@ class AppProjects:
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
                description_es=None, files=None, *, author=None, art_direction=None):
-        if files is None:
-            files = starter_files(name, template, description, accent, fields, items, lang, description_es)
+        if files is None or not _PROJECT_SCAFFOLD_FILES.issubset(files):
+            starter = "work-board" if files is not None and template == "custom" else template
+            defaults = starter_files(name, starter, description, accent, fields, items, lang, description_es)
+            files = {**defaults, **(files or {})}
         elif "server.py" not in files:
             files = {**files, "server.py": _standalone_runtime()}
         if art_direction and "project.json" in files:
