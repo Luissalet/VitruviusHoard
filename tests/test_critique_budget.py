@@ -139,15 +139,15 @@ def test_missing_vision_is_classified_before_generation(services, monkeypatch, d
     assert "use_vision=false" in report["next_action"]["es"]
 
 
-@pytest.mark.parametrize("explicit_origin", [False, True], ids=["default-loopbacks", "explicit-loopback"])
-def test_cold_vision_resolution_reaches_the_announced_spark(monkeypatch, explicit_origin):
+@pytest.mark.parametrize("route", ["default-loopbacks", "explicit-loopback", "blocked-spark", "both-ready"])
+def test_cold_vision_resolution_prefers_healthy_origin(monkeypatch, route):
     hub = "http://hub-fixture.invalid"
     spark = "http://spark-fixture.invalid"
     defaults = LinkConfig(hub_url=hub)
     first_local = defaults.faustus_urls[0]
-    config = LinkConfig(hub_url=hub, faustus_urls=(first_local,)) if explicit_origin else defaults
-    expected_origin = first_local if explicit_origin else spark
-    expected_model = "fixture-local" if explicit_origin else "fixture-spark"
+    config = LinkConfig(hub_url=hub, faustus_urls=(first_local,)) if route == "explicit-loopback" else defaults
+    expected_origin = first_local if route in {"explicit-loopback", "blocked-spark"} else spark
+    expected_model = "fixture-local" if expected_origin == first_local else "fixture-spark"
     probes = []
 
     class PlacementAndHealth:
@@ -156,11 +156,14 @@ def test_cold_vision_resolution_reaches_the_announced_spark(monkeypatch, explici
             probes.append(url)
             if url == hub + "/api/placement":
                 body = {"location": "sparks", "urls": {"faustus": spark}}
-            elif url in {origin + "/api/health" for origin in defaults.faustus_urls} and not explicit_origin:
+            elif url == spark + "/api/health" and route == "blocked-spark":
+                time.sleep(min(timeout, 0.65))
+                raise TimeoutError("Unresponsive advertised Spark")
+            elif url in {origin + "/api/health" for origin in defaults.faustus_urls} and route == "default-loopbacks":
                 time.sleep(0.3)
                 raise TimeoutError("Slow implicit loopback")
             else:
-                assert url == expected_origin + "/api/health"
+                assert url in {origin + "/api/health" for origin in (*defaults.faustus_urls, spark)}
                 body = {"status": "healthy"}
             response = io.BytesIO(json.dumps(body).encode())
             response.status = 200
@@ -189,7 +192,10 @@ def test_cold_vision_resolution_reaches_the_announced_spark(monkeypatch, explici
         assert asyncio.run(resolve_and_pin()) == expected_model
     finally:
         where.forget()
-    assert probes == [hub + "/api/placement", expected_origin + "/api/health"]
+    expected_probes = [hub + "/api/placement"]
+    if route == "blocked-spark":
+        expected_probes.append(spark + "/api/health")
+    assert probes == [*expected_probes, expected_origin + "/api/health"]
 
 
 def test_published_critique_schema_matches_the_native_tool():

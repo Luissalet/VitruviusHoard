@@ -17,7 +17,8 @@ from hoard_link.types import Resolution
 from .owned_http import OwnedAsyncClient,close_client
 
 _job = ContextVar('vitruvius_global_job', default=None)
-VISION_RESOLUTION_TIMEOUT_S = 3.0
+VISION_RESOLUTION_TIMEOUT_S = 6.0
+SPARK_HEALTH_TIMEOUT_S = 3.0
 _DEFAULT_FAUSTUS_URLS = LinkConfig().faustus_urls
 
 
@@ -101,13 +102,13 @@ class GlobalLink(Link):
             selected = await self.resolve('llm')
             return {'llm': selected.to_dict()}
 
-    async def selection(self):
+    async def selection(self, *, deadline=None):
         pinned = _job.get()
         urls = tuple(self.config.faustus_urls)
         if not urls:
             raise ValueError('Global model unavailable: no configured Faustus endpoint')
         if pinned is None:
-            return await self._selection(urls)
+            return await self._selection(urls, deadline)
         key = (urls, self.config.faustus_token)
         # A job may resolve concurrently across native threads and event loops.
         # Lock only publication of its one future, never the HTTP request/chat.
@@ -119,7 +120,7 @@ class GlobalLink(Link):
         if not owner:
             return await asyncio.shield(asyncio.wrap_future(future))
         try:
-            selected = await self._selection(urls)
+            selected = await self._selection(urls, deadline)
         except asyncio.CancelledError:
             # An expired owner must not cancel the other users of its selection.
             future.set_exception(TimeoutError("Global model resolution was cancelled"))
@@ -130,17 +131,30 @@ class GlobalLink(Link):
         future.set_result(selected)
         return selected
 
-    def _origin(self, urls):
+    async def _origin(self, urls, deadline):
         if urls != _DEFAULT_FAUSTUS_URLS:
-            return self.config.faustus_origin()
+            return await asyncio.to_thread(self.config.faustus_origin)
         # The SDK appends the active Spark placement after the local candidates.
-        # Try it before the implicit loopbacks, which can each take 1.5 s to fail.
-        candidates = self.config.faustus_candidates()
-        ordered = candidates[len(urls):] + candidates[:len(urls)]
-        return where.reachable(ordered, token=self.config.faustus_token or "") or urls[0]
+        candidates = await asyncio.to_thread(self.config.faustus_candidates)
+        local, spark = candidates[:len(urls)], candidates[len(urls):]
+        token = self.config.faustus_token or ""
+        if spark and deadline is not None:
+            # Leave at least 40% of the remaining resolution time for local health and the descriptor.
+            remaining = deadline - asyncio.get_running_loop().time()
+            wait = min(SPARK_HEALTH_TIMEOUT_S, max(0.0, remaining) * 0.6)
+            try:
+                async with asyncio.timeout(wait):
+                    base = await asyncio.to_thread(where.reachable, spark, token=token,
+                                                   timeout=SPARK_HEALTH_TIMEOUT_S, remote_timeout=SPARK_HEALTH_TIMEOUT_S)
+            except TimeoutError:
+                base = ""
+            if base:
+                return base
+            spark = []
+        return await asyncio.to_thread(where.reachable, spark + local, token=token) or urls[0]
 
-    async def _selection(self, urls):
-        base = await asyncio.to_thread(self._origin, urls)
+    async def _selection(self, urls, deadline):
+        base = await self._origin(urls, deadline)
         headers = {'Authorization': 'Bearer ' + self.config.faustus_token} if self.config.faustus_token else {}
         response = await self._client.get(base + '/api/global-model', headers=headers)
         response.raise_for_status()
@@ -156,10 +170,10 @@ class GlobalLink(Link):
         selected.update(base=base, headers=headers, vision=bool(value.get('vision')))
         return selected
 
-    async def resolve(self, capability, task=None):
+    async def resolve(self, capability, task=None, *, deadline=None):
         if capability not in ('llm', 'vision'):
             return await super().resolve(capability, task)
-        selected = await self.selection()
+        selected = await self.selection(deadline=deadline)
         if capability == 'vision' and not selected['vision']:
             raise VisionUnavailable("no_model", "The selected global model does not expose vision.")
         return Resolution(capability=capability, provider='openai', api='openai', state='resolved',
@@ -175,8 +189,8 @@ class GlobalLink(Link):
         resolution_budget = VISION_RESOLUTION_TIMEOUT_S if timeout is None else min(timeout, VISION_RESOLUTION_TIMEOUT_S)
         with global_job() if _job.get() is None else nullcontext():
             try:
-                async with asyncio.timeout(resolution_budget):
-                    resolution = await self.resolve("vision")
+                async with asyncio.timeout(resolution_budget) as resolution_timeout:
+                    resolution = await self.resolve("vision", deadline=resolution_timeout.when())
             except VisionUnavailable:
                 raise
             except (TimeoutError, httpx.TimeoutException) as error:
