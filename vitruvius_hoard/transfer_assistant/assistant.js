@@ -73,7 +73,7 @@ const COPY = {
     rejected: "Revisa los datos y vuelve a confirmar la transferencia.",
     balance: "El saldo es insuficiente para este importe.",
     trace: "Cómo se procesó esta respuesta", stages: ["Transcribe", "Entiende", "Habla", "Ejecuta", "Corte", "Subida y vuelta", "Caché"],
-    local_parser: "Análisis local", text_only: "Respuesta escrita", voice_cache: "caché",
+    local_parser: "Análisis local", text_only: "Respuesta escrita",
     fields: ["Destinatario", "Importe", "Concepto", "Origen"], pending: "Pendiente",
   },
   en: {
@@ -93,7 +93,7 @@ const COPY = {
     rejected: "Review the details and try confirming the transfer again.",
     balance: "The balance is too low for this amount.",
     trace: "How this reply was processed", stages: ["Transcribes", "Interprets", "Speaks", "Executes", "Endpoint", "Upload and round trip", "Cache"],
-    local_parser: "Local parser", text_only: "Written reply", voice_cache: "cache",
+    local_parser: "Local parser", text_only: "Written reply",
     fields: ["Recipient", "Amount", "Reference", "From"], pending: "Pending",
   },
 };
@@ -365,10 +365,12 @@ export function mountTransferAssistant(root, options = {}) {
         }
       },
       onEnd: receipt => {
-        if (receipt.cached) {
-          track(turn, 6, "", audioAt - replyAt);
-          timing?.stages.push(["voice.cache", replyAt, audioAt - replyAt, "ok"]);
-          track(turn, 2, `Boltagon · ${receipt.engine_id} · ${copy.voice_cache}`, audioAt - replyAt);
+        if (!receipt.cached) return;
+        const {first_audio: first, queue} = receipt.timings_ms || {};
+        const cacheMs = Number.isFinite(first) && Number.isFinite(queue) ? Math.max(0, first - queue) : undefined;
+        track(turn, 6, "", cacheMs);
+        if (timing && Number.isFinite(cacheMs)) {
+          timing.stages.push(["voice.cache", replyAt + queue, cacheMs, "ok"]);
         }
       },
       onSettled: outcome => {
