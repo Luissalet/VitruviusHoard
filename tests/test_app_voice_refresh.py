@@ -20,7 +20,9 @@ def project_with_old_assistant(services):
     files["pages/index.html"] += '<section data-transfer-assistant="manual" id="tesela-voice"></section>'
     files["assets/transfer-assistant/project-notes.txt"] = "Project-owned source"
     files[ENTRY] = LEGACY
-    return call_tool(services, "app_project_create", {"name": "Voice update fixture", "template": "custom", "files": files})
+    return call_tool(services, "app_project_create", {
+        "name": "Voice update fixture", "template": "custom", "files": files, "include_files": True,
+    })
 
 
 def refresh(services, project):
@@ -119,7 +121,9 @@ def test_refresh_form_keeps_configuration_and_other_assets(services):
     files = source_files(transfer_spec())
     files["pages/index.html"] += '<span data-voice-assistant="{&quot;formSelector&quot;:&quot;#existing&quot;}"></span>'
     files[FORM_ENTRY] = LEGACY
-    project = call_tool(services, "app_project_create", {"name": "Legacy form assistant", "template": "custom", "files": files})
+    project = call_tool(services, "app_project_create", {
+        "name": "Legacy form assistant", "template": "custom", "files": files, "include_files": True,
+    })
     receipt = refresh(services, project)
     assert receipt["changed"] and FORM_ENTRY in receipt["files"]
     current = services.app_projects.get(project["id"])["files"]

@@ -12,7 +12,9 @@ Use `app_project_canvas_view` to read the project preview open in Applications a
 
 The Canvas rail opens the regular copilot conversation scoped to the application project. It shows the person's request before the agent acts, the agent's visible speech, and collapsed groups of clicks, scrolling and navigation. Source history remains below the conversation, including affected files, example IDs and a token system ID when supplied. `app_project_update` accepts `examples` and `tokens_id` and also recognises the library metadata in `project.json`. Use `app_project_change_undo` with a history step ID and the current revision and timestamp. It reverses that step while preserving later edits to other files. A conflict on the same file keeps the later source, and success includes an undo call.
 
-The Canvas panel also lists the active page’s elements and open comments. The person can jump to comment anchors, resolve comments and undo the latest source change from the history. `app_project_get` returns `history` with recorded source transitions, author (person or agent, plus agent name when supplied) and the last applicable source undo. Older saved revisions remain accessible with their existing IDs.
+The Canvas panel also lists the active page’s elements and open comments. The person can jump to comment anchors, resolve comments and undo the latest source change from the history. Call `app_project_get` with `include_files: true` to read the source and `history` with recorded transitions, authors and the last applicable source undo. Older saved revisions remain accessible with their existing IDs.
+
+For tool results with full source contents, pass `include_files: true` to `app_project_create`, `app_project_get` or `app_project_edit_source`. The default receipts include project and revision IDs, preview status and file metadata. Use `detail: true` on `app_project_render` when you need the full lint findings, metrics and browser probe.
 
 ## App project data
 

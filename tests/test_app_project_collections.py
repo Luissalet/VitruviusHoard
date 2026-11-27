@@ -307,7 +307,7 @@ def test_project_schema_rejects_undeclared_operations_and_fields(invalid_effect)
 
 def test_agent_tool_native_rest_and_standalone_export(services, client, tmp_path):
     project = call_tool(services, "app_project_create", {
-        "name": "Sample project", "template": "custom", "files": source_files(transfer_spec()),
+        "name": "Sample project", "template": "custom", "files": source_files(transfer_spec()), "include_files": True,
     })
     id = project["id"]
     path = f"/api/app-projects/{id}/call"

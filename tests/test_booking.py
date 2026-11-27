@@ -38,14 +38,33 @@ def test_booking_export_has_the_same_page_as_the_owned_preview(tmp_path):
         projects.close()
 
 
-def test_project_render_keeps_all_capture_widths_after_capping(client, monkeypatch):
+def test_project_render_summarizes_lint_and_keeps_all_capture_widths(client, monkeypatch):
     widths = [390, 768, 1440]
     captures = [{"width": width, "path": f"{width}.png"} for width in widths]
-    monkeypatch.setattr(client.svc, "app_project_render", lambda *_: {
-        "widths": widths, "files": captures, "metrics": {}, "_probe": {"huge": ["x" * 30000]},
-    })
-    result = call_tool(client.svc, "app_project_render", {"widths": widths})
+    counts = {"error": 1, "warn": 1, "info": 1}
+    findings = [
+        {"check_id": "floor", "tier": "floor", "severity": "error", "title": "Floor", "evidence": {"sample": "x" * 30000}},
+        {"check_id": "reflex", "tier": "reflex", "severity": "warn", "title": "Reflex"},
+        {"check_id": "finish", "tier": "finish", "severity": "info", "title": "Finish"},
+    ]
+    probe = {"huge": ["x" * 30000]}
+    original = {"id": "render-1", "url": "http://127.0.0.1", "widths": widths, "files": captures,
+                "metrics": {"probe": probe}, "_probe": probe,
+                "lint": {"score": 7, "counts": counts, "findings": findings}}
+    monkeypatch.setattr(client.svc, "app_project_render", lambda *_: original)
+    arguments = {"widths": widths}
+    result = call_tool(client.svc, "app_project_render", arguments)
     assert result["widths"] == widths and result["files"] == captures
+    assert result["id"] == original["id"] and result["url"] == original["url"]
+    assert result["lint"] == {"score": 7, "count": 3, "counts": counts,
+                              "findings": [{key: value for key, value in findings[0].items() if key != "evidence"},
+                                           findings[1]]}
+    assert "metrics" not in result and "_probe" not in result
+    assert json.dumps(call_tool(client.svc, "app_project_render", {**arguments, "detail": True})) == json.dumps(original)
+
+    original["metrics"] = {"error": "browser_unavailable", "hint": "Install a headless browser"}
+    failed = call_tool(client.svc, "app_project_render", arguments)
+    assert failed["error"] == original["metrics"]["error"] and failed["hint"] == original["metrics"]["hint"]
 
 
 def test_project_undo_checks_current_revision_and_keeps_saved_edits(tmp_path):
