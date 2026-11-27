@@ -29,6 +29,7 @@ from .app_source_map import SourceMapError, edit_source, first_changed_source, s
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
+from .static_page import TEMPLATE as STATIC_PAGE_TEMPLATE, page_files as static_page_files
 from .transfer_assistant.embedded import embedded_assistant_assets
 from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
 from .transfer_assistant import FORM_ENTRY, form_assistant_files
@@ -48,6 +49,7 @@ _TEMPLATES = [
     {"id": "inventory", "name": "Inventory", "name_es": "Inventario", "accent": "#286c56", "fields": [
         {"name": "name", "label": "Item", "type": "text"}, {"name": "quantity", "label": "Quantity", "type": "number"}, {"name": "location", "label": "Location", "type": "text"}]},
     BOOKING_TEMPLATE,
+    STATIC_PAGE_TEMPLATE,
 ]
 
 
@@ -71,7 +73,17 @@ def starter_files(name, template="work-board", description="", accent=None, fiel
     colour = accent or selected["accent"]
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", colour):
         raise ValueError("accent must be a six-digit hex colour")
-    spec = validate_spec({"format": "vitruvius-app/v1", "name": name, "description": description, "fields": fields if fields is not None else selected["fields"], "template": template})
+    static = template == STATIC_PAGE_TEMPLATE["id"]
+    page_description = description_es if static and lang == "es" and description_es is not None else description
+    spec = validate_spec({"format": "vitruvius-app/v1", "name": name, "description": page_description, "fields": fields if fields is not None else selected["fields"], "template": template})
+    common = {
+        "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n",
+        "server.py": _standalone_runtime(),
+        "Dockerfile": 'FROM python:3.13-slim\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["python", "server.py", "--host", "0.0.0.0", "--port", "3000"]\n',
+        "LICENSE": Path(__file__).with_name("LICENSE").read_text(encoding="utf-8"),
+    }
+    if static:
+        return {**common, **static_page_files(name, colour, lang, page_description)}
     properties = []
     for field in spec["fields"]:
         kind = field["type"]
@@ -137,8 +149,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 });
 '''
     files = {
-        "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n",
-        "server.py": _standalone_runtime(),
+        **common,
         "layout.html": '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{name}}</title><link rel="stylesheet" href="/assets/style.css"></head><body><header><strong>{{name}}</strong><nav aria-label="Application"><a href="/">Overview</a><a href="/records">Records</a></nav></header><main>{{content}}</main><footer><p id="status" role="status" aria-live="polite"></p></footer><script type="module" src="/assets/client.js"></script></body></html>',
         "pages/index.html": '<h1>{{name}}</h1><p>{{description}}</p><section><h2>Overview</h2><p>{{count}} records in this application.</p><a href="/records">Manage records</a></section><section><h2>Current records</h2><div class="table-wrap">{{table}}</div></section>',
         "pages/records/index.html": '<h1>Records</h1><form class="search" action="/records" method="get"><label>Search records<input name="q" value="{{query}}" type="search"></label><button type="submit">Search</button></form><section><h2>Add a record</h2>{{form}}</section><section><h2>Saved records</h2><div class="table-wrap">{{table}}</div></section>',
@@ -146,8 +157,6 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
         "assets/style.css": css, "assets/api.js": api, "assets/client.js": client,
         "contracts.d.ts": contracts,
         "tsconfig.json": json.dumps({"compilerOptions": {"allowJs": True, "checkJs": True, "noEmit": True, "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022", "DOM"]}, "include": ["assets/api.js", "contracts.d.ts"]}, indent=2),
-        "Dockerfile": 'FROM python:3.13-slim\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["python", "server.py", "--host", "0.0.0.0", "--port", "3000"]\n',
-        "LICENSE": Path(__file__).with_name("LICENSE").read_text(encoding="utf-8"),
         "README.md": f'# {name}\n\nRun `python server.py --port 3000` and open http://127.0.0.1:3000. Python 3.10+; no packages or workbench required. SQLite data is stored in data/app.db. Edit pages/*.html, layout.html, assets and project.json; restart after editing to use the changed source.\n\nPages are discovered from the pages directory, with index.html and [parameter].html paths. JSON operations are available through /api/records and POST /actions/create, /actions/update, /actions/delete. /api/schema and /api/routes describe the project. contracts.d.ts and the annotated API client share the field types; run `tsc -p tsconfig.json` if TypeScript is installed.\n\nGenerated application source belongs to the exported project. It uses an ordinary local HTTP server, without account, authentication or external service setup. Add production infrastructure appropriate to your deployment.\n',
     }
     if template == "booking":

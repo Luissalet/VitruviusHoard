@@ -1319,7 +1319,7 @@
   },
   {
     "name": "app_project_create",
-    "description": "Create an editable application project. Crear aplicación.\nFor a new custom design, pass the decided art-direction study from the brief.",
+    "description": "Create an editable application project. Crear aplicación.\nUse template='static-page' for a standalone page without a records interface. Supply files to save authored source in one call.\nPara una página suelta usa static-page. Si ya tienes el código fuente, pásalo en files al crear el proyecto.\nFor a new custom design, pass the decided art-direction study from the brief.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
