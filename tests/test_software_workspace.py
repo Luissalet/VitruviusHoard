@@ -47,7 +47,7 @@ async def test_project_tools_and_stable_preview_paths_with_other_modules_off(tmp
     app = create_app()
     runtime = app.state.runtime
     expected = {
-        "app_templates", "app_project_archive", "app_project_call", "app_project_canvas_act",
+        "app_templates", "app_project_add_voice_assistant", "app_project_archive", "app_project_call", "app_project_canvas_act",
         "app_project_canvas_edit", "app_project_canvas_view", "app_project_change_undo", "app_project_comment_ack",
         "app_project_comment_dismiss", "app_project_comment_reply", "app_project_comment_resolve",
         "app_project_comment_undo", "app_project_comments", "app_project_create",
@@ -73,11 +73,9 @@ async def test_project_tools_and_stable_preview_paths_with_other_modules_off(tmp
             project = (await client.post("/design/api/app-projects", json={"name": "Short preview link"})).json()
             short = f"/api/app-projects/{project['id']}/preview/open"
             canonical = "/design" + short
-            for lang, message in (("es", "La vista previa está detenida"), ("en", "The preview is stopped")):
-                for url in (short, canonical):
-                    response = await client.get(url, params={"lang": lang})
-                    assert response.status_code == 503 and response.text.startswith(message)
-            preview = (await client.post(canonical.removesuffix("/open"), json={"operation": "start"})).json()
+            first = await client.get(short)
+            preview = (await client.get(f"/design/api/app-projects/{project['id']}")).json()["preview"]
+            assert first.status_code == 307 and first.headers["location"] == preview["url"] + "/"
             for lang in ("es", "en"):
                 for url in (short, canonical):
                     path = f"/transferir?lang={lang}&message=hola%20mundo"

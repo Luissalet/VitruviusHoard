@@ -44,7 +44,7 @@ async def test_new_profile_prepares_searchable_library_and_respects_off_at_resta
         assert available["presets"] == available["styles"] == available["palettes"] > 100
         assert available["font_pairings"] > 10 and available["chunks"] > 200
         assert available["recipes"] == available["references"] == 5
-        assert available["patterns"] == 8 and available["motion_examples"] == 3
+        assert available["patterns"] == 9 and available["motion_examples"] == 3
         results = await execute("design_search", {"query": "muelle amortiguado", "mode": "bm25", "source": SOURCE})
         assert results["items"], results
 

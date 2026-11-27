@@ -313,12 +313,12 @@ class Node:
             self._text = re.sub(r"\s+", " ", " ".join(parts)).strip()
         return self._text
 
-    def text_without(self, skip: set[str]) -> str:
+    def text_without(self, skip: set[str], *, omit_aria_hidden: bool = False) -> str:
         """Visible text with some elements (pre, code, svg ...) left out."""
         parts: list[str] = []
 
         def walk(n: "Node") -> None:
-            if n.tag in SKIP_TEXT or n.tag in skip:
+            if n.tag in SKIP_TEXT or n.tag in skip or (omit_aria_hidden and n.attrs.get("aria-hidden") == "true"):
                 return
             children = iter(n.children)
             done = 0

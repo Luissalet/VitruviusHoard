@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 
+export function previewAllow(project) {
+  const files = project?.files || {};
+  if (Object.hasOwn(files, "assets/voice-assistant/microphone.js") ||
+      Object.hasOwn(files, "assets/transfer-assistant/assistant.js")) {
+    return "microphone 'src'";
+  }
+}
+
 export function refreshKind(change, visible, next) {
   if (change.reset || change.previous_revision !== visible || change.revision !== next ||
       !change.files.length || change.global_styles?.length) return "full";

@@ -251,6 +251,15 @@ class AppUpdateArgs(BaseModel):
     tokens_id: str | None = Field(None, max_length=120, description="Design token system used in this edit.")
 
 
+class AppVoiceAssistantArgs(BaseModel):
+    id: str
+    expected_revision: str
+    page: str = Field(description="Existing HTML source, e.g. pages/index.html or public/index.html.")
+    form_selector: str = Field("form", min_length=1, max_length=256, description="CSS selector matching one rendered form.")
+    field_schema: dict = Field(alias="schema", description="JSON Schema object. Property names match form controls; title and aliases guide dictation.")
+    allow_submit: StrictBool = Field(False, description="Allow a separate spoken confirmation to submit the form.")
+
+
 class AppSourceTextChange(BaseModel):
     kind: Literal["text"]
     value: str
@@ -896,6 +905,11 @@ TOOLS: list[Tool] = [
         AppIdArgs, ann(True), lambda services, args: services.app_projects.get(args.id, args.revision), capped=False),
     Tool("app_project_update", "Save selected source files as a retained project revision. Editar archivos de aplicación.",
         AppUpdateArgs, ann(False, False, True), run_app_project_update, capped=False),
+    Tool("app_project_add_voice_assistant", "Add voice input to a form, with spoken replies, trace and undo. Añadir asistente de voz a un formulario.",
+        AppVoiceAssistantArgs, ann(False, False, True),
+        lambda services, args: services.app_projects.add_voice_assistant(
+            args.id, args.expected_revision, args.page, args.form_selector, args.field_schema, args.allow_submit
+        ), capped=False),
     Tool("app_project_edit_source", "Edit literal HTML at a preview source position and return undo. Editar un elemento por su posición.",
         AppSourceEditArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
     Tool("app_project_canvas_edit", "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",

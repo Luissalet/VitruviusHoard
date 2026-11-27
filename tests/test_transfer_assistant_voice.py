@@ -2,9 +2,17 @@ import base64
 import json
 from pathlib import Path
 
+import pytest
+
 from vitruvius_hoard.hoard_link.service_contracts import OWNERS
 from vitruvius_hoard.transfer_assistant import ASSETS, ENTRY, assistant_assets
 from vitruvius_hoard.transfer_assistant import voice
+
+
+@pytest.fixture(autouse=True)
+def use_family_transport(monkeypatch):
+    """These tests exercise the family registry with injected replies."""
+    monkeypatch.setattr(voice, "_direct_voice", lambda *_args, **_kwargs: None)
 
 
 def payload(response):
@@ -380,6 +388,35 @@ def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):
     result = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
     assert result == {"stt": True, "tts": False, "dictation": False, "dictation_route": "local",
                       "dictation_name": "Boltagon"}
+
+
+def test_explicit_dictation_and_discovered_fallback_keep_their_routes_and_names(monkeypatch):
+    relay = voice.TransferVoice()
+    calls = []
+    args = {"version": voice.DICTATION_VERSION, "language": "es-ES", "text": "Plazas veinte"}
+    delivered = {"version": voice.DICTATION_VERSION, "fields": {}}
+    monkeypatch.setenv("CYRANO_URL", "http://127.0.0.1:9")
+
+    def direct(path, data=None, **_):
+        calls.append(path)
+        if path == "/api/health":
+            return {"service": "cyrano-hoard", "stt": {"warm": True}}
+        assert path == "/api/dictation/understand" and data == args
+        return delivered
+
+    monkeypatch.setattr(voice, "_direct_voice", direct)
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_a, **_k: pytest.fail("Unexpected fallback"))
+    assert payload(relay.handle("GET", "capabilities", "", "", b""))["dictation_route"] == "direct"
+    reply = relay.handle("POST", "understand", "", "application/json", json.dumps(args).encode())
+    assert payload(reply) == {**delivered, "dictation_route": "direct", "dictation_name": "Boltagon"}
+    assert calls == ["/api/health", "/api/dictation/understand"]
+
+    monkeypatch.setattr(voice, "_direct_voice", lambda *_a, **_k: None)
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_a, **_k: (delivered, "common"))
+    monkeypatch.setattr(voice, "_read_dictation_details", lambda **_: ("Boltagon's Hoard", {}))
+    reply = relay.handle("POST", "understand", "", "application/json", json.dumps(args).encode())
+    assert payload(reply) == {**delivered, "dictation_route": "common", "dictation_name": "Boltagon's Hoard",
+                              "dictation_fallback": True}
 
 
 def test_end_turn_relays_the_provisional_result_and_preserves_its_status(monkeypatch):

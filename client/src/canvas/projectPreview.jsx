@@ -3,6 +3,8 @@ import { useProjectCanvas } from "../pages/projectCanvas.js";
 import { useProjectLivePreview } from "../pages/projectLivePreview.js";
 import { usePreviewEdits } from "../preview-edits.js";
 
+export { previewAllow } from "../pages/projectLivePreview.js";
+
 /**
  * The project preview shared by the Applications and Canvas screens: one frame reference, the live refresh
  * (`useProjectLivePreview`), the second Dock frame bridge (`useProjectCanvas`) and the in-place edits of the handles
@@ -26,11 +28,6 @@ export function useProjectPreviewCanvas({ projectId, preview, baseline, lang, on
  * The preview frames. During a refresh the next page loads hidden on top of the visible one, so there can be two.
  * `height` is any CSS height; the visible frame gets `frameRef` (pass `attachFrame` from the hook).
  */
-/** Permissions the preview frame may use: the microphone only for projects that carry the transfer assistant. */
-export function previewAllow(project) {
-  return project && Object.hasOwn(project.files || {}, "assets/transfer-assistant/assistant.js") ? "microphone 'src'" : undefined;
-}
-
 export function PreviewFrames({ frames, frameRef, title, height = 560, allow }) {
   return <div className="relative" style={{ height }}>
     {frames.map(({ key, src, pending, onLoad }) => <iframe key={key} ref={pending ? null : frameRef}
