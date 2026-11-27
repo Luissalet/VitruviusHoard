@@ -1,7 +1,7 @@
 /** Local microphone capture for the shared dictation service. */
 const MIME = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
 const ADAPTIVE_PROBE_MS = 150;
-const ADAPTIVE_LONG_MS = 1750;
+const ADAPTIVE_LONG_MS = 1650;
 
 export async function recordDictation({
   request, onPartial = () => {}, onStatus = () => {}, onFinal = () => {}, onError = () => {},

@@ -225,7 +225,7 @@ test("failed adaptive probes use a full final and legacy callers keep 1500 ms", 
       endTurn,
       onFinal: (result, timing) => final.push({result, timing}),
     });
-    const cutoff = endTurn ? 1750 : 1500;
+    const cutoff = endTurn ? 1650 : 1500;
     await advance(400, true);
     await advance(cutoff - 50);
     assert.deepEqual(final, []);
@@ -267,6 +267,62 @@ test("local commands skip understand and a speculative interpretation commits on
   assert.deepEqual(routes, ["transcribe", "end-turn"]);
 });
 
+
+test("an affirmative review waits for a later correction and uses the final recording", async t => {
+  const advance = mockCapture(t);
+  const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const {assessTransferEndTurn} = await import("../vitruvius_hoard/transfer_assistant/voice.js");
+  const {initialTransfer, transferTurn} = await import("../vitruvius_hoard/transfer_assistant/dialogue.js");
+  const context = {accounts: [{id: "daily", name: "Cuenta diaria", aliases: ["diaria"], balanceCents: 10000}],
+    contacts: [{id: "marta", name: "Marta Vidal", aliases: ["Marta"]}]};
+  const draft = "Haz una transferencia a Marta de 40 euros con concepto cena desde la cuenta diaria";
+  const {state} = transferTurn(initialTransfer(), draft, context);
+  assert.equal(state.phase, "ready");
+  const correction = "Sí. No, mejor cincuenta";
+  const final = [];
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.ok(url.endsWith("/end-turn"), url);
+    assert.equal(JSON.parse(options.body).text, correction, "The prefix must not consult the cutoff service");
+    return Response.json({decision: "long", silence_ms: 1650, reason: "incomplete"});
+  });
+  const capture = () => recordDictation({
+    request: async (_blob, {partial}) => {
+      requests.push(partial);
+      return {text: requests.length === 1 ? "Sí" : correction};
+    },
+    endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {state, context, locale: "es-ES", signal}),
+    onFinal: (result, timing) => final.push({result, timing, outcome: transferTurn(state, result.text, context)}),
+  });
+  await capture();
+  await advance(300, true);
+  await advance(800);
+  assert.deepEqual(final, []);
+  await advance(450, true);
+  await advance(1650);
+  assert.deepEqual(requests, [true, true, false]);
+  assert.equal(final[0].timing.stopReason, "silence");
+  assert.equal(final[0].result.text, correction);
+  assert.equal(final[0].outcome.action, undefined);
+
+  // A real confirmation remains available, but only after a final request.
+  const confirmation = [];
+  await recordDictation({
+    request: async (_blob, {partial}) => {
+      confirmation.push(partial);
+      return {text: "Sí, confirmo"};
+    },
+    endTurn: (turn, {signal}) => assessTransferEndTurn(turn, {state, context, locale: "es-ES", signal}),
+    onFinal: (result, timing) => final.push({result, timing, outcome: transferTurn(state, result.text, context)}),
+  });
+  await advance(300, true);
+  await advance(1450);
+  assert.equal(final.length, 1);
+  await advance(50);
+  assert.deepEqual(confirmation, [true, false]);
+  assert.equal(final[1].timing.stopReason, "silence");
+  assert.equal(final[1].outcome.action.amountCents, 4000);
+});
 
 test("the adaptive detector can complete a brief response with two voiced frames", async t => {
   const advance = mockCapture(t);

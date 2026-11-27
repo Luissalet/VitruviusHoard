@@ -1,7 +1,8 @@
-import {isTransferCommand} from "./dialogue.js";
+import {isTransferCommand, isTransferConfirmation} from "./dialogue.js";
 
 const API = "/__vitruvius_preview__/transfer-voice";
 const VERSION = "cyrano.dictation/v0";
+const CONFIRMATION_SILENCE_MS = 1500;
 const WIRE_FIELDS = {
   recipient: "destination_contact_id",
   amountCents: "amount_cents",
@@ -65,6 +66,10 @@ function validInterpretation(value, final) {
 }
 
 export async function assessTransferEndTurn(turn, {state, context, locale, signal}) {
+  if (state.phase === "ready" && isTransferConfirmation(turn.text)) {
+    // Keep listening for a correction and require a fresh transcript of the closed recording.
+    return {silenceMs: CONFIRMATION_SILENCE_MS};
+  }
   const started = performance.now();
   const response = await fetch(API + "/end-turn", {
     method: "POST", headers: {"Content-Type": "application/json"}, signal,

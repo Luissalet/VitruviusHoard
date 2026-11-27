@@ -9,6 +9,9 @@ const STT_FALLBACK = {
   es: {
     resident_prewarming: "El residente se está calentando",
     resident_lease_timeout: "Se agotó la espera del arriendo de GPU",
+    resident_lease_rejected: "Se denegó el arriendo de GPU",
+    resident_lease_error: "Falló la solicitud de arriendo de GPU",
+    resident_lease_not_granted: "No se concedió el arriendo de GPU",
     resident_queue_timeout: "Se agotó la espera en la cola del residente",
     resident_timeout: "Se agotó la espera de la transcripción",
     resident_model_load_failed: "No se pudo cargar el modelo principal",
@@ -18,6 +21,9 @@ const STT_FALLBACK = {
   en: {
     resident_prewarming: "The resident engine is warming up",
     resident_lease_timeout: "Waiting for a GPU lease timed out",
+    resident_lease_rejected: "The GPU lease was denied",
+    resident_lease_error: "The GPU lease request failed",
+    resident_lease_not_granted: "The GPU lease was not granted",
     resident_queue_timeout: "Waiting for the resident queue timed out",
     resident_timeout: "Transcription timed out",
     resident_model_load_failed: "The primary model could not load",
