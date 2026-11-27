@@ -8,6 +8,8 @@ Native schemas/annotations are retained in vitruvius_hoard/software/catalog.json
 
 In an open canvas, `app_project_canvas_act` with `action: "highlight"` can find a visible figure or image by name. For example, set `args.label` to the text of an SVG's `<title>` or its `aria-labelledby` reference.
 
+If an edit advances the live preview before an anchor report from the same preview session arrives, `PUT /api/app-projects/{id}/comments/anchors` returns HTTP 200 with `changed: 0` and `stale: true`. Stored anchors stay as they are. A report for an earlier preview session, a stopped preview or a newer source revision that the preview has yet to serve still returns HTTP 409.
+
 When linting supplied HTML with `engines: ["static"]`, `design_lint` reads the document's `<html lang>` from the source without opening a browser.
 
 `tokens_generate` accepts a preset and a partial `fonts` map together. The supplied `heading`, `body` or `mono` overrides that preset role. The other font roles, palette, radius, spacing and motion still come from the preset.
