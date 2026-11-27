@@ -153,12 +153,14 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     style.textContent = `
       :host{pointer-events:none!important}
       .cursor{position:absolute;left:0;top:0;opacity:1;transition:opacity .3s;will-change:transform;pointer-events:none}
-      .arrow{display:block;width:25px;height:30px;filter:drop-shadow(0 2px 2px #0008)}
-      .name,.note{position:absolute;left:17px;top:25px;max-width:min(240px,60vw);padding:4px 8px;border-radius:5px;
-        color:#fff;background:#25251f;font:600 12px/1.4 'Source Sans 3',system-ui,sans-serif;white-space:nowrap;
-        box-shadow:0 2px 6px #0005;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff70}
-      .name{border-top:3px solid var(--actor-color)}
-      .note{top:56px;font-weight:400;white-space:normal;width:max-content}
+      .arrow{display:block;width:30px;height:34px;filter:drop-shadow(0 1px 2px #101828b3)}
+      .name,.note{position:absolute;left:21px;top:27px;max-width:min(240px,60vw);padding:4px 8px;border-radius:5px;
+        color:#f8fafc;background:#192333;font:600 14px/1.35 'Source Sans 3',system-ui,sans-serif;
+        box-shadow:0 2px 6px #0005;border:1px solid #ffffff85}
+      .name{display:flex;align-items:center;gap:6px;white-space:nowrap}
+      .name::before{content:'';flex:none;width:8px;height:8px;border-radius:2px;background:var(--actor-color);border:1px solid #ffffff90}
+      .name span{overflow:hidden;text-overflow:ellipsis}
+      .note{top:56px;font-size:12px;font-weight:400;white-space:normal;width:max-content;overflow-wrap:anywhere}
       .note:empty{display:none}
       .ring{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border:2px solid var(--actor-color);border-radius:50%;opacity:0;box-sizing:border-box}
       .highlight .ring{opacity:.75;transform:scale(1.2)}
@@ -189,14 +191,14 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       const node = document.createElement('div');
       node.className = 'cursor';
       node.dataset.actor = id;
-      node.innerHTML = '<div class="ring"></div><svg class="arrow" viewBox="0 0 25 30" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L2 23L8 18L12 27L17 25L13 16L22 16Z" fill="var(--actor-color)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="name"></span><span class="note"></span>';
+      node.innerHTML = '<div class="ring"></div><svg class="arrow" viewBox="0 0 30 34" xmlns="http://www.w3.org/2000/svg"><path d="M3 3L5 27L12 21L17 31L22 28L17 19L27 18Z" fill="var(--actor-color)" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg><span class="name"><span></span></span><span class="note"></span>';
       layer.append(node);
       cursor = {node, x: 28 + actors.size * 34, y: 32, active: 0, timer: null, animation: null};
       actors.set(id, cursor);
     }
     const color = typeof actor.color === 'string' && CSS.supports('color', actor.color) ? actor.color : '#b58937';
     cursor.node.style.setProperty('--actor-color', color);
-    cursor.node.querySelector('.name').textContent = String(actor.name || id).slice(0, 80);
+    cursor.node.querySelector('.name span').textContent = String(actor.name || id).slice(0, 80);
     cursor.node.style.transform = `translate(${cursor.x}px,${cursor.y}px)`;
     cursor.node.style.opacity = '1';
     positionAnnotations(cursor);
@@ -225,9 +227,9 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const nameBox = name.getBoundingClientRect();
     const noteBox = note.getBoundingClientRect();
     const height = nameBox.height + (note.textContent ? noteBox.height + 4 : 0);
-    const top = Math.max(6, Math.min(cursor.y + 25, innerHeight - height - 6));
+    const top = Math.max(6, Math.min(cursor.y + 27, innerHeight - height - 6));
     for (const [element, box, offset] of [[name, nameBox, 0], [note, noteBox, nameBox.height + 4]]) {
-      element.style.left = `${Math.max(6, Math.min(cursor.x + 17, innerWidth - box.width - 6)) - cursor.x}px`;
+      element.style.left = `${Math.max(6, Math.min(cursor.x + 21, innerWidth - box.width - 6)) - cursor.x}px`;
       element.style.top = `${top + offset - cursor.y}px`;
     }
   }
@@ -241,8 +243,8 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
         if (!cursor) return;
         const rect = element?.getBoundingClientRect() ||
           {left: box.x - scrollX, top: box.y - scrollY, width: box.w, height: box.h};
-        const x = Math.max(4, Math.min(innerWidth - 28, rect.left + Math.min(rect.width / 2, 60)));
-        const y = Math.max(4, Math.min(innerHeight - 36, rect.top + rect.height / 2));
+        const x = Math.max(4, Math.min(innerWidth - 32, rect.left + Math.min(rect.width / 2, 60)));
+        const y = Math.max(4, Math.min(innerHeight - 38, rect.top + rect.height / 2));
         cursor.node.classList.remove('thinking');
         cursor.node.classList.remove('highlight');
         cursor.node.querySelector('.note').textContent = '';
@@ -606,8 +608,8 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       for (const cursor of actors.values()) {
         if (!cursor.target?.isConnected || cursor.animation) continue;
         const rect = cursor.target.getBoundingClientRect();
-        cursor.x = Math.max(4, Math.min(innerWidth - 28, rect.left + Math.min(rect.width / 2, 60)));
-        cursor.y = Math.max(4, Math.min(innerHeight - 36, rect.top + rect.height / 2));
+        cursor.x = Math.max(4, Math.min(innerWidth - 32, rect.left + Math.min(rect.width / 2, 60)));
+        cursor.y = Math.max(4, Math.min(innerHeight - 38, rect.top + rect.height / 2));
         cursor.node.style.transform = `translate(${cursor.x}px,${cursor.y}px)`;
         positionAnnotations(cursor);
       }

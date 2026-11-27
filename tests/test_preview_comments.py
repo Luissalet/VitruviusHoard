@@ -396,3 +396,13 @@ def test_the_preview_session_survives_a_live_refresh_and_changes_with_a_new_open
         assert reopened["session"] and reopened["session"] != first["session"]
     finally:
         projects.close()
+
+
+def test_person_can_resolve_pending_comment_and_undo_from_preview(client, services, project):
+    comment = add(services, project)
+    route = f"/api/app-projects/{project['id']}/comments/{comment['id']}"
+    resolved = client.post(route + "/resolve")
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+    assert resolved.json()["history"][-1]["by"] == "person"
+    assert client.post(route + "/undo").json()["status"] == "pending"

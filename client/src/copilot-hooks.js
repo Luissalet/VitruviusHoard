@@ -30,11 +30,14 @@ export function useCopilotForm(kind, { objectId, initial, current }) {
 }
 
 /** Name the stored objects a view is showing, as `[{ kind, id }]`; the context resolves them through the client API. */
-export function useCopilotObjects(refs) {
-  const ref = useRef(refs);
-  ref.current = refs;
+export function useCopilotObjects(refs, project) {
+  const ref = useRef({ refs, project });
+  ref.current = { refs, project };
   useEffect(() => {
-    const answer = (event) => event.detail?.provideObjects?.(ref.current || []);
+    const answer = (event) => {
+      event.detail?.provideObjects?.(ref.current.refs || []);
+      if (ref.current.project) event.detail?.provideProject?.(ref.current.project);
+    };
     window.addEventListener(CONTEXT_REQUEST, answer);
     return () => window.removeEventListener(CONTEXT_REQUEST, answer);
   }, []);

@@ -63,10 +63,54 @@ def test_capabilities_distinguish_legacy_app_and_local_paths(monkeypatch):
     relay = voice.TransferVoice()
     ready = payload(relay.handle("GET", "capabilities", "", "", b""))
     assert ready["dictation"] and ready["dictation_route"] == "app"
-    assert ready["dictation_name"] == "cyrano"
+    assert ready["dictation_name"] == "Boltagon"
     monkeypatch.setattr(voice, "_hub_get", lambda path, **kwargs: (503, {}))
     down = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
     assert not down["dictation"] and down["dictation_route"] == "local"
+
+
+def test_first_dictation_uses_health_name_and_reuses_it_after_discovery(monkeypatch):
+    calls = []
+    now = 0
+
+    def hub_get(path, **kwargs):
+        calls.append(path)
+        return 200, {"url": "http://127.0.0.1:59731", "name": "cyrano", "health": {"name": "cyrano"}}
+
+    def health(url, **kwargs):
+        calls.append(url)
+        if now < voice.DICTATION_NAME_TTL:
+            return 200, {"service": "cyrano-hoard", "name": "  Visible Dictation's Hoard  "}
+        return 503, {}
+
+    monkeypatch.setattr(voice, "monotonic", lambda: now)
+    monkeypatch.setattr(voice, "_hub_get", hub_get)
+    monkeypatch.setattr(voice, "fetch", health)
+    relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"version": voice.DICTATION_VERSION}, "app"))
+    request = json.dumps({"version": voice.DICTATION_VERSION, "text": "treinta"}).encode()
+
+    def name():
+        status, result, _ = relay.handle("POST", "understand", "", "application/json", request)
+        assert status == 200
+        return json.loads(result)["dictation_name"]
+
+    assert name() == name() == "Visible Dictation's Hoard"
+    reads = ["/api/apps/cyrano", "http://127.0.0.1:59731/api/health"]
+    assert calls == reads
+    now = voice.DICTATION_NAME_TTL
+    assert name() == "Visible Dictation's Hoard"
+    assert calls == reads * 2
+
+
+def test_first_dictation_uses_visible_default_when_hub_and_health_are_unavailable(monkeypatch):
+    monkeypatch.setenv("CYRANO_URL", "http://127.0.0.1:9")
+    monkeypatch.setattr(voice, "_hub_get", lambda *_args, **_kwargs: (503, {}))
+    monkeypatch.setattr(voice, "fetch", lambda *_args, **_kwargs: (503, {}))
+    relay = voice.TransferVoice()
+    monkeypatch.setattr(relay, "_dictation_call", lambda *_args, **_kwargs: ({"version": voice.DICTATION_VERSION}, "app"))
+    request = json.dumps({"version": voice.DICTATION_VERSION, "text": "treinta"}).encode()
+    assert payload(relay.handle("POST", "understand", "", "application/json", request))["dictation_name"] == "Boltagon"
 
 
 def test_transcription_readiness_accepts_a_call_through_a_hidden_tool_catalogue(monkeypatch):
@@ -342,4 +386,4 @@ def test_cyrano_only_capability_advertises_raw_speech(monkeypatch):
     monkeypatch.setattr(voice, "_cache_phrases", lambda _root: {})
     result = payload(voice.TransferVoice().handle("GET", "capabilities", "", "", b""))
     assert result == {"stt": True, "tts": False, "dictation": False, "dictation_route": "local",
-                      "dictation_name": "cyrano"}
+                      "dictation_name": "Boltagon"}

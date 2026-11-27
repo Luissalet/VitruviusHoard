@@ -259,3 +259,66 @@ def test_browser_fields_can_share_form_member_names(tmp_path):
                 browser.close()
     finally:
         projects.close()
+
+
+def test_revision_history_records_author_and_walks_back_without_reapplying_undone_source(client, services):
+    created = client.post("/api/app-projects", json={"name": "History"}).json()
+    id = created["id"]
+    route = f"/api/app-projects/{id}"
+    first = services.app_projects.update(id, {"pages/index.html": "<h1>First</h1>"}, created["revision"],
+                                         actor={"id": "editor", "name": "Editor"})
+    second = client.put(route, json={"files": {"pages/index.html": "<h1>Second</h1>"},
+                                     "expected_revision": first["revision"]}).json()
+    assert second["history"][-2]["author"] == {"kind": "agent", "id": "editor", "name": "Editor"}
+    assert second["history"][-1]["author"] == {"kind": "person"}
+
+    def undo(project):
+        return client.post(route + "/undo", json={"expected_revision": project["revision"],
+                           "expected_updated_ts": project["updated_ts"],
+                           "revision": project["history"][-1]["undo_revision"]})
+
+    assert undo(first).status_code == 400
+    restored = undo(second).json()
+    assert restored["revision"] == first["revision"]
+    assert restored["history"][-1]["action"] == "undo"
+    assert restored["history"][-1]["previous_revision"] == second["revision"]
+    assert restored["history"][-1]["undo_revision"] == created["revision"]
+    original = undo(restored).json()
+    assert original["revision"] == created["revision"]
+    assert original["history"][-1]["undo_revision"] is None
+    assert original["revisions"] == second["revisions"]
+
+
+def test_undo_one_history_step_preserves_other_changes_and_reports_conflict(client, services):
+    created = client.post("/api/app-projects", json={"name": "History steps"}).json()
+    project_id = created["id"]
+    route = f"/api/app-projects/{project_id}"
+    source = "pages/index.html"
+    first = services.app_projects.update(
+        project_id, {source: "<h1>Edited</h1>"}, created["revision"],
+        actor={"id": "editor", "name": "Editor"}, target={"selector": "h1"},
+        examples=["editorial"], tokens_id="paper-ink",
+    )
+    step = first["history"][-1]
+    assert (step["files"], step["target"], step["examples"], step["tokens_id"]) == (
+        [source], "h1", ["editorial"], "paper-ink",
+    )
+    second = services.app_projects.update(project_id, {"assets/added.css": "a{color:blue}"},
+                                           first["revision"])
+
+    def undo(project, change=step["id"]):
+        return client.post(route + "/undo-change", json={"change_id": change,
+                           "expected_revision": project["revision"], "expected_updated_ts": project["updated_ts"]})
+
+    reversed_step = undo(second).json()
+    assert reversed_step["files"][source] == created["files"][source]
+    assert reversed_step["files"]["assets/added.css"] == "a{color:blue}"
+    assert reversed_step["history"][-1]["reverted_change"] == step["id"]
+    assert reversed_step["undo"]["arguments"]["revision"] == second["revision"]
+    assert undo(reversed_step).json()["already_undone"]
+
+    later = services.app_projects.update(project_id, {source: "Later edit"}, reversed_step["revision"])
+    response = undo(later)
+    assert response.status_code == 409 and response.json()["files"] == [source]
+    assert "Later changes overlap" in response.json()["error"]
+    assert services.app_projects.get(project_id)["files"][source] == "Later edit"

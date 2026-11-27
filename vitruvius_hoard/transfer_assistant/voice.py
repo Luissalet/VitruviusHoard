@@ -28,6 +28,8 @@ MAX_JSON = 32 * 1024
 MAX_REPLY_JSON = 128 * 1024
 DICTATION_VERSION = "cyrano.dictation/v0"
 DICTATION_APP = "cyrano"
+DICTATION_DISPLAY_NAME = "Boltagon"
+DICTATION_NAME_TTL = 60
 DICTATION_TOOLS = ("dictation_understand", "dictation_audio")
 SPEECH_TOOL = "speech_transcribe"
 FAMILY_TRANSCRIPTION = "Funes / Talos (reserva)"
@@ -96,39 +98,44 @@ def _transcription_ready():
     return result.get("ok", False) or (result.get("status") == 404 and "no such job" in result.get("error", "").lower())
 
 
-def _dictation_details(*, include_stt=False):
+def _visible_dictation_name(candidate):
+    if not isinstance(candidate, str):
+        return None
+    name = candidate.strip()
+    label = re.sub(r"['’]s Hoard$", "", name, flags=re.IGNORECASE).strip()
+    return name if label and label.casefold() not in (DICTATION_APP, "cyrano-hoard") else None
+
+
+def _read_dictation_details(*, include_stt):
     status, app = _hub_get(f"/api/apps/{DICTATION_APP}", timeout=0.5)
     if status != 200 or not isinstance(app, dict):
-        return DICTATION_APP, {}
+        app = {}
     health = app.get("health")
     health = health if isinstance(health, dict) else {}
-    if not health.get("name") or (include_stt and not isinstance(health.get("stt"), dict)):
-        url = app.get("url")
+    name = _visible_dictation_name(health.get("name")) or _visible_dictation_name(app.get("name"))
+    if not name or (include_stt and not isinstance(health.get("stt"), dict)):
+        url = app.get("url") or os.environ.get("CYRANO_URL")
         if isinstance(url, str) and re.fullmatch(r"http://(?:127\.0\.0\.1|localhost|\[::1\]):\d{1,5}/?", url):
             status, fresh_health = fetch(url.rstrip("/") + "/api/health", timeout=0.5)
             if status == 200 and isinstance(fresh_health, dict) and fresh_health.get("service") == "cyrano-hoard":
+                name = _visible_dictation_name(fresh_health.get("name")) or name
                 health = {**health, **fresh_health}
-    name = DICTATION_APP
-    for candidate in (health.get("name"), app.get("name")):
-        if isinstance(candidate, str) and candidate.strip():
-            name = candidate.strip()
-            break
     stt = health.get("stt")
     return name, stt if isinstance(stt, dict) and stt.get("warm") is True else {}
 
 
-def _cyrano_transcription_provider(result):
+def _cyrano_transcription_provider(result, details):
     if result.get("engine") == "family":
         return FAMILY_TRANSCRIPTION
     model, gpu = result.get("model"), result.get("gpu")
     has_model = isinstance(model, str) and bool(model.strip())
     has_gpu = type(gpu) is int and gpu >= 0
-    name, health = _dictation_details(include_stt=not (has_model and has_gpu))
+    name, health = details(include_stt=not (has_model and has_gpu))
     if not (has_model and has_gpu):
         model = model if has_model else health.get("model")
         gpu = gpu if has_gpu else health.get("gpu")
     label = re.sub(r"['’]s Hoard$", "", name, flags=re.IGNORECASE).strip()
-    parts = ["Boltagon" if label.casefold() == DICTATION_APP else label or name]
+    parts = [label]
     if type(gpu) is int and gpu >= 0:
         parts.append(f"GPU {gpu}")
     if isinstance(model, str) and model.strip():
@@ -167,9 +174,22 @@ class TransferVoice:
     def __init__(self, *, replies=None):
         self.partial = Lock()
         self.discovery = Lock()
+        self.name_discovery = Lock()
+        self.name_checked_at = float("-inf")
+        self.dictation_name = DICTATION_DISPLAY_NAME
         self.discovered_at = float("-inf")
         self.registered = False
         self.replies = replies if replies is not None else ReplyRelay(_speech_origin)
+
+    def _dictation_details(self, *, include_stt=False):
+        with self.name_discovery:
+            if not include_stt and monotonic() - self.name_checked_at < DICTATION_NAME_TTL:
+                return self.dictation_name, {}
+            name, stt = _read_dictation_details(include_stt=include_stt)
+            if name:
+                self.dictation_name = name
+                self.name_checked_at = monotonic()
+            return self.dictation_name, stt
 
     def _common_dictation(self):
         with self.discovery:
@@ -214,7 +234,7 @@ class TransferVoice:
             tts = bool(phrases) and (VOICE_MODE == "cache-natural" or VOICE_MODE == "piper" and _offers("tts", "voice_tts"))
             return _json(200, stt=SPEECH_TOOL in tools or _transcription_ready(),
                          tts=tts, dictation=ready, dictation_route=route,
-                         dictation_name=_dictation_details()[0],
+                         dictation_name=self._dictation_details()[0],
                          **({"voice_phrases": phrases} if phrases else {}))
         if method == "POST" and route == "transcribe":
             return self._transcribe(query, content_type, body)
@@ -290,7 +310,7 @@ class TransferVoice:
                 }, timeout=window + 1)
                 if isinstance(value, dict) and isinstance(value.get("text"), str):
                     return _json(200, text=value["text"], final=not preview,
-                                 provider=_cyrano_transcription_provider(value))
+                                 provider=_cyrano_transcription_provider(value, self._dictation_details))
 
                 budget = 2 if preview else FINAL_TRANSCRIPTION_S
                 remaining = max(1, budget - (monotonic() - started))
@@ -350,7 +370,7 @@ class TransferVoice:
                 value, route = self._dictation_call("dictation_audio", {**options, "path": str(path)}, timeout=DICTATION_AUDIO_S)
         if not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
             return _json(503, code="dictation_unavailable")
-        return _json(200, **{**value, "dictation_route": route, "dictation_name": _dictation_details()[0],
+        return _json(200, **{**value, "dictation_route": route, "dictation_name": self._dictation_details()[0],
                              "dictation_fallback": "CYRANO_URL" in os.environ})
 
     @staticmethod

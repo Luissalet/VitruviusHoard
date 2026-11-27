@@ -111,29 +111,32 @@ export default function App() {
 
   return (
     <AppContext.Provider value={value}>
-      <div className="min-h-dvh md:grid md:grid-cols-[216px_minmax(0,1fr)]">
-        <aside className="sticky top-0 z-10 border-b md:self-start md:h-dvh md:border-b-0 md:border-r" style={{ background: "var(--sidebar)", borderColor: "var(--line)" }}>
-          <div className="flex items-center gap-3 px-4 py-3 md:px-5 md:py-5">
+      <div className="app-shell min-h-dvh md:grid md:grid-cols-[216px_minmax(0,1fr)]" data-view={page.path}>
+        <aside className="app-navigation sticky top-0 z-10 border-b md:self-start md:h-dvh md:border-b-0 md:border-r" style={{ background: "var(--sidebar)", borderColor: "var(--line)" }}>
+          <div className="app-brand flex items-center gap-3 px-4 py-3 md:px-5 md:py-5">
             <img src="/icon-192.png" alt="" width="34" height="34" className="rounded-lg" />
-            <div className="leading-tight">
+            <div className="app-brand-name leading-tight">
               <div className="text-[15px] font-semibold">Vitruvius's Hoard</div>
             </div>
           </div>
-          <nav aria-label="Sections" className="flex gap-1 overflow-x-auto px-3 pb-2 md:flex-col">
+          <nav aria-label={lang === "es" ? "Secciones" : "Sections"} className="flex gap-1 overflow-x-auto px-3 pb-2 md:flex-col">
             {PAGES.map((p) => (
-              <a key={p.path} href={`#/${p.path}`} className="nav-link shrink-0 text-[13px]" aria-current={p.path === page.path ? "page" : undefined}>
+              <a key={p.path} href={`#/${p.path}`} className="nav-link shrink-0 text-[13px]" title={t(p.key)} aria-label={t(p.key)} aria-current={p.path === page.path ? "page" : undefined}>
                 <Icon d={p.icon} />
-                {t(p.key)}
+                <span className="app-nav-name">{t(p.key)}</span>
               </a>
             ))}
           </nav>
-          <div className="hidden px-5 pt-4 md:block">
+          <div className="app-nav-footer hidden px-5 pt-4 md:block">
             {health && (
-              <div className="help text-[11px]">
+              <div className="app-nav-health help text-[11px]">
                 {health.counts?.sources ?? 0} {t("sources_title").toLowerCase()} · {health.counts?.chunks ?? 0} {t("chunks")}
               </div>
             )}
-            <button type="button" className="btn btn-sm mt-4" onClick={switchLang}>{t("language")}</button>
+            <button type="button" className="btn btn-sm mt-4" onClick={switchLang} aria-label={t("language")}>
+              <span className="app-language-label">{t("language")}</span>
+              <span className="app-language-short" aria-hidden="true">{lang === "es" ? "EN" : "ES"}</span>
+            </button>
           </div>
         </aside>
         <main className="min-w-0 px-4 py-4 md:px-8 md:py-7">

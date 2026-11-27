@@ -324,7 +324,7 @@ class AppProjects:
         return {"id": id, "revision": revision, "path": path, "vsrc": vsrc,
                 "same_vsrc_count": source_count(html, vsrc)}
 
-    def _save(self, root, index, files, *, before_commit=None):
+    def _save(self, root, index, files, *, before_commit=None, action="edit", author=None, details=None):
         destinations = set()
         for name, source in files.items():
             path = PurePosixPath(name)
@@ -355,19 +355,33 @@ class AppProjects:
             finally:
                 if stage.exists() and stage.resolve().parent == (root / "revisions").resolve():
                     shutil.rmtree(stage)
-        updated = {**index, "name": spec["name"], "revision": revision, "updated_ts": time.time(), "revisions": list(dict.fromkeys(index.get("revisions", []) + [revision]))}
+        now = time.time()
+        previous = index.get("revision")
+        history = index.get("history")
+        if history is None:
+            history = [{"revision": saved, "action": "legacy"} for saved in index.get("revisions", [])]
+        if revision != previous:
+            undo_revision = previous
+            if action == "undo":
+                restored = next((entry for entry in reversed(history) if entry["revision"] == revision), {})
+                undo_revision = restored.get("undo_revision")
+            history = [*history, {"id": uuid.uuid4().hex, "revision": revision, "previous_revision": previous,
+                                  "ts": now, "undo_revision": undo_revision, "action": action,
+                                  "author": author, **(details or {})}]
+        updated = {**index, "name": spec["name"], "revision": revision, "updated_ts": now,
+                   "revisions": list(dict.fromkeys([*index.get("revisions", []), revision])), "history": history}
         if before_commit is not None:
             before_commit(revision)
         write_json_atomic(root / "project-index.json", updated)
         return self.get(updated["id"])
 
     def create(self, name, template="work-board", description="", accent=None, fields=None, items=None, lang="en",
-               description_es=None, files=None):
+               description_es=None, files=None, *, author=None):
         if files is None:
             files = starter_files(name, template, description, accent, fields, items, lang, description_es)
         elif "server.py" not in files:
             files = {**files, "server.py": _standalone_runtime()}
-        project = self.create_from_files(name, template, files)
+        project = self.create_from_files(name, template, files, author=author)
         return {**project, "undo": self._undo_call(project)}
 
     @staticmethod
@@ -377,15 +391,35 @@ class AppProjects:
             "expected_updated_ts": project["updated_ts"],
         }}
 
-    def create_from_files(self, name, template, files):
+    def create_from_files(self, name, template, files, *, author=None):
         """Create a project from a complete generated source (instruments use this)."""
         with self.lock:
             id = uuid.uuid4().hex[:16]
             root = self.root / id
             index = {"id": id, "name": name, "template": template, "created_ts": time.time(), "revisions": []}
-            return self._save(root, index, files)
+            return self._save(root, index, files, action="create", author=author)
 
-    def update(self, id, files, expected_revision, *, actor=None, target=None):
+    @staticmethod
+    def _change_details(current, files, target=None, examples=None, tokens_id=None):
+        spec = json.loads(files["project.json"])
+        library = spec.get("biblioteca") if isinstance(spec, dict) else None
+        library = library if isinstance(library, dict) else {}
+        references = [item[:120] for item in (examples or [])]
+        for key in ("presets", "recetas", "reglas_movimiento"):
+            value = library.get(key)
+            if isinstance(value, list):
+                references.extend(item[:120] for item in value[:12] if isinstance(item, str))
+        tokens = tokens_id or library.get("tokens_id")
+        target = target or {}
+        return {
+            "files": sorted(path for path in current["files"].keys() | files.keys()
+                            if files.get(path) != current["files"].get(path)),
+            "target": target.get("vsrc") or target.get("selector"),
+            "examples": list(dict.fromkeys(references))[:12],
+            "tokens_id": tokens[:120] if isinstance(tokens, str) else None,
+        }
+
+    def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -413,12 +447,14 @@ class AppProjects:
                             if position:
                                 sources.append(position)
                     hint["sources"] = sources
-                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint})
+                self.canvas.prepare_edit(id, current["revision"], actor, {"box": None, **hint}, change=details)
                 # Whole-frame refreshes can still outline a caller-supplied selector.
                 if hint.get("selector"):
                     change["selectors"] = [hint["selector"]]
 
-            saved = self._save(self._directory(id), self._index(current), merged,
+            author = {"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")} if actor else {"kind": "person"}
+            details = self._change_details(current, merged, target, examples, tokens_id)
+            saved = self._save(self._directory(id), self._index(current), merged, author=author, details=details,
                                before_commit=before_commit if actor is not None else None)
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
@@ -453,7 +489,7 @@ class AppProjects:
     def _index(project):
         return {key: value for key, value in project.items() if key not in ("files", "selected_revision", "source_sha256", "preview")}
 
-    def undo(self, id, expected_revision, expected_updated_ts, revision=None):
+    def undo(self, id, expected_revision, expected_updated_ts, revision=None, *, author=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["updated_ts"] != expected_updated_ts:
@@ -465,10 +501,42 @@ class AppProjects:
                 self._set_archived(root, self._index(current), True)
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
-            saved = self._save(root, self._index(current), previous["files"])
+            saved = self._save(root, self._index(current), previous["files"], action="undo", author=author)
             if saved["revision"] != current["revision"]:
                 self.revision_events.publish(id, revision_change(current, saved))
             return saved
+
+    def undo_change(self, id, change_id, expected_revision, expected_updated_ts, *, author=None):
+        """Reverse a single recorded edit while keeping other files and conflicting later edits."""
+        with self.lock:
+            current = self.get(id)
+            if current["revision"] != expected_revision or current["updated_ts"] != expected_updated_ts:
+                raise AppError("conflict", "Application revision changed after the history was read")
+            entry = next((row for row in current.get("history", []) if row.get("id") == change_id), None)
+            if not entry or entry.get("action") != "edit":
+                raise LookupError("Editable history step not found")
+            original = self.get(id, entry["previous_revision"])["files"]
+            edited = self.get(id, entry["revision"])["files"]
+            files = dict(current["files"])
+            conflicts = []
+            for path in entry["files"]:
+                if files.get(path) == original.get(path):
+                    continue
+                if files.get(path) != edited.get(path):
+                    conflicts.append(path)
+                elif path in original:
+                    files[path] = original[path]
+                else:
+                    files.pop(path, None)
+            if conflicts:
+                raise AppError("conflict", "Later changes overlap: " + ", ".join(conflicts), details={"files": conflicts})
+            if files == current["files"]:
+                return {**current, "already_undone": True}
+            details = {**self._change_details(current, files), "reverted_change": change_id}
+            saved = self._save(self._directory(id), self._index(current), files,
+                               action="undo-change", author=author, details=details)
+            self.revision_events.publish(id, revision_change(current, saved))
+            return {**saved, "undo": self._undo_call(saved, current["revision"])}
 
     def status(self, id):
         item = self.processes.get(id)
