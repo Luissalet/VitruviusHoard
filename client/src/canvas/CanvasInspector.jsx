@@ -48,8 +48,7 @@ export function CanvasElements({ elements, onSelect, onRetry, es }) {
 export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   const [undoing, setUndoing] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(false);
+  const [undoResult, setUndoResult] = useState(null);
   const focusAfterUndo = useRef(false);
   const heading = useRef(null);
   const history = project.history || [];
@@ -75,6 +74,19 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
     : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
   const date = new Intl.DateTimeFormat(es ? "es-ES" : "en-GB", { dateStyle: "short", timeStyle: "short" });
+  const undoMessages = es ? {
+    alreadyUndone: "El paso ya estaba deshecho.",
+    restored: "Versión restaurada.",
+    undone: "Cambio deshecho.",
+    conflict: "Hay ediciones posteriores en los mismos archivos. El paso se conserva.",
+    failed: "No se pudo deshacer. Comprueba la versión actual e inténtalo de nuevo.",
+  } : {
+    alreadyUndone: "The step was already undone.",
+    restored: "Revision restored.",
+    undone: "Change undone.",
+    conflict: "Later edits touch the same files. The step was kept.",
+    failed: "Could not undo. Check the current revision and try again.",
+  };
 
   useEffect(() => {
     if (!focusAfterUndo.current || undoing) return;
@@ -83,7 +95,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   }, [undoing, undoTarget]);
 
   const undo = async (step) => {
-    setUndoing(true); setError(false); setMessage("");
+    setUndoing(true); setUndoResult(null);
     focusAfterUndo.current = heading.current?.parentElement?.contains(document.activeElement);
     try {
       const expected = { expected_revision: project.revision, expected_updated_ts: project.updated_ts };
@@ -91,15 +103,11 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
         ? await api.appProjectUndoChange(project.id, { ...expected, change_id: step.id })
         : await api.appProjectUndo(project.id, { ...expected, revision: undoTarget });
       onChange(updated);
-      if (updated.already_undone) setMessage(es ? "El paso ya estaba deshecho." : "The step was already undone.");
-      else if (!step && legacy) setMessage(es ? "Versión restaurada." : "Revision restored.");
-      else setMessage(es ? "Cambio deshecho." : "Change undone.");
+      if (updated.already_undone) setUndoResult("alreadyUndone");
+      else if (!step && legacy) setUndoResult("restored");
+      else setUndoResult("undone");
     } catch (error) {
-      setError(true);
-      const overlap = error.message.startsWith("Later changes overlap:");
-      setMessage(overlap
-        ? (es ? "Hay ediciones posteriores en los mismos archivos. El paso se conserva." : "Later edits touch the same files. The step was kept.")
-        : (es ? "No se pudo deshacer. Comprueba la versión actual e inténtalo de nuevo." : "Could not undo. Check the current revision and try again."));
+      setUndoResult(error.message.startsWith("Later changes overlap:") ? "conflict" : "failed");
       onChange();
     } finally {
       setUndoing(false);
@@ -142,6 +150,8 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
         : legacy ? (es ? "Restaurar versión anterior" : "Restore previous revision")
         : (es ? "Deshacer último cambio" : "Undo last change")}
     </button>}
-    {message && <p className="canvas-empty" role={error ? "alert" : "status"}>{message}</p>}
+    {undoResult && <p className="canvas-empty" role={["conflict", "failed"].includes(undoResult) ? "alert" : "status"}>
+      {undoMessages[undoResult]}
+    </p>}
   </section>;
 }
