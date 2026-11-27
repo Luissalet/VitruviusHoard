@@ -243,6 +243,8 @@ class AppUpdateArgs(BaseModel):
     expected_revision: str
     actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
     target: CanvasTarget | None = Field(None, description="Optional visible target for the edit.")
+    examples: list[str] | None = Field(None, max_length=12, description="IDs of examples used in this edit.")
+    tokens_id: str | None = Field(None, max_length=120, description="Design token system used in this edit.")
 
 
 class AppSourceTextChange(BaseModel):
@@ -343,6 +345,13 @@ class AppCommentUndoArgs(BaseModel):
 
 
 class AppUndoArgs(AppIdArgs):
+    expected_revision: str
+    expected_updated_ts: float
+
+
+class AppChangeUndoArgs(BaseModel):
+    id: str = ""
+    change_id: str
     expected_revision: str
     expected_updated_ts: float
 
@@ -837,7 +846,7 @@ TOOLS: list[Tool] = [
     Tool("app_templates", "List original full application starters. Plantillas de aplicaciones completas.",
         Empty, ann(True), lambda services, args: {"templates": app_templates()}),
     Tool("app_project_create", "Create an editable application project with pages, typed data and its own server. Crear aplicación.",
-        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump()), capped=False),
+        AppCreateArgs, ann(False, False, True), lambda services, args: services.app_projects.create(**args.model_dump(), author={"kind": "agent"}), capped=False),
     Tool("app_project_list", "List active or archived projects and their revisions. Listar aplicaciones activas o archivadas.",
         AppProjectListArgs, ann(True), lambda services, args: {"projects": services.app_projects.list(args.archived)}, capped=False),
     Tool("app_project_get", "Read a complete application source revision. Leer archivos y revisión de aplicación.",
@@ -852,8 +861,12 @@ TOOLS: list[Tool] = [
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_archive", "Archive or restore a project with its history. Archivar o restaurar una aplicación.",
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
+    Tool("app_project_change_undo", "Undo one recorded project edit. Deshacer un cambio del historial.",
+        AppChangeUndoArgs, ann(False, False, True),
+        lambda services, args: services.app_projects.undo_change(**args.model_dump(), author={"kind": "agent"}),
+        capped=False),
     Tool("app_project_undo", "Undo a source edit or untouched creation. Deshacer una edición o un alta sin cambios.",
-        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump()), capped=False),
+        AppUndoArgs, ann(False, False, True), lambda services, args: services.app_projects.undo(**args.model_dump(), author={"kind": "agent"}), capped=False),
     Tool("app_project_preview", "Start or stop the local preview. Start returns its stable open_path. Previsualizar aplicación.",
         AppPreviewArgs, ann(False, False, True), lambda services, args: services.app_projects.stop(args.id) if args.operation == "stop" else services.app_projects.preview(args.id, args.revision)),
     Tool("app_project_selection",

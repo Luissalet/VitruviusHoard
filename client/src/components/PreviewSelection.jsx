@@ -13,7 +13,7 @@ import PreviewComments from "./PreviewComments.jsx";
  * picked; this bar shows them as chips, lets the person remove one, and stores the list so an agent can read it
  * (`app_project_selection`) and the copilot sees it in the turn context. The frame is found through `frameRef`.
  */
-export default function PreviewSelection({ project, preview, frameRef, frameKey, es, notify }) {
+export default function PreviewSelection({ project, preview, frameRef, frameKey, es, notify, canvas = false, onComments }) {
   const [mode, setMode] = useState(false);
   const [commentMode, setCommentMode] = useState(false);
   const [ready, setReady] = useState(0); // counts the greetings of the page, so pins are sent again after a reload
@@ -102,26 +102,29 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     const onKey = (event) => {
       if (event.altKey && event.shiftKey && event.code === "KeyS") { event.preventDefault(); toggle(); }
       else if (event.altKey && event.shiftKey && event.code === "KeyC") { event.preventDefault(); toggleComment(); }
-      else if (event.key === "Escape" && state.current.mode) toggle(); // Esc leaves the mode from this page too, not only from inside the frame
-      else if (event.key === "Escape" && state.current.commentMode) toggleComment();
+      else if (!event.defaultPrevented && event.key === "Escape" && state.current.mode) toggle(); // Esc leaves the mode from this page too, not only from inside the frame
+      else if (!event.defaultPrevented && event.key === "Escape" && state.current.commentMode) toggleComment();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running]);
+  }, [running, projectId]);
   useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [], comments: [] }, current: { revision: items.length ? served.current || undefined : undefined, selection: copilotSelection(items), comments: waiting } });
 
   if (!running) return null;
-  return <div className="panel flex flex-col gap-3" aria-label={es ? "Selección en la vista previa" : "Preview selection"}>
+  return <div className={canvas ? "min-w-0" : "panel flex flex-col gap-3"} aria-label={es ? "Selección en la vista previa" : "Preview selection"}>
+    {(!canvas || items.length > 0) && <div className={canvas ? "canvas-inspector-section" : "contents"}>
+    {canvas && <h2 className="canvas-inspector-heading">{es ? "Selección" : "Selection"}</h2>}
     <div className="flex gap-2 items-center flex-wrap">
-      <button type="button" className={`btn ${mode ? "btn-active" : ""}`} aria-pressed={mode} aria-keyshortcuts="Alt+Shift+S" onClick={toggle} disabled={!connected} title="Alt+Shift+S">{mode ? (es ? "Salir de seleccionar" : "Stop selecting") : (es ? "Seleccionar" : "Select")}</button>
-      <button type="button" className={`btn ${commentMode ? "btn-active" : ""}`} aria-pressed={commentMode} aria-keyshortcuts="Alt+Shift+C" onClick={toggleComment} disabled={!connected} title="Alt+Shift+C">{commentMode ? (es ? "Salir de comentar" : "Stop commenting") : (es ? "Comentar" : "Comment")}</button>
-      {items.length > 0 && <button type="button" className="btn" onClick={() => { send("inspect/clear"); setItems([]); store([]); }}>{es ? "Quitar todo" : "Clear all"}</button>}
-      <span className="help" role="status">{!connected ? (es ? "Esta vista previa no admite selección todavía." : "This preview does not support selection yet.") : commentMode ? (es ? "Haz clic en un elemento y escribe la nota. Esc sale." : "Click an element and write the note. Esc leaves.") : mode ? (es ? "Haz clic para seleccionar. Mayús+clic añade o quita. Arrastra un tirador o enfócalo con Alt+Intro. Doble clic edita texto. Esc sale." : "Click to select. Shift+click adds or removes. Drag a handle or focus it with Alt+Enter. Double-click to edit text. Esc leaves.") : items.length ? (es ? `${items.filter((item) => !item.expired).length} seleccionados: el agente los ve en su turno.` : `${items.filter((item) => !item.expired).length} selected: the agent sees them in its turn.`) : (es ? "Selecciona elementos para pedir un cambio sobre ellos." : "Select elements to ask for a change on them.")}</span>
+      {!canvas && <><button type="button" className={`btn ${mode ? "btn-active" : ""}`} aria-pressed={mode} aria-keyshortcuts="Alt+Shift+S" onClick={toggle} disabled={!connected} title="Alt+Shift+S">{mode ? (es ? "Salir de seleccionar" : "Stop selecting") : (es ? "Seleccionar" : "Select")}</button>
+      <button type="button" className={`btn ${commentMode ? "btn-active" : ""}`} aria-pressed={commentMode} aria-keyshortcuts="Alt+Shift+C" onClick={toggleComment} disabled={!connected} title="Alt+Shift+C">{commentMode ? (es ? "Salir de comentar" : "Stop commenting") : (es ? "Comentar" : "Comment")}</button></>}
+      {items.length > 0 && <button type="button" className="btn" onClick={() => { send("inspect/clear"); setItems([]); store([]); if (canvas) document.getElementById("canvas-elements-title")?.focus(); }}>{es ? "Quitar todo" : "Clear all"}</button>}
+      {!canvas && <span className="help" role="status">{!connected ? (es ? "Esta vista previa no admite selección todavía." : "This preview does not support selection yet.") : commentMode ? (es ? "Haz clic en un elemento y escribe la nota. Esc sale." : "Click an element and write the note. Esc leaves.") : mode ? (es ? "Haz clic para seleccionar. Mayús+clic añade o quita. Arrastra un tirador o enfócalo con Alt+Intro. Doble clic edita texto. Esc sale." : "Click to select. Shift+click adds or removes. Drag a handle or focus it with Alt+Enter. Double-click to edit text. Esc leaves.") : items.length ? (es ? `${items.filter((item) => !item.expired).length} seleccionados: el agente los ve en su turno.` : `${items.filter((item) => !item.expired).length} selected: the agent sees them in its turn.`) : (es ? "Selecciona elementos para pedir un cambio sobre ellos." : "Select elements to ask for a change on them.")}</span>}
     </div>
     {items.length > 0 && <ul className="flex flex-wrap gap-2" aria-label={es ? "Elementos seleccionados" : "Selected elements"}>{items.map((item, index) => <li key={item.selector + index} className={`chip chip-wrap ${item.expired ? "chip-amber" : "chip-accent"}`} style={{ alignItems: "flex-start" }}>
       <span><strong style={item.expired ? { textDecoration: "line-through" } : undefined}>{chipText(item, index)}</strong>{item.expired && <><br /><span>{es ? "caducada: la versión actual ya no tiene este elemento" : "expired: the current revision no longer has this element"}</span></>}{sourceText(item, es) && <><br /><span>{sourceText(item, es)}</span></>}{affectsText(item, es) && <><br /><span>{affectsText(item, es)}</span></>}</span>
       <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length }); const next = items.filter((_, at) => at !== index); setItems(next); store(next); }}>×</button>
     </li>)}</ul>}
-    <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} />
+    </div>}
+    <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} onComments={onComments} canvas={canvas} />
   </div>;
 }

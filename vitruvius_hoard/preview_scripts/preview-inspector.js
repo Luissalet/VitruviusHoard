@@ -322,7 +322,7 @@
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
-  const report = () => { paintEdits(); const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); };
+  const report = () => { paintEdits(); const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/select', message); scheduleElements(); };
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
   const candidates = () => [...document.body.querySelectorAll('*')].filter(element => !isOwn(element)
     && !['script', 'style', 'link', 'meta', 'head', 'noscript', 'template'].includes(tagOf(element))
@@ -1024,6 +1024,41 @@
     selected = next; expired = [...expired, ...lost].slice(-MAX_SELECTION); schedule(); report();
   }
   const all = selector => [...document.querySelectorAll(selector)];
+  const layerSelector = 'header,main,footer,nav,aside,section,article,h1,h2,h3,h4,h5,h6,p,ul,ol,table,form,label,button,a,input,select,textarea,img,svg,video,canvas,[role],[data-vsrc],[data-vgen]';
+  const layerIds = new WeakMap();
+  let nextLayerId = 0, listedElements = new Map(), listFrame = 0, listKey = '', listRequested = false;
+
+  function publishElements() {
+    listFrame = 0;
+    const elements = [...document.body.querySelectorAll(layerSelector)].filter(element =>
+      !isOwn(element) && element.getClientRects().length && getComputedStyle(element).visibility === 'visible'
+      && !element.matches('input[type=hidden]'));
+    const limit = 200;
+    const rows = [], depths = new Map();
+    listedElements = new Map();
+    for (const element of elements.slice(0, limit)) {
+      if (!layerIds.has(element)) layerIds.set(element, ++nextLayerId);
+      const id = layerIds.get(element);
+      let parent = element.parentElement;
+      while (parent && !depths.has(parent)) parent = parent.parentElement;
+      const depth = parent ? depths.get(parent) + 1 : 0;
+      depths.set(element, depth);
+      listedElements.set(id, element);
+      const label = element.getAttribute('aria-label') || element.getAttribute('alt') ||
+        element.getAttribute('placeholder') || element.getAttribute('title');
+      const hasText = element.matches('a,button,p,label,h1,h2,h3,h4,h5,h6,[role="button"]') || !element.children.length;
+      const text = label || (hasText && compact(element.textContent)) || element.id;
+      rows.push({id, tag: tagOf(element), text: compact(text || '').slice(0, 96), depth,
+        selected: selected.includes(element)});
+    }
+    const payload = {page: pageId(), revision: revision(), items: rows, total: elements.length};
+    const key = JSON.stringify(payload);
+    if (key !== listKey) { listKey = key; post('dock/elements', payload); }
+  }
+
+  function scheduleElements() {
+    if (listRequested && !listFrame) listFrame = setTimeout(publishElements, 100);
+  }
   // A layer the page removed is put back. A change of the served revision (a live refresh patches the page in place)
   // or a selected element that left the document settles the selection.
   new MutationObserver(() => {
@@ -1035,6 +1070,10 @@
       if (pins.length || draft) schedule();
     });
   }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
+  new MutationObserver(scheduleElements).observe(document.documentElement, {
+    childList: true, characterData: true, subtree: true, attributes: true,
+    attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
+  });
 
   function elementAt(event) {
     const hit = document.elementsFromPoint ? document.elementsFromPoint(event.clientX, event.clientY).find(element => !isOwn(element)) : event.target;
@@ -1137,7 +1176,16 @@
       edits?.setLanguage(hostLanguage);
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select');
-    else if (data.type === 'inspect/pins') {
+    else if (data.type === 'inspect/elements') {
+      listRequested = true; listKey = ''; scheduleElements();
+    } else if (data.type === 'inspect/element-select' && data.page === pageId() && data.revision === revision()) {
+      const element = listedElements.get(data.id);
+      if (element?.isConnected && element.getClientRects().length) {
+        if (!mode) setMode(true);
+        choose(element, data.additive === true);
+        if (selected.includes(element)) element.scrollIntoView?.({block: 'nearest', behavior: reduced() ? 'auto' : 'smooth'});
+      } else scheduleElements();
+    } else if (data.type === 'inspect/pins') {
       const states = ['pending', 'seen', 'answered', 'resolved', 'dismissed']; const text = value => (typeof value === 'string' ? value : '');
       pins = (Array.isArray(data.pins) ? data.pins : []).slice(0, MAX_PINS).filter(pin => pin && typeof pin.id === 'string' && Number.isInteger(pin.n))
         .map(pin => ({id: pin.id, n: pin.n, status: states.includes(pin.status) ? pin.status : 'pending', selector: text(pin.selector), vsrc: text(pin.vsrc),
@@ -1147,9 +1195,13 @@
       ensureLayer(); anchorKey = ''; schedule();
     }
     else if (data.type === 'inspect/draft-clear') { draft = null; schedule(); }
-    else if (data.type === 'inspect/pin-focus') {
+    else if (data.type === 'inspect/pin-navigate' && typeof data.page === 'string' && data.page.startsWith('/')) {
+      const target = new URL(data.page, location.origin);
+      if (target.origin === location.origin && target.pathname + target.search !== pageId()) location.assign(target.href);
+    } else if (data.type === 'inspect/pin-focus') {
       const pin = pins.find(entry => entry.id === data.id);
       const found = pin && locatePin(pin, all, revision());
+      post('dock/comment-jump', {id: data.id, found: Boolean(found?.element)});
       if (found && found.element) { found.element.scrollIntoView?.({block: 'center', behavior: reduced() ? 'auto' : 'smooth'}); flash = pin.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash = ''; schedule(); }, 1600); schedule(); }
     }
     else if (data.type === 'inspect/clear') { selected = []; expired = []; schedule(); report(); }
@@ -1164,7 +1216,7 @@
   for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) document.addEventListener(type, onBlock, true);
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', schedule, true);
-  window.addEventListener('resize', schedule);
+  window.addEventListener('resize', () => { schedule(); scheduleElements(); });
   window.__vitruviusInspector = {version: 1, core};
   try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
 })();

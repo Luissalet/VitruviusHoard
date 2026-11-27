@@ -1621,6 +1621,37 @@
           ],
           "default": null,
           "description": "Optional visible target for the edit."
+        },
+        "examples": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "IDs of examples used in this edit.",
+          "title": "Examples"
+        },
+        "tokens_id": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Design token system used in this edit.",
+          "title": "Tokens Id"
         }
       },
       "required": [
@@ -2254,6 +2285,45 @@
         "expected_revision"
       ],
       "title": "AppArchiveArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
+    "name": "app_project_change_undo",
+    "description": "Undo one recorded project edit. Deshacer un cambio del historial.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "default": "",
+          "title": "Id",
+          "type": "string"
+        },
+        "change_id": {
+          "title": "Change Id",
+          "type": "string"
+        },
+        "expected_revision": {
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "expected_updated_ts": {
+          "title": "Expected Updated Ts",
+          "type": "number"
+        }
+      },
+      "required": [
+        "change_id",
+        "expected_revision",
+        "expected_updated_ts"
+      ],
+      "title": "AppChangeUndoArgs",
       "type": "object"
     },
     "module": "design"
