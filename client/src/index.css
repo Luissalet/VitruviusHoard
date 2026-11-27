@@ -159,7 +159,7 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
 .canvas-workspace {
   --canvas-height: max(420px, calc(100dvh - 190px));
   --canvas-rail-duration: 0ms;
-  --canvas-rail-ease: cubic-bezier(.2, .72, .28, 1);
+  --canvas-rail-ease: cubic-bezier(.25, .25, .3, 1);
   display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px;
   transition: grid-template-columns var(--canvas-rail-duration) var(--canvas-rail-ease),
     gap var(--canvas-rail-duration) var(--canvas-rail-ease);
@@ -238,6 +238,9 @@ textarea.field.preview-comment-text { font-family: inherit; font-size: 13px; }
     inline-size: var(--canvas-rail-width); max-height: var(--canvas-height);
     overflow-y: auto; scrollbar-gutter: stable; scroll-padding-block-start: 44px;
   }
+}
+@media (max-width: 960px) {
+  .canvas-mode-hint { order: 1; flex-basis: 100%; min-block-size: 2lh; }
 }
 @media (min-width: 820px) and (max-width: 960px) {
   main:has(.canvas-workspace) { padding-inline: 18px; }
