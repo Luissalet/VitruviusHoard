@@ -69,7 +69,7 @@ def test_native_api(client, tmp_path):
     assert client.get("/api/reference-collections").json()["collections"][0]["count"] == 2
     assert client.get("/api/references", params={"collection": "studies", "limit": 1}).json()["next_before"]
     assert client.get("/api/references", params={"before": "bad"}).status_code == 400
-    assert len(client.get("/api/design-patterns").json()["patterns"]) == 8
+    assert len(client.get("/api/design-patterns").json()["patterns"]) == 9
     assert client.post("/api/design-patterns/generate", json={"id": "elastic", "text": "á 👩‍🚀"}).json()["html"]
 
 
