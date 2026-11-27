@@ -105,7 +105,7 @@ def _declarations(tinycss2, tokens):
     return tinycss2.parse_declaration_list(tokens, skip_comments=True, skip_whitespace=True)
 
 
-def _read_sheets(tinycss2, files, paths, tag, attrs):
+def _read_sheets(tinycss2, files, paths, tag=None, attrs=None):
     tokens = {}
     candidates = []
     for path in paths:
@@ -118,11 +118,12 @@ def _read_sheets(tinycss2, files, paths, tag, attrs):
                         previous = tokens.get(declaration.name)
                         if previous is None or declaration.important or not previous.important:
                             tokens[declaration.name] = declaration
-            selectors = _selectors(rule.prelude)
-            matching = [selector.priority for selector in selectors if selector.classes and selector.matches(tag, attrs)]
-            if matching:
-                priority = max(matching)
-                candidates.append((priority, path, rule, selectors))
+            if tag is not None:
+                selectors = _selectors(rule.prelude)
+                matching = [selector.priority for selector in selectors if selector.classes and selector.matches(tag, attrs)]
+                if matching:
+                    priority = max(matching)
+                    candidates.append((priority, path, rule, selectors))
     candidate = max(reversed(candidates), key=lambda item: item[0], default=None)
     return tokens, candidate
 
@@ -231,13 +232,7 @@ def _target_class(vsrc, page, files):
     return name
 
 
-def _style_plan(files, page, route, vsrc, source, tag, line, column, change, root_font_px):
-    property_name, pixels = change["property"], change["pixels"]
-    if property_name not in STYLE_PROPERTIES or not -100_000 <= pixels <= 100_000:
-        raise _error("Choose a supported size or spacing value.", "Elige un valor de tamaño o espaciado admisible.")
-    if pixels < 0 and not property_name.startswith("margin-"):
-        raise _error("Use zero or a positive size.", "Usa cero o un tamaño positivo.")
-
+def _css_parser():
     try:
         import tinycss2
     except ImportError as error:
@@ -245,7 +240,28 @@ def _style_plan(files, page, route, vsrc, source, tag, line, column, change, roo
             "Canvas style editing needs tinycss2. Install the project dependencies or use the source editor.",
             "La edición de estilos en el lienzo requiere tinycss2. Instala las dependencias o usa el editor de fuente.",
         ) from error
+    return tinycss2
 
+
+def canvas_token_scale(files, html, route, root_font_px):
+    """Read the same snapping tokens the style planner uses without planning an edit."""
+    try:
+        parser = _css_parser()
+    except SourceMapError:
+        return []
+    paths = list(dict.fromkeys(_sheets(files, _HTML(html), route)))
+    tokens, _ = _read_sheets(parser, files, paths)
+    return _scale(tokens, root_font_px)
+
+
+def _style_plan(files, page, route, vsrc, source, tag, line, column, change, root_font_px):
+    property_name, pixels = change["property"], change["pixels"]
+    if property_name not in STYLE_PROPERTIES or not -100_000 <= pixels <= 100_000:
+        raise _error("Choose a supported size or spacing value.", "Elige un valor de tamaño o espaciado admisible.")
+    if pixels < 0 and not property_name.startswith("margin-"):
+        raise _error("Use zero or a positive size.", "Usa cero o un tamaño positivo.")
+
+    tinycss2 = _css_parser()
     attrs = dict(tag.attrs)
     paths = list(dict.fromkeys(_sheets(files, page, route)))
     tokens, candidate = _read_sheets(tinycss2, files, paths, tag.name, attrs)

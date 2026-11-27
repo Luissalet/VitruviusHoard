@@ -2,7 +2,7 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
@@ -224,6 +224,12 @@ def project_edit_source(request: Request, id: str, body: AppSourceEditArgs):
 @router.post("/{id}/canvas-edit")
 def project_canvas_edit(request: Request, id: str, body: AppCanvasEditArgs):
     return execute(lambda: services(request).app_projects.canvas_edit(id, **body.model_dump(exclude={"id"})))
+
+
+@router.get("/{id}/canvas-edit/scale")
+def project_canvas_scale(request: Request, id: str, revision: str, path: str = "/",
+                         root_font_px: float = Query(16, gt=0, le=1000)):
+    return execute(lambda: services(request).app_projects.canvas_scale(id, revision, path, root_font_px))
 
 
 @router.get("/{id}/source-count")

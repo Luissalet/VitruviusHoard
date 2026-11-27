@@ -1,9 +1,4 @@
-"""Elements a person selected on an application preview, kept for the agent.
-
-The inspector script (``preview_scripts/preview-inspector.js``) runs inside the owned preview and reports each element it
-selected to the Vitruvius page that frames it. That page stores the list here, so an agent can read "this" without
-the person describing it. The list is advisory: it is per project, in memory, and replaced on every report.
-"""
+"""Read what is selected in the open canvas, with an explicit in-memory API override."""
 from __future__ import annotations
 
 import copy
@@ -90,6 +85,8 @@ class StaleSelection(ValueError):
 
 
 class PreviewSelections:
+    """Compatibility storage for callers that explicitly set a selection."""
+
     def __init__(self):
         self._lock = threading.Lock()
         self._by_project = {}
@@ -136,6 +133,37 @@ def _running(services, project_id):
     return status.get("revision"), status.get("pid") or status.get("url")
 
 
+def _stale(project_id, served, reported):
+    return {
+        **_empty(project_id, served, "The selection was made on another revision than the preview now serves."),
+        "stale_revision": reported, "preview_revision": served,
+    }
+
+
+def _browser_selection(projects, project_id, served):
+    result = projects.canvas.selection(project_id)
+    if not result["ok"]:
+        error = result["error"]
+        if error["code"] in {"no_preview", "preview_closed"}:
+            return None
+        return _empty(project_id, served, error["message"])
+    snapshot = result["result"]
+    if not isinstance(snapshot, dict) or not isinstance(snapshot.get("selection"), list):
+        return None
+    items = normalise(snapshot["selection"])
+    if not items:
+        return None
+    reported = _text(snapshot.get("revision"), 64)
+    if not reported or (served and reported != served):
+        return _stale(project_id, served, reported)
+    if any(item["revision"] and item["revision"] != reported for item in items if not item["expired"]):
+        return _stale(project_id, served, reported)
+    return PreviewSelections._public({
+        "id": project_id, "selection": items, "revision": reported,
+        "updated_ts": _number(snapshot.get("updated_ts")) or None,
+    })
+
+
 def _read(services, project_id, revision=None):
     """Current selection of an existing project's open preview. It is empty once the preview stopped (by the person, an agent or a
     crash), after it restarted, or when it was taken on another revision than the one now served."""
@@ -143,13 +171,20 @@ def _read(services, project_id, revision=None):
     store = services.preview_selections
     entry = store.entry(project_id)
     live = _running(services, project_id)
+    discarded = None
     if entry and (live is None or live[1] != entry["_session"]):
         store.clear(project_id)
-        return _empty(project_id, revision, "The preview is not running, so nothing is selected." if live is None
-                      else "The preview restarted since the selection was made, so it was dropped.")
+        discarded = "The preview is not running, so nothing is selected." if live is None else (
+            "The preview restarted since the selection was made, so it was dropped.")
+        entry = None
+    if live:
+        selected = _browser_selection(services.app_projects, project_id, live[0])
+        if selected is not None:
+            return selected
+    if discarded:
+        return _empty(project_id, revision, discarded)
     if entry and entry["revision"] and live[0] and entry["revision"] != live[0]:
-        return {**_empty(project_id, live[0], "The selection was made on another revision than the preview now serves; the page will report it again once it settles."),
-                "stale_revision": entry["revision"], "preview_revision": live[0]}
+        return _stale(project_id, live[0], entry["revision"])
     return store.get(project_id, revision or (live[0] if live else None))
 
 
@@ -165,8 +200,7 @@ def read_selection(services, project_id, revision=None, clips=False):
 
 
 def write_selection(services, project_id, selection, revision=None):
-    """Store what the preview page reported. A report for a stopped preview is dropped, and one that names another revision than the
-    preview serves is refused (StaleSelection)."""
+    """Keep an explicitly supplied selection in memory for the running preview."""
     services.app_projects._directory(project_id)
     live = _running(services, project_id)
     if live is None:

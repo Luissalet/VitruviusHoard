@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
-from .app_canvas_edits import plan_canvas_edit
+from .app_canvas_edits import canvas_token_scale, plan_canvas_edit
 from .app_materials import describe_materials
 from .app_preview import PreviewProxy
 from . import app_critique_loop
@@ -277,6 +277,14 @@ class AppProjects:
                 return current
             return self.update(id, {filename: updated}, expected_revision, actor=actor,
                                target={**(target or {}), "vsrc": vsrc})
+
+    def canvas_scale(self, id, revision, path="/", root_font_px=16):
+        with self.lock:
+            current = self.get(id, revision)
+            served, html = self._preview_html(id, path)
+            if served != revision:
+                raise ValueError("The preview changed before its token scale could be read.")
+            return {"scale": canvas_token_scale(current["files"], html, path, root_font_px)}
 
     def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
                     expected_count=None, root_font_px=16, lang="en", *, actor=None):

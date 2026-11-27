@@ -98,6 +98,26 @@ def test_the_selection_dies_with_the_preview_however_it_was_stopped(services):
     assert preview_inspector.write_selection(services, id, [element()], "rev1")["selection"] == []
 
 
+def test_the_agent_reads_the_visible_browser_without_storing_its_selection(services, monkeypatch):
+    project = services.app_projects.create("Live selector", "work-board")
+    project_id = project["id"]
+    preview = Preview(services)
+    snapshot = {"selection": [element(revision="rev1")], "revision": "rev1", "updated_ts": 123}
+    monkeypatch.setattr(services.app_projects.canvas, "selection",
+                        lambda id: {"ok": True, "result": snapshot} if id == project_id else None)
+
+    live = call_tool(services, "app_project_selection", {"id": project_id})
+    assert live["count"] == 1 and live["updated_ts"] == 123
+    assert services.preview_selections.entry(project_id) is None
+
+    preview.revision = "rev2"
+    stale = preview_inspector.read_selection(services, project_id)
+    assert stale["count"] == 0 and stale["stale_revision"] == "rev1" and stale["preview_revision"] == "rev2"
+    snapshot.update(selection=[], revision="rev2")
+    assert preview_inspector.read_selection(services, project_id)["count"] == 0
+    assert services.preview_selections.entry(project_id) is None
+
+
 def test_the_selection_is_tied_to_the_revision_the_preview_serves(services):
     project = services.app_projects.create("Selector", "work-board")
     id = project["id"]

@@ -138,6 +138,15 @@ class CanvasSessions:
                         session.pending.pop(id, None)
 
     def call(self, project: str, tool: str, args: dict, actor: dict, *, target=None, timeout: float = 47):
+        event = {"type": "dock/call", "tool": tool, "args": args, "actor": actor}
+        if target is not None:
+            event["presence"] = target
+        return self._request(project, event, timeout)
+
+    def selection(self, project: str):
+        return self._request(project, {"type": "inspect/read-selection"}, 3)
+
+    def _request(self, project: str, payload: dict, timeout: float):
         id = uuid.uuid4().hex
         pending = Future()
         with self._lock:
@@ -148,10 +157,12 @@ class CanvasSessions:
                 return failure("multiple_previews", "Keep a single Applications tab open on this project's preview.")
             session = sessions[0]
             session.pending[id] = pending
-            event = {"hoardDock": 1, "type": "dock/call", "id": id, "tool": tool, "args": args, "actor": actor}
-            if target is not None:
-                event["presence"] = target
-            session.loop.call_soon_threadsafe(session.events.put_nowait, event)
+            event = {"hoardDock": 1, **payload, "id": id}
+            try:
+                session.loop.call_soon_threadsafe(session.events.put_nowait, event)
+            except RuntimeError:
+                session.pending.pop(id, None)
+                return failure("preview_closed", "The preview closed before answering.")
         try:
             return pending.result(timeout)
         except TimeoutError:
