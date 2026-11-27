@@ -156,6 +156,7 @@ def create_app(runtime=None):
     @app.get('/icon.png')
     @app.get('/icon-192.png')
     async def icon(): return FileResponse(ROOT/'vitruvius_hoard/static/icon-192.png')
+    app.add_route('/api/app-projects/{id}/preview/open', runtime.modules['design'], methods=['GET'])
     for name,module in runtime.modules.items(): app.mount('/'+name,module)
     return app
 
