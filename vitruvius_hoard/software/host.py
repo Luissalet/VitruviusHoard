@@ -18,13 +18,15 @@ VERSION={'reference_id':S,'expected_revision':{'type':'integer','minimum':0}}
 ARTIFACT={**PROJECT,**VERSION,'file':S,'native_project_id':S,'artifact_id':S}
 
 
-def control(name,description,props,required=(),read=False):
-    return {'name':name,'description':description,'inputSchema':{'type':'object','properties':props,'required':list(required),'additionalProperties':False},'annotations':{'readOnlyHint':read,'destructiveHint':False,'idempotentHint':read,'openWorldHint':False}}
+def control(name,description,props,required=(),read=False,*,idempotent=False):
+    return {'name':name,'description':description,'inputSchema':{'type':'object','properties':props,'required':list(required),'additionalProperties':False},'annotations':{'readOnlyHint':read,'destructiveHint':False,'idempotentHint':read or idempotent,'openWorldHint':False}}
 
 
 CONTROLS=[
  control('software_modules','Read independent module states and Theseus incomplete/in-progress status without loading engines.',{},read=True),
  control('software_module_set','Set and save a native module. Reuse the previous settings to undo.',{'module':{'enum':['design','babel','theseus']},'enabled':{'type':'boolean'},'automatic':{'type':'boolean'}},('module','enabled')),
+ control('design_library_prepare','Prepare the offline design library. Preparar la biblioteca local de diseño.',{},idempotent=True),
+ control('design_library_undo','Undo a library preparation. Deshacer una preparación de la biblioteca.',{'token':{'type':'string','pattern':'^[0-9a-f]{32}$'}},('token',)),
  control('software_projects','List native source projects.',{},read=True),
  control('software_project_read','Read selected project revision, files and retained linked results.',PROJECT,('project_id',),True),
  control('software_references','Read retained historical source/environment/results while engines are OFF.',{'project_id':S,'reference_id':S},read=True),
@@ -51,6 +53,7 @@ def create_app(runtime=None):
         read_or_create_token(token_path())
         try:
             await runtime.restore()
+            await runtime.prepare_first_start()
             yield
         finally:
             await runtime.close()
@@ -84,6 +87,10 @@ def create_app(runtime=None):
             return {**runtime.status(),'theseus_status':'Existing capabilities; development incomplete and in progress, resumed on 20 October 2026.'}
         if name=='software_module_set':
             return await runtime.set_module(args['module'],args['enabled'],args.get('automatic',False))
+        if name=='design_library_prepare':
+            return await runtime.prepare_library()
+        if name=='design_library_undo':
+            return await runtime.undo_library(args['token'])
         if name=='software_references':
             from .projects import retained
             return await owned(asyncio.to_thread(retained,**args))
