@@ -17,6 +17,7 @@ from .app_canvas import project_tool_caller
 from .app_project_results import render_summary, source_summary
 from .app_projects import templates as app_templates
 from .app_source_map import source_position
+from .app_template_data import edit_project_template_data
 from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
@@ -320,6 +321,14 @@ class AppSourceEditArgs(BaseModel):
 
 class AppSourceEditToolArgs(AppSourceEditArgs):
     include_files: StrictBool = Field(False, description="Return the full saved project, including all source files.")
+
+
+class AppTemplateDataArgs(BaseModel):
+    id: str
+    expected_revision: str
+    name: str | None = Field(None, min_length=1, max_length=160, description="Literal project name, used by {{name}}.")
+    description: str | None = Field(None, max_length=2000, description="Literal project description, used by {{description}}.")
+    actor: CanvasActor | None = Field(None, description="Agent identity for the preview cursor.")
 
 
 class AppCanvasTextChange(BaseModel):
@@ -859,6 +868,19 @@ def run_app_project_edit_source(services: Services, args: AppSourceEditToolArgs)
     return source_summary(project, changed_path=changed_path, edit=True)
 
 
+def run_app_project_edit_template_data(services: Services, args: AppTemplateDataArgs) -> dict:
+    fields = args.model_dump(include={"name", "description"}, exclude_none=True)
+    if not fields or ("name" in fields and not fields["name"].strip()):
+        raise AppError("invalid_input", "Supply a name or description. / Indica un nombre o una descripción.", status=400)
+    projects = services.app_projects
+    projects.canvas.wait_for_revision(args.id, args.expected_revision)
+    return edit_project_template_data(
+        projects, args.id, args.expected_revision, fields,
+        actor=(args.actor or CanvasActor()).model_dump(exclude_none=True),
+        author=project_tool_author(args.actor),
+    )
+
+
 def run_app_project_render(services: Services, args: AppProjectRenderToolArgs) -> dict:
     render = services.app_project_render(args.id, args.revision, args.widths)
     return render if args.detail else render_summary(render)
@@ -997,6 +1019,10 @@ TOOLS: list[Tool] = [
     Tool("app_project_edit_source", "Edit literal HTML by source position with undo. Editar un elemento por su posición.\n"
         "Returns changed file metadata. Pass include_files=true for full source.",
         AppSourceEditToolArgs, ann(False, False, True), run_app_project_edit_source, capped=False),
+    Tool("app_project_edit_template_data", "Edit project template text with undo. Editar texto de plantilla con deshacer.\n"
+        "Pass name and/or description to change {{name}} and {{description}} as literal project data.\n"
+        "Usa name o description y la revisión vigente; conserva el marcado de la plantilla.",
+        AppTemplateDataArgs, ann(False, False, True), run_app_project_edit_template_data, capped=False),
     Tool("app_project_canvas_edit", "Edit preview size, spacing or text with undo. Editar tamaño, espaciado o texto.",
         AppCanvasEditArgs, ann(False, False, True), run_app_project_canvas_edit),
     Tool("app_project_source_count", "Count elements at a source position in a running preview page. Contar elementos que comparten origen.",

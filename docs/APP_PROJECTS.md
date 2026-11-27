@@ -153,9 +153,22 @@ The owned preview maps each served opening tag in `layout.html` and `pages/**/*.
 - `{"kind":"attribute","name":"aria-label","value":"New label"}` sets a literal attribute. A null value removes it.
 - `{"kind":"class","operation":"add","value":"emphasis"}` adds one class. Use remove to remove it.
 
-A marker-generated fragment, a text node with template bindings or an attribute bound to a marker identifies the marker in the error. Edit the corresponding project fields, records or styles. The position tool also reports ambiguous text when an element has multiple direct text nodes and leaves script and style bodies to the source editor. Use `lang: "es"` for Spanish edit messages.
+A marker-generated fragment, a text node with template bindings or an attribute bound to a marker identifies the marker in the error. Use `app_project_edit_template_data` for project name and description. Edit the corresponding records or styles for other generated content. The position tool also reports ambiguous text when an element has multiple direct text nodes and leaves script and style bodies to the source editor. Use `lang: "es"` for Spanish edit messages.
 
 The HTTP equivalents are `POST /api/app-projects/{id}/source-edit` and `GET /api/app-projects/{id}/source-count`. The packaged starter runtime applies the map only when launched by the owned preview. Exported source and the ordinary standalone server contain no preview markup. Earlier stock starters get the source map in preview while retaining their exact saved runtime on export. Custom runtimes can use the starter's optional template-rendering hook. The preview reserves the `data-vsrc` and `data-vgen` attribute names.
+
+### Edit template text
+
+Call `app_project_edit_template_data` with the project `id`, its current `expected_revision` and `name`, `description` or both.
+The tool updates the corresponding data in `project.json`. The runtime renders `{{name}}` and `{{description}}` as escaped text
+where the saved templates use them. Use ordinary text or a quoted text attribute such as `aria-label`. The same call can set
+`description` to an empty string. Generated content, record fields and request parameters continue to use their own data.
+
+The receipt lists the saved revision and `changed_files` with a path, byte count and SHA-256. Apply the returned
+`undo.tool` with its `undo.arguments` once to restore the previous data. Passing identical values leaves the revision in place. The project history uses the caller supplied by the agent transport and records an unidentified agent for anonymous agent calls.
+
+En castellano, indica `name` o `description` y la revisión vigente. La herramienta cambia los datos del proyecto, conserva
+las plantillas y devuelve un recibo breve con deshacer.
 
 ### Live preview
 

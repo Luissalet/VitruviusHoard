@@ -14,10 +14,11 @@ from hashlib import blake2b
 PRESENCE_WAIT = 1.5
 ACTOR_TOOLS = frozenset({
     "app_project_canvas_view", "app_project_canvas_act", "app_project_update",
-    "app_project_edit_source", "app_project_canvas_edit",
+    "app_project_edit_source", "app_project_edit_template_data", "app_project_canvas_edit",
 })
 PROJECT_HISTORY_TOOLS = frozenset({
     "app_project_create", "app_project_update", "app_project_edit_source", "app_project_canvas_edit",
+    "app_project_edit_template_data",
     "app_project_refresh_voice_assistant", "app_project_add_voice_assistant", "app_project_undo",
     "app_project_change_undo",
 })

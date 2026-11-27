@@ -20,7 +20,7 @@ The Canvas rail opens the regular copilot conversation scoped to the application
 
 The Canvas panel also lists the active page’s elements and open comments. The person can jump to comment anchors, resolve comments and undo the latest source change from the history. Call `app_project_get` with `include_files: true` to read the source and `history` with recorded transitions, authors and the last applicable source undo. Older saved revisions remain accessible with their existing IDs.
 
-For tool results with full source contents, pass `include_files: true` to `app_project_create`, `app_project_get` or `app_project_edit_source`. The default receipts include project and revision IDs, preview status and file metadata. Use `detail: true` on `app_project_render` when you need the full lint findings, metrics and browser probe.
+For tool results with full source contents, pass `include_files: true` to `app_project_create`, `app_project_get` or `app_project_edit_source`. The default receipts include project and revision IDs, preview status and file metadata. Use `app_project_edit_template_data` with the current revision to set `name` or `description`, retain the template bindings and get an undo call. Use `detail: true` on `app_project_render` when you need the full lint findings, metrics and browser probe.
 
 `page_check` reports actions intercepted by the read-only preview in `blocked_cases` with their IDs, descriptions and requests. When it reaches its time limit after planning, it also lists pending and inconclusive cases in `unchecked_cases`. `stopped_at` identifies where the check stopped.
 
