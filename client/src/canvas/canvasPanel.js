@@ -86,3 +86,19 @@ export function canvasContext({ project, revision, mode, selection = [], comment
   const summary = [head, picked, stale, notes].filter(Boolean).join(" · ");
   return { view: "canvas", focus: { kind: "app_project", id: project.id, label: project.name }, summary: clip(summary, max) };
 }
+
+/** Fold older unattributed snapshots in the newest-first history, keeping the current save and recorded steps. */
+export function partitionLegacyHistory(entries, currentRevision) {
+  const currentIndex = entries.findIndex((entry) => entry.revision === currentRevision);
+  const recordedEntries = [];
+  const previous = [];
+  entries.forEach((entry, index) => {
+    if (currentIndex >= 0 && index > currentIndex && !entry.author?.kind
+      && (!entry.action || entry.action === "legacy")) {
+      previous.push(entry);
+    } else {
+      recordedEntries.push(entry);
+    }
+  });
+  return { recordedEntries, previous };
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { partitionLegacyHistory } from "./canvasPanel.js";
 import { api } from "../api.js";
 import { CanvasMaterials } from "./CanvasActivity.jsx";
 
@@ -33,7 +34,7 @@ export function CanvasElements({ elements, onSelect, onRetry, es }) {
                 <button type="button" aria-pressed={item.selected} tabIndex={item.id === tabStop ? 0 : -1}
                   onFocus={() => setFocused(item.id)}
                   style={{ paddingInlineStart: 9 + Math.min(item.depth, 5) * 10 }}
-                  title={item.text || item.tag}
+                  title={item.text ? `${item.tag} · ${item.text}` : item.tag}
                   onClick={(event) => onSelect(item.id, event.shiftKey)}>
                   <code aria-hidden={Boolean(item.text)}>{item.tag}</code>
                   {item.text && <span>{item.text}</span>}
@@ -58,9 +59,13 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
     ...history,
   ].reverse();
   const recentCount = 2;
-  const visibleEntries = showAll ? entries : entries.slice(0, recentCount);
+  const { recordedEntries, previous } = partitionLegacyHistory(entries, project.revision);
+  const visibleEntries = showAll ? recordedEntries : recordedEntries.slice(0, recentCount);
+  const previousLabel = es
+    ? `${previous.length} ${previous.length === 1 ? "versión anterior sin autor" : "versiones anteriores sin autor"}`
+    : `${previous.length} earlier ${previous.length === 1 ? "revision" : "revisions"} without an author`;
   const last = history.at(-1);
-  const currentIndex = entries.findIndex((entry) => entry.revision === project.revision);
+  const currentIndex = recordedEntries.findIndex((entry) => entry.revision === project.revision);
   const legacy = !last || last.action === "legacy";
   const savedIndex = project.revisions.indexOf(project.revision);
   const undoTarget = legacy && savedIndex > 0 ? project.revisions[savedIndex - 1] : last?.undo_revision;
@@ -138,8 +143,19 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
           aria-disabled={undoing} aria-label={`${es ? "Deshacer paso" : "Undo step"} · ${revisionLabel(entry.revision)}`}
           onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
       </li>)}
+      {previous.length > 0 && <li>
+        <details className="canvas-history-legacy">
+          <summary>{previousLabel}</summary>
+          <ol className="canvas-history-list">
+            {previous.map((entry) => <li className="canvas-history-line" key={entry.id || entry.revision}>
+              <span>{revisionLabel(entry.revision)}</span>
+              {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
+            </li>)}
+          </ol>
+        </details>
+      </li>}
     </ol> : <p className="canvas-empty">{es ? "Aún no hay revisiones." : "No revisions yet."}</p>}
-    {entries.length > recentCount && <button type="button" className="btn-link canvas-history-more"
+    {recordedEntries.length > recentCount && <button type="button" className="btn-link canvas-history-more"
       aria-expanded={showAll} aria-controls="canvas-history-entries" onClick={() => setShowAll((value) => !value)}>
       {showAll ? (es ? "Mostrar solo los recientes" : "Show recent only")
         : (es ? "Ver el historial completo" : "Show full history")}
