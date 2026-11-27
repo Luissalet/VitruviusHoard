@@ -936,8 +936,9 @@ TOOLS: list[Tool] = [
         AppExportArgs, ann(False, False, True), lambda services, args: services.app_projects.export(args.id, args.revision, args.include_data)),
     Tool("app_project_critique_loop", "Read the application critique rounds, best revision and reasons. Consultar el bucle de crítica.",
         AppCritiqueLoopArgs, ann(True), lambda services, args: services.app_projects.critique_loop(args.id, args.lang), capped=False),
-    Tool("app_project_critique_round", "Capture the current revision at 390, 834 and 1440 px and run a deterministic critique. "
-        "Retain the best revision and restore it after a lower score, with reasons and undo. Evaluar una revisión.",
+    Tool("app_project_critique_round", "Assess an application revision. Evaluar una revisión de la aplicación.\n"
+        "Capture the current revision at 390, 834 and 1440 px for deterministic critique.\n"
+        "Retain the best revision and restore it after a lower score, with reasons and undo.",
         AppCritiqueRoundArgs, ann(False, False, False), lambda services, args: services.app_project_critique_round(**args.model_dump()),
         timeout_s=120, capped=False),
     Tool("app_project_critique_round_undo", "Undo the latest critique round and its source selection. Deshacer una ronda de crítica.",

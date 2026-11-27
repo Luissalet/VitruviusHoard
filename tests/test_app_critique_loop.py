@@ -97,3 +97,33 @@ def test_source_and_round_compare_and_swap_prevent_stale_writes(tmp_path):
     with pytest.raises(AppError, match="changed"):
         apps.undo_critique_round(**result["undo"]["arguments"])
     assert apps.get(id)["revision"] == latest["revision"]
+
+
+
+def test_critique_and_single_step_undo_preserve_each_others_history(tmp_path):
+    apps = AppProjects(tmp_path)
+    initial = apps.create("Combined history")
+    project_id = initial["id"]
+    record(apps, initial, [])
+    rejected = edit(apps, initial, "Rejected")
+    result = record(apps, rejected, [finding("craft/button-wrap", "error")])
+    restored = apps.get(project_id)
+    assert restored["revision"] == initial["revision"]
+    assert restored["history"][-1]["action"] == "critique-restore"
+    assert restored["history"][-1]["files"] == ["pages/index.html"]
+    assert restored["history"][-1]["author"] == {"kind": "system"}
+    round_undo = apps.undo_critique_round(**result["undo"]["arguments"])
+    reopened = apps.get(project_id)
+    assert reopened["revision"] == rejected["revision"] == round_undo["revision"]
+    assert reopened["history"][-1]["action"] == "critique-undo"
+    project = apps.update(project_id, {"assets/extra.css": "body { color: black; }"}, reopened["revision"])
+    edit_entry = next(row for row in project["history"] if row["action"] == "edit"
+                      and row["revision"] == rejected["revision"])
+    undone = apps.undo_change(project_id, edit_entry["id"], project["revision"], project["updated_ts"])
+    assert undone["files"]["pages/index.html"] == initial["files"]["pages/index.html"]
+    assert undone["files"]["assets/extra.css"] == project["files"]["assets/extra.css"]
+    assert undone["history"][-1]["action"] == "undo-change"
+    assert apps.critique_loop(project_id)["best"]["revision"] == initial["revision"]
+    restored_revision = apps.undo(project_id, undone["revision"], undone["updated_ts"], rejected["revision"])
+    assert restored_revision["history"][-1]["action"] == "undo"
+    assert len(apps.critique_loop(project_id)["rounds"]) == 1

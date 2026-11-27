@@ -3013,7 +3013,7 @@
   },
   {
     "name": "app_project_critique_round",
-    "description": "Capture the current revision at 390, 834 and 1440 px and run a deterministic critique. Retain the best revision and restore it after a lower score, with reasons and undo. Evaluar una revisión.",
+    "description": "Assess an application revision. Evaluar una revisión de la aplicación.\nCapture the current revision at 390, 834 and 1440 px for deterministic critique.\nRetain the best revision and restore it after a lower score, with reasons and undo.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
