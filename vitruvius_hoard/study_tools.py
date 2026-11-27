@@ -28,6 +28,10 @@ class AlternativeIn(BaseModel):
     document_id: Optional[str] = Field(None, max_length=40, description="diagram_document: the editable diagram (its revision is pinned).")
     revision: Optional[str | int] = None
     intent: str = Field("", max_length=400, description="What structural idea this alternative tests.")
+    pattern_id: Optional[str] = Field(None, max_length=40, description="A page study from design_patterns, used instead of html or path.")
+    pattern_text: Optional[str] = Field(None, max_length=200)
+    pattern_accent: Optional[str] = Field(None, max_length=7)
+    typical: bool = Field(False, description="The familiar direction used as the baseline of an art-direction study.")
 
 
 class StudyCreateArgs(BaseModel):
@@ -36,6 +40,8 @@ class StudyCreateArgs(BaseModel):
     alternatives: list[AlternativeIn] = Field(..., max_length=12, description="2 to 12 alternatives.")
     diversity_threshold: float = Field(0.2, gt=0, lt=1, description="Minimum structural distance between any two alternatives.")
     check_only: bool = Field(False, description="Only report structural distances; create nothing.")
+    art_direction: bool = Field(False, description="A pre-build study of three library patterns, one marked typical.")
+    allow_typical: bool = Field(False, description="Allow the typical direction to win when the commission specifically requests it.")
 
 
 class StudyIdArgs(BaseModel):
@@ -134,10 +140,12 @@ def tools() -> list[Tool]:
         Tool("design_alternatives_create",
              "Compare structurally different alternatives on frozen criteria. Crear estudio de alternativas.\n"
              "Brief + criteria (each with a measurable source, direction and weight) + 2..12 pages, app projects or diagrams. Refuses colour-only variants: "
-             "structural fingerprints of the DOM/outline must differ in element structure or layout. check_only reports distances without creating.\n"
+             "structural fingerprints of the DOM/outline must differ in element structure or layout. check_only reports distances without creating. "
+             "For a new design, pass the art_direction.create.arguments from design_brief.\n"
              "Sinónimos: alternativas, comparar diseños, opciones, variantes, criterios, decisión de diseño.",
              StudyCreateArgs, ann(False, False, True),
-             lambda s, a: S(s).create(a.brief, [_dump(c) for c in a.criteria], [_dump(x) for x in a.alternatives], a.diversity_threshold, a.check_only)),
+             lambda s, a: S(s).create(a.brief, [_dump(c) for c in a.criteria], [_dump(x) for x in a.alternatives],
+                                       a.diversity_threshold, a.check_only, art_direction=a.art_direction, allow_typical=a.allow_typical)),
         Tool("design_alternatives_list", "List alternatives studies with state and decision. Listar estudios de alternativas.",
              Empty, ann(True), lambda s, a: {"studies": S(s).list()}),
         Tool("design_alternatives_get", "Read a study: criteria, alternatives, diversity, measures, frontier and trade-offs. Leer estudio.",
