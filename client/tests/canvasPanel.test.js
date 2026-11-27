@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../src/canvas/canvasPanel.js";
+import { canvasContext, canvasHistoryEntries, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../src/canvas/canvasPanel.js";
 
 test("the toolbar offers only the modes the preview supports", () => {
   assert.deepEqual(supportedModes(undefined), ["navigate"]);
@@ -63,4 +63,16 @@ test("expired elements are never counted as selected and carry no source positio
   assert.equal(mixed.summary, 'Board @newrev · selected 1: p "Kept" pages/index.html:4:3 · expired 1, not in this revision: h2 "Current records"');
   const restored = canvasContext({ project, revision: "newrev", selection: [heading] });
   assert.equal(restored.summary, 'Board @newrev · selected 1: h2 "Current records" pages/index.html:1:167');
+});
+test("history gives a rollback its own step number and keeps the restored revision", () => {
+  const revisions = ["first", "next", "edited"];
+  const history = [
+    { id: "edit2", revision: "next", action: "edit" },
+    { id: "edit3", revision: "edited", action: "edit" },
+    { id: "undo", revision: "next", action: "undo" },
+  ];
+  assert.deepEqual(canvasHistoryEntries({ revisions, history }).map(({ step, revision }) => [step, revision]),
+    [[4, "next"], [3, "edited"], [2, "next"], [1, "first"]]);
+  assert.deepEqual(canvasHistoryEntries({ revisions }).map(({ step }) => step), [3, 2, 1]);
+  assert.deepEqual(canvasHistoryEntries({ revisions, history: null }), canvasHistoryEntries({ revisions }));
 });

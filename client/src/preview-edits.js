@@ -11,7 +11,13 @@ export function usePreviewEdits(projectId, running, frameRef, lang) {
     const send = (frame, origin, type, payload = {}) => {
       frame?.contentWindow?.postMessage({ hoardDock: 1, type, ...payload }, origin);
     };
-    const configure = (frame) => send(frame, previewOrigin(frame), "inspect/edits-config", { lang });
+    const configure = (frame) => {
+      const computed = getComputedStyle(document.body);
+      const theme = Object.fromEntries(["surface", "surface-2", "ink", "line", "accent", "field"]
+        .map((name) => [name, computed.getPropertyValue("--" + name).trim()]));
+      theme.font = computed.fontFamily;
+      send(frame, previewOrigin(frame), "inspect/edits-config", { lang, theme });
+    };
     const receive = async (event) => {
       const frame = frameRef.current;
       const origin = previewOrigin(frame);

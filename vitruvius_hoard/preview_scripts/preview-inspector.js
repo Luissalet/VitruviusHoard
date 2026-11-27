@@ -200,6 +200,7 @@
   };
   let hostOrigin = null; // the origin of the page that frames this one: fixed by the browser, or by the first hello
   let hostLanguage;
+  let hostTheme;
   let mode = false;
   let commenting = false;
   let pins = []; // comments pinned on this page: {id, n, status, selector, vsrc, own_vsrc, tag, text, revision}
@@ -366,6 +367,7 @@
     document.documentElement.appendChild(layer);
     edits = installCanvasEdits(root, post, schedule);
     edits?.setLanguage(hostLanguage);
+    edits?.setTheme(hostTheme);
     // Project CSS must not hide or move the layer: inline !important wins over any stylesheet rule, and the layer is
     // put back (or its style restored) if the page removes or rewrites it.
     new MutationObserver(() => { if (layer.getAttribute('style') !== LAYER_STYLE) layer.setAttribute('style', LAYER_STYLE); }).observe(layer, {attributes: true, attributeFilter: ['style', 'class', 'hidden']});
@@ -386,27 +388,32 @@
     if (!meta) return null;
     const style = document.createElement('style');
     style.textContent = [
-      '.canvas-control{pointer-events:auto;box-sizing:border-box;font:600 13px/1.35 system-ui,sans-serif}',
+      '[data-canvas-edits]{--canvas-surface:#1e2121;--canvas-surface-2:#282b2c;--canvas-ink:#e1eaec;',
+      '--canvas-line:#3a3d3e;--canvas-accent:#d5b575;--canvas-field:#121414;',
+      '--canvas-font:"Segoe UI",system-ui,sans-serif}',
+      '.canvas-control{pointer-events:auto;box-sizing:border-box;font:600 13px/1.35 var(--canvas-font)}',
       '.canvas-handle{position:absolute;z-index:1;width:22px;height:22px;padding:0;display:grid;place-items:center;',
       'border:0;background:none;color:var(--inspection-blue);transform:translate(-50%,-50%);touch-action:none}',
       '.canvas-handle::before{content:"";width:6px;height:6px;border:1px solid currentColor;background:var(--inspection-paper);',
       'border-radius:1px;box-shadow:0 0 0 1px #fff;box-sizing:content-box}',
       '.canvas-handle[data-kind=padding]::before{border-radius:50%;width:5px;height:5px}',
       '.canvas-handle[data-kind=margin]::before{transform:rotate(45deg);width:5px;height:5px}',
-      '.canvas-handle:focus-visible,.canvas-action:focus-visible,.canvas-text:focus-visible{outline:2px solid var(--inspection-blue);outline-offset:2px}',
+      '.canvas-handle:focus-visible,.canvas-action:focus-visible,.canvas-text:focus-visible{outline:2px solid var(--canvas-accent);outline-offset:2px}',
       '.canvas-handle:hover::before,.canvas-handle:focus-visible::before{background:currentColor}',
-      '.canvas-tip,.canvas-panel,.canvas-text{position:absolute;z-index:2;border:1px solid #9cb1d5;',
-      'border-radius:6px;background:#f7f9ff;color:#182946;box-shadow:0 3px 12px #18294626}',
-      '.canvas-tip{padding:4px 8px;font:600 12px/1.3 system-ui,sans-serif;pointer-events:none;max-width:calc(100vw - 16px)}',
+      '.canvas-tip,.canvas-panel,.canvas-text{position:absolute;z-index:2;border:1px solid var(--canvas-line);',
+      'border-radius:7px;background:var(--canvas-surface);color:var(--canvas-ink);box-shadow:0 3px 12px #0005}',
+      '.canvas-tip{padding:4px 8px;font:600 12px/1.3 var(--canvas-font);pointer-events:none;max-width:calc(100vw - 16px)}',
       '.canvas-panel{width:max-content;max-width:min(310px,calc(100vw - 16px));padding:10px;',
       'display:flex;gap:8px;align-items:center;flex-wrap:wrap}',
       '.canvas-panel[hidden],.canvas-tip[hidden],.canvas-handle[hidden],.canvas-text[hidden]{display:none}',
       '.canvas-panel-message{width:100%;overflow-wrap:anywhere}',
       '.canvas-guide{position:absolute;box-sizing:border-box;pointer-events:none;color:#20458f}',
       '.canvas-guide[data-axis=x]{border-left:1px dashed currentColor} .canvas-guide[data-axis=y]{border-top:1px dashed currentColor}',
-      '.canvas-action{min-height:32px;padding:4px 9px;border:1px solid #9cb1d5;border-radius:4px;color:#182946;background:#fff;font:inherit}',
-      '.canvas-action[data-apply]{color:#fff;background:#20458f;border-color:#20458f}',
-      '.canvas-text{padding:4px 6px;resize:none;overflow:hidden;min-height:30px}',
+      '.canvas-action{min-height:32px;padding:4px 9px;border:1px solid var(--canvas-line);border-radius:6px;',
+      'color:var(--canvas-ink);background:var(--canvas-surface-2);font:inherit;cursor:pointer}',
+      '.canvas-action:hover,.canvas-action[data-apply]{border-color:var(--canvas-accent)}',
+      '.canvas-action[data-apply]{background:var(--canvas-accent);color:var(--canvas-field)}',
+      '.canvas-text{padding:4px 6px;resize:none;overflow:hidden;min-height:30px;background:var(--canvas-field)}',
     ].join('');
     root.append(style);
 
@@ -936,6 +943,14 @@
         return node.parentElement;
       },
       setLanguage: value => { if (value) { lang = value === 'es' ? 'es' : 'en'; redraw(); } },
+      setTheme: theme => {
+        if (!theme) return;
+        for (const name of ['surface', 'surface-2', 'ink', 'line', 'accent', 'field', 'font']) {
+          const value = theme[name];
+          const property = name === 'font' ? 'font-family' : 'color';
+          if (typeof value === 'string' && CSS.supports(property, value)) stage.style.setProperty('--canvas-' + name, value);
+        }
+      },
       message: data => {
         if (data.type === 'inspect/canvas-edit-result' && pending.has(data.request)) {
           const callback = pending.get(data.request);
@@ -1189,7 +1204,9 @@
     edits?.message(data);
     if (data.type === 'inspect/edits-config') {
       hostLanguage = data.lang;
+      hostTheme = data.theme;
       edits?.setLanguage(hostLanguage);
+      edits?.setTheme(hostTheme);
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/read-selection' && typeof data.id === 'string') {
       if (selected.length && (revision() !== lastRevision || selected.some(element => !element.isConnected))) settle();
