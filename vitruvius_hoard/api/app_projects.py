@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .deps import services
 from ..agent_tools import (
-    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
+    AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs, VoiceAssistantRevision,
 )
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
@@ -135,6 +135,11 @@ def project_list(request: Request, archived: bool = False):
 @router.post("", status_code=201)
 def project_create(request: Request, body: AppCreateArgs):
     return execute(lambda: services(request).app_projects.create(**body.model_dump(), author={"kind": "person"}))
+
+
+@router.post("/{id}/voice-assistant/refresh")
+def project_refresh_voice_assistant(request: Request, id: str, body: VoiceAssistantRevision):
+    return execute(lambda: services(request).app_projects.refresh_voice_assistant(id, body.expected_revision))
 
 
 @router.get("/{id}")

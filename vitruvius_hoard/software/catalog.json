@@ -1455,6 +1455,41 @@
     "module": "design"
   },
   {
+    "name": "app_project_refresh_voice_assistant",
+    "description": "Update embedded voice assistant assets with undo. Actualizar el asistente de voz incrustado con deshacer.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "expected_revision": {
+          "description": "Current project source revision.",
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "id": {
+          "description": "Application project ID.",
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "id"
+      ],
+      "title": "AppVoiceAssistantRefreshArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_update",
     "description": "Save selected source files as a retained project revision. Editar archivos de aplicación.",
     "annotations": {
