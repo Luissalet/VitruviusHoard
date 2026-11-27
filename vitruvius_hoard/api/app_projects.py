@@ -224,12 +224,14 @@ def project_archive(request: Request, id: str, body: AppArchiveArgs):
 
 @router.post("/{id}/source-edit")
 def project_edit_source(request: Request, id: str, body: AppSourceEditArgs):
-    return execute(lambda: services(request).app_projects.edit_source(id, **body.model_dump(exclude={"id"})))
+    return execute(lambda: services(request).app_projects.edit_source(
+        id, **body.model_dump(exclude={"id"}), author={"kind": "person"}))
 
 
 @router.post("/{id}/canvas-edit")
 def project_canvas_edit(request: Request, id: str, body: AppCanvasEditArgs):
-    return execute(lambda: services(request).app_projects.canvas_edit(id, **body.model_dump(exclude={"id"})))
+    return execute(lambda: services(request).app_projects.canvas_edit(
+        id, **body.model_dump(exclude={"id"}), author={"kind": "person"}))
 
 
 @router.get("/{id}/canvas-edit/scale")

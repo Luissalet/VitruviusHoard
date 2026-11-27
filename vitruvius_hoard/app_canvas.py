@@ -6,6 +6,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import Future, TimeoutError, wait
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from hashlib import blake2b
 
@@ -15,6 +16,14 @@ ACTOR_TOOLS = frozenset({
     "app_project_canvas_view", "app_project_canvas_act", "app_project_update",
     "app_project_edit_source", "app_project_canvas_edit",
 })
+PROJECT_HISTORY_TOOLS = frozenset({
+    "app_project_create", "app_project_update", "app_project_edit_source", "app_project_canvas_edit",
+    "app_project_refresh_voice_assistant", "app_project_add_voice_assistant", "app_project_undo",
+    "app_project_change_undo",
+})
+CALLER_TOOLS = ACTOR_TOOLS | PROJECT_HISTORY_TOOLS
+# None means the workbench UI, while an empty string denotes an unidentified agent.
+project_tool_caller: ContextVar[str | None] = ContextVar("project_tool_caller", default="")
 _ACTOR_COLORS = ("#7551bd", "#246cb4", "#147c68", "#a46114", "#b94265", "#8c522a", "#465ccc", "#237c87")
 
 
