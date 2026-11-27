@@ -433,6 +433,27 @@ Header: `Authorization: Bearer <token from data/mcp-token>`. Body: `{"name": "vi
 Response: whatever that tool returns (see each tool's shape above/below). `401` on a bad/missing token, `404` for
 an unknown tool, `400` on an argument validation error.
 
+#### Edit project text with `app_project_patch`
+
+Send the current revision and the literal replacements to the agent call endpoint.
+
+```json
+{
+  "name": "app_project_patch",
+  "arguments": {
+    "id": "0123456789abcdef",
+    "expected_revision": "0123456789abcdefabcd",
+    "replacements": [
+      {"file": "assets/style.css", "old": ".card { padding: 12px; }", "new": ".card { padding: 16px; }"}
+    ]
+  }
+}
+```
+
+Use an existing project-relative `.css`, `.js`, `.html`, `.json` or `.md` file. Matches are literal and case-sensitive. Each nonempty `old` must appear exactly once in the file as modified by the preceding entries. An empty `new` removes the match. The batch is atomic. An absent or repeated match returns HTTP 400 with `file`, `replacement` (one-based) and `occurrences`. A stale `expected_revision` returns HTTP 409 with the current revision in `revision`. Use `lang: "es"` for Spanish errors.
+
+The compact receipt gives the new `revision`, `changed`, paths and UTF-8 sizes in `changed_files`, the sum of those sizes in `bytes`, current `preview` status and an `app_project_undo` call. A running preview follows the saved revision through the same path as `app_project_update`. A batch with no effective change keeps the current revision and returns `changed: false`, `bytes: 0` and no undo call.
+
 ## PWA
 
 `GET /manifest.webmanifest` (`application/manifest+json`) and `GET /sw.js` (`application/javascript`) — standard
