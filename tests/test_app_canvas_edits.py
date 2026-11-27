@@ -64,7 +64,7 @@ def test_canvas_edit_emits_the_agent_actor_only_for_a_change(opened, monkeypatch
     assert presence == [(project["id"], project["revision"], actor, {"vsrc": args["vsrc"], "box": None})]
 
 
-def test_canvas_tool_syncs_the_running_preview_after_edit_source_and_undo(opened):
+def test_canvas_tool_uses_the_saved_preview_after_edit_source_update_and_undo(opened):
     projects, project = opened
     services = SimpleNamespace(app_projects=projects)
     project_id = project["id"]
@@ -90,20 +90,25 @@ def test_canvas_tool_syncs_the_running_preview_after_edit_source_and_undo(opened
         **target, "expected_revision": project["revision"], "change": {"kind": "text", "value": "Edited"},
     })
     assert source["changed"]
-    assert not style(source["revision"])["changed"]
     assert_served(source["revision"])
-    applied = style(source["revision"], operation="apply")
+    assert not style(source["revision"])["changed"]
+    updated = call_tool(services, "app_project_update", {
+        "id": project_id, "expected_revision": source["revision"], "files": {"assets/style.css": CSS + "\n/* Update */\n"},
+    })
+    assert_served(updated["revision"])
+    assert not style(updated["revision"])["changed"]
+    applied = style(updated["revision"], operation="apply")
     assert applied["changed"]
 
-    # Serve the new revision first so undo leaves a genuinely older snapshot running.
-    assert not style(applied["revision"], pixels=42)["changed"]
     assert_served(applied["revision"])
     undo = applied["undo"]
     restored = call_tool(services, undo["tool"], undo["arguments"])
-    assert restored["revision"] == source["revision"]
-    assert not style(restored["revision"], pixels=42)["changed"]
+    assert restored["revision"] == updated["revision"]
     assert_served(restored["revision"])
-    assert style(restored["revision"], operation="apply", pixels=42)["changed"]
+    assert not style(restored["revision"], pixels=42)["changed"]
+    reapplied = style(restored["revision"], operation="apply", pixels=42)
+    assert reapplied["changed"]
+    assert_served(reapplied["revision"])
 
     with pytest.raises(ValueError, match="The revision changed"):
         style("f" * 20)

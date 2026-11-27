@@ -50,16 +50,16 @@ def test_preview_repeated_source_edit_and_undo(tmp_path):
         assert projects.get(project_id, original["revision"])["files"] == original["files"]
         with pytest.raises(ValueError, match="revision changed"):
             projects.edit_source(project_id, vsrc, "h2", original["revision"], {"kind": "text", "value": "Stale"})
-        assert projects.source_count(project_id, vsrc)["revision"] == original["revision"]
-        new_preview = projects.preview(project_id, updated["revision"])
+        assert projects.source_count(project_id, vsrc)["revision"] == updated["revision"]
+        new_preview = updated["preview"]
         with urlopen(new_preview["url"] + "/", timeout=5) as response:
             saved = response.read().decode()
         assert saved.count(f'<h2 data-vsrc="{vsrc}">Revisado á &lt;mapa&gt;</h2>') == 2
         restored = projects.undo(**updated["undo"]["arguments"])
         assert restored["files"] == original["files"]
         assert restored["revision"] == original["revision"]
-        assert projects.source_count(project_id, vsrc)["revision"] == updated["revision"]
-        restored_preview = projects.preview(project_id, restored["revision"])
+        restored_preview = restored["preview"]
+        assert restored_preview["session"] == new_preview["session"] == preview["session"]
         assert restored_preview["url"] == new_preview["url"] == preview["url"]
         assert projects.source_count(project_id, vsrc)["revision"] == original["revision"]
     finally:

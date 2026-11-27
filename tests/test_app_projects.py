@@ -86,8 +86,9 @@ def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):
         changed = projects.update(id, {"pages/index.html": "<h1>Revised page</h1>{{table}}"}, original["revision"])
         assert changed["revision"] != original["revision"]
         assert projects.get(id, original["revision"])["files"] == original["files"]
-        assert projects.status(id)["revision"] == original["revision"]
-        preview = projects.preview(id)
+        assert projects.status(id) == changed["preview"]
+        assert changed["preview"]["revision"] == changed["revision"]
+        preview = changed["preview"]
         assert preview["url"] == url
         _, raw = request(preview["url"] + "/api/records")
         assert json.loads(raw)["records"][0]["quantity"] == 3
@@ -139,7 +140,10 @@ def test_failed_revision_keeps_the_visible_runtime(tmp_path):
         assert runtime_url != preview["url"]
         _, direct = request(runtime_url + "/")
         assert SCRIPT_ROOT.encode() not in direct
-        projects.update(id, {"server.py": "raise RuntimeError('broken')"}, original["revision"])
+        saved = projects.update(id, {"server.py": "raise RuntimeError('broken')"}, original["revision"])
+        assert saved["revision"] != original["revision"] and saved["preview"] == preview
+        assert "Application did not start" in saved["preview_warning"]
+        assert projects.get(id)["revision"] == saved["revision"]
 
         with pytest.raises(ValueError, match="Application did not start"):
             projects.preview(id)
@@ -237,7 +241,9 @@ def test_stable_preview_link_starts_and_reuses_the_project(client):
 
     updated = projects.update(id, {"pages/index.html": "<h1>Current revision</h1>"}, project["revision"])
     assert open_link().headers["location"] == first["url"] + path
-    assert projects.status(id) == first
+    assert projects.status(id) == updated["preview"]
+    assert updated["preview"]["session"] == first["session"]
+    assert updated["preview"]["revision"] == updated["revision"]
     client.post(base, json={"operation": "stop"})
     assert open_link().status_code == 307
     current = projects.status(id)
