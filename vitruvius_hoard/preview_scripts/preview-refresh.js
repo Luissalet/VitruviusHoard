@@ -93,16 +93,19 @@
     return actions;
   }
 
-  async function refreshHtml(change) {
+  async function prepareHtml(change, files) {
     const route = location.href;
     const response = await fetch(route, { cache: "no-store", signal: AbortSignal.timeout(3500) });
     const revision = response.headers.get("X-Vitruvius-Revision");
     if (!response.ok || !response.headers.get("content-type")?.includes("text/html") ||
-        (revision && revision !== change.revision)) return { applied: false };
+        (revision && revision !== change.revision)) return null;
     const documentAfter = new DOMParser().parseFromString(await response.text(), "text/html");
-    if (location.href !== route) return { applied: false };
-    const actions = planHtml(documentAfter, new Set(change.files));
-    if (!actions) return { applied: false };
+    if (location.href !== route) return null;
+    const actions = planHtml(documentAfter, new Set(files));
+    return actions && { documentAfter, actions };
+  }
+
+  function applyHtml({ documentAfter, actions }) {
     const touched = [];
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     for (const { node, after, replace } of actions) {
@@ -119,7 +122,7 @@
       }
     }
     rendered = documentAfter.documentElement;
-    return { applied: true, targets: { ...describe(touched), exact: true } };
+    return { ...describe(touched), exact: true };
   }
 
   function stylesheetRules(rules, result = new Map()) {
@@ -132,47 +135,102 @@
     return result;
   }
 
-  async function refreshCss(change) {
-    const paths = new Set(change.files.map((file) => file.replace(/^public\//, "")));
-    const styles = [];
-    for (const node of document.querySelectorAll('link[rel~="stylesheet"][href]')) {
-      const url = new URL(node.href);
-      const path = decodeURIComponent(url.pathname).slice(1);
-      if (url.origin === location.origin && paths.has(path)) styles.push({ node, url, path });
+  function sheetPath(href) {
+    const url = new URL(href);
+    return url.origin === location.origin ? decodeURIComponent(url.pathname).slice(1) : null;
+  }
+
+  function sheetPaths(sheet, paths = new Set()) {
+    if (!sheet?.href) return paths;
+    const path = sheetPath(sheet.href);
+    if (!path || paths.has(path)) return paths;
+    paths.add(path);
+    for (const rule of sheet.cssRules) {
+      if (rule.type === CSSRule.IMPORT_RULE) sheetPaths(rule.styleSheet, paths);
     }
-    if (new Set(styles.map(({ path }) => path)).size !== paths.size) return { applied: false };
-    const staged = styles.map(({ node, url }) => {
+    return paths;
+  }
+
+  function stageStyles(files, revision) {
+    if (!files.length) return [];
+    const paths = new Set(files.map((file) => file.replace(/^public\//, "")));
+    const matched = new Set();
+    const stages = [];
+    for (const node of document.querySelectorAll('link[rel~="stylesheet"][href]')) {
+      const path = sheetPath(node.href);
+      if (!path || node.disabled || node.relList.contains("alternate")) continue;
+      const affected = [path, ...sheetPaths(node.sheet)].filter((file) => paths.has(file));
+      if (!affected.length) continue;
+      for (const file of affected) matched.add(file);
       const next = node.cloneNode();
-      url.searchParams.set("__vitruvius_revision", change.revision);
+      const url = new URL(node.href);
+      url.searchParams.set("__vitruvius_revision", revision);
       next.href = url.href;
       next.media = "not all";
-      return { node, next };
-    });
-    try {
-      const loaded = await Promise.all(staged.map(({ node, next }) => new Promise((resolve) => {
-        const timer = setTimeout(() => resolve(false), 3500);
-        next.onload = () => { clearTimeout(timer); resolve(true); };
-        next.onerror = () => { clearTimeout(timer); resolve(false); };
-        node.after(next);
-      })));
-      if (!loaded.every(Boolean)) return { applied: false };
-      const selectors = new Set();
-      for (const { node, next } of staged) {
-        const oldRules = stylesheetRules(node.sheet?.cssRules || []);
-        const newRules = stylesheetRules(next.sheet?.cssRules || []);
-        for (const selector of new Set([...oldRules.keys(), ...newRules.keys()])) {
-          if (oldRules.get(selector) !== newRules.get(selector)) selectors.add(selector);
-        }
-      }
-      for (const { node, next } of staged) {
+      stages.push({ node, next });
+    }
+    return matched.size === paths.size ? stages : null;
+  }
+
+  async function loadStyles(stages) {
+    const ready = await Promise.all(stages.map((stage) => new Promise((resolve) => {
+      const { node, next } = stage;
+      const finish = (loaded) => {
+        clearTimeout(timer);
         next.onload = next.onerror = null;
-        if (node.hasAttribute("media")) next.setAttribute("media", node.getAttribute("media"));
-        else next.removeAttribute("media");
-        node.remove();
+        resolve(loaded);
+      };
+      const timer = setTimeout(() => finish(false), 3500);
+      stage.finish = finish;
+      next.onload = () => finish(Boolean(next.sheet));
+      next.onerror = () => finish(false);
+      node.after(next);
+    })));
+    return ready.every(Boolean);
+  }
+
+  function applyStyles(stages) {
+    const selectors = new Set();
+    for (const { node, next } of stages) {
+      const oldRules = stylesheetRules(node.sheet?.cssRules || []);
+      const newRules = stylesheetRules(next.sheet.cssRules);
+      for (const selector of new Set([...oldRules.keys(), ...newRules.keys()])) {
+        if (oldRules.get(selector) !== newRules.get(selector)) selectors.add(selector);
       }
-      return { applied: true, targets: { selectors: [...selectors] } };
+    }
+    // Activate every replacement before removing the old cascade.
+    for (const { node, next } of stages) {
+      if (node.hasAttribute("media")) next.setAttribute("media", node.getAttribute("media"));
+      else next.removeAttribute("media");
+    }
+    for (const { node } of stages) node.remove();
+    return selectors;
+  }
+
+  async function refreshDocument(change) {
+    const route = location.href;
+    const css = change.files.filter((file) => /\.css$/i.test(file));
+    const pages = change.files.filter((file) => /^pages\/.+\.html$/i.test(file));
+    if (css.length + pages.length !== change.files.length || !change.files.length) return { applied: false };
+    const stages = stageStyles(css, change.revision);
+    if (!stages) return { applied: false };
+    try {
+      const [html, stylesReady] = await Promise.all([
+        pages.length ? prepareHtml(change, pages).catch(() => null) : null,
+        loadStyles(stages),
+      ]);
+      if (!stylesReady) return { applied: false, stylesheetFailed: true };
+      if (location.href !== route || (pages.length && !html) || stages.some(({ node, next }) => !node.isConnected || !next.isConnected) ||
+          html?.actions.some(({ node }) => !node.isConnected)) return { applied: false };
+
+      const selectors = applyStyles(stages);
+      const targets = html ? applyHtml(html) : {};
+      return { applied: true, targets: { ...targets, selectors: [...new Set([...selectors, ...(targets.selectors || [])])] } };
     } finally {
-      for (const { node, next } of staged) if (node.isConnected) next.remove();
+      for (const { node, next, finish } of stages) {
+        finish?.(false);
+        if (node.isConnected) next.remove();
+      }
     }
   }
 
@@ -243,11 +301,14 @@
       reply({ revision: revisionMeta()?.content });
     } else if (hostOrigin && message.type === "canvas/refresh") {
       try {
-        const { change, mode } = message;
+        const { change } = message;
         const meta = revisionMeta();
         if (meta?.content && meta.content !== change.previous_revision) return reply({ applied: false });
-        const result = await (mode === "css" ? refreshCss(change) : refreshHtml(change));
-        if (result.applied && meta) meta.content = change.revision;
+        const result = await refreshDocument(change);
+        if (result.applied) {
+          if (meta) meta.content = change.revision;
+          window.dispatchEvent(new Event("vitruvius:preview-updated"));
+        }
         reply(result);
       } catch {
         reply({ applied: false });

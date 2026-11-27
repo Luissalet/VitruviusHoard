@@ -9,10 +9,15 @@ test("only compatible page and sheet changes can patch the loaded document", () 
     [["assets/page.css"], "css"],
     [["layout.html"], "full"],
     [["assets/client.js"], "full"],
-    [["pages/index.html", "assets/page.css"], "full"],
+    [["pages/index.html", "assets/page.css"], "mixed"],
+    [["pages/index.html", "assets/page.css", "assets/client.js"], "full"],
     [[], "full"],
   ]) assert.equal(refreshKind({ ...event, files }, "a", "b"), expected);
-  assert.equal(refreshKind({ ...event, files: ["assets/style.css"], global_styles: ["assets/style.css"] }, "a", "b"), "full");
+  assert.equal(refreshKind({ ...event, files: ["assets/style.css"], global_styles: ["assets/style.css"] }, "a", "b"), "css");
+  assert.equal(refreshKind({
+    ...event, files: ["pages/index.html", "assets/style.css", "assets/tokens.css"],
+    global_styles: ["assets/style.css", "assets/tokens.css"],
+  }, "a", "b"), "mixed");
   assert.equal(refreshKind({ ...event, files: ["pages/index.html"] }, "older", "b"), "full");
   assert.equal(refreshKind({ ...event, files: ["pages/index.html"] }, "a", "newer"), "full");
 });
