@@ -152,21 +152,24 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const style = document.createElement('style');
     style.textContent = `
       :host{pointer-events:none!important}
-      .cursor{position:absolute;left:0;top:0;opacity:1;transition:opacity .3s;will-change:transform;pointer-events:none}
+      .cursor{position:absolute;left:0;top:0;opacity:0;will-change:transform;pointer-events:none}
+      .cursor.fading{transition:opacity .24s ease-out}
       .arrow{display:block;width:30px;height:34px;filter:drop-shadow(0 1px 2px #101828b3)}
-      .name,.note{position:absolute;left:21px;top:27px;max-width:min(240px,60vw);padding:4px 8px;border-radius:5px;
+      .annotation{position:absolute;left:0;top:0;display:grid;justify-items:start;gap:4px;
+        width:max-content;max-width:min(240px,60vw)}
+      .name,.note{box-sizing:border-box;max-width:100%;padding:4px 8px;border-radius:5px;
         color:#f8fafc;background:#192333;font:600 14px/1.35 'Source Sans 3',system-ui,sans-serif;
         box-shadow:0 2px 6px #0005;border:1px solid #ffffff85}
       .name{display:flex;align-items:center;gap:6px;white-space:nowrap}
       .name::before{content:'';flex:none;width:8px;height:8px;border-radius:2px;background:var(--actor-color);border:1px solid #ffffff90}
       .name span{overflow:hidden;text-overflow:ellipsis}
-      .note{top:56px;font-size:12px;font-weight:400;white-space:normal;width:max-content;overflow-wrap:anywhere}
+      .note{font-size:12px;font-weight:400;overflow-wrap:anywhere}
       .note:empty{display:none}
       .ring{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border:2px solid var(--actor-color);border-radius:50%;opacity:0;box-sizing:border-box}
       .highlight .ring{opacity:.75;transform:scale(1.2)}
       .thinking .arrow{animation:thinking 1.5s ease-in-out infinite}
       @keyframes thinking{50%{opacity:.45}}
-      @media(prefers-reduced-motion:reduce){.cursor{transition:none}.thinking .arrow{animation:none}}
+      @media(prefers-reduced-motion:reduce){.cursor.fading{transition:none}.thinking .arrow{animation:none}}
     `;
     try {
       const sheet = new CSSStyleSheet();
@@ -178,9 +181,28 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
 
   function removeCursor(id, cursor) {
     clearTimeout(cursor.timer);
-    cursor.animation?.cancel();
+    cursor.motion?.stop();
     cursor.node.remove();
     actors.delete(id);
+  }
+
+  function poseKey(id) {
+    const session = document.querySelector('meta[name="vitruvius-preview-session"]')?.content;
+    return session ? 'vitruvius-cursor:' + session + ':' + id : null;
+  }
+
+  function readPose(key) {
+    if (!key) return null;
+    try {
+      const pose = JSON.parse(sessionStorage.getItem(key));
+      return Array.isArray(pose) && pose.length === 2 && pose.every(Number.isFinite) ? pose : null;
+    } catch (_) { return null; }
+  }
+
+  function rememberPose(cursor) {
+    if (!cursor.key || !cursor.positioned) return;
+    try { sessionStorage.setItem(cursor.key, JSON.stringify([cursor.x, cursor.y])); }
+    catch (_) { /* Frame storage may be disabled. */ }
   }
 
   function cursorFor(actor = {}, presence = false) {
@@ -191,17 +213,19 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       const node = document.createElement('div');
       node.className = 'cursor';
       node.dataset.actor = id;
-      node.innerHTML = '<div class="ring"></div><svg class="arrow" viewBox="0 0 30 34" xmlns="http://www.w3.org/2000/svg"><path d="M3 3L5 27L12 21L17 31L22 28L17 19L27 18Z" fill="var(--actor-color)" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg><span class="name"><span></span></span><span class="note"></span>';
+      node.innerHTML = '<div class="ring"></div><svg class="arrow" viewBox="0 0 30 34" xmlns="http://www.w3.org/2000/svg"><path d="M3 3L5 27L12 21L17 31L22 28L17 19L27 18Z" fill="var(--actor-color)" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg><div class="annotation"><span class="name"><span></span></span><span class="note"></span></div>';
       layer.append(node);
-      cursor = {node, x: 28 + actors.size * 34, y: 32, active: 0, timer: null, animation: null};
+      const key = poseKey(id);
+      const pose = readPose(key);
+      cursor = {
+        node, key, x: pose?.[0] ?? 0, y: pose?.[1] ?? 0, positioned: Boolean(pose), active: 0, timer: null, motion: null,
+      };
       actors.set(id, cursor);
     }
     const color = typeof actor.color === 'string' && CSS.supports('color', actor.color) ? actor.color : '#b58937';
     cursor.node.style.setProperty('--actor-color', color);
     cursor.node.querySelector('.name span').textContent = String(actor.name || id).slice(0, 80);
-    cursor.node.style.transform = `translate(${cursor.x}px,${cursor.y}px)`;
-    cursor.node.style.opacity = '1';
-    positionAnnotations(cursor);
+    if (cursor.positioned) paintCursor(cursor, cursor.x, cursor.y, cursor.target?.getBoundingClientRect());
     scheduleCursorExpiry(id, cursor, presence);
     return cursor;
   }
@@ -211,8 +235,8 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     if (cursor.active || actors.get(id) !== cursor) return;
     const delay = Number.isFinite(expiryMs) && expiryMs >= 0 ? expiryMs : (presence ? 4000 : 20000);
     cursor.timer = setTimeout(() => {
-      if (presence) removeCursor(id, cursor);
-      else cursor.node.style.opacity = '0';
+      cursor.node.classList.add('fading');
+      cursor.node.style.opacity = '0';
     }, delay);
   }
 
@@ -221,69 +245,123 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     scheduleCursorExpiry(String(actor.id || 'agent'), cursor, presence, expiryMs);
   }
 
-  function positionAnnotations(cursor) {
-    const name = cursor.node.querySelector('.name');
-    const note = cursor.node.querySelector('.note');
-    const nameBox = name.getBoundingClientRect();
-    const noteBox = note.getBoundingClientRect();
-    const height = nameBox.height + (note.textContent ? noteBox.height + 4 : 0);
-    const width = Math.max(nameBox.width, noteBox.width);
-    const margin = 6;
+  const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
+
+  function positionAnnotations(cursor, target = cursor.target?.getBoundingClientRect()) {
+    const annotation = cursor.node.querySelector('.annotation');
+    const {width, height} = annotation.getBoundingClientRect();
+    const {x, y} = cursor;
     const gap = 8;
-    const maxTop = Math.max(margin, innerHeight - height - margin);
-    let top = Math.max(margin, Math.min(cursor.y + 27, maxTop));
-    let left = cursor.x + 21;
-    if (cursor.avoidTarget && cursor.target?.isConnected) {
-      const target = cursor.target.getBoundingClientRect();
-      if (top < target.bottom && top + height > target.top) {
-        if (target.bottom + gap <= maxTop) top = target.bottom + gap;
-        else if (target.top - gap - height >= margin) top = target.top - gap - height;
-        else if (target.right + gap + width <= innerWidth - margin) left = target.right + gap;
-        else if (target.left - gap - width >= margin) left = target.left - gap - width;
-        else top = cursor.y < innerHeight / 2 ? maxTop : margin;
+    const margin = 6;
+    const candidates = [[x + 23, y + 28], [x - width - gap, y + 26], [x + 23, y - height - gap]];
+    if (target) candidates.push(
+      [x + 23, target.bottom + gap], [x + 23, target.top - height - gap],
+      [target.right + gap, y], [target.left - width - gap, y],
+    );
+    const overlap = (left, top) => target
+      ? Math.max(0, Math.min(left + width, target.right) - Math.max(left, target.left))
+        * Math.max(0, Math.min(top + height, target.bottom) - Math.max(top, target.top))
+      : 0;
+    let best;
+    for (const [left, top] of candidates) {
+      const candidate = [clamp(left, margin, innerWidth - width - margin), clamp(top, margin, innerHeight - height - margin)];
+      candidate.push(overlap(...candidate));
+      if (!best || candidate[2] < best[2]) best = candidate;
+      if (!best[2]) break;
+    }
+    annotation.style.transform = 'translate(' + (best[0] - x) + 'px,' + (best[1] - y) + 'px)';
+  }
+
+  function pointerPoint(rect) {
+    const x = clamp((rect.left + rect.right) / 2, 4, innerWidth - 34);
+    const y = clamp((rect.top + rect.bottom) / 2 - 9, 4, innerHeight - 38);
+    const fitsRight = rect.right >= 0 && rect.right + 34 <= innerWidth;
+    if (fitsRight && rect.right - rect.left < innerWidth / 2) return [rect.right + 4, y];
+    if (rect.left >= 36 && rect.left < innerWidth) return [rect.left - 32, y];
+    if (fitsRight) return [rect.right + 4, y];
+    if (rect.top >= 40 && rect.top < innerHeight) return [x, rect.top - 36];
+    if (rect.bottom >= 0 && rect.bottom + 38 <= innerHeight) return [x, rect.bottom + 4];
+    return [x, y];
+  }
+
+  function paintCursor(cursor, x, y, rect) {
+    cursor.positioned = true;
+    cursor.x = x;
+    cursor.y = y;
+    cursor.node.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    cursor.node.classList.remove('fading');
+    cursor.node.style.opacity = '1';
+    positionAnnotations(cursor, rect);
+  }
+
+  function glide(cursor, rectAt, signal, settling = false) {
+    cursor.motion?.stop();
+    signal?.throwIfAborted();
+    if (reduced() || (!cursor.positioned && !settling)) {
+      const rect = rectAt();
+      if (rect) paintCursor(cursor, ...pointerPoint(rect), rect);
+      rememberPose(cursor);
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      let frame, previousRect;
+      const start = performance.now();
+      let previousFrame = start;
+      let stableSince = start;
+      const motion = {stop};
+      cursor.motion = motion;
+
+      function stop() {
+        cancelAnimationFrame(frame);
+        signal?.removeEventListener('abort', stop);
+        if (cursor.motion === motion) cursor.motion = null;
+        rememberPose(cursor);
+        resolve();
       }
-    }
-    for (const [element, box, offset] of [[name, nameBox, 0], [note, noteBox, nameBox.height + 4]]) {
-      element.style.left = `${Math.max(margin, Math.min(left, innerWidth - box.width - margin)) - cursor.x}px`;
-      element.style.top = `${top + offset - cursor.y}px`;
-    }
+      function sample(now) {
+        const rect = rectAt();
+        if (!rect || signal?.aborted) return stop();
+        const goal = pointerPoint(rect);
+        if (!previousRect || Math.hypot(rect.left - previousRect.left, rect.top - previousRect.top) > .5) stableSince = now;
+        previousRect = rect;
+        const dx = goal[0] - cursor.x;
+        const dy = goal[1] - cursor.y;
+        const distance = Math.hypot(dx, dy);
+        // Bound displacement even when the browser delays a frame.
+        const step = Math.min(36, .84 * Math.max(0, now - previousFrame), Math.max(2, distance * .3));
+        previousFrame = now;
+        if (!cursor.positioned || distance <= step) paintCursor(cursor, ...goal, rect);
+        else paintCursor(cursor, cursor.x + dx * step / distance, cursor.y + dy * step / distance, rect);
+        if ((distance <= step && (!settling || now - stableSince >= 96)) || now - start >= 3500) return stop();
+        frame = requestAnimationFrame(sample);
+      }
+
+      signal?.addEventListener('abort', stop, {once: true});
+      frame = requestAnimationFrame(sample);
+    });
   }
 
   function cursorApi(cursor, signal, presence) {
     return {
       presence,
-      async to(element, box, {scroll = true, avoidTarget = false} = {}) {
+      async to(element, box, {scroll = true, smooth = false, block = 'nearest', settling = false} = {}) {
         signal?.throwIfAborted();
-        if (scroll) element?.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
+        if (scroll) element?.scrollIntoView({
+          block, inline: 'nearest', behavior: smooth && !reduced() ? 'smooth' : 'instant',
+        });
         if (!cursor) return;
-        const rect = element?.getBoundingClientRect() ||
-          {left: box.x - scrollX, top: box.y - scrollY, width: box.w, height: box.h};
-        const x = Math.max(4, Math.min(innerWidth - 32, rect.left + Math.min(rect.width / 2, 60)));
-        const y = Math.max(4, Math.min(innerHeight - 38, rect.top + rect.height / 2));
-        cursor.node.classList.remove('thinking');
-        cursor.node.classList.remove('highlight');
+        cursor.node.classList.remove('thinking', 'highlight');
         cursor.node.querySelector('.note').textContent = '';
         cursor.target = element;
-        cursor.avoidTarget = avoidTarget;
-        const distance = Math.hypot(x - cursor.x, y - cursor.y);
-        cursor.animation?.cancel();
-        if (!reduced()) {
-          const animation = cursor.animation = cursor.node.animate([
-            {transform: `translate(${cursor.x}px,${cursor.y}px)`},
-            {transform: `translate(${(cursor.x + x) / 2}px,${(cursor.y + y) / 2 - Math.min(45, distance / 8)}px)`, offset: .5},
-            {transform: `translate(${x}px,${y}px)`}
-          ], {duration: Math.min(600, 250 + distance / 3), easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards'});
-          await animation.finished.catch(() => {});
-          if (cursor.animation !== animation) return;
-          cursor.animation = null;
-          animation.cancel();
-        }
+        const rectAt = () => {
+          if (element?.isConnected) return element.getBoundingClientRect();
+          if (!box) return null;
+          const left = box.x - scrollX;
+          const top = box.y - scrollY;
+          return {left, top, right: left + box.w, bottom: top + box.h};
+        };
+        await glide(cursor, rectAt, signal, settling || smooth);
         signal?.throwIfAborted();
-        cursor.x = x;
-        cursor.y = y;
-        cursor.node.style.transform = `translate(${x}px,${y}px)`;
-        positionAnnotations(cursor);
-        cursor.animation = null;
       },
       press() {
         if (!cursor || reduced()) return;
@@ -390,7 +468,7 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const element = actionTarget(args, 'input:not([type=hidden]),textarea,[contenteditable=true]', cursor.presence);
     enabled(element);
     if (element.readOnly || element.matches('input[type=file],input[type=checkbox],input[type=radio],input[type=button],input[type=submit]')) fail('bad_args', 'Target is not an editable text field');
-    await cursor.to(element, undefined, {avoidTarget: true});
+    await cursor.to(element);
     await cursor.touch();
     element.focus();
     const characters = Array.from(args.value);
@@ -447,19 +525,40 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     return result;
   });
 
+  function scrollDestination(top) {
+    const aim = top + innerHeight * .34;
+    let closest, best = Infinity;
+    for (const element of document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,figcaption,[data-hoard-ref]')) {
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom + scrollY <= top || rect.top + scrollY >= top + innerHeight) continue;
+      const distance = Math.abs((rect.top + rect.bottom) / 2 + scrollY - aim);
+      const score = distance + (element.matches('h1,h2,h3,h4,h5,h6') ? 0 : 40);
+      if (score < best && visible(element)) {
+        closest = element;
+        best = score;
+      }
+    }
+    return closest;
+  }
+
   generic('app_scroll', 'Scroll to a target or move the page', {...targetProperties, by: {type: 'string', enum: ['down', 'up', 'top', 'bottom']}}, [], async (args, {cursor}) => {
-    if (args.ref || args.text || args.label) await cursor.to(target(args));
+    if (args.ref || args.text || args.label) await cursor.to(target(args), undefined, {smooth: true, block: 'center'});
     else {
       if (!args.by) fail('bad_args', 'Provide a target or scroll direction');
-      const top = args.by === 'top' ? 0 : args.by === 'bottom' ? document.documentElement.scrollHeight : scrollY + innerHeight * (args.by === 'up' ? -.8 : .8);
+      const end = Math.max(0, document.scrollingElement.scrollHeight - innerHeight);
+      const distance = innerHeight * (args.by === 'up' ? -.8 : .8);
+      const top = args.by === 'top' ? 0 : args.by === 'bottom' ? end : clamp(scrollY + distance, 0, end);
+      const element = scrollDestination(top);
       window.scrollTo({top, behavior: reduced() ? 'instant' : 'smooth'});
+      const point = {x: scrollX + innerWidth / 2, y: top + innerHeight * .34, w: 0, h: 0};
+      await cursor.to(element, point, {scroll: false, settling: true});
     }
     return {scrolled: true};
   });
 
   generic('app_highlight', 'Point to a target with a note', {...targetProperties, note: {type: 'string'}}, [], async (args, {cursor}) => {
     const element = target(args);
-    await cursor.to(element);
+    await cursor.to(element, undefined, {scroll: !visible(element, true), smooth: true, block: 'center'});
     cursor.press();
     cursor.note(args.note);
     return {highlighted: label(element)};
@@ -482,7 +581,6 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     registerTool,
     pointTo(element, actor = {}, {presence = false, expiryMs, ...options} = {}) {
       if (!(element instanceof Element) || !element.getClientRects().length) return;
-      if (presence && reduced()) return cursorApi(undefined, undefined, true).to(element, undefined, options);
       const cursor = cursorFor(actor, presence);
       cursor.active++;
       clearTimeout(cursor.timer);
@@ -520,10 +618,8 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       if (!tool) fail('not_found', 'Unknown tool');
       const args = message.args ?? {};
       validate(args, tool.inputSchema);
-      if (!presence || !reduced()) {
-        actorCursor = cursorFor(actor, Boolean(presence));
-        actorCursor.active++;
-      }
+      actorCursor = cursorFor(actor, Boolean(presence));
+      actorCursor.active++;
       const cursor = cursorApi(actorCursor, controller.signal, presence);
       const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); const error = new Error('Tool exceeded 45 seconds'); error.code = 'timeout'; reject(error); }, 45000); });
       const result = await Promise.race([Promise.resolve().then(() => tool.handler(args, {actor, cursor, signal: controller.signal})), timeout]);
@@ -543,17 +639,17 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     const revision = document.querySelector('meta[name="vitruvius-preview-revision"]')?.content;
     const hint = message.target || {};
     let shown = false;
-    if (remaining > 0 && revision === message.revision && !reduced()) {
+    if (remaining > 0 && revision === message.revision) {
       const actor = message.actor || {};
       const explicit = hint.vsrc || hint.selector;
-      const fallback = !explicit && !hint.box ? document.querySelector('main, body > section') || document.body : null;
+      const fallback = !explicit && !hint.box ? scrollDestination(scrollY) || document.querySelector('main') || document.body : null;
       const element = presenceTarget(hint) || fallback;
       if (element || hint.box) {
         const cursor = cursorFor(actor, true);
         cursor.active++;
         try {
           const motion = cursorApi(cursor, AbortSignal.timeout(Math.ceil(remaining)), hint);
-          await motion.to(element, hint.box);
+          await motion.to(element, hint.box, {scroll: Boolean(explicit)});
           await motion.touch();
           shown = true;
         } catch (_) {
@@ -612,7 +708,17 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
       if (message.state === 'gone') {
         const cursor = actors.get(id);
         if (cursor) removeCursor(id, cursor);
-      } else if (['idle', 'thinking'].includes(message.state)) cursorFor(message.actor).node.classList.toggle('thinking', message.state === 'thinking');
+      } else if (['idle', 'thinking'].includes(message.state)) {
+        const cursor = cursorFor(message.actor);
+        if (!cursor.positioned) {
+          cursor.target = scrollDestination(scrollY);
+          const rect = cursor.target?.getBoundingClientRect();
+          if (rect) paintCursor(cursor, ...pointerPoint(rect), rect);
+          else paintCursor(cursor, innerWidth / 2, innerHeight / 3);
+          rememberPose(cursor);
+        }
+        cursor.node.classList.toggle('thinking', message.state === 'thinking');
+      }
     }
   });
   function activate() {
@@ -622,15 +728,16 @@ BRIDGE_JS = r"""// App Dock page bridge. Served after the copilot launcher, with
     for (const event of ['hashchange', 'popstate']) window.addEventListener(event, navigation);
     const positionCursors = () => {
       for (const cursor of actors.values()) {
-        if (!cursor.target?.isConnected || cursor.animation) continue;
-        const rect = cursor.target.getBoundingClientRect();
-        cursor.x = Math.max(4, Math.min(innerWidth - 32, rect.left + Math.min(rect.width / 2, 60)));
-        cursor.y = Math.max(4, Math.min(innerHeight - 38, rect.top + rect.height / 2));
-        cursor.node.style.transform = `translate(${cursor.x}px,${cursor.y}px)`;
-        positionAnnotations(cursor);
+        if (cursor.motion || cursor.node.style.opacity !== '1' || !cursor.target) continue;
+        if (!cursor.target.isConnected && cursor.target.id) cursor.target = document.getElementById(cursor.target.id);
+        if (cursor.target?.isConnected) {
+          void glide(cursor, () => cursor.target?.isConnected ? cursor.target.getBoundingClientRect() : null, undefined, true);
+        }
       }
     };
     window.addEventListener('resize', positionCursors);
+    window.addEventListener('vitruvius:preview-updated', positionCursors);
+    window.addEventListener('pagehide', () => { for (const cursor of actors.values()) rememberPose(cursor); });
     document.addEventListener('scroll', positionCursors, true);
     for (const method of ['pushState', 'replaceState']) {
       const original = history[method];
