@@ -12,7 +12,8 @@ import pytest
 from hoard_link import LinkConfig
 from vitruvius_hoard.agent_tools import call_tool, tool_catalog
 from vitruvius_hoard.critique import DEFAULT_TIMEOUT_S
-from vitruvius_hoard.software.global_models import GlobalLink
+from vitruvius_hoard.software import global_models
+from vitruvius_hoard.software.global_models import GlobalLink, global_job
 
 
 def test_confined_render_id_keeps_the_successful_vision_contract(services):
@@ -84,6 +85,7 @@ def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(ser
         asyncio.run(client.aclose())
 
     assert partial["vision"] == {"status": "timed_out"}
+    assert partial["vision_model"] == "fixture-vision"
     assert partial["partial"] is True and partial["missing"] == ["vision", "clean_review"]
     assert partial["review"]["status"] == "timed_out" and partial["review"]["verdict"] is None
     assert "use_vision=false" in partial["next_action"]["es"]
@@ -91,6 +93,48 @@ def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(ser
     assert deterministic["score_source"] == "heuristic"
     for key in ("score", "heuristic_score", "score_source", "findings", "gate", "ship_ready", "rules_run"):
         assert partial[key] == deterministic[key], key
+
+
+
+@pytest.mark.parametrize(("descriptor_ready", "reason"), [(True, "no_model"), (False, "resolution_timeout")])
+def test_missing_vision_is_classified_before_generation(services, monkeypatch, descriptor_ready, reason):
+    monkeypatch.setattr(global_models, "VISION_RESOLUTION_TIMEOUT_S", 0.1, raising=False)
+    requests = []
+    cancelled = Event()
+
+    async def provider(request):
+        requests.append(request.method)
+        if request.method == "GET" and descriptor_ready:
+            return httpx.Response(200, json={"endpoint_id": "text-only", "model": "fixture-text",
+                                             "connection_revision": "1", "vision": False,
+                                             "chat_path": "/api/global-model/v1/chat/completions"})
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    origin = "http://vision-fixture.invalid"
+    monkeypatch.setattr(LinkConfig, "faustus_origin", lambda config: origin)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(provider))
+    link = GlobalLink(LinkConfig(faustus_urls=(origin,)), client=client)
+    services.link_sync = link.sync
+    render = services.render(html="<h1>Captured page</h1>", widths=[390])
+    try:
+        with global_job():
+            report = call_tool(services, "design_critique", {
+                "render_id": render["id"], "timeout_s": 1, "clean_review": True,
+            })
+    finally:
+        link.sync.close()
+        asyncio.run(client.aclose())
+
+    assert requests == ["GET"]
+    assert cancelled.is_set() is not descriptor_ready
+    assert report["vision"] == {"status": "unavailable", "reason": reason}
+    assert report["vision_model"] is None and report["partial"]
+    assert report["missing"] == ["vision", "clean_review"] and report["score_source"] == "heuristic"
+    assert report["review"]["status"] == "unavailable" and report["review"]["reason"] == reason
+    assert "use_vision=false" in report["next_action"]["es"]
 
 
 def test_published_critique_schema_matches_the_native_tool():
