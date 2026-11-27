@@ -1,7 +1,7 @@
 // Pure helpers for the pinned comments of the application preview (no DOM or React: they run under `node --test`).
 
 /** Message types the inspector sends about comments. */
-export const COMMENT_FROM_PAGE = ["dock/comment-target", "dock/comment-anchors", "dock/comment-focus"];
+export const COMMENT_FROM_PAGE = ["dock/comment-target", "dock/comment-anchors", "dock/comment-focus", "dock/comment-jump"];
 
 /** True for a comment message that really comes from the preview frame: right window, right origin, right envelope. */
 export function isCommentMessage(event, frameWindow, origin) {

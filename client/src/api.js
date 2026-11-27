@@ -146,6 +146,7 @@ export const api = {
   appProjectCreate: (body) => request("POST", "/design/api/app-projects", { body }),
   appProjectArchive: (id, body) => request("POST", "/design/api/app-projects/" + encodeURIComponent(id) + "/archive", { body }),
   appProjectUpdate: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}`, { body }),
+  appProjectUndo: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo`, { body }),
   appProjectPreview: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/preview`, { body }),
   appProjectExport: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/export`, { body }),
   appProjectRender: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/render`, { body }),

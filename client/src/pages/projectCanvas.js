@@ -24,6 +24,11 @@ export function useProjectCanvas(frameRef, projectId, previewUrl, revision, loca
 
     function greet() {
       close();
+      try {
+        if (frame.contentWindow?.location.href === "about:blank") return;
+      } catch {
+        // The frame has loaded its own preview origin.
+      }
       send({ type: "dock/hello", host: "faustus", session: projectId, locale });
     }
 
