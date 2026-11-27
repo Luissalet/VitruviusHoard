@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PatternPicker from "../components/PatternPicker.jsx";
+import CaptureWarning from "../components/CaptureWarning.jsx";
 import { api } from "../api.js";
 import { useApp } from "../App.jsx";
 import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot-hooks.js";
@@ -61,6 +62,7 @@ function RenderView({ render, t, lang }) {
   const groups = findingsByArea(render.lint?.findings);
   return (
     <div className="mt-4 flex flex-col gap-4">
+      <CaptureWarning captures={render.capture_truncation} lang={lang} />
       <div className="flex gap-3 overflow-x-auto pb-2">
         {render.files?.map((f) => (
           <figure key={f.width} className="shrink-0" style={{ width: Math.min(f.width, 320) }}>

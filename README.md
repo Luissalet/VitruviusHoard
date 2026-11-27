@@ -35,7 +35,7 @@ Language-model work in the app uses only the globally selected model through Fau
 
 ### Rendering and comparison
 
-The `render_preview` tool opens public or loopback URLs and local HTML files with their relative assets. The result lists each capture's path and dimensions.
+The `render_preview` tool opens public or loopback URLs and local HTML files with their relative assets. The result lists each capture's path and dimensions. Full-page screenshots capture up to 16,000 CSS pixels of height per width and report both heights and whether any content was cut.
 - Render HTML or a URL in Chromium to screenshots (several widths) and scroll video; compare two renders.
 - Visual parity: frozen-browser comparison of a candidate against a reference, screen by screen, with noise masking.
 - Remake: rebuild a public page from its URL or a screenshot until it reaches visual parity, as a copy or a rebuild, with downloadable code and a report. Every round gets a fidelity score (normalized SSIM per screen plus the reference's headings, links, buttons and fields) with the zones that differ most outlined on the capture, and a remake can keep going until a fidelity target is reached.

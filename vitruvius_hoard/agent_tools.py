@@ -22,16 +22,13 @@ from .preview_inspector import read_selection
 from .preview_comments import acknowledge_comments, dismiss_comment, list_comments, reply_to_comment, resolve_comment, undo_comment
 from .motion import Composition, MotionStore, page as motion_page, templates as motion_templates
 
-AGENT_INSTRUCTIONS = """Design library, Chromium rendering, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
-New design: call design_brief with the full commission. Before building, use its art_direction.create in Alternatives,
-score the three library directions and record a decision. Choose a non-typical direction unless the brief asks for the
-typical one. Pass the decided study id to app_project_create for a custom app.
-Use content_sections as drafts and keep the commission's facts. Put a simulation notice in the footer only on request.
-After the decision, render, critique and iterate to 8/10 or three rounds, then use page_assay.
-For a deterministic critique of a captured render, call design_critique with use_vision=false and clean_review=false.
-If design_critique returns partial=true, its missing list names the model passes that did not finish.
-Diagrams: diagram_types, then diagram_render. Fix their gates.
-reference_add, source_add, source_ingest, tokens_delete and reference_delete change things: only when asked."""
+AGENT_INSTRUCTIONS = """Design library, Chromium renders, critique, tokens and references. Cite `[vitruvius: ...]` for library material.
+Call design_brief with the full commission. Before building, use its art_direction.create in Alternatives, score its three library directions and record the decision. Avoid the typical direction unless requested. Pass the decided study ID to app_project_create for custom apps.
+Use content_sections as drafts, keep the commission's facts and add a footer simulation notice only on request.
+After the decision, render and critique to 8/10 or three rounds, then use page_assay.
+For deterministic critique, call design_critique with use_vision=false and clean_review=false. On partial=true, missing lists unfinished model passes.
+Use diagram_types then diagram_render and fix their gates.
+Run reference_add, source_add, source_ingest, tokens_delete and reference_delete only when asked."""
 
 
 # ---------------- library ----------------
@@ -941,7 +938,7 @@ TOOLS: list[Tool] = [
     Tool("render_preview",
         "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\n"
         "Use url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, "
-        "capture paths, dimensions, lint and metrics. Image bytes are optional.\n"
+        "capture paths, dimensions, lint and metrics. Full-page screenshots report truncated, page_height and captured_height. Image bytes are optional.\n"
         "Sinónimos: renderizar, capturar, screenshot, previsualizar.",
         RenderArgs, ann(False, False, False), run_render_preview),
     Tool("design_lint",
@@ -1088,7 +1085,7 @@ TOOLS: list[Tool] = [
         AppCritiqueUndoArgs, ann(False, False, False), lambda services, args: services.app_projects.undo_critique_round(**args.model_dump()),
         capped=False),
     Tool("app_project_render", "Capture an application preview for critique. Capturar la vista previa de una aplicación.\n"
-        "Returns screenshots and a lint summary. Pass detail=true for full metrics and probe.",
+        "Returns screenshots and a lint summary. Full-page screenshots report truncated, page_height and captured_height. Pass detail=true for full metrics and probe.",
         AppProjectRenderToolArgs, ann(False, False, True), run_app_project_render, capped=False),
     Tool("app_project_call", "Read project records or run a typed action. Leer registros o ejecutar una acción tipada.",
         AppCallArgs, ann(False, True, False), lambda services, args: services.app_project_call(**args.model_dump())),

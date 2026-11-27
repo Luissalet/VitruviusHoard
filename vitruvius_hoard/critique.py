@@ -161,7 +161,7 @@ def _keyboard_summary(probe: dict, findings: list[dict]) -> Optional[dict]:
 def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Optional[list[bytes]] = None,
              link: Any = None, use_vision: bool = True, tokens: Optional[dict] = None, waivers: Any = None,
              prior_waivers: Optional[dict[str, str]] = None, clean_review: bool = False,
-             deadline: Optional[float] = None) -> dict[str, Any]:
+             deadline: Optional[float] = None, capture_truncation: Optional[list[dict]] = None) -> dict[str, Any]:
     """Lint (all registered rules; ``tokens`` switches on the design-system rules) merged with an optional vision pass.
 
     ``waivers`` are validated (``waivers.validate``) and applied to Reflex findings. The result carries the tier gate and, with
@@ -174,6 +174,13 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
     vision_summary = ""
     vision_score = None
     vision = {"status": "not_requested"}
+    capture_note = ""
+    if capture_truncation:
+        dimensions = ", ".join(
+            f"{file['width']} px wide: top {file['captured_height']} of {file['page_height']} px"
+            for file in capture_truncation
+        )
+        capture_note = f"\nScreenshots cropped ({dimensions}). Treat the uncaptured regions as unobserved."
 
     if use_vision and not images:
         vision = {"status": "unavailable", "reason": "no_screenshots"}
@@ -183,7 +190,7 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
         try:
             messages = [
                 {"role": "system", "content": vision_prompt()},
-                {"role": "user", "content": f"Focus: {focus or 'overall quality'}. Rate and critique this page."},
+                {"role": "user", "content": f"Focus: {focus or 'overall quality'}. Rate and critique this page.{capture_note}"},
             ]
             result = review_mod.chat_before_deadline(link, messages, images, deadline)
             text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
@@ -219,7 +226,8 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
 
     review = None
     if clean_review:
-        review = review_mod.run(link, images=images or [], html=html, findings=findings, deadline=deadline)
+        review = review_mod.run(link, images=images or [], html=html, findings=findings,
+                                deadline=deadline, capture_note=capture_note)
         if review.get("verdict") in ("recapture", "rebuild") and gate["state"] == "pass":
             gate = {**gate, "state": "fix", "blocking": [*gate["blocking"], f"review:{review['verdict']}"]}
 

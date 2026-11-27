@@ -55,7 +55,8 @@ def parse(text: str) -> dict[str, Any]:
     return {"verdict": verdict, "findings": findings[:MAX_FINDINGS], "verdict_parsed": parsed}
 
 
-def run(link: Any, *, images: list[bytes], html: str, findings: list[dict], deadline: Optional[float] = None) -> dict[str, Any]:
+def run(link: Any, *, images: list[bytes], html: str, findings: list[dict],
+        deadline: Optional[float] = None, capture_note: str = "") -> dict[str, Any]:
     """One fresh call: no history, no system prompt from the build. ``link`` has a sync ``chat``."""
     t0 = time.monotonic()
     if link is None:
@@ -66,7 +67,7 @@ def run(link: Any, *, images: list[bytes], html: str, findings: list[dict], dead
     truncated = len(html or "") > HTML_CAP
     messages = [
         {"role": "system", "content": _SYSTEM},
-        {"role": "user", "content": f"AUTOMATIC FINDINGS\n{_digest(findings)}\n\nHTML{' (truncated)' if truncated else ''}\n```html\n{body}\n```"},
+        {"role": "user", "content": f"AUTOMATIC FINDINGS\n{_digest(findings)}{capture_note}\n\nHTML{' (truncated)' if truncated else ''}\n```html\n{body}\n```"},
     ]
     try:
         result = chat_before_deadline(link, messages, images, deadline)

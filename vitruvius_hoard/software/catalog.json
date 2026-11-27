@@ -423,7 +423,7 @@
   },
   {
     "name": "render_preview",
-    "description": "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\nUse url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, capture paths, dimensions, lint and metrics. Image bytes are optional.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
+    "description": "Capture each requested width in Chromium and run lint. Captura cada anchura y revisa el diseño.\nUse url for a public or loopback preview, or path for HTML with relative assets. Returns the render ID, capture paths, dimensions, lint and metrics. Full-page screenshots report truncated, page_height and captured_height. Image bytes are optional.\nSinónimos: renderizar, capturar, screenshot, previsualizar.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -3395,7 +3395,7 @@
   },
   {
     "name": "app_project_render",
-    "description": "Capture an application preview for critique. Capturar la vista previa de una aplicación.\nReturns screenshots and a lint summary. Pass detail=true for full metrics and probe.",
+    "description": "Capture an application preview for critique. Capturar la vista previa de una aplicación.\nReturns screenshots and a lint summary. Full-page screenshots report truncated, page_height and captured_height. Pass detail=true for full metrics and probe.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
