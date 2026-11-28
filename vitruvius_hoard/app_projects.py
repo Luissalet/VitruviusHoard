@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sqlite3
+import stat
 import shutil
 import subprocess
 import sys
@@ -268,10 +269,13 @@ class AppProjects:
         # Earlier creation undos left an empty marker. An explicit index state takes precedence.
         return index["archived"] if "archived" in index else (root / "archived").exists()
 
-    def _load_index(self, id, *, include_archived=False):
+    def _project_path(self, id):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
             raise ValueError("Invalid project id")
-        root = self.root / id
+        return self.root / id
+
+    def _load_index(self, id, *, include_archived=False):
+        root = self._project_path(id)
         try:
             index = json.loads((root / "project-index.json").read_text(encoding="utf-8"))
         except FileNotFoundError as error:
@@ -352,6 +356,82 @@ class AppProjects:
                     "operation": "restore" if archived else "archive", "confirm": True, "lang": lang,
                 }}
             return result
+
+    @staticmethod
+    def _deletion_stat(path, es):
+        info = path.lstat()
+        is_reparse_point = getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+        if is_reparse_point or not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+            raise AppError("unsafe_project_data",
+                           "El proyecto contiene un enlace o un tipo de archivo que no se puede borrar."
+                           if es else "The project contains a link or file type that cannot be deleted.")
+        return info
+
+    @classmethod
+    def _deletion_inventory(cls, root, es):
+        directories = [root]
+        pending = [root]
+        files = []
+        size = 0
+        while pending:
+            for entry in pending.pop().iterdir():
+                info = cls._deletion_stat(entry, es)
+                if stat.S_ISDIR(info.st_mode):
+                    directories.append(entry)
+                    pending.append(entry)
+                else:
+                    files.append(entry)
+                    size += info.st_size
+        return directories, files, size
+
+    def delete(self, id, expected_revision, expected_updated_ts, confirm=False, lang="en"):
+        es = lang == "es"
+        if confirm is not True:
+            raise AppError("confirm_required",
+                           "Confirma que quieres borrar definitivamente el proyecto."
+                           if es else "Confirm that you want to permanently delete the project.")
+        with self.lock:
+            root = self._project_path(id)
+            index_path = root / "project-index.json"
+            try:
+                self._deletion_stat(root, es)
+                self._deletion_stat(index_path, es)
+                _, index = self._load_index(id, include_archived=True)
+            except (FileNotFoundError, LookupError, NotADirectoryError) as error:
+                raise AppError("not_found", "No se ha encontrado el proyecto." if es
+                               else "Application project not found") from error
+            if index["id"] != id:
+                raise AppError("unsafe_project_data", "El registro no corresponde al proyecto." if es
+                               else "The stored record does not match this project.")
+            if not self._archived(root, index):
+                raise AppError("project_active", "Archiva el proyecto antes de borrarlo." if es
+                               else "Archive the project before deleting it.", status=409)
+            if index["revision"] != expected_revision or index["updated_ts"] != expected_updated_ts:
+                raise AppError("conflict", "El proyecto ha cambiado. Vuelve a cargar la lista de archivados." if es
+                               else "The project changed. Reload the archived projects.")
+            try:
+                self.stop(id)
+                self.revision_events.close_project(id)
+                directories, files, size = self._deletion_inventory(root, es)
+                # Keep the archived record available if removing any of its contents fails.
+                for path in files:
+                    if path != index_path:
+                        path.unlink()
+                for path in reversed(directories[1:]):
+                    path.rmdir()
+                index_path.unlink()
+                try:
+                    root.rmdir()
+                except OSError:
+                    write_json_atomic(index_path, index)
+                    raise
+            except OSError as error:
+                raise AppError("delete_failed",
+                               "No se ha podido completar el borrado. Revisa la lista de archivados antes de reintentar."
+                               if es else "Deletion could not be completed. Check the archived list before retrying.",
+                               status=500) from error
+            return {"id": id, "name": index["name"], "path": str(root),
+                    "files": len(files), "bytes": size, "deleted": True}
 
     def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None,
                     author=None):

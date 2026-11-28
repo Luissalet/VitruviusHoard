@@ -11,7 +11,7 @@ from starlette.concurrency import run_in_threadpool
 from .deps import services
 from ..agent_tools import (
     AppArchiveArgs, AppCallArgs, AppCanvasEditArgs, AppChangeUndoArgs, AppCreateArgs, AppCritiqueRoundBody,
-    AppCritiqueUndoBody, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
+    AppCritiqueUndoBody, AppDeleteBody, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
     run_app_project_create,
 )
 from ..app_creation import ProjectCreationError
@@ -229,6 +229,11 @@ def project_undo(request: Request, id: str, body: AppUndoArgs):
 @router.post("/{id}/archive")
 def project_archive(request: Request, id: str, body: AppArchiveArgs):
     return execute(lambda: services(request).app_projects.archive(id, **body.model_dump(exclude={"id"})))
+
+
+@router.post("/{id}/delete")
+def project_delete(request: Request, id: str, body: AppDeleteBody):
+    return execute(lambda: services(request).app_projects.delete(id, **body.model_dump()))
 
 
 @router.post("/{id}/source-edit")

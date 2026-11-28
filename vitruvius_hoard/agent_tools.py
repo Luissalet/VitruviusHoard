@@ -261,6 +261,17 @@ class AppArchiveArgs(BaseModel):
     lang: Literal["en", "es"] = "en"
 
 
+class AppDeleteBody(BaseModel):
+    expected_revision: str = Field(description="Current source revision from the archived project list.")
+    expected_updated_ts: FiniteFloat = Field(description="Current updated_ts from the archived project list.")
+    confirm: StrictBool = Field(False, description="Set true to confirm permanent deletion.")
+    lang: Literal["en", "es"] = "en"
+
+
+class AppDeleteArgs(AppDeleteBody):
+    id: str = Field(description="Archived application project ID.")
+
+
 class VoiceAssistantRevision(BaseModel):
     expected_revision: str = Field(min_length=1, max_length=64, description="Current project source revision.")
 
@@ -1056,6 +1067,10 @@ TOOLS: list[Tool] = [
         AppSourceCountArgs, ann(True), lambda services, args: services.app_projects.source_count(**args.model_dump())),
     Tool("app_project_archive", "Archive or restore a project with its history. Archivar o restaurar una aplicación.",
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
+    Tool("app_project_delete", "Permanently delete an archived project. Borrar definitivamente un proyecto archivado.\n"
+        "Read app_project_list with archived=true first. Use its revision and updated_ts and confirm=true. "
+        "Returns the deleted path, file count and bytes. No undo.",
+        AppDeleteArgs, ann(False, True, False), lambda services, args: services.app_projects.delete(**args.model_dump())),
     Tool("app_project_change_undo", "Undo one recorded project edit. Deshacer un cambio del historial.",
         AppChangeUndoArgs, ann(False, False, True),
         lambda services, args: services.app_projects.undo_change(**args.model_dump(), author=project_tool_author()),
