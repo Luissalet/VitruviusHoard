@@ -91,6 +91,27 @@ def faustus_urls(configured: Iterable[str], document: Optional[dict[str, Any]] =
     return with_placement("faustus", configured, document, hub=hub)
 
 
+def faustus_destination(url: str, document: dict[str, Any]) -> str:
+    """Name the endpoint the relay actually reached, without exposing its address to the panel."""
+    import re
+    from ipaddress import ip_address
+
+    host = (urlsplit(url).hostname or "").lower()
+    if url.rstrip("/") == placed("faustus", document):
+        node = str(document.get("node") or "").strip().lower()
+        match = re.fullmatch(r"spark[ -]?(\d+)", node) or re.fullmatch(r"spark-?(\d+)", host.split(".")[0])
+        return f"spark:{match[1]}" if match else "spark"
+    if host == "localhost":
+        return "pc"
+    try:
+        if ip_address(host).is_loopback:
+            return "pc"
+    except ValueError:
+        pass
+    match = re.fullmatch(r"spark-?(\d+)", host.split(".")[0])
+    return f"spark:{match[1]}" if match else "remote"
+
+
 def app_url(app_id: str, configured: str = "", *, hub: Optional[str] = None) -> str:
     """Where one movable app answers: the placed address, else ``configured``."""
     return placed(app_id, hub=hub) or str(configured or "").rstrip("/")

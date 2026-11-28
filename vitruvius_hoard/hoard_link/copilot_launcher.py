@@ -120,8 +120,10 @@ LAUNCHER_JS = r"""
           } catch { /* an attachment must never prevent the native chat from sending */ }
         }
       }
-      return fetch('/api/copilot/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json', ...APP_HEADERS },
+      const response = await fetch('/api/copilot/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json', ...APP_HEADERS },
         body: JSON.stringify(envelope), signal: request.signal, credentials: 'same-origin' });
+      showDestination(response.headers.get('X-Hoard-Copilot-Destination'));
+      return response;
     })();
   }
 
@@ -141,7 +143,13 @@ LAUNCHER_JS = r"""
       border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45);font:14px/1.4 system-ui,sans-serif}
     .hoard-copilot[data-inline]{position:static;width:100%;height:clamp(250px,46dvh,435px);min-width:0;z-index:auto;box-shadow:none}
     .hoard-copilot[data-inline]:not(:has(faustus-chat)){height:auto}
-    .hoard-copilot .hoard-copilot-loading{margin:12px}
+    .hoard-copilot-conversation-tools{display:none;padding:6px 12px;border-bottom:1px solid rgba(127,127,127,.25)}
+    .hoard-copilot[data-inline] .hoard-copilot-conversation-tools{display:block}
+    .hoard-copilot-conversation-tools p{margin:0}
+    .hoard-copilot-conversation-tools form{display:flex;flex-wrap:wrap;align-items:end;gap:6px;margin-top:6px}
+    .hoard-copilot-conversation-tools label{min-width:0;flex:1 1 10ch}
+    .hoard-copilot-conversation-tools input{display:block;width:100%;box-sizing:border-box}
+    .hoard-copilot-conversation-tools :is(input,button){font:inherit;color:inherit;background:#242132;border:1px solid #91879d;border-radius:4px;padding:3px 6px}    .hoard-copilot .hoard-copilot-loading{margin:12px}
     .hoard-copilot details summary{cursor:pointer}
     .hoard-copilot[hidden]{display:none}
     .hoard-copilot header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;
@@ -156,6 +164,7 @@ LAUNCHER_JS = r"""
 .hoard-copilot .hoard-copilot-unavailable small{opacity:.65;overflow-wrap:anywhere}
     @media (max-width:600px){.hoard-copilot{top:var(--hoard-copilot-top,6px);right:6px;bottom:60px;width:calc(100vw - 12px)}}`;
 
+  let conversationControls = null;
   let info = null;
   let aside = null;
   let panel = null;
@@ -263,6 +272,7 @@ LAUNCHER_JS = r"""
     if (panel && key !== currentKey) {
       currentKey = key;
       panel.session = await savedSession(key);
+      syncRename(panel);
       refreshAfterTurn = true;
     }
     return ctx;
@@ -322,6 +332,122 @@ LAUNCHER_JS = r"""
     if (full) { turn.part++; turn.text = ''; }
   }
 
+  function showDestination(value) {
+    if (!conversationControls || typeof value !== 'string') return;
+    const es = lang() === 'es';
+    const spark = /^spark:(\d+)$/.exec(value);
+    const labels = {
+      pc: 'Faustus · PC',
+      spark: 'Faustus · Spark',
+      remote: es ? 'Faustus · Servidor remoto' : 'Faustus · Remote server',
+      connection_lost: es ? 'Se ha perdido la conexión con Faustus.' : 'The connection to Faustus was lost.',
+      unavailable: es ? 'Ningún Faustus responde.' : 'No Faustus server is responding.',
+    };
+    const label = spark ? 'Faustus · Spark ' + spark[1] : labels[value];
+    if (typeof label !== 'string') return;
+    conversationControls.destination.textContent = label;
+    conversationControls.destination.hidden = false;
+  }
+
+  async function readInfo() {
+    const response = await fetch('/api/copilot/info', { headers: APP_HEADERS, credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) {
+      showDestination(response.headers.get('X-Hoard-Copilot-Destination'));
+      throw new Error((await response.text()) || ('HTTP ' + response.status));
+    }
+    const data = await response.json();
+    showDestination(data.destination);
+    return data;
+  }
+
+  function syncRename(element) {
+    const controls = conversationControls;
+    const session = element?.session || null;
+    if (!controls || (controls.element === element && controls.session === session)) return;
+    controls.element = element;
+    controls.session = session;
+    controls.rename.hidden = !session;
+    controls.rename.open = false;
+    controls.field.value = '';
+    controls.notice.textContent = '';
+  }
+
+  function makeConversationControls() {
+    const es = lang() === 'es';
+    const root = document.createElement('div');
+    root.className = 'hoard-copilot-conversation-tools';
+    const destination = document.createElement('p');
+    destination.setAttribute('role', 'status');
+    destination.hidden = true;
+    const rename = document.createElement('details');
+    rename.hidden = true;
+    const summary = document.createElement('summary');
+    summary.textContent = es ? 'Renombrar conversación' : 'Rename conversation';
+    const form = document.createElement('form');
+    const label = document.createElement('label');
+    label.textContent = es ? 'Nuevo nombre' : 'New name';
+    const field = document.createElement('input');
+    field.required = true;
+    label.appendChild(field);
+    const save = document.createElement('button');
+    save.type = 'submit';
+    save.textContent = es ? 'Guardar' : 'Save';
+    const notice = document.createElement('p');
+    notice.setAttribute('role', 'status');
+    form.append(label, save);
+    rename.append(summary, form);
+    root.append(destination, rename, notice);
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (save.disabled) return;
+      const element = panel;
+      const session = element?.session;
+      const key = currentKey;
+      const name = field.value.trim();
+      if (!session || !name) {
+        notice.textContent = es ? 'Escribe un nombre para la conversación.' : 'Enter a name for the conversation.';
+        return;
+      }
+      save.disabled = true;
+      notice.textContent = '';
+      const stillCurrent = () => panel === element && currentKey === key && element.session === session;
+      try {
+        if (keyFor(await appContext()) !== key || !stillCurrent()) {
+          schedule();
+          return;
+        }
+        const encoded = encodeURIComponent(session);
+        const response = await relayFetch(location.origin + '/api/session/' + encoded,
+          { method: 'PATCH', body: new URLSearchParams({ name }) });
+        if (!stillCurrent()) return;
+        let unsupported = [405, 501].includes(response.status);
+        if (response.status === 404) {
+          const existing = await relayFetch(location.origin + '/api/hoard-copilot/conversations/' + encoded);
+          unsupported = existing.ok;
+        }
+        if (!stillCurrent()) return;
+        if (unsupported) {
+          notice.textContent = es ? 'Este Faustus no permite renombrar conversaciones.' : 'This Faustus does not support renaming conversations.';
+          return;
+        }
+        if (!response.ok) throw new Error('Rename failed');
+        const result = await response.json();
+        if (!stillCurrent()) return;
+        if (result?.id !== session || result.name !== name) throw new Error('Rename not confirmed');
+        rename.open = false;
+        field.value = '';
+        notice.textContent = es ? 'Nombre guardado.' : 'Name saved.';
+        summary.focus();
+        try { await element.refreshConversations?.(); } catch { /* the rename already persisted */ }
+      } catch {
+        if (stillCurrent()) notice.textContent = es ? 'No se pudo guardar el nombre. Vuelve a intentarlo.' : 'Could not save the name. Try again.';
+      } finally {
+        save.disabled = false;
+      }
+    });
+    return { root, destination, rename, field, notice };
+  }
   function buildPanel(sessionId) {
     const element = document.createElement('faustus-chat');
     element.server = window.location.origin;
@@ -346,6 +472,7 @@ LAUNCHER_JS = r"""
     if (sessionId) element.session = sessionId;
     element.addEventListener('faustus:session-change', (event) => {
       if (currentKey) store.set(currentKey, event.detail && event.detail.sessionId);
+      if (panel === element) syncRename(element);
     });
     element.addEventListener('faustus:turn-start', () => { busy = true; });
     // A completed tool can already have saved changes while the model is still answering.
@@ -377,9 +504,7 @@ LAUNCHER_JS = r"""
   }
 
   async function mount(body, title) {
-    const response = await fetch('/api/copilot/info', { headers: APP_HEADERS, credentials: 'same-origin' });
-    if (!response.ok) throw new Error((await response.text()) || ('HTTP ' + response.status));
-    info = await response.json();
+    info = await readInfo();
     title.textContent = 'Faustus · ' + (info.app_name || info.app_id);
     await import(info.panel_url);
     // One conversation per app data space (and per project when the app names one): the route of every turn travels
@@ -387,6 +512,7 @@ LAUNCHER_JS = r"""
     currentKey = keyFor(await appContext());
     panel = buildPanel(await savedSession(currentKey));
     body.replaceChildren(panel);
+    syncRename(panel);
     if (typeof panel.loadHistory === 'function') await panel.loadHistory();
   }
 
@@ -400,6 +526,7 @@ LAUNCHER_JS = r"""
     const next = buildPanel(await savedSession(key));
     panel.replaceWith(next);
     panel = next;
+    syncRename(panel);
     if (typeof next.loadHistory === 'function') await next.loadHistory();
   }
 
@@ -471,8 +598,8 @@ LAUNCHER_JS = r"""
     box.className = 'hoard-copilot-unavailable';
     const text = document.createElement('p');
     text.textContent = es
-      ? 'Faustus no está disponible ahora mismo. La aplicación sigue funcionando y tu borrador se conserva; vuelve a intentarlo cuando Faustus esté en marcha.'
-      : 'Faustus is not available right now. The app keeps working and your draft is kept; try again once Faustus is running.';
+      ? 'Ningún Faustus responde ahora mismo. La aplicación sigue funcionando y tu borrador se conserva; vuelve a intentarlo cuando Faustus esté en marcha.'
+      : 'No Faustus server is responding right now. The app keeps working and your draft is kept; try again once Faustus is running.';
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.textContent = es ? 'Reintentar' : 'Try again';
@@ -498,7 +625,7 @@ LAUNCHER_JS = r"""
       status.textContent = lang() === 'es' ? 'Cargando conversación…' : 'Loading conversation…';
       body.replaceChildren(status);
     }
-    mounting = mount(body, title).catch((error) => { panel = null; unavailable(body, title, error); }).finally(() => { mounting = null; });
+    mounting = mount(body, title).catch((error) => { panel = null; syncRename(null); conversationControls.destination.hidden = true; unavailable(body, title, error); }).finally(() => { mounting = null; });
     return mounting;
   }
 
@@ -534,7 +661,13 @@ LAUNCHER_JS = r"""
     returnFocus = trigger || toggle;
     if (aside) {
       placeAside(container); setVisible(toggle, true); fitBelowHeader();
-      if (!panel && !mounting && mountTarget) attach(mountTarget.body, mountTarget.title); else schedule();
+      if (!panel && !mounting && mountTarget) attach(mountTarget.body, mountTarget.title);
+      else {
+        if (panel && aside.hasAttribute('data-inline')) {
+          readInfo().then(({ settings_url }) => { if (info) info.settings_url = settings_url; }).catch(() => {});
+        }
+        schedule();
+      }
       return;
     }
     aside = document.createElement('aside');
@@ -555,7 +688,8 @@ LAUNCHER_JS = r"""
     header.append(title, close);
     const body = document.createElement('div');
     body.className = 'hoard-copilot-body';
-    aside.append(header, body);
+    conversationControls = makeConversationControls();
+    aside.append(header, conversationControls.root, body);
     stopKeys(aside);
     // Escape closes the panel (inside an app dialog it stays for the dialog; the chat may claim it first).
     aside.addEventListener('keydown', (event) => {

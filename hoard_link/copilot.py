@@ -87,6 +87,9 @@ class CopilotClient:
                 yield line.decode("utf-8")
 
 
+DESTINATION_HEADER = "X-Hoard-Copilot-Destination"
+
+
 def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_name=None):
     """Mount a thin local relay; all panel/chat/agent behavior stays in Faustus.
 
@@ -115,42 +118,54 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
     except FileExistsError:
         pass
     space_id = space_file.read_text(encoding="utf-8").strip()
-    selected = {"url": None, "until": 0.0}
+    selected = None
 
-    async def locate():
+    async def locate(*, recheck=False):
         import asyncio
         import time
         from . import where
-        if selected["url"] and time.monotonic() < selected["until"]:
-            return selected["url"]
-        # Faustus may have been moved to a Spark by the Hub's "Run on": the placed address is tried after the
-        # configured ones (they refuse at once when it is off here). The choice is re-checked every few seconds.
-        candidates = await asyncio.to_thread(where.faustus_urls, urls, None, hub=config.hub_url)
+
+        nonlocal selected
+        previous = selected
+        if not recheck and previous and time.monotonic() < previous["until"]:
+            return previous
+        # The placed endpoint is a fallback. A configured endpoint that answers keeps precedence.
+        placement = await asyncio.to_thread(where.current, config.hub_url)
+        candidates = where.faustus_urls(urls, placement)
         async with httpx.AsyncClient(timeout=3, trust_env=False) as client:
             for base in candidates:
                 try:
-                    response = await client.get(base.rstrip("/") + "/api/hoard-copilot/capabilities", headers=headers,
+                    response = await client.get(base + "/api/hoard-copilot/capabilities", headers=headers,
                                                 timeout=3 if base.startswith("http://127.") else 8)
-                    if response.status_code == 200 and response.json().get("contract_version"):
-                        selected["url"] = base.rstrip("/")
-                        selected["until"] = time.monotonic() + 20
-                        return selected["url"]
+                    if response.status_code != 200:
+                        continue
+                    capabilities = response.json()
+                    if isinstance(capabilities, dict) and capabilities.get("contract_version"):
+                        selected = {"url": base, "destination": where.faustus_destination(base, placement),
+                                    "until": time.monotonic() + 20}
+                        return selected
                 except (httpx.HTTPError, ValueError):
                     continue
-        raise HTTPException(503, "Faustus copilot is unavailable on the configured endpoints")
+        if selected is previous:
+            selected = None
+        raise HTTPException(503, "Faustus copilot is unavailable on the configured endpoints",
+                            headers={DESTINATION_HEADER: "unavailable"})
 
     async def relay(path, method="GET", body=None, content_type="application/json", extra_headers=None):
-        base = await locate()
+        nonlocal selected
+        target = await locate()
         client = httpx.AsyncClient(timeout=None, trust_env=False)
-        request = client.build_request(method, base + path, content=body, headers={**headers, **(extra_headers or {}), "Content-Type": content_type})
+        request = client.build_request(method, target["url"] + path, content=body, headers={**headers, **(extra_headers or {}), "Content-Type": content_type})
         try:
             upstream = await client.send(request, stream=True)
         except httpx.HTTPError as exc:
             await client.aclose()
-            selected["url"] = None
+            if selected is target:
+                selected = None
             from . import where
             where.forget()
-            raise HTTPException(503, "Faustus copilot connection failed") from exc
+            raise HTTPException(503, "Faustus copilot connection failed",
+                                headers={DESTINATION_HEADER: "connection_lost"}) from exc
         async def chunks():
             try:
                 async for chunk in upstream.aiter_bytes():
@@ -159,14 +174,15 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
                 await upstream.aclose()
         forwarded = {key: value for key, value in upstream.headers.items() if key.lower() in (
             "content-type", "x-odysseus-run-id", "x-faustus-idempotent-replay", "x-faustus-api-version")}
+        forwarded[DESTINATION_HEADER] = target["destination"]
         return StreamingResponse(chunks(), status_code=upstream.status_code, headers=forwarded, background=BackgroundTask(client.aclose))
 
     @router.get("/info")
     async def info():
-        base = await locate()
+        target = await locate(recheck=True)
         return {"app_id": app_id, "app_name": app_name or app_id, "data_space_id": space_id,
                 "panel_url": "/api/copilot/panel.js", "server": "/", "tool_server_id": app_id,
-                "settings_url": base + "/studio/settings"}
+                "settings_url": target["url"] + "/studio/settings", "destination": target["destination"]}
 
     @router.get("/panel.js")
     async def panel():
