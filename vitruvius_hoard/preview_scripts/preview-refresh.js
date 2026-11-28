@@ -5,7 +5,7 @@
   const provenance = (node) => (node.getAttribute("data-vsrc") || "").match(/^(.*):(\d+):(\d+)$/);
   const sourceFile = (node) => provenance(node)?.[1];
   const sourced = (root) => [...root.querySelectorAll("[data-vsrc]")];
-  const revisionMeta = () => document.querySelector('meta[name="vitruvius-preview-revision"]');
+  const revisionMeta = (root = document) => root.querySelector('meta[name="vitruvius-preview-revision"]');
   // In the preview response this script runs before deferred project code and dock overlays.
   let rendered = document.documentElement.cloneNode(true);
   let hostOrigin;
@@ -139,6 +139,9 @@
         node.setAttribute("data-vsrc", after.getAttribute("data-vsrc"));
       }
     }
+    const proof = revisionMeta(documentAfter)?.getAttribute("data-vtext-edits");
+    if (proof) revisionMeta()?.setAttribute("data-vtext-edits", proof);
+    else revisionMeta()?.removeAttribute("data-vtext-edits");
     rendered = documentAfter.documentElement;
     return { ...describe(touched), exact: true };
   }

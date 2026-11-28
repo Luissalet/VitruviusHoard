@@ -270,17 +270,18 @@
     for (const name of IDENTITY_ATTRS) { const value = attrOf(element, name); if (value) found[name] = compactAttr(value); }
     return found;
   }
-  // On a different revision, a unique stable name in the same source file survives a text edit. A source position
-  // alone can move when lines change. For unnamed elements, keep the text and sibling checks and reject ambiguity.
+  // A stable name follows edits within its source file. For unnamed elements, use the text when it still matches.
+  // A verified text edit in the revision history can also keep a unique source selector and the same parent slot.
   // The caller only sends pins for the current page. `all(selector)` lists matching elements.
-  function locatePin(pin, all, pageRevision) {
+  function locatePin(pin, all, pageRevision, textEdits = []) {
     const lost = {state: 'lost', element: null};
     const attrs = pin.attrs && typeof pin.attrs === 'object' ? pin.attrs : {};
     const attrsOk = element => IDENTITY_ATTRS.every(name => !attrs[name] || compactAttr(attrOf(element, name)) === attrs[name]);
     const quote = value => String(value).replace(/["\\]/g, '\\$&');
+    const source = pin.vsrc && `[data-vsrc="${quote(pin.vsrc)}"]`;
     try {
-      if (pin.revision && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) {
-        const here = all(`[data-vsrc="${quote(pin.vsrc)}"]`).filter(element => tagOf(element) === pin.tag && attrsOk(element));
+      if (pin.revision && pin.revision === pageRevision && pin.own_vsrc && source) {
+        const here = all(source).filter(element => tagOf(element) === pin.tag && attrsOk(element));
         if (here.length === 1) return {state: 'ok', element: here[0]};
       }
       if (!pin.text && !Object.keys(attrs).length) return lost;
@@ -296,9 +297,21 @@
         return named.length === 1 ? {state: 'ok', element: named[0]} : lost;
       }
       let pick = sameTag.filter(element => textOf(element) === (pin.text || ''));
+      const hasTextMatch = pick.length > 0;
       if (pick.length > 1 && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === pin.vsrc);
       if (pick.length > 1 && typeof pin.parent === 'string') pick = pick.filter(element => { const at = relationOf(element); return at.parent === pin.parent && at.index === pin.index; });
-      return pick.length === 1 ? {state: 'ok', element: pick[0]} : lost;
+      if (pick.length === 1) return {state: 'ok', element: pick[0]};
+      if (hasTextMatch || !pin.revision || !pageRevision || !pin.own_vsrc || !source ||
+          pin.selector !== source || !/\|.+:\d+:\d+$/.test(pin.parent || '')) return lost;
+      if (!textEdits.some(edit => Array.isArray(edit) && edit[0] === pin.revision &&
+          edit[1] === pin.vsrc && edit[2] === pin.tag)) return lost;
+      const here = all(source);
+      if (here.length !== 1 || !sameTag.includes(here[0])) return lost;
+      const element = here[0];
+      const at = relationOf(element);
+      if (at.parent !== pin.parent || at.index !== pin.index ||
+          IDENTITY_ATTRS.some(name => !attrs[name] && attrOf(element, name))) return lost;
+      return {state: 'ok', element};
     } catch (_) { return lost; }
   }
 
@@ -349,6 +362,16 @@
   const pageId = () => location.pathname + location.search;
   const sessionId = () => { const meta = document.querySelector('meta[name="vitruvius-preview-session"]'); return (meta && meta.content) || null; };
   const revision = () => { const meta = document.querySelector('meta[name="vitruvius-preview-revision"]'); return (meta && meta.content) || null; };
+  function verifiedTextEdits(current) {
+    const proof = document.querySelector('meta[name="vitruvius-preview-revision"]')?.getAttribute('data-vtext-edits');
+    if (proof) {
+      try {
+        const {revision: served, edits} = JSON.parse(proof);
+        if (served === current && Array.isArray(edits)) return edits;
+      } catch (_) { /* An invalid proof cannot reattach a pin. */ }
+    }
+    return [];
+  }
   const describe = element => {
     const item = {...describeElement(element, env), revision: revision()};
     if (!picked.has(element)) picked.set(element, item);
@@ -1221,8 +1244,9 @@
 
     const anchors = []; const slots = new Map(); const now = revision();
     const labels = hostLanguage === 'es' ? commentLabels.es : commentLabels.en;
+    const textEdits = verifiedTextEdits(now);
     for (const pin of pins) {
-      const found = locatePin(pin, all, now);
+      const found = locatePin(pin, all, now, textEdits);
       if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
       const r = found.element.getBoundingClientRect();
       const slot = slots.get(found.element) || 0; slots.set(found.element, slot + 1);
@@ -1464,7 +1488,8 @@
       if (target.origin === location.origin && target.pathname + target.search !== pageId()) location.assign(target.href);
     } else if (data.type === 'inspect/pin-focus') {
       const pin = pins.find(entry => entry.id === data.id);
-      const found = pin && locatePin(pin, all, revision());
+      const now = revision();
+      const found = pin && locatePin(pin, all, now, verifiedTextEdits(now));
       post('dock/comment-jump', {id: data.id, found: Boolean(found?.element)});
       if (found && found.element) { found.element.scrollIntoView?.({block: 'center', behavior: reduced() ? 'auto' : 'smooth'}); flash = pin.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash = ''; schedule(); }, 1600); schedule(); }
     }

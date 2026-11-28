@@ -2,6 +2,7 @@ import asyncio
 import json
 import urllib.error
 import urllib.request
+from html import unescape
 
 import pytest
 
@@ -23,6 +24,16 @@ def test_injection_preserves_html_and_script_order():
     assert inject_scripts(document, scripts, "new") == document.replace(
         "</head>", metadata + inspector + "</head>",
     ).replace("</textarea></body>", "</textarea>" + deferred + "</body>")
+
+
+def test_preview_metadata_binds_text_edit_proof_to_the_served_revision():
+    source = "<html><head><title>Sample</title></head><body><h2>Watering</h2></body></html>"
+    edits = [("earlier", 'pages/a"b.html:1:1', "h2")]
+    serve = inject_scripts(source, PREVIEW_SCRIPTS, "current", text_edits=edits)
+    metadata = serve.split('data-vtext-edits="', 1)[1].split('"', 1)[0]
+    assert json.loads(unescape(metadata)) == {
+        "revision": "current", "edits": [["earlier", 'pages/a"b.html:1:1', "h2"]],
+    }
 
 
 @pytest.mark.parametrize("first_app_tag", [

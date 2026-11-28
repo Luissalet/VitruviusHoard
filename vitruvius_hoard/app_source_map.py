@@ -338,6 +338,24 @@ def source_tag(source, line, column, expected_tag):
     return tag
 
 
+def is_direct_text_edit(before, after, line, column, expected_tag):
+    """Check that these snapshots differ only inside one literal direct text node."""
+    try:
+        old = source_tag(before, line, column, expected_tag)
+        new = source_tag(after, line, column, expected_tag)
+    except SourceMapError:
+        return False
+    if old.name in _RAW or len(old.text) != len(new.text):
+        return False
+    for (start, end), (next_start, next_end) in zip(old.text, new.text):
+        old_text, new_text = before[start:end], after[next_start:next_end]
+        if (start == next_start and old_text != new_text and not _MARKER.search(old_text)
+                and not _MARKER.search(new_text) and before[:start] == after[:next_start]
+                and before[end:] == after[next_end:]):
+            return True
+    return False
+
+
 def edit_source(source, line, column, expected_tag, change):
     """Apply a single positional change, preserving bytes outside the target span."""
     tag = source_tag(source, line, column, expected_tag)

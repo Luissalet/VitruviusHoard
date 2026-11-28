@@ -21,8 +21,11 @@ The host waits for the preview document before sending its greeting to the previ
 The preview proxy loads the inspector before project scripts so its window capture handles subsequent clicks
 in Select and Comment as well. In Navigate, the page handles its own input.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. A saved comment
-quotes the text of its anchor on the displayed page. When it changes, **Text when commented** contains the
-original quote and crop. The preview's edit confirmation and text
+quotes the text of its anchor on the displayed page. Undo and Redo keep the anchor for a verified in-place text edit,
+when the selector is still unique and the element occupies the same slot in its source parent. The preview checks
+the saved source snapshots before using that match, so deleting an element cannot pass its pin to a sibling whose
+text differs. When the text changes,
+**Text when commented** contains the original quote and crop. The preview's edit confirmation and text
 editor use the same theme. The outline label uses the same type and name as the selection card,
 with selectors and source paths available under Technical details. It uses a free area near the element, clear of text,
 controls and edit handles. If only a shorter label fits, it shows the element type. In a fully occupied

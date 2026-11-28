@@ -26,7 +26,7 @@ from .app_preview import PreviewProxy
 from . import app_critique_loop
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
-from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position
+from .app_source_map import SourceMapError, edit_source, first_changed_source, is_direct_text_edit, source_count, source_position
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
@@ -879,6 +879,34 @@ class AppProjects:
                 self._close_process(item)
             return {"state": "stopped"}
 
+    def _preview_text_edits(self, id, project):
+        selected = project["selected_revision"]
+        snapshots = {}
+        edits = set()
+        for step in project.get("history", []):
+            edge = (step.get("previous_revision"), step.get("revision"))
+            presentation = step.get("target_presentation") or {}
+            vsrc, tag = step.get("target"), presentation.get("tag")
+            if (step.get("action") != "edit" or selected not in edge or not vsrc or not tag
+                    or "text" not in presentation):
+                continue
+            other = edge[1] if edge[0] == selected else edge[0]
+            if not other or (other, vsrc, tag) in edits:
+                continue
+            try:
+                filename, line, column = source_position(vsrc)
+                if step.get("files") != [filename]:
+                    continue
+                if other not in snapshots:
+                    snapshots[other] = self.get(id, other)["files"]
+                before = snapshots[other].get(filename)
+                after = project["files"].get(filename)
+                if before is not None and after is not None and is_direct_text_edit(before, after, line, column, tag):
+                    edits.add((other, vsrc, tag))
+            except (SourceMapError, LookupError):
+                continue
+        return sorted(edits)
+
     def preview(self, id, revision=None):
         with self.lock:
             project = self.get(id, revision)
@@ -888,6 +916,7 @@ class AppProjects:
                 self.prepare_form_chat()
             if status["state"] == "running" and status["revision"] == selected:
                 return status
+            text_edits = self._preview_text_edits(id, project)
             root = self._directory(id)
             run = root / "runs" / uuid.uuid4().hex
             candidate = self._start_runtime(project, run, root / "data" / "app.db")
@@ -901,6 +930,7 @@ class AppProjects:
             previous = self.processes.get(id)
             candidate["url"] = proxy.url
             proxy.voice_revision = selected if {TRANSFER_ASSISTANT_ENTRY, FORM_ENTRY} & project["files"].keys() else ""
+            proxy.text_edits = (selected, text_edits)
             proxy.backend = (urlsplit(candidate["runtime_url"]).port, selected)
             self.processes[id] = candidate
             if previous:
