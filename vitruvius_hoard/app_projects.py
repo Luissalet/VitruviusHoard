@@ -30,6 +30,7 @@ from .app_source_map import SourceMapError, edit_source, first_changed_source, s
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
+from .preview_inspector import MAX_TEXT, presentation_fields
 from .static_page import TEMPLATE as STATIC_PAGE_TEMPLATE, page_files as static_page_files
 from .transfer_assistant.embedded import embedded_assistant_assets
 from .transfer_assistant import ENTRY as TRANSFER_ASSISTANT_ENTRY
@@ -366,8 +367,11 @@ class AppProjects:
                 raise
             if updated == source:
                 return current
+            target = {**(target or {}), "vsrc": vsrc}
+            if change["kind"] == "text":
+                target["presentation"] = self._edit_presentation(tag, change)
             return self.update(id, {filename: updated}, expected_revision, actor=actor,
-                               target={**(target or {}), "vsrc": vsrc}, author=author)
+                               target=target, author=author)
 
     def canvas_scale(self, id, revision, path="/", root_font_px=16):
         with self.lock:
@@ -377,8 +381,15 @@ class AppProjects:
                 raise ValueError("The preview changed before its token scale could be read.")
             return {"scale": canvas_token_scale(current["files"], html, path, root_font_px)}
 
+    @staticmethod
+    def _edit_presentation(tag, change, supplied=None):
+        result = {"tag": tag.lower()[:40], **presentation_fields(supplied)}
+        if change["kind"] == "text":
+            result["text"] = change["value"][:MAX_TEXT]
+        return result
+
     def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
-                    expected_count=None, root_font_px=16, lang="en", *, actor=None, author=None):
+                    expected_count=None, root_font_px=16, lang="en", *, actor=None, author=None, target_presentation=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["preview"]["state"] != "running":
@@ -401,7 +412,9 @@ class AppProjects:
                 result.update(affects_scope="page", shared_stylesheet=True)
             if operation == "plan" or confirmation or not changes:
                 return result
-            updated = self.update(id, changes, expected_revision, actor=actor, target={"vsrc": vsrc}, author=author)
+            presentation = self._edit_presentation(tag, change, target_presentation)
+            updated = self.update(id, changes, expected_revision, actor=actor,
+                                  target={"vsrc": vsrc, "presentation": presentation}, author=author)
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"],
                     **{key: updated[key] for key in ("preview_warning",) if key in updated}}
 
@@ -557,6 +570,7 @@ class AppProjects:
             "files": sorted(path for path in current["files"].keys() | files.keys()
                             if files.get(path) != current["files"].get(path)),
             "target": target.get("vsrc") or target.get("selector"),
+            **({"target_presentation": target["presentation"]} if target.get("presentation") else {}),
             "examples": list(dict.fromkeys(references))[:12],
             "tokens_id": tokens[:120] if isinstance(tokens, str) else None,
         }

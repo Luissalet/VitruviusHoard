@@ -23,6 +23,15 @@ def _text(value, limit):
     return value[:limit] if isinstance(value, str) else None
 
 
+def presentation_fields(raw, *, include_text=True):
+    if not isinstance(raw, dict):
+        return {}
+    limits = {"role": 40, "label": MAX_TEXT}
+    if include_text:
+        limits["text"] = MAX_TEXT
+    return {key: value for key, limit in limits.items() if (value := _text(raw.get(key), limit))}
+
+
 def _number(value):
     return value if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
 

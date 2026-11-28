@@ -28,6 +28,8 @@ Navigate keeps the selection in the inspector and clears its outline from the pa
 When an edit or undo updates the open preview, the selected cards reflect the newly displayed revision.
 The edit handles show the nearest whole pixel
 while applying and saving the precise value.
+History and comments show the readable element name. Selectors, source locators and file lists are available
+under **Technical details**. Older history entries without a saved name still retain their locators there.
 The Canvas header names the source revision in the preview. History numbers each action and labels the revision
 shown in the preview separately. Restoring a snapshot adds a step and keeps that snapshot's revision number.
 Resolving a pending comment as an agent records its acknowledgement and resolution together. Undo on the comment

@@ -622,6 +622,7 @@
     function argumentsFor(element, change) {
       return {
         vsrc: source(element), tag: tagOf(element), expected_revision: meta.content, change,
+        target_presentation: presentationOf(element),
         path: location.pathname + location.search,
         root_font_px: rootFont(),
       };

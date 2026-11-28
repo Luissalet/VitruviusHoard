@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { canvasHistoryEntries, canvasRevisionLabel, partitionLegacyHistory } from "./canvasPanel.js";
 import { api } from "../api.js";
+import { chipText } from "../preview-selection.js";
+import PreviewTargetDetails from "../components/PreviewTargetDetails.jsx";
 import { CanvasMaterials } from "./CanvasActivity.jsx";
 
 export function CanvasElements({ elements, onSelect, onRetry, es }) {
@@ -136,6 +138,10 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
       {visibleEntries.map((entry, index) => {
         const status = index === previewIndex ? (es ? "En pantalla" : "In preview")
           : index === currentIndex ? (es ? "Guardada" : "Saved") : null;
+        const targetName = entry.target_presentation ? chipText(entry.target_presentation, es)
+          : entry.target ? (es ? "Elemento editado" : "Edited element") : null;
+        const count = entry.files?.length || 0;
+        const filesLabel = count === 1 ? (es ? "1 fichero" : "1 file") : (es ? `${count} ficheros` : `${count} files`);
         return <li key={entry.id || `${entry.revision}-${entry.ts || "legacy"}`}>
           <div className="canvas-history-line">
             <strong>{stepLabel(entry.step)}</strong>
@@ -148,12 +154,10 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
             <span>{labels[entry.action || "legacy"]} · {authorLabel(entry)}</span>
             {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
           </div>
-          {(entry.target || entry.files?.length > 0) && <p className="canvas-step-target" title={entry.files?.join(", ")}>
-            {(entry.target || entry.files?.length === 1) && <code>{entry.target || entry.files[0]}</code>}
-            {entry.files?.length > 1 && <span>{entry.target && " · "}
-              {es ? `${entry.files.length} ficheros` : `${entry.files.length} files`}
-            </span>}
-          </p>}
+          {(targetName || count > 0) && <>
+            <p className="canvas-step-target">{targetName}{count > 0 && <span>{targetName && " · "}{filesLabel}</span>}</p>
+            <PreviewTargetDetails es={es} locator={entry.target} files={entry.files} />
+          </>}
           <CanvasMaterials materials={entry.materials} es={es} />
           {entry.action === "edit" && entry.id && !entry.undone && <button type="button" className="btn-link canvas-step-undo"
             aria-disabled={savingHistory} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
