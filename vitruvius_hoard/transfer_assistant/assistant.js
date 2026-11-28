@@ -2,7 +2,7 @@ import {initialTransfer, isTransferCommand, transferSpeech, transferTurn} from "
 import {
   assessTransferEndTurn, finishProvisionalTransfer, publishVoiceTrace, transcribeTransferSpeech, understandText, voiceAvailability,
 } from "./voice.js";
-import {mountDictationMicrophone} from "./microphone.js";
+import {MICROPHONE_TEXT, mountDictationMicrophone} from "./microphone.js";
 import {createTransferReplyVoice} from "./reply_audio.js";
 
 const STT_FALLBACK = {
@@ -60,7 +60,7 @@ const COPY = {
     title: "Boltagon · Asistente de transferencias", start: "¿A quién quieres hacer una transferencia simulada?",
     input: "Escribe lo que quieres hacer", placeholder: "Escribe un mensaje", send: "Enviar", mic: "Hablar", stop: "Terminar",
     listen: "Escuchar respuesta", confirm: "Confirmar transferencia", cancel: "Cancelar",
-    getting_mic: "Solicitando acceso al micrófono…", recording: "Escuchando…", transcribing: "Transcribiendo…",
+    recording: "Escuchando…", transcribing: "Transcribiendo…",
     mic_unavailable: "No se puede usar el micrófono aquí. Puedes escribir.",
     stt_unavailable: "El servicio de transcripción local no responde. Puedes escribir.",
     written_replies: "Respuestas por escrito.",
@@ -80,7 +80,7 @@ const COPY = {
     title: "Boltagon · Transfer assistant", start: "Who would you like to make a simulated transfer to?",
     input: "Type what you want to do", placeholder: "Type a message", send: "Send", mic: "Speak", stop: "Finish",
     listen: "Read reply aloud", confirm: "Confirm transfer", cancel: "Cancel",
-    getting_mic: "Requesting microphone access…", recording: "Listening…", transcribing: "Transcribing…",
+    recording: "Listening…", transcribing: "Transcribing…",
     mic_unavailable: "The microphone is unavailable here. You can type your reply.",
     stt_unavailable: "The local transcription service is unavailable. You can type your reply.",
     written_replies: "Written replies.",
@@ -161,6 +161,7 @@ export function mountTransferAssistant(root, options = {}) {
   const lang = (options.language || document.documentElement.lang).startsWith("en") ? "en" : "es";
   const locale = lang === "es" ? "es-ES" : "en-IE";
   const copy = COPY[lang];
+  const permissionCopy = MICROPHONE_TEXT[lang];
   const loadContext = options.loadContext || loadProjectData;
   const execute = options.execute || performTransfer;
   const currency = new Intl.NumberFormat(locale, {style: "currency", currency: "EUR", useGrouping: "always"});
@@ -551,7 +552,7 @@ export function mountTransferAssistant(root, options = {}) {
         adaptiveTurn = Boolean(available?.adaptive_turn);
         showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
-        show(captureStatus, sttWarning);
+        if (!mic.phase) show(captureStatus, sttWarning);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;
@@ -591,17 +592,19 @@ export function mountTransferAssistant(root, options = {}) {
       captureContext = context;
       return !sttWarning;
     },
-    onStatus: phase => show(captureStatus, copy[phase] || sttWarning),
+    onStatus: phase => show(captureStatus, phase === "getting_mic" ? permissionCopy.waiting : permissionCopy[phase] || copy[phase] || sttWarning),
     onError: error => {
       sttWarning = error === "stt_unavailable" ? copy[error] : sttWarning;
-      show(captureStatus, copy[error]);
+      show(captureStatus, error === "mic_permission_denied" ? permissionCopy.denied : copy[error]);
     },
     onPartial: result => show(transcript, provisional + " · " + result.text),
     onFinal: (result, timing) => {
       if (captureVersion !== formVersion) return;
-      if (timing.stopReason === "adaptive") result = finishProvisionalTransfer(result);
+      if (timing.reusedProvisional) result = finishProvisionalTransfer(result);
       if (result.interpretation && result.interpretation.is_final !== true) return;
-      if (!isTransferCommand(result.text)) showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
+      if (result.text && !isTransferCommand(result.text)) {
+        showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);
+      }
       show(transcript, result.text);
       if (result.text) void submit(result.text, {spoken: true, timing: {
         ...timing, inputProvider: result.provider, transcriptionProvider: result.transcriptionProvider,

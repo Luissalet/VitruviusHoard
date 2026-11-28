@@ -88,10 +88,11 @@ export async function assessTransferEndTurn(turn, {state, context, locale, signa
   const short = verdict.decision === "short" && silenceMs >= 500 && silenceMs <= 700;
   const long = verdict.decision === "long" && silenceMs >= 1500 && silenceMs <= 2500;
   if (!Number.isInteger(silenceMs) || (!short && !long)) return null;
+  if (long) return {silenceMs};
   const provisional = verdict.interpretation;
   if (provisional == null ? !isTransferCommand(turn.text)
     : !validInterpretation(provisional, false) || provisional.raw_transcript !== turn.text) {
-    return long ? {silenceMs} : null;
+    return null;
   }
   return {silenceMs, result: {
     ...turn, provisionalInterpretation: provisional, understandingMs: performance.now() - started,

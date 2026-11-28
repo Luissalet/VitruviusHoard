@@ -19,6 +19,112 @@ class Element extends EventTarget {
   getClientRects() { return [true]; }
 }
 
+test("a pending microphone request can be cancelled and a late grant stops its tracks", async t => {
+  const {mountDictationMicrophone} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const pending = Promise.withResolvers();
+  const requestStarted = Promise.withResolvers();
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  let requests = 0;
+  let stopped = 0;
+  let captureInitializations = 0;
+  const recorder = Object.getOwnPropertyDescriptor(globalThis, "MediaRecorder");
+  Object.defineProperty(globalThis, "MediaRecorder", {configurable: true, value: class {
+    static isTypeSupported() { captureInitializations++; return false; }
+  }});
+  Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices: {
+    getUserMedia() {
+      requests++;
+      if (requests === 2) return Promise.reject(new DOMException("blocked", "NotAllowedError"));
+      requestStarted.resolve();
+      return pending.promise;
+    },
+  }}});
+  globalThis.document = new EventTarget();
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+    if (recorder) Object.defineProperty(globalThis, "MediaRecorder", recorder);
+    else delete globalThis.MediaRecorder;
+  });
+  const button = new Element();
+  const phases = [], errors = [];
+  mountDictationMicrophone(button, {request() { assert.fail("No audio should be sent"); },
+    onStatus: phase => phases.push(phase), onError: error => errors.push(error)});
+
+  button.dispatchEvent(new Event("click"));
+  await requestStarted.promise;
+  assert.equal(button.textContent, "Cancelar solicitud");
+  assert.equal(button.disabled, false);
+  button.dispatchEvent(new Event("click"));
+  assert.equal(button.textContent, "Hablar");
+  pending.resolve({getTracks: () => [{stop() { stopped++; }}]});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(stopped, 1);
+  assert.equal(captureInitializations, 0);
+  assert.deepEqual(phases, ["", "getting_mic", ""]);
+  assert.deepEqual(errors, []);
+
+  button.dispatchEvent(new Event("click"));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(errors, ["mic_permission_denied"]);
+  assert.equal(button.textContent, "Hablar");
+  assert.equal(button.disabled, false);
+});
+
+test("the microphone permission message survives a delayed voice availability check", {timeout: 5000}, async t => {
+  const availability = Promise.withResolvers();
+  const permission = Promise.withResolvers();
+  const requesting = Promise.withResolvers();
+  let mic;
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, "MediaRecorder");
+  Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices: {
+    getUserMedia() {
+      requesting.resolve();
+      return permission.promise;
+    },
+  }}});
+  Object.defineProperty(globalThis, "MediaRecorder", {configurable: true, value: class {}});
+  globalThis.document = Object.assign(new EventTarget(), {
+    documentElement: {lang: "es"},
+    createElement: () => new Element(),
+    querySelectorAll: () => [],
+  });
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    if (mic?.textContent === "Cancelar solicitud") mic.dispatchEvent(new Event("click"));
+    availability.resolve(Response.json({dictation: true, stt: true}));
+    permission.resolve({getTracks: () => []});
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+    if (recorderDescriptor) Object.defineProperty(globalThis, "MediaRecorder", recorderDescriptor);
+    else delete globalThis.MediaRecorder;
+  });
+  t.mock.method(globalThis, "fetch", url => {
+    assert.ok(url.endsWith("/capabilities"), url);
+    return availability.promise;
+  });
+  const {mountTransferAssistant} = await import("../vitruvius_hoard/transfer_assistant/assistant.js");
+  const root = new Element();
+  mountTransferAssistant(root, {loadContext: async () => ({accounts: [], contacts: []})});
+  mic = root.children.flatMap(item => item.children).find(item => item.textContent === "Hablar");
+  mic.dispatchEvent(new Event("click"));
+  const waiting = root.children.find(item => item.textContent?.startsWith("Comprobando la conexión"));
+  assert.ok(waiting);
+  availability.resolve(Response.json({dictation: true, stt: true, dictation_route: "direct"}));
+  await requesting.promise;
+  assert.match(waiting.textContent, /^Esperando permiso del micrófono/u);
+  assert.equal(mic.textContent, "Cancelar solicitud");
+  mic.dispatchEvent(new Event("click"));
+  assert.equal(mic.textContent, "Hablar");
+  assert.equal(waiting.textContent, "");
+});
+
 test("a reply computed while a newer turn is queued cannot start audio or be replayed", {timeout: 5000}, async t => {
   const field = new Element();
   field.dataset.transferSlot = "amountCents";
@@ -194,8 +300,9 @@ function mockCapture(t) {
     Object.defineProperty(globalThis, name, {configurable: true, writable: true, value});
     t.after(() => old ? Object.defineProperty(globalThis, name, old) : delete globalThis[name]);
   }
-  return async (duration, voice = false) => {
+  return async (duration, voice = false, sample = true) => {
     voiced = voice;
+    if (!sample) return;
     for (let frame = 0; frame < duration; frame += sampleMs) {
       time += sampleMs;
       tick?.();
@@ -203,6 +310,75 @@ function mockCapture(t) {
     }
   };
 }
+
+for (const mode of ["accepted", "incomplete", "failed", "resumed", "speaking", "pending"]) {
+  test("manual microphone finish uses the correct transcript: " + mode, async t => {
+    const advance = mockCapture(t);
+    const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+    const requests = [];
+    const final = [];
+    const deferred = Promise.withResolvers();
+    const capture = await recordDictation({
+      request: async (_blob, {partial}) => {
+        requests.push(partial);
+        return {text: partial ? "Veinte euros" : "Veinte euros con concepto cena"};
+      },
+      endTurn: async result => {
+        if (mode === "failed") throw new Error("Unavailable");
+        if (mode === "pending") await deferred.promise;
+        return {silenceMs: mode === "incomplete" ? 1650 : 650, result};
+      },
+      onFinal: (result, timing) => final.push({result, timing}),
+    });
+    await advance(400, true);
+    await advance(200);
+    if (mode === "resumed") {
+      await advance(125, true);
+      await advance(25);
+    }
+    if (mode === "speaking") await advance(1, true, false);
+    capture.stop();
+    deferred.resolve();
+    await new Promise(resolve => setImmediate(resolve));
+    const reused = mode === "accepted";
+    assert.deepEqual(requests, reused ? [true] : [true, false]);
+    assert.equal(final.length, 1);
+    assert.equal(final[0].result.text, reused ? "Veinte euros" : "Veinte euros con concepto cena");
+    assert.equal(final[0].timing.reusedProvisional, reused);
+    assert.equal(final[0].timing.stopReason, "manual");
+  });
+}
+
+test("busy and unavailable microphone buttons expose a reason", async t => {
+  const {mountDictationMicrophone} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  globalThis.document = new EventTarget();
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+  });
+  function mount(mediaDevices) {
+    Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices}});
+    const button = new Element();
+    const phases = [];
+    const microphone = mountDictationMicrophone(button, {request() {}, onStatus: phase => phases.push(phase)});
+    return {button, phases, microphone};
+  }
+  const ready = mount({getUserMedia() {}});
+  ready.microphone.setDisabled(true);
+  assert.equal(ready.button.disabled, true);
+  assert.equal(ready.phases.at(-1), "busy");
+  ready.microphone.setDisabled(false);
+  assert.equal(ready.button.disabled, false);
+  assert.equal(ready.phases.at(-1), "");
+
+  const unavailable = mount(undefined);
+  assert.equal(unavailable.button.disabled, true);
+  assert.equal(unavailable.phases.at(-1), "unavailable");
+});
 
 test("a renewed pause invalidates an in-flight provisional parse", async t => {
   const advance = mockCapture(t);
@@ -409,7 +585,7 @@ for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 675], [7
         await transcript.promise;
         return {text: short ? "Veinte euros" : "Treinta y"};
       },
-      endTurn: async result => short ? {silenceMs, result} : {silenceMs},
+      endTurn: async result => ({silenceMs, result}),
       onFinal: (result, timing) => final.push({result, timing}),
     });
     await advance(400, true);
