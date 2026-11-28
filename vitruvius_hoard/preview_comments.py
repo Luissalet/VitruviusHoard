@@ -30,7 +30,7 @@ import threading
 import time
 
 from .hoard_link.atomic import write_json_atomic
-from .preview_inspector import StaleSelection, normalise
+from .preview_inspector import StaleSelection, normalise, presentation_fields
 
 FORMAT = "vitruvius-preview-comments/v1"
 STATUSES = ("pending", "seen", "answered", "resolved", "dismissed")
@@ -287,6 +287,7 @@ class PreviewComments:
                 "id": f"c{number}", "n": number, "status": "pending", "note": note, "page": _page(page), "revision": revision,
                 "vsrc": target.get("vsrc"), "vgen": target.get("vgen"), "selector": target["selector"], "tag": target["tag"],
                 "classes": target["classes"], "element_text": target["text"], "box": target["box"], "own_vsrc": bool(target.get("own_vsrc")),
+                **presentation_fields(element, include_text=False),
                 "parent": target.get("parent") or "", "index": target.get("index") or 0, "attrs": self._attrs(attrs),
                 "crop": {"revision": revision, "bytes": len(png)} if png else None,
                 "anchor": {"state": "ok", "revision": revision, "vsrc": target.get("vsrc"), "checked_ts": now},

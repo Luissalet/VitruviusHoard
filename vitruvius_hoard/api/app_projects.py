@@ -228,8 +228,12 @@ def project_edit_source(request: Request, id: str, body: AppSourceEditArgs):
         id, **body.model_dump(exclude={"id"}), author={"kind": "person"}))
 
 
+class CanvasEditBody(AppCanvasEditArgs):
+    target_presentation: dict | None = None
+
+
 @router.post("/{id}/canvas-edit")
-def project_canvas_edit(request: Request, id: str, body: AppCanvasEditArgs):
+def project_canvas_edit(request: Request, id: str, body: CanvasEditBody):
     return execute(lambda: services(request).app_projects.canvas_edit(
         id, **body.model_dump(exclude={"id"}), author={"kind": "person"}))
 

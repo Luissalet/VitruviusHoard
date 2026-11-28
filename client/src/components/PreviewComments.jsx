@@ -1,8 +1,11 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { anchorChanges, copilotComments, groupComments, isOpen, pinsFor, sameComments, sourceLine, statusLabel, targetName } from "../preview-comments.js";
+import { anchorChanges, copilotComments, groupComments, isOpen, pinsFor, sameComments, statusLabel } from "../preview-comments.js";
+import { chipText, sourceText } from "../preview-selection.js";
+import PreviewTargetDetails from "./PreviewTargetDetails.jsx";
 
 const POLL_MS = 2500;
+const PRESENTATION_FIELDS = ["tag", "role", "label", "text"];
 
 /**
  * Pinned comments of the application preview, shown inside the bar of `PreviewSelection` (which owns the frame, the mode
@@ -81,8 +84,13 @@ export default function PreviewComments({ projectId, running, served, previewRev
       else if (data.type === "dock/comment-anchors" && Array.isArray(data.anchors)) {
         // The report names the revision the page itself serves; the server refuses one the preview no longer serves.
         const reported = data.revision || previewRevision.current;
-        const texts = data.anchors.filter((anchor) => anchor?.state === "ok" && typeof anchor.text === "string");
-        setAnchorReport({ page: data.page, revision: reported, texts: new Map(texts.map((anchor) => [anchor.id, anchor.text])) });
+        const presentations = new Map();
+        for (const anchor of data.anchors) {
+          if (anchor?.state !== "ok") continue;
+          const fields = PRESENTATION_FIELDS.filter((field) => typeof anchor[field] === "string");
+          presentations.set(anchor.id, Object.fromEntries(fields.map((field) => [field, anchor[field]])));
+        }
+        setAnchorReport({ page: data.page, revision: reported, presentations });
         const changed = anchorChanges(state.current.comments, data.anchors, reported);
         if (changed.length && projectId && reported) {
           const anchors = changed.map(({ id, state, vsrc, box }) => ({ id, state, vsrc, box }));
@@ -169,24 +177,30 @@ export default function PreviewComments({ projectId, running, served, previewRev
   const { anchored, lost, closed } = groupComments(comments);
   if (!running) return null;
 
-  const visibleTexts = anchorReport && anchorReport.page === page && anchorReport.revision === now() ? anchorReport.texts : null;
+  const visiblePresentations = anchorReport && anchorReport.page === page && anchorReport.revision === now()
+    ? anchorReport.presentations : null;
   const item = (comment) => {
     const lastDecision = comment.history.findLast((entry) => entry.status !== "seen");
-    const liveText = comment.page === page ? visibleTexts?.get(comment.id) : undefined;
-    const quote = liveText ?? comment.element_text;
-    const showOriginal = liveText !== undefined && liveText !== comment.element_text && (comment.element_text || comment.has_crop);
-    const originalCrop = comment.has_crop && <img className="preview-comment-crop" src={`/design/api/app-projects/${projectId}/comments/${comment.id}/crop`} alt={es ? `Recorte de ${targetName(comment)} cuando se comentó` : `Crop of ${targetName(comment)} when it was commented`} />;
+    const live = comment.page === page ? visiblePresentations?.get(comment.id) : undefined;
+    const quote = live?.text ?? comment.element_text;
+    const originalName = chipText({ ...comment, text: comment.element_text }, es);
+    const currentName = chipText({ ...comment, text: comment.element_text, ...live }, es);
+    const nameChanged = currentName !== originalName;
+    const showOriginal = nameChanged || (quote !== comment.element_text && (comment.element_text || comment.has_crop));
+    const originalCrop = comment.has_crop && <img className="preview-comment-crop" src={`/design/api/app-projects/${projectId}/comments/${comment.id}/crop`} alt={es ? `Recorte de ${originalName} cuando se comentó` : `Crop of ${originalName} when it was commented`} />;
     return <li key={comment.id} id={`preview-comment-${comment.id}`} tabIndex={-1} className={`panel flex flex-col gap-1 ${focusId === comment.id ? "ring-2" : ""}`} style={{ padding: 10 }}>
       <div className="flex gap-2 items-center flex-wrap">
         <strong>#{comment.n}</strong>
         <span className={`chip ${comment.status === "resolved" ? "chip-ok" : comment.status === "dismissed" ? "" : comment.status === "answered" ? "chip-accent" : "chip-amber"}`}>{statusLabel(comment.status, es)}</span>
-        <span className="help">{targetName(comment)} · {sourceLine(comment, es)}</span>
+        <span className="help">{currentName}</span>
         {comment.stale && <span className="chip chip-wrap" title={comment.revision}>{es ? "hecho en una versión anterior" : "made on an earlier revision"}</span>}
       </div>
+      <PreviewTargetDetails es={es} selector={comment.selector} source={sourceText(comment, es)} />
       <p>{comment.note}</p>
       {quote && <blockquote className="preview-comment-quote">{quote}</blockquote>}
       {showOriginal ? <details className="help">
         <summary>{es ? "Texto al comentar" : "Text when commented"}</summary>
+        {nameChanged && <p>{originalName}</p>}
         {comment.element_text && <blockquote>{comment.element_text}</blockquote>}
         {originalCrop}
       </details> : originalCrop}
@@ -215,8 +229,8 @@ export default function PreviewComments({ projectId, running, served, previewRev
     {canvas && loadState === "error" && <p className="canvas-empty" role="status">{es ? "No se pudieron actualizar los comentarios." : "Could not refresh comments."} <button type="button" className="btn-link" onClick={load}>{es ? "Reintentar" : "Retry"}</button></p>}
     {canvas && loadState === "ready" && !openCount && !draft && <p className="canvas-empty">{es ? "No hay comentarios abiertos." : "No open comments."}</p>}
     {draft && <form ref={draftForm} className="preview-comment-draft panel flex flex-col gap-2" style={{ padding: 10 }} onSubmit={(event) => { event.preventDefault(); save(); }}>
-      <strong>{es ? "Comentario sobre " : "Comment on "}{targetName(draft.element)}</strong>
-      <span className="help">{draft.element.vsrc || (es ? "sin posición en el fuente" : "no source position")}</span>
+      <strong>{es ? "Comentario sobre " : "Comment on "}{chipText(draft.element, es)}</strong>
+      <PreviewTargetDetails es={es} selector={draft.element.selector} source={sourceText(draft.element, es)} />
       {draft.element.text && <blockquote className="preview-comment-quote">{draft.element.text}</blockquote>}
       {draft.crop && <img className="preview-comment-crop" src={draft.crop} alt={es ? "Recorte del elemento" : "Crop of the element"} />}
       <label className="label">{es ? "Nota para el agente" : "Note for the agent"}
