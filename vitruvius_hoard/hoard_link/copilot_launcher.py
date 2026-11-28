@@ -67,6 +67,9 @@ LAUNCHER_JS = r"""
   }
 
   const TURN_WAIT_S = 600;
+  const STOP_WAIT_MS = 12000;
+  // This upstream path stays the same when the host sets a local module prefix.
+  const CHAT_PATH = ["", "api", "chat_stream"].join("/");
   // Apps that refuse state-changing requests without their anti-CSRF header (``X-Hoard-Request: 1``) accept the
   // relay like any other call of their own page; apps that do not check it ignore the header.
   const APP_HEADERS = { 'X-Hoard-Request': '1' };
@@ -75,8 +78,7 @@ LAUNCHER_JS = r"""
     const request = new Request(input, init);
     return (async () => {
       const url = new URL(request.url);
-      // Keep the upstream chat path stable when the workbench rewrites local API routes.
-      const isChatTurn = url.pathname === ["", "api", "chat_stream"].join("/");
+      const isChatTurn = url.pathname === CHAT_PATH;
       const envelope = { path: url.pathname + url.search, method: request.method, headers: {} };
       for (const name of ['X-Faustus-Client-Version', 'X-Odysseus-Run-Id']) {
         const value = request.headers.get(name);
@@ -408,7 +410,10 @@ LAUNCHER_JS = r"""
     notice.setAttribute('role', 'status');
     form.append(label, save);
     rename.append(summary, form);
-    root.append(destination, rename, notice);
+    const stopNotice = document.createElement('p');
+    stopNotice.setAttribute('role', 'alert');
+    stopNotice.hidden = true;
+    root.append(destination, stopNotice, rename, notice);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -458,8 +463,32 @@ LAUNCHER_JS = r"""
         save.disabled = false;
       }
     });
-    return { root, destination, rename, field, notice };
+    return { root, destination, rename, field, notice, stopNotice };
   }
+
+  function stopErrorFrame(message) {
+    // End the local observer without treating an unconfirmed remote stop as success.
+    return '\n\ndata: ' + JSON.stringify({type: 'error', error: message}) + '\n\ndata: [DONE]\n\n';
+  }
+
+  function observeTurn(response, turn) {
+    const transport = new TransformStream({
+      start(controller) {
+        turn.end = () => {
+          try {
+            controller.enqueue(new TextEncoder().encode(stopErrorFrame(turn.warning)));
+          } catch {
+            return; // The stream already ended. A pending resume will receive the error instead.
+          }
+          controller.terminate();
+        };
+      },
+    });
+    const body = response.body.pipeThrough(transport);
+    if (turn.warning) turn.end();
+    return new Response(body, response);
+  }
+
   function buildPanel(sessionId) {
     const element = document.createElement('faustus-chat');
     element.server = window.location.origin;
@@ -467,14 +496,56 @@ LAUNCHER_JS = r"""
     element.theme = 'dark';
     let requestProject = '';
     let turn;
-    element.fetch = (input, init) => relayFetch(input, init, (body) => {
+    let activeTurn;
+    const onTurn = (body) => {
       const projectId = projectKey(body.context) || projectKey(body.hoard_context) || requestProject;
       const text = requestText(body);
       if (!projectId || !text) return;
       if (turn?.projectId === projectId && turn.request === text) return;
       turn = { projectId, request: text, id: ++turnSequence, part: 0, text: '' };
       publishConversation(turn, 'user', text);
-    });
+    };
+    const stopUnavailable = (stopping) => {
+      if (!stopping || stopping !== activeTurn || stopping.warning || panel !== element) return;
+      stopping.warning = lang() === 'es'
+        ? 'No se pudo confirmar que el trabajo se haya detenido. Revisa los cambios antes de volver a enviar el mensaje.'
+        : 'The stop could not be confirmed. Check for changes before sending the message again.';
+      conversationControls.stopNotice.textContent = stopping.warning;
+      conversationControls.stopNotice.hidden = false;
+      stopping.end?.();
+    };
+    element.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      const resume = request.method === 'GET' && /^\/api\/chat\/resume\/[^/]+$/.test(path);
+      if (request.method === 'POST' && path === CHAT_PATH) {
+        activeTurn = {};
+        conversationControls.stopNotice.hidden = true;
+      } else if (resume) {
+        activeTurn ??= {};
+        if (activeTurn.warning) {
+          return new Response(stopErrorFrame(activeTurn.warning), {headers: {'Content-Type': 'text/event-stream'}});
+        }
+      }
+      const current = activeTurn;
+      if (request.method === 'POST' && /^\/api\/chat\/stop\/[^/]+$/.test(path)) {
+        const signal = AbortSignal.any([request.signal, AbortSignal.timeout(STOP_WAIT_MS)]);
+        try {
+          const response = await relayFetch(request, { signal });
+          if (!response.ok || (await response.clone().json()).stopped !== true) stopUnavailable(current);
+          return response;
+        } catch (error) {
+          stopUnavailable(current);
+          throw error;
+        }
+      }
+      const response = await relayFetch(request, {}, onTurn);
+      if (current && current === activeTurn && response.ok && response.body
+          && response.headers.get('Content-Type')?.startsWith('text/event-stream')) {
+        return observeTurn(response, current);
+      }
+      return response;
+    };
     element.onOpenSettings = () => window.open(info.settings_url, '_blank', 'noopener');
     element.contextProvider = async () => {
       const value = await context();
@@ -501,6 +572,7 @@ LAUNCHER_JS = r"""
       } catch { /* a host refresh must never interrupt the turn */ }
     });
     element.addEventListener('faustus:turn-end', (event) => {
+      activeTurn = undefined;
       busy = false;
       turn = undefined;
       window.dispatchEvent(new CustomEvent('hoard:copilot-turn-end', { detail: event.detail || {} }));
@@ -545,6 +617,7 @@ LAUNCHER_JS = r"""
     const next = buildPanel(await savedSession(key));
     panel.replaceWith(next);
     panel = next;
+    conversationControls.stopNotice.hidden = true;
     syncRename(panel);
     if (typeof next.loadHistory === 'function') await next.loadHistory();
   }

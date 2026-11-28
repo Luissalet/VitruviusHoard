@@ -47,7 +47,7 @@ PAGE = """
 """
 
 
-def fake_app(monkeypatch, tmp_path, modules=(copilot, where)):
+def fake_app(monkeypatch, tmp_path, modules=(copilot, where), *, panel_js=PANEL):
     relay, placement = modules
     state = {"online": {PC, SPARK}, "name": "Título inicial", "rename_status": 200, "patches": [],
              "delays": {}, "probes": [], "cancelled": []}
@@ -72,7 +72,7 @@ def fake_app(monkeypatch, tmp_path, modules=(copilot, where)):
         if capabilities:
             return httpx.Response(200, json={"contract_version": "1.0"})
         if request.method == "GET" and path == "/api/hoard-copilot/panel.js":
-            return httpx.Response(200, text=PANEL, headers={"content-type": "application/javascript"})
+            return httpx.Response(200, text=panel_js, headers={"content-type": "application/javascript"})
         if request.method == "GET" and path == CONVERSATION:
             return httpx.Response(200, json={"session_id": SESSION, "name": state["name"]})
         if request.method == "PATCH" and path == RENAME:
@@ -212,5 +212,118 @@ def test_inline_conversation_renames_and_handles_unavailable_faustus(monkeypatch
             playwright.expect(page.get_by_text("Nombre guardado.")).to_be_visible()
             playwright.expect(page.locator("faustus-chat")).to_have_text("Notas del encargo")
             assert state["patches"] == [(SPARK, "Notas del encargo")] * 2
+        finally:
+            browser.close()
+
+
+STOP_PANEL = """
+customElements.define('faustus-chat', class extends HTMLElement {
+  session = 'session-fixture';
+  connectedCallback() {
+    const root = this.attachShadow({mode: 'open'});
+    root.innerHTML = '<textarea aria-label="Mensaje"></textarea><button>Enviar</button><button>Detener</button>';
+    const [input, send, stop] = root.children;
+    send.onclick = async () => {
+      input.disabled = true;
+      const response = await this.fetch(location.origin + '/api/chat_stream', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message: input.value}),
+      });
+      this.dispatchEvent(new CustomEvent('faustus:turn-start', {detail: {sessionId: this.session}}));
+      const text = await response.text();
+      if (!text.includes('data: [DONE]')) return;
+      input.disabled = false;
+      this.dispatchEvent(new CustomEvent('faustus:turn-end', {detail: {
+        sessionId: this.session, reason: text.includes('"type":"error"') ? 'error' : 'done',
+      }}));
+    };
+    stop.onclick = async () => {
+      // The embed leaves the observer running when the backend rejects a stop.
+      try {
+        await this.fetch(location.origin + '/api/chat/stop/' + this.session, {method: 'POST'});
+      } catch {}
+    };
+  }
+  async loadHistory() {}
+});
+"""
+
+STOP_TRANSPORT = """
+window.recovery = {turns: 0, cancelled: 0, stop: null, end: null};
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init) => {
+  const route = new URL(typeof input === 'string' ? input : input.url, location.href);
+  if (route.pathname !== '/api/copilot/proxy') return nativeFetch(input, init);
+  const envelope = JSON.parse(init.body);
+  if (envelope.path === '/api/chat_stream') {
+    window.recovery.turns++;
+    const stream = new ReadableStream({
+      start(controller) {
+        window.recovery.end = () => {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\\n\\n'));
+          controller.close();
+        };
+      },
+      cancel() { window.recovery.cancelled++; },
+    });
+    return Promise.resolve(new Response(stream, {headers: {'Content-Type':'text/event-stream; charset=utf-8'}}));
+  }
+  if (envelope.path === '/api/chat/stop/session-fixture') {
+    if (window.recovery.stop === 'offline') return Promise.reject(new TypeError('Failed to fetch'));
+    if (window.recovery.stop === 'busy') {
+      return Promise.resolve(Response.json({stopped:false, reason:'no_run_id_supplied'}));
+    }
+    if (window.recovery.stop === 'unavailable') {
+      return Promise.resolve(Response.json({error:'Faustus copilot is unavailable on the configured endpoints'},
+        {status:503, headers:{'X-Hoard-Copilot-Destination':'unavailable'}}));
+    }
+    window.recovery.end();
+    return Promise.resolve(Response.json({stopped:true}));
+  }
+  return nativeFetch(input, init);
+};
+"""
+
+
+@pytest.mark.skipif(os.getenv("VITRUVIUS_BROWSER_TESTS") != "1", reason="Set VITRUVIUS_BROWSER_TESTS=1 for the Chrome test")
+@pytest.mark.parametrize("outcome", ["unavailable", "offline", "busy", "stopped"])
+def test_failed_stop_releases_the_composer(monkeypatch, tmp_path, outcome):
+    playwright = pytest.importorskip("playwright.sync_api")
+    client, _ = fake_app(monkeypatch, tmp_path, panel_js=STOP_PANEL)
+
+    def respond(route):
+        request = route.request
+        if not request.url.startswith(HOST + "/"):
+            return route.abort()
+        response = client.request(request.method, request.url, content=request.post_data_buffer, headers=request.headers)
+        return route.fulfill(status=response.status_code, headers=dict(response.headers), body=response.content)
+
+    with playwright.sync_playwright() as instance:
+        browser = instance.chromium.launch(channel="chrome", headless=True, args=["--disable-gpu", "--mute-audio"])
+        try:
+            page = browser.new_page(service_workers="block")
+            page.add_init_script(STOP_TRANSPORT)
+            page.route("**/*", respond)
+            page.goto(HOST)
+            page.get_by_role("button", name="Abrir conversación").click()
+            chat = page.locator("faustus-chat")
+            composer = chat.get_by_role("textbox", name="Mensaje")
+            composer.fill("Cambia el título")
+            chat.get_by_role("button", name="Enviar").click()
+            playwright.expect(composer).to_be_disabled()
+            page.wait_for_function("window.recovery.turns === 1")
+            page.evaluate("(value) => window.recovery.stop = value", outcome)
+            chat.get_by_role("button", name="Detener").click()
+            playwright.expect(composer).to_be_enabled(timeout=2500)
+            assert chat.evaluate("element => element.session") == SESSION
+            notice = page.get_by_text("No se pudo confirmar que el trabajo se haya detenido.", exact=False)
+            if outcome == "stopped":
+                playwright.expect(notice).to_have_count(0)
+            else:
+                playwright.expect(notice).to_be_visible()
+                page.wait_for_function("window.recovery.cancelled === 1")
+            composer.fill("Prueba siguiente")
+            chat.get_by_role("button", name="Enviar").click()
+            page.wait_for_function("window.recovery.turns === 2")
+            playwright.expect(notice).not_to_be_visible()
         finally:
             browser.close()
