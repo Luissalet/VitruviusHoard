@@ -48,13 +48,15 @@ export function CanvasElements({ elements, onSelect, onRetry, es }) {
 }
 
 export function CanvasHistory({ project, visibleRevision, onChange, es }) {
-  const [undoing, setUndoing] = useState(false);
+  const [pending, setPending] = useState(null);
+  const savingHistory = Boolean(pending);
   const [showAll, setShowAll] = useState(false);
   const [undoResult, setUndoResult] = useState(null);
   const focusAfterUndo = useRef(false);
   const heading = useRef(null);
   const history = project.history || [];
   const entries = canvasHistoryEntries(project);
+  const redoTarget = entries[0]?.redoRevision;
   const recentCount = 2;
   const { recordedEntries, previous } = partitionLegacyHistory(entries, project.revision);
   const visibleEntries = showAll ? recordedEntries : recordedEntries.slice(0, recentCount);
@@ -74,46 +76,54 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
   };
   const revisionLabel = (revision) => (es ? "Versión " : "Revision ") + (project.revisions.indexOf(revision) + 1);
   const stepLabel = (step) => (es ? "Paso " : "Step ") + step;
-  const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
-    : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
+  const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", redo: "Rehacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
+    : { create: "Created", edit: "Edited", undo: "Undo", redo: "Redo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
   const date = new Intl.DateTimeFormat(es ? "es-ES" : "en-GB", { dateStyle: "short", timeStyle: "short" });
   const undoMessages = es ? {
     alreadyUndone: "El paso ya estaba deshecho.",
     restored: "Versión restaurada.",
     undone: "Cambio deshecho.",
+    redone: "Cambio rehecho.",
+    redoFailed: "No se pudo rehacer. Comprueba la versión actual e inténtalo de nuevo.",
     conflict: "Hay ediciones posteriores en los mismos archivos. El paso se conserva.",
     failed: "No se pudo deshacer. Comprueba la versión actual e inténtalo de nuevo.",
   } : {
     alreadyUndone: "The step was already undone.",
     restored: "Revision restored.",
     undone: "Change undone.",
+    redone: "Change redone.",
+    redoFailed: "Could not redo. Check the current revision and try again.",
     conflict: "Later edits touch the same files. The step was kept.",
     failed: "Could not undo. Check the current revision and try again.",
   };
 
   useEffect(() => {
-    if (!focusAfterUndo.current || undoing) return;
+    if (!focusAfterUndo.current || savingHistory) return;
     focusAfterUndo.current = false;
     if (document.activeElement === document.body) heading.current?.focus({ preventScroll: true });
-  }, [undoing, undoTarget]);
+  }, [savingHistory, undoTarget, redoTarget]);
 
-  const undo = async (step) => {
-    setUndoing(true); setUndoResult(null);
+  const changeHistory = async (operation, step) => {
+    setPending(operation); setUndoResult(null);
     focusAfterUndo.current = heading.current?.parentElement?.contains(document.activeElement);
     try {
       const expected = { expected_revision: project.revision, expected_updated_ts: project.updated_ts };
+      const target = operation === "redo" ? redoTarget : undoTarget;
       const updated = step
         ? await api.appProjectUndoChange(project.id, { ...expected, change_id: step.id })
-        : await api.appProjectUndo(project.id, { ...expected, revision: undoTarget });
+        : await api.appProjectUndo(project.id, { ...expected, revision: target });
       onChange(updated);
-      if (updated.already_undone) setUndoResult("alreadyUndone");
+      if (operation === "redo") setUndoResult("redone");
+      else if (updated.already_undone) setUndoResult("alreadyUndone");
       else if (!step && legacy) setUndoResult("restored");
       else setUndoResult("undone");
     } catch (error) {
-      setUndoResult(error.message.startsWith("Later changes overlap:") ? "conflict" : "failed");
+      const failure = operation === "redo" ? "redoFailed"
+        : error.message.startsWith("Later changes overlap:") ? "conflict" : "failed";
+      setUndoResult(failure);
       onChange();
     } finally {
-      setUndoing(false);
+      setPending(null);
     }
   };
 
@@ -126,6 +136,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
       {visibleEntries.map((entry, index) => <li key={entry.id || `${entry.revision}-${entry.ts || "legacy"}`}>
         <div className="canvas-history-line">
           <strong>{stepLabel(entry.step)}</strong>
+          {entry.undone && <span className="chip">{es ? "Deshecho" : "Undone"}</span>}
           {index === currentIndex && <span className="chip chip-accent">{entry.revision === visibleRevision ? (es ? "Actual" : "Current") : (es ? "Guardada" : "Saved")}</span>}
         </div>
         <div className="canvas-history-meta">
@@ -139,9 +150,9 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
           </span>}
         </p>}
         <CanvasMaterials materials={entry.materials} es={es} />
-        {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"
-          aria-disabled={undoing} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
-          onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
+        {entry.action === "edit" && entry.id && !entry.undone && <button type="button" className="btn-link canvas-step-undo"
+          aria-disabled={savingHistory} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
+          onClick={() => { if (!savingHistory) void changeHistory("undo", entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
       </li>)}
       {previous.length > 0 && <li>
         <details className="canvas-history-legacy">
@@ -160,13 +171,17 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
       {showAll ? (es ? "Mostrar solo los recientes" : "Show recent only")
         : (es ? "Ver el historial completo" : "Show full history")}
     </button>}
-    {undoTarget && <button type="button" className="btn canvas-undo" aria-disabled={undoing}
-      title={revisionLabel(undoTarget)} onClick={() => { if (!undoing) void undo(); }}>
-      {undoing ? (es ? "Restaurando…" : "Restoring…")
+    {undoTarget && undoTarget !== redoTarget && <button type="button" className="btn canvas-undo" aria-disabled={savingHistory}
+      title={revisionLabel(undoTarget)} onClick={() => { if (!savingHistory) void changeHistory("undo"); }}>
+      {pending === "undo" ? (es ? "Restaurando…" : "Restoring…")
         : legacy ? (es ? "Restaurar versión anterior" : "Restore previous revision")
         : (es ? "Deshacer último cambio" : "Undo last change")}
     </button>}
-    {undoResult && <p className="canvas-empty" role={["conflict", "failed"].includes(undoResult) ? "alert" : "status"}>
+    {redoTarget && <button type="button" className="btn canvas-undo" aria-disabled={savingHistory}
+      onClick={() => { if (!savingHistory) void changeHistory("redo"); }}>
+      {pending === "redo" ? (es ? "Rehaciendo…" : "Redoing…") : (es ? "Rehacer" : "Redo")}
+    </button>}
+    {undoResult && <p className="canvas-empty" role={["conflict", "failed", "redoFailed"].includes(undoResult) ? "alert" : "status"}>
       {undoMessages[undoResult]}
     </p>}
   </section>;

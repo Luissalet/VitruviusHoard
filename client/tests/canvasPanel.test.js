@@ -101,3 +101,48 @@ test("history gives a rollback its own step number and keeps the restored revisi
   assert.deepEqual(canvasHistoryEntries({ revisions }).map(({ step }) => step), [3, 2, 1]);
   assert.deepEqual(canvasHistoryEntries({ revisions, history: null }), canvasHistoryEntries({ revisions }));
 });
+
+test("restoring the prior snapshot marks the reverted edit and offers one redo", () => {
+  const revision = ["first", "edited"];
+  const create = { id: "create", revision: "first", action: "create" };
+  const edit = { id: "edit", revision: "edited", previous_revision: "first", action: "edit" };
+  const undo = { id: "undo", revision: "first", previous_revision: "edited", action: "undo" };
+  const history = [create, edit, undo];
+  const [latest, previous] = canvasHistoryEntries({ revisions: revision, history });
+  assert.equal(previous.undone, true);
+  assert.equal(latest.redoRevision, "edited");
+
+  const redo = { id: "redo", revision: "edited", previous_revision: "first", action: "undo" };
+  const restored = canvasHistoryEntries({ revisions: revision, history: [...history, redo] });
+  assert.equal(restored[0].action, "redo");
+  assert.equal(restored[0].redoRevision, undefined);
+  assert.equal(restored.find((step) => step.id === "edit").undone, undefined);
+
+  const revertedAgain = { ...undo, id: "undo-again" };
+  const repeated = canvasHistoryEntries({ revisions: revision, history: [...history, redo, revertedAgain] });
+  assert.equal(repeated[0].action, "undo");
+  assert.equal(repeated[0].redoRevision, "edited");
+});
+
+test("undoing one step leaves later edits active and a new edit closes the immediate redo", () => {
+  const revisions = ["first", "after-text", "after-style", "style-only", "new-text"];
+  const history = [
+    { id: "text", revision: "after-text", previous_revision: "first", action: "edit" },
+    { id: "style", revision: "after-style", previous_revision: "after-text", action: "edit" },
+    { id: "undo", revision: "style-only", previous_revision: "after-style", action: "undo-change", reverted_change: "text" },
+  ];
+  const rows = canvasHistoryEntries({ revisions, history });
+  assert.equal(rows[0].redoRevision, "after-style");
+  assert.equal(rows.find((step) => step.id === "text").undone, true);
+  assert.equal(rows.find((step) => step.id === "style").undone, undefined);
+
+  const redo = { id: "redo", revision: "after-style", previous_revision: "style-only", action: "undo" };
+  const redone = canvasHistoryEntries({ revisions, history: [...history, redo] });
+  assert.equal(redone[0].action, "redo");
+  assert.equal(redone.find((step) => step.id === "text").undone, undefined);
+
+  const newEdit = { id: "new", revision: "new-text", previous_revision: "style-only", action: "edit" };
+  const newer = canvasHistoryEntries({ revisions, history: [...history, newEdit] });
+  assert.equal(newer[0].redoRevision, undefined);
+  assert.equal(newer.find((step) => step.id === "text").undone, true);
+});
