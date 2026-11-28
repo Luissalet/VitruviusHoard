@@ -11,6 +11,7 @@ from . import review as review_mod
 from . import waivers as waivers_mod
 from .lint import run_lint, score_of
 from .rules.critique_checks import PATTERN_WEIGHTS
+from .software.global_models import VisionTimeout, VisionUnavailable
 
 DEFAULT_TIMEOUT_S = 110
 TIMEOUT_DESCRIPTION = ("Budget in seconds for optional model work. Default 110 leaves time for the reply under the Hub's "
@@ -205,8 +206,13 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
                 vision = {"status": "complete"}
             else:
                 vision = {"status": "unavailable", "reason": "invalid_score" if parsed else "invalid_response"}
-        except TimeoutError:
+        except VisionTimeout as error:
+            vision_model = error.model
             vision = {"status": "timed_out"}
+        except VisionUnavailable as error:
+            vision = {"status": "unavailable", "reason": error.reason}
+        except TimeoutError:
+            vision = {"status": "unavailable", "reason": "budget_exhausted"}
         except Exception as error:  # noqa: BLE001 — vision is best-effort
             vision_summary = f"(vision critique unavailable: {type(error).__name__}: {error})"
             vision = {"status": "unavailable", "reason": "model_error"}
