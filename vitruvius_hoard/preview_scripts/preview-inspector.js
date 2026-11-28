@@ -57,6 +57,20 @@
     return best;
   }
 
+  // Presentation hints describe the person-facing name without replacing the selector or source identity.
+  function displayLabel(element, tag) {
+    const labelled = compact(attrOf(element, 'aria-labelledby'));
+    const names = labelled ? labelled.split(' ').map(id => element.ownerDocument?.getElementById(id))
+      .filter(Boolean).map(textOf).join(' ') : '';
+    const labels = Array.from(element.labels || [], textOf).join(' ');
+    const caption = tag === 'figure' ? element.querySelector?.('figcaption')
+      : tag === 'table' ? element.querySelector?.('caption')
+      : /^(section|article|aside|header|footer|main|nav)$/.test(tag)
+        ? element.querySelector?.('h1, h2, h3, h4, h5, h6') : null;
+    return compact(names || attrOf(element, 'aria-label') || labels || attrOf(element, 'alt')
+      || (caption && textOf(caption))).slice(0, MAX_TEXT);
+  }
+
   function describeElement(element, env) {
     const {count, rect, style, scroll} = env;
     const vsrcOwner = attrOf(element, 'data-vsrc') ? element : null;
@@ -67,15 +81,20 @@
     const styles = style(element) || {};
     for (const key of COMPUTED) if (styles[key] !== undefined && styles[key] !== '') computed[key] = String(styles[key]).slice(0, 120);
     const classes = String(attrOf(element, 'class') || '').split(/\s+/).filter(Boolean).slice(0, 12);
+    const tag = tagOf(element);
+    const role = compact(attrOf(element, 'role')).split(' ')[0];
+    const label = displayLabel(element, tag);
     return {
       vsrc: vsrc || null,
       own_vsrc: Boolean(vsrcOwner),
       html: String(element.outerHTML || '').slice(0, MAX_HTML),
       vgen: generated ? attrOf(generated, 'data-vgen') : null,
       selector: selectorFor(element, count),
-      tag: tagOf(element),
+      tag,
       classes,
-      text: compact(element.innerText ?? element.textContent).slice(0, MAX_TEXT),
+      ...(role ? {role} : {}),
+      ...(label ? {label} : {}),
+      text: textOf(element),
       box: {x: Math.round(box.left + scroll.x), y: Math.round(box.top + scroll.y), w: Math.round(box.width), h: Math.round(box.height)},
       computed,
       ...relationOf(element),

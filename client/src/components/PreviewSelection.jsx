@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useCopilotForm } from "../copilot-hooks.js";
-import { affectsText, chipText, copilotSelection, identitiesOf, isInspectorMessage, sourceText } from "../preview-selection.js";
+import { affectsText, chipText, copilotSelection, elementName, identitiesOf, isInspectorMessage, sourceText } from "../preview-selection.js";
 import { isCommentMessage } from "../preview-comments.js";
 import PreviewComments from "./PreviewComments.jsx";
 
@@ -113,10 +113,34 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
       {items.length > 0 && <button type="button" className="btn" onClick={() => { send("inspect/clear"); setItems([]); if (canvas) document.getElementById("canvas-elements-title")?.focus(); }}>{es ? "Quitar todo" : "Clear all"}</button>}
       {!canvas && <span className="help" role="status">{!connected ? (es ? "Esta vista previa no admite selección todavía." : "This preview does not support selection yet.") : commentMode ? (es ? "Haz clic en un elemento y escribe la nota. Esc sale." : "Click an element and write the note. Esc leaves.") : mode ? (es ? "Haz clic para seleccionar. Mayús+clic añade o quita. Arrastra un tirador o enfócalo con Alt+Intro. Doble clic edita texto. Esc sale." : "Click to select. Shift+click adds or removes. Drag a handle or focus it with Alt+Enter. Double-click to edit text. Esc leaves.") : items.length ? (es ? `${items.filter((item) => !item.expired).length} seleccionados: el agente los ve en su turno.` : `${items.filter((item) => !item.expired).length} selected: the agent sees them in its turn.`) : (es ? "Selecciona elementos para pedir un cambio sobre ellos." : "Select elements to ask for a change on them.")}</span>}
     </div>
-    {items.length > 0 && <ul className="flex flex-wrap gap-2" aria-label={es ? "Elementos seleccionados" : "Selected elements"}>{items.map((item, index) => <li key={item.selector + index} className={`chip chip-wrap ${item.expired ? "chip-amber" : "chip-accent"}`} style={{ alignItems: "flex-start" }}>
-      <span><strong style={item.expired ? { textDecoration: "line-through" } : undefined}>{chipText(item, index)}</strong>{item.expired && <><br /><span>{es ? "caducada: la versión actual ya no tiene este elemento" : "expired: the current revision no longer has this element"}</span></>}{sourceText(item, es) && <><br /><span>{sourceText(item, es)}</span></>}{affectsText(item, es) && <><br /><span>{affectsText(item, es)}</span></>}</span>
-      <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${chipText(item, index)}`} onClick={() => { send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length }); setItems(items.filter((_, at) => at !== index)); }}>×</button>
-    </li>)}</ul>}
+    {items.length > 0 && <ul className="flex flex-wrap gap-2" aria-label={es ? "Elementos seleccionados" : "Selected elements"}>
+      {items.map((item, index) => {
+        const label = chipText(item, es);
+        const source = sourceText(item, es);
+        const affects = affectsText(item, es);
+        const element = elementName(item);
+        return <li key={item.selector + index} className={`preview-selection-card chip chip-wrap ${item.expired ? "chip-amber" : "chip-accent"}`}>
+          <div className="preview-selection-content">
+            <strong style={item.expired ? { textDecoration: "line-through" } : undefined}>{label}</strong>
+            {item.expired && <span>{es ? "Caducada. La versión actual ya no tiene este elemento." : "Expired. The current revision no longer contains this element."}</span>}
+            {affects && <span>{affects}</span>}
+            <details className="preview-selection-details">
+              <summary>{es ? "Detalles técnicos" : "Technical details"}</summary>
+              <dl>
+                {item.selector && <><dt>Selector</dt><dd><code>{item.selector}</code></dd></>}
+                {element !== item.selector && <><dt>{es ? "Elemento" : "Element"}</dt><dd><code>{element}</code></dd></>}
+                {source && <><dt>{es ? "Origen" : "Source"}</dt><dd><code>{source}</code></dd></>}
+                {item.vgen && item.vsrc && <><dt>{es ? "Ruta" : "Path"}</dt><dd><code>{item.vsrc}</code></dd></>}
+              </dl>
+            </details>
+          </div>
+          <button type="button" className="px-2 text-[16px] leading-none" aria-label={`${es ? "Quitar" : "Remove"} ${label}`} onClick={() => {
+            send(item.expired ? "inspect/dismiss" : "inspect/remove", { index: items.slice(0, index).filter((other) => Boolean(other.expired) === Boolean(item.expired)).length });
+            setItems(items.filter((_, at) => at !== index));
+          }}>×</button>
+        </li>;
+      })}
+    </ul>}
     </div>}
     <PreviewComments projectId={projectId} running={running} served={served} previewRevision={previewRevision} es={es} notify={notify} send={send} register={commentHandler} ready={ready} onContext={setWaiting} onComments={onComments} canvas={canvas} />
   </div>;

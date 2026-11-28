@@ -68,6 +68,21 @@ test("selector falls back to a path anchored at body when nothing shorter is uni
   assert.ok(selector.split(" > ").length <= 5);
 });
 
+test("descriptions add a person-facing label without changing source identity", () => {
+  const title = node("h1", { id: "titulo" }, [], "Portada");
+  const section = node("section", { id: "portada", "aria-labelledby": "titulo", "data-vsrc": "pages/index.html:3:1" }, [title], "VISITAS Portada Más texto");
+  section.ownerDocument = { getElementById: (id) => id === "titulo" ? title : null };
+  const link = node("a", { id: "reserva", role: "button" }, [], "Reservar para un grupo");
+  const body = node("body", {}, [section, link]);
+  const env = { count: counter(body), rect: () => ({}), style: () => ({}), scroll: { x: 0, y: 0 } };
+  const selection = describeElement(section, env);
+  assert.equal(selection.label, "Portada");
+  assert.equal(selection.text, "VISITAS Portada Más texto");
+  assert.equal(selection.selector, "#portada");
+  assert.equal(selection.vsrc, "pages/index.html:3:1");
+  assert.equal(describeElement(link, env).role, "button");
+});
+
 test("description carries source position, generated marker, trimmed text, page box and styles", () => {
   const { html, items, generated } = page();
   const count = counter(html);
