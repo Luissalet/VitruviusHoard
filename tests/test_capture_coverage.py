@@ -51,9 +51,9 @@ def test_project_capture_coverage_reaches_render_consumers(services, monkeypatch
     deadlines = []
     chat = review.chat_before_deadline
 
-    def record_deadline(link, messages, images, deadline):
+    def record_deadline(link, messages, images, deadline, **options):
         deadlines.append(deadline)
-        return chat(link, messages, images, deadline)
+        return chat(link, messages, images, deadline, **options)
 
     monkeypatch.setattr(review, "chat_before_deadline", record_deadline)
     critique = call_tool(services, "design_critique", {"render_id": render_id, "clean_review": True, "timeout_s": 5})

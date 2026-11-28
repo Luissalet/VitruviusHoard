@@ -86,11 +86,12 @@ def run(link: Any, *, images: list[bytes], html: str, findings: list[dict],
     return {**parse(text or ""), "model": model, "images": len(images), "ms": round((time.monotonic() - t0) * 1000, 1)}
 
 
-def chat_before_deadline(link, messages, images, deadline):
+def chat_before_deadline(link, messages, images, deadline, **options):
     chat = getattr(link, "vision_chat", link.chat)
-    if deadline is None:
-        return chat(messages, images=images, effort="high")
-    remaining = deadline - time.monotonic()
-    if remaining <= 0:
-        raise TimeoutError("The model budget is exhausted")
-    return chat(messages, images=images, effort="high", timeout=remaining)
+    options.setdefault("effort", "high")
+    if deadline is not None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("The model budget is exhausted")
+        options["timeout"] = remaining
+    return chat(messages, images=images, **options)

@@ -20,15 +20,16 @@ from vitruvius_hoard.software.global_models import GlobalLink, global_job
 
 def test_confined_render_id_keeps_the_successful_vision_contract(services):
     class PromptRecorder:
-        def chat(self, messages, *, images, effort, timeout):
+        def chat(self, messages, *, images, effort, max_tokens, timeout):
             assert 0 < timeout <= DEFAULT_TIMEOUT_S
-            assert len(images) == 1 and effort == "high"
+            assert len(images) == 1 and effort == "off" and max_tokens == 768
             return {"model": "fixture-vision", "text": '{"score": 9, "summary": "Visual feedback", "findings": []}'}
 
     services.link_sync = PromptRecorder()
     render = services.render(html="<main><h1>An owned render</h1></main>", widths=[390])
     report = call_tool(services, "design_critique", {"render_id": render["id"]})
-    assert report["vision_model"] == "fixture-vision" and report["vision"] == {"status": "complete"}
+    assert report["vision_model"] == "fixture-vision"
+    assert report["vision"] == {"status": "complete", "reason": None, "model": "fixture-vision"}
     assert report["summary"] == "Visual feedback"
     assert report["score"] == round((report["heuristic_score"] + 9) / 2, 2)
     assert report["score_source"] == "vision_blend"
@@ -49,8 +50,8 @@ def test_invalid_visual_score_leaves_the_deterministic_report_unchanged(services
     deterministic = call_tool(services, "design_critique", {**args, "use_vision": False})
     report = call_tool(services, "design_critique", args)
     assert report["partial"] is True and report["missing"] == ["vision"]
-    assert report["vision"] == {"status": "unavailable", "reason": "invalid_score"}
-    assert report["vision_model"] is None and report["score_source"] == "heuristic"
+    assert report["vision"] == {"status": "unavailable", "reason": "invalid_score", "model": "fixture-vision"}
+    assert report["vision_model"] == "fixture-vision" and report["score_source"] == "heuristic"
     for key in ("score", "heuristic_score", "findings", "summary", "gate", "ship_ready"):
         assert report[key] == deterministic[key], key
 
@@ -62,6 +63,8 @@ def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(ser
         if request.method == "GET":
             return httpx.Response(200, json={"endpoint_id": "fixture", "model": "fixture-vision", "connection_revision": "1",
                                              "vision": True, "chat_path": "/api/global-model/v1/chat/completions"})
+        body = json.loads(request.content)
+        assert body["max_tokens"] == 768 and body["chat_template_kwargs"]["enable_thinking"] is False
         try:
             await asyncio.Event().wait()
         finally:
@@ -86,12 +89,13 @@ def test_cutoff_returns_a_deterministic_report_and_cancels_the_model_request(ser
         link.sync.close()
         asyncio.run(client.aclose())
 
-    assert partial["vision"] == {"status": "timed_out"}
+    assert partial["vision"] == {"status": "timed_out", "reason": "generation_timeout", "model": "fixture-vision"}
     assert partial["vision_model"] == "fixture-vision"
     assert partial["partial"] is True and partial["missing"] == ["vision", "clean_review"]
     assert partial["review"]["status"] == "timed_out" and partial["review"]["verdict"] is None
-    assert "use_vision=false" in partial["next_action"]["es"]
-    assert deterministic["vision"] == {"status": "not_requested"} and deterministic["partial"] is False
+    assert all("render_id" in action and "timeout_s" in action for action in partial["next_action"].values())
+    assert deterministic["vision"] == {"status": "not_requested", "reason": None, "model": None}
+    assert deterministic["partial"] is False
     assert deterministic["score_source"] == "heuristic"
     for key in ("score", "heuristic_score", "score_source", "findings", "gate", "ship_ready", "rules_run"):
         assert partial[key] == deterministic[key], key
@@ -132,11 +136,11 @@ def test_missing_vision_is_classified_before_generation(services, monkeypatch, d
 
     assert requests == ["GET"]
     assert cancelled.is_set() is not descriptor_ready
-    assert report["vision"] == {"status": "unavailable", "reason": reason}
+    assert report["vision"] == {"status": "unavailable", "reason": reason, "model": None}
     assert report["vision_model"] is None and report["partial"]
     assert report["missing"] == ["vision", "clean_review"] and report["score_source"] == "heuristic"
     assert report["review"]["status"] == "unavailable" and report["review"]["reason"] == reason
-    assert "use_vision=false" in report["next_action"]["es"]
+    assert all("render_id" in action and "use_vision=false" not in action for action in report["next_action"].values())
 
 
 @pytest.mark.parametrize("route", ["default-loopbacks", "explicit-loopback", "blocked-spark", "both-ready"])

@@ -6,7 +6,7 @@
 
 ## Critique a captured render
 
-Call `design_critique` with your project's `render_id`. The default 110-second model budget works with the same scoped call. For deterministic checks on every iteration, pass `use_vision: false` and leave `clean_review: false`. A report with `partial: true` still supplies findings, a score and a gate. `score_source: "heuristic"` identifies a score without visual-model input. When the global selection cannot provide vision, read `vision.reason` and `next_action`. A generation timeout reports the selected `vision_model`.
+Call `design_critique` with your project's `render_id`. The default model budget is 110 seconds. For deterministic checks on every iteration, pass `use_vision: false` and leave `clean_review: false`. A report with `partial: true` still supplies findings, a score and a gate. `score_source: "heuristic"` identifies a score without visual-model input. `vision` reports `status`, `reason` and `model`. Use `next_action` to recover a missing visual pass, for example by retrying a saved capture or capturing only the width you want reviewed.
 
 Llama a `design_critique` con el `render_id` de tu proyecto. Para corregir entre rondas, puedes usar `use_vision: false` con `clean_review: false`. Si el informe devuelve `partial: true`, consulta `missing` y sigue con los hallazgos deterministas disponibles. Para pedir una valoración visual centrada en una anchura, crea una captura con `app_project_render(widths=[834])` y pasa su `render_id`.
 

@@ -14,6 +14,8 @@ from .rules.critique_checks import PATTERN_WEIGHTS
 from .software.global_models import VisionTimeout, VisionUnavailable
 
 DEFAULT_TIMEOUT_S = 110
+VISION_EFFORT = "off"
+VISION_MAX_TOKENS = 768
 TIMEOUT_DESCRIPTION = ("Budget in seconds for optional model work. Default 110 leaves time for the reply under the Hub's "
                        "120-second limit. If the budget expires, deterministic findings still return.")
 
@@ -42,12 +44,11 @@ def _with_review_weights(findings: list[dict]) -> list[dict]:
 
 RUBRIC_AREAS = ["hierarchy", "typography", "color", "spacing", "motion", "distinctiveness", "a11y", "content"]
 
-_VISION_PROMPT = """You are a senior visual designer critiquing a rendered web page from screenshots.
-Rubric: hierarchy, typography, colour, spacing/rhythm, motion, distinctiveness vs generic AI output,
-accessibility, copy. Reply with ONLY a JSON object:
+_VISION_PROMPT = """Critique the screenshots for hierarchy, typography, colour, spacing, motion, distinctiveness,
+accessibility and copy. Focus on visible evidence. Return only JSON:
 {"score": 0-10, "findings": [{"area": "...", "severity": "info|warn|error", "title": "...", "detail": "...", "fix": "..."}],
- "summary": "...", "direction": "..."}
-Say what to change, not just what is wrong."""
+ "summary": "..."}
+Use at most three findings with one sentence each for detail and fix. Keep the summary to two sentences."""
 
 
 def vision_prompt() -> str:
@@ -159,6 +160,34 @@ def _keyboard_summary(probe: dict, findings: list[dict]) -> Optional[dict]:
             "rules": sorted({f["check_id"] for f in mine})}
 
 
+def _next_action(missing: list[str], vision: dict) -> dict[str, str]:
+    if "vision" not in missing:
+        return {
+            "en": "Repeat design_critique with the saved render_id and clean_review=true for the independent review.",
+            "es": "Para la revisión independiente, repite design_critique con el render_id guardado y clean_review=true.",
+        }
+    reason = vision.get("reason")
+    if reason == "no_model":
+        return {
+            "en": "Select a global model that supports vision, then repeat design_critique with the saved render_id.",
+            "es": "Selecciona un modelo global con visión y repite design_critique con el render_id guardado.",
+        }
+    if reason in ("resolution_timeout", "resolution_error"):
+        return {
+            "en": "Check that the global model service responds, then repeat design_critique with the saved render_id.",
+            "es": "Comprueba que el servicio del modelo global responde y repite design_critique con el render_id guardado.",
+        }
+    if reason in ("generation_timeout", "budget_exhausted"):
+        return {
+            "en": "Retry with the saved render_id and timeout_s=110 if the previous limit was shorter. If it still times out, capture just the width you need and use its new render_id.",
+            "es": "Repite con el render_id guardado y timeout_s=110 si el plazo era menor. Si vuelve a vencer, captura solo la anchura que necesitas y usa su nuevo render_id.",
+        }
+    return {
+        "en": "Capture the page at one width with app_project_render or render_preview, then call design_critique with that render_id and the focus you want reviewed.",
+        "es": "Captura la página a una anchura con app_project_render o render_preview y llama a design_critique con ese render_id y el foco que quieres revisar.",
+    }
+
+
 def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Optional[list[bytes]] = None,
              link: Any = None, use_vision: bool = True, tokens: Optional[dict] = None, waivers: Any = None,
              prior_waivers: Optional[dict[str, str]] = None, clean_review: bool = False,
@@ -193,14 +222,14 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
                 {"role": "system", "content": vision_prompt()},
                 {"role": "user", "content": f"Focus: {focus or 'overall quality'}. Rate and critique this page.{capture_note}"},
             ]
-            result = review_mod.chat_before_deadline(link, messages, images, deadline)
+            result = review_mod.chat_before_deadline(link, messages, images, deadline,
+                                                     effort=VISION_EFFORT, max_tokens=VISION_MAX_TOKENS)
             text = result.text if hasattr(result, "text") else (result.get("text") if isinstance(result, dict) else str(result))
-            model = getattr(result, "model", None) or (result.get("model") if isinstance(result, dict) else None)
+            vision_model = getattr(result, "model", None) or (result.get("model") if isinstance(result, dict) else None)
             parsed = _extract_json(text or "")
             score = _visual_score(parsed.get("score")) if parsed else None
             if score is not None:
                 findings.extend(_vision_findings(parsed))
-                vision_model = model
                 vision_score = score
                 vision_summary = parsed.get("summary", "")
                 vision = {"status": "complete"}
@@ -208,8 +237,9 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
                 vision = {"status": "unavailable", "reason": "invalid_score" if parsed else "invalid_response"}
         except VisionTimeout as error:
             vision_model = error.model
-            vision = {"status": "timed_out"}
+            vision = {"status": "timed_out", "reason": "generation_timeout"}
         except VisionUnavailable as error:
+            vision_model = error.model
             vision = {"status": "unavailable", "reason": error.reason}
         except TimeoutError:
             vision = {"status": "unavailable", "reason": "budget_exhausted"}
@@ -242,10 +272,6 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
         missing.append("vision")
     if review is not None and (review.get("error") or not images):
         missing.append("clean_review")
-    next_action = {
-        "en": "Continue with these deterministic findings. For the next check, call design_critique with use_vision=false and clean_review=false.",
-        "es": "Continúa con estos hallazgos deterministas. Para la siguiente comprobación, llama a design_critique con use_vision=false y clean_review=false.",
-    }
     open_n = gate["floor"] + gate["reflex_open"]
     web_guidance, references = _guidance(findings, focus)
     summary = vision_summary or (
@@ -258,10 +284,10 @@ def critique(*, probe: dict, html: str, focus: Optional[str] = None, images: Opt
         "heuristic_score": heuristic_score,
         "score_source": score_source,
         "vision_model": vision_model,
-        "vision": vision,
+        "vision": {**vision, "reason": vision.get("reason"), "model": vision_model},
         "partial": bool(missing),
         "missing": missing,
-        **({"next_action": next_action} if missing else {}),
+        **({"next_action": _next_action(missing, vision)} if missing else {}),
         "findings": findings,
         "summary": summary,
         "gate": gate,

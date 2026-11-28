@@ -23,9 +23,10 @@ _DEFAULT_FAUSTUS_URLS = LinkConfig().faustus_urls
 
 
 class VisionUnavailable(ValueError):
-    def __init__(self, reason, message):
+    def __init__(self, reason, message, model=None):
         super().__init__(message)
         self.reason = reason
+        self.model = model
 
 
 class VisionTimeout(TimeoutError):
@@ -63,8 +64,9 @@ class GlobalSync(SyncFacade):
                 self._inner = GlobalLink(parent.config, client=None if parent._owns_client else parent._client)
             return self._inner
 
-    def vision_chat(self, messages, *, images, effort, timeout=None):
-        return self._run(lambda link: link.vision_chat(messages, images=images, effort=effort, timeout=timeout))
+    def vision_chat(self, messages, *, images, effort, timeout=None, max_tokens=None):
+        return self._run(lambda link: link.vision_chat(
+            messages, images=images, effort=effort, timeout=timeout, max_tokens=max_tokens))
 
     def close(self, timeout=None):
         if self._thread is threading.current_thread():
@@ -180,7 +182,7 @@ class GlobalLink(Link):
                           url=selected['base'] + selected['chat_path'], model=selected['model'],
                           reason='Exact global selection through Faustus', details={'allow_load': False})
 
-    async def vision_chat(self, messages, *, images, effort, timeout=None):
+    async def vision_chat(self, messages, *, images, effort, timeout=None, max_tokens=None):
         """Resolve vision within a short budget and keep the selected model pinned for generation."""
         if not self.config.faustus_urls:
             raise VisionUnavailable("no_model", "No global model endpoint is configured.")
@@ -202,9 +204,13 @@ class GlobalLink(Link):
                 remaining = deadline - time.monotonic() if deadline is not None else None
                 if remaining is not None and remaining <= 0:
                     raise TimeoutError("The model budget is exhausted")
-                return await self.chat(messages, images=images, effort=effort, capability="vision", timeout=remaining)
+                return await self.chat(messages, images=images, effort=effort, capability="vision",
+                                       timeout=remaining, max_tokens=max_tokens)
             except (TimeoutError, httpx.TimeoutException) as error:
                 raise VisionTimeout(resolution.model) from error
+            except (ValueError, httpx.HTTPError) as error:
+                raise VisionUnavailable("model_error", "The selected vision model could not finish its response.",
+                                        model=resolution.model) from error
 
     async def _post_chat(self, provider, url, payload, level):
         selected = await self.selection()
