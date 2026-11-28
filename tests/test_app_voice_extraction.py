@@ -366,16 +366,23 @@ def test_spoken_booking_details_are_grounded_in_the_actual_form_options():
 
 
 @pytest.mark.asyncio
-async def test_streaming_short_chat_stops_at_a_complete_json_object(monkeypatch):
+async def test_streaming_short_chat_returns_at_complete_json_and_drains_the_socket(monkeypatch):
     origin = "http://test.invalid"
-    monkeypatch.setattr(LinkConfig, "faustus_candidates", lambda _: [origin])
+    def unexpected_placement(_):
+        pytest.fail("An explicitly configured healthy origin must not wait for placement")
+
+    monkeypatch.setattr(LinkConfig, "faustus_candidates", unexpected_placement)
+    release_tail = asyncio.Event()
+    drained = asyncio.Event()
 
     class Events(httpx.AsyncByteStream):
         async def __aiter__(self):
             for content in ('{"seats":', "40}"):
                 event = json.dumps({"choices": [{"delta": {"content": content}}]})
                 yield ("data: " + event + "\n\n").encode()
-            pytest.fail("Reading should stop once the JSON object is complete")
+            await release_tail.wait()
+            yield b"data: [DONE]\n\n"
+            drained.set()
 
     def handler(request):
         if request.method == "GET":
@@ -388,8 +395,37 @@ async def test_streaming_short_chat_stops_at_a_complete_json_object(monkeypatch)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         link = GlobalLink(LinkConfig(faustus_urls=(origin,)), client=client)
-        result = await link.short_json_chat([{"role": "user", "content": "JSON"}], timeout=1, max_tokens=16)
-    assert json.loads(result.text) == {"seats": 40}
+        try:
+            result = await link.short_json_chat([{"role": "user", "content": "JSON"}], timeout=1, max_tokens=16)
+            assert json.loads(result.text) == {"seats": 40}
+            assert not drained.is_set()
+            release_tail.set()
+            await asyncio.wait_for(drained.wait(), timeout=1)
+        finally:
+            await link.aclose()
+
+
+@pytest.mark.asyncio
+async def test_short_chat_uses_placement_when_an_explicit_origin_is_unavailable(monkeypatch):
+    configured, published = "http://configured.invalid", "http://published.invalid"
+    order = []
+    def placement(_):
+        order.append("placement")
+        return [configured, published]
+
+    monkeypatch.setattr(LinkConfig, "faustus_candidates", placement)
+
+    def handler(request):
+        order.append(str(request.url))
+        if request.url.host == "configured.invalid":
+            return httpx.Response(503)
+        return httpx.Response(200, json={"endpoint_id": "family", "connection_revision": "8", "model": "sample",
+                                         "chat_path": "/api/global-model/v1/chat/completions"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        link = GlobalLink(LinkConfig(faustus_urls=(configured,)), client=client)
+        assert (await link._prepared_short_selection())["base"] == published
+    assert order == [configured + "/api/global-model", "placement", published + "/api/global-model"]
 
 
 @pytest.mark.asyncio
