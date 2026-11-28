@@ -237,7 +237,7 @@ export default function Canvas({ param }) {
     setElements((current) => current?.items ? current : null);
     elementsTimer.current = setTimeout(() => setElements((current) => ({ ...current, error: true })), 3500);
     let connectUntil;
-    const hello = () => send({ type: "inspect/hello" });
+    const hello = () => send({ type: "inspect/hello", canvas: true });
     const onLoad = () => { connectUntil = Date.now() + CONNECT_WINDOW; hello(); };
     const onMessage = (event) => {
       const frame = frameRef.current;
@@ -299,7 +299,9 @@ export default function Canvas({ param }) {
 
   // What the Dock host (Faustus) sees of this screen: the same active and expired elements the panel shows.
   useEffect(() => {
-    window.HoardApp?.setContext?.(canvasContext({ project, revision: visible?.revision, mode, selection, comments }));
+    window.HoardApp?.setContext?.(canvasContext({
+      project, revision: visible?.revision, mode, selection: mode === "navigate" ? [] : selection, comments,
+    }));
   }, [project?.id, project?.name, visible?.revision, mode, selection, comments]);
   useEffect(() => () => window.HoardApp?.setContext?.({}), []);
 
@@ -454,7 +456,8 @@ export default function Canvas({ param }) {
                       <p className="canvas-empty">{es ? "Abre la vista previa para ver los elementos." : "Open the preview to see its elements."}</p>
                     </div>}
               </div>
-              <PreviewSelection key={project.id} project={project} preview={preview} frameRef={frameRef} frameKey={frameKey} es={es} notify={notify} canvas onComments={setComments} />
+              <PreviewSelection key={project.id} project={project} preview={preview} frameRef={frameRef} frameKey={frameKey}
+                es={es} notify={notify} canvas selectionActive={mode !== "navigate"} onComments={setComments} />
             </aside>
           </div>
         </div>

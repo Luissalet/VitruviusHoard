@@ -11,7 +11,7 @@ import PreviewComments from "./PreviewComments.jsx";
  * The inspector reports the elements the person picks. This bar keeps the chips in this workbench and includes them in
  * the copilot turn context. The read-only agent tool queries the live preview through the canvas relay.
  */
-export default function PreviewSelection({ project, preview, frameRef, frameKey, es, notify, canvas = false, onComments }) {
+export default function PreviewSelection({ project, preview, frameRef, frameKey, es, notify, canvas = false, selectionActive = true, onComments }) {
   const [mode, setMode] = useState(false);
   const [commentMode, setCommentMode] = useState(false);
   const [ready, setReady] = useState(0); // counts the greetings of the page, so pins are sent again after a reload
@@ -103,11 +103,12 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [running, projectId, canvas]);
-  useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [], comments: [] }, current: { revision: items.length ? served.current || undefined : undefined, selection: copilotSelection(items), comments: waiting } });
+  const activeItems = selectionActive ? items : [];
+  useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [], comments: [] }, current: { revision: activeItems.length ? served.current || undefined : undefined, selection: copilotSelection(activeItems), comments: waiting } });
 
   if (!running) return null;
   return <div className={canvas ? "min-w-0" : "panel flex flex-col gap-3"} aria-label={es ? "Selección en la vista previa" : "Preview selection"}>
-    {(!canvas || items.length > 0) && <div className={canvas ? "canvas-inspector-section" : "contents"}>
+    {(!canvas || activeItems.length > 0) && <div className={canvas ? "canvas-inspector-section" : "contents"}>
     {canvas && <h2 className="canvas-inspector-heading">{es ? "Selección" : "Selection"}</h2>}
     <div className="flex gap-2 items-center flex-wrap">
       {!canvas && <><button type="button" className={`btn ${mode ? "btn-active" : ""}`} aria-pressed={mode} aria-keyshortcuts="Alt+Shift+S" onClick={toggle} disabled={!connected} title="Alt+Shift+S">{mode ? (es ? "Salir de seleccionar" : "Stop selecting") : (es ? "Seleccionar" : "Select")}</button>

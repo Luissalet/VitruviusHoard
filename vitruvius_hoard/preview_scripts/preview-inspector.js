@@ -286,6 +286,7 @@
   let hostOrigin = null; // the origin of the page that frames this one: fixed by the browser, or by the first hello
   let hostLanguage;
   let hostTheme;
+  let canvasHost = false;
   let mode = false;
   let commenting = false;
   let pins = []; // comments pinned on this page: {id, n, status, selector, vsrc, own_vsrc, tag, text, revision}
@@ -315,6 +316,7 @@
   };
   // Live cards first, then the expired ones: they stay in the list, flagged, until the person removes them.
   const active = () => mode || commenting;
+  const exposesSelection = () => !canvasHost || active();
   const snapshot = () => ({mode, comment_mode: commenting, page: pageId(), revision: revision(), selection: [...selected.map(describe), ...expired]});
   // A clip of the element (an SVG foreignObject drawn to a canvas), made once, off the report path; the list is reported again when it is ready.
   let clipTimer = 0;
@@ -403,6 +405,7 @@
   function publishContext(items) {
     const app = window.HoardApp;
     if (!app || typeof app.setContext !== 'function') return;
+    if (!exposesSelection()) items = [];
     const summary = items.length ? 'Selected on the preview: ' + items.map((item, index) => (item.expired ? '(expired) ' : '') + `${index + 1}. ${item.tag}${item.classes[0] ? '.' + item.classes[0] : ''} "${item.text.slice(0, 40)}"${item.vsrc ? ' (' + item.vsrc + ')' : ''}`).join('; ') : '';
     // The whole card travels in `view` (the clip as its description only: its pixels stay in the preview's report).
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
@@ -1180,7 +1183,7 @@
       const hasText = element.matches('a,button,p,label,h1,h2,h3,h4,h5,h6,[role="button"]') || !element.children.length;
       const text = label || (hasText && compact(element.textContent)) || element.id;
       rows.push({id, tag: tagOf(element), text: compact(text || '').slice(0, 96), depth,
-        selected: selected.includes(element)});
+        selected: exposesSelection() && selected.includes(element)});
     }
     const payload = {page: pageId(), revision: revision(), items: rows, total: elements.length};
     const key = JSON.stringify(payload);
@@ -1310,11 +1313,16 @@
       edits?.setLanguage(hostLanguage);
       edits?.setTheme(hostTheme);
       schedule();
-    } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
+    } else if (data.type === 'inspect/hello') {
+      canvasHost = data.canvas === true;
+      const message = snapshot(); lastRevision = message.revision;
+      publishContext(message.selection); post('dock/inspector-ready', message);
+    }
     else if (data.type === 'inspect/read-selection' && typeof data.id === 'string') {
       if (selected.length && (revision() !== lastRevision || selected.some(element => !element.isConnected))) settle();
-      const { selection, revision: servedRevision } = snapshot();
-      post('dock/result', { id: data.id, ok: true, result: { selection, revision: servedRevision, updated_ts: updatedTs } });
+      const selection = exposesSelection() ? snapshot().selection : [];
+      post('dock/result', { id: data.id, ok: true, result: { selection, revision: revision(),
+        updated_ts: exposesSelection() ? updatedTs : null } });
     }
     else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select', data.mode_request);
     else if (data.type === 'inspect/pick' && active() && Number.isFinite(data.x) && Number.isFinite(data.y) &&
@@ -1326,6 +1334,7 @@
     } else if (data.type === 'inspect/element-select' && data.page === pageId() && data.revision === revision()) {
       const element = listedElements.get(data.id);
       if (element?.isConnected && element.getClientRects().length) {
+        if (!exposesSelection()) { selected = []; expired = []; }
         if (!mode) setMode(true);
         choose(element, data.additive === true);
         if (selected.includes(element)) element.scrollIntoView?.({block: 'nearest', behavior: reduced() ? 'auto' : 'smooth'});

@@ -24,7 +24,8 @@ editor use the same theme. The label above a selected element uses the same type
 with selectors and source paths available under Technical details. The label moves clear of the edit handles.
 Inline text edits save when the field loses focus, when you click outside it, or when you press Enter.
 Escape cancels the draft. Edits that affect several rendered elements still ask for confirmation.
-Navigate keeps the selection in the inspector and clears its outline from the page.
+Navigate clears the active selection from the sidebar, preview outline and agent context. Returning to Select
+restores the last selection on that page. Picking an element from the list starts a new selection.
 When an edit or undo updates the open preview, the selected cards reflect the newly displayed revision.
 The edit handles show the nearest whole pixel
 while applying and saving the precise value.
