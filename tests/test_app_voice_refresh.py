@@ -168,6 +168,9 @@ def test_refresh_uses_direct_preview_when_transport_is_integrated(services, monk
 
     from vitruvius_hoard.transfer_assistant import voice_directory
 
+    monkeypatch.delenv("BOLTAGON_URL", raising=False)
+    monkeypatch.delenv("CYRANO_URL", raising=False)
+
     origin = "http://127.0.0.1:59731"
     reads = []
 
@@ -181,7 +184,6 @@ def test_refresh_uses_direct_preview_when_transport_is_integrated(services, monk
         return httpx.Response(200, json={"tools": [{"name": name} for name in
                              (voice.SPEECH_TOOL, voice.END_TURN_TOOL, *voice.DICTATION_TOOLS)]})
 
-    monkeypatch.delenv("CYRANO_URL", raising=False)
     monkeypatch.setattr(voice_directory, "_hub_apps", catalog)
     monkeypatch.setattr(voice_directory, "_request", request)
     project = project_with_old_assistant(services)
