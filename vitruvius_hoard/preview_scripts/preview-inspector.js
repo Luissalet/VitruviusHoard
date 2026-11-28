@@ -685,12 +685,25 @@
       return current;
     }
 
+    function commitEditor(focus = false) {
+      if (!editor) return;
+      const value = trim(input.value);
+      // Clear the draft before hiding the input or moving focus, which can fire blur.
+      const { args } = closeEditor(focus);
+      if (value !== args.change.original) void save({ ...args, change: { ...args.change, value } }, handles[0]);
+    }
+
     function closePanel(focus = true) {
       if (!confirmation) return;
       const previous = confirmation.focus;
       confirmation = null;
       panel.hidden = true;
       if (focus && previous?.isConnected && !previous.hidden) previous.focus({ preventScroll: true });
+    }
+
+    function closeStylePanel() {
+      // A text save can ask for confirmation between a pointer press (blur) and release (change mode).
+      if (confirmation?.args.change.kind === 'style') closePanel(false);
     }
 
     async function save(args, handle) {
@@ -810,7 +823,7 @@
         observer.disconnect();
         restoreGesture();
         closeEditor();
-        closePanel(false);
+        closeStylePanel();
         selected = next;
         if (next) observer.observe(next);
       }
@@ -819,7 +832,9 @@
         for (const handle of handles) handle.hidden = true;
         return;
       }
-      if (confirmation) anchor(panel, next.getBoundingClientRect());
+      if (confirmation && (confirmation.args.change.kind === 'style' || source(next) === confirmation.args.vsrc)) {
+        anchor(panel, next.getBoundingClientRect());
+      }
       const path = pageId();
       const rootFontPx = rootFont();
       const key = [meta.content, path, rootFontPx].join('|');
@@ -987,12 +1002,10 @@
       if (event.key === 'Escape') { event.preventDefault(); closeEditor(true); }
       else if (event.key === 'Enter') {
         event.preventDefault();
-        const { args } = closeEditor(true);
-        const value = trim(input.value);
-        if (value !== args.change.original) void save({ ...args, change: { ...args.change, value } }, handles[0]);
+        commitEditor(true);
       }
     });
-    input.addEventListener('blur', () => closeEditor());
+    input.addEventListener('blur', () => commitEditor());
     new MutationObserver(() => {
       const interrupted = gesture || editor || confirmation;
       restoreGesture(); closeEditor(); closePanel(false); waitingFor = null; redraw();
@@ -1015,7 +1028,8 @@
       hit: event => event.composedPath().includes(stage),
       hitHandle: event => event.composedPath().some(node => node.classList?.contains('canvas-handle')),
       editing: () => Boolean(gesture || editor || confirmation),
-      cancel: () => { restoreGesture(); closeEditor(); closePanel(false); },
+      commitEditor,
+      leaveMode: () => { commitEditor(); restoreGesture(); closeStylePanel(); },
       focus: () => handles.find(handle => !handle.hidden)?.focus({ preventScroll: true }),
       doubleClick: (event, throughHandle) => {
         const node = literalAt(event, throughHandle);
@@ -1219,10 +1233,12 @@
     if (draft === element) post('dock/comment-target', {page: pageId(), revision: item.revision, element: item, crop: clip ? clip.data_url : null, attrs: identityAttrs(element)});
   }
   function onClick(event) {
+    if (edits?.hit(event)) { keepInInspector(event); return; }
+    // Select intercepts the pointer press, so a click outside can leave the editor without a native blur.
+    if (mode) edits?.commitEditor();
     const pin = pinOf(event);
     if (pin) { swallow(event); post('dock/comment-focus', {page: pageId(), revision: revision(), id: pin}); return; }
     if (!active()) return;
-    if (mode && edits?.hit(event)) { keepInInspector(event); return; }
     swallow(event);
     if (commenting || event.detail <= 1) pickElement(elementAt(event), event.shiftKey);
   }
@@ -1232,11 +1248,10 @@
     else choose(element, additive);
   }
   function onBlock(event) {
-    if (!active()) return;
-    if (pinOf(event)) { keepInInspector(event); return; }
-    if (commenting) { swallow(event); return; }
     const hitOverlay = edits?.hit(event);
-    if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
+    if (!active() && !hitOverlay) return;
+    if (pinOf(event)) { keepInInspector(event); return; }
+    if (mode && event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
       const element = edits?.doubleClick(event, hitOverlay);
       if (element) { selected = [element]; schedule(); report(); swallow(event); return; }
     }
@@ -1246,7 +1261,7 @@
   function onKey(event) {
     if (event.altKey && event.shiftKey && event.code === 'KeyS') { event.preventDefault(); setMode(!mode); return; }
     if (event.altKey && event.shiftKey && event.code === 'KeyC') { event.preventDefault(); setMode(!commenting, 'comment'); return; }
-    if (!active() || (mode && edits?.hit(event) && (event.key !== 'Escape' || edits.editing()))) return;
+    if (!active() || (edits?.hit(event) && (event.key !== 'Escape' || edits.editing()))) return;
     if (mode && event.altKey && event.key === 'Enter' && selected.length === 1 && edits) {
       swallow(event); edits.focus(); return;
     }
@@ -1264,7 +1279,7 @@
     if (kind === 'comment') { commenting = Boolean(on); if (commenting) mode = false; } else { mode = Boolean(on); if (mode) commenting = false; }
     ensureLayer();
     if (!active()) hovered = null;
-    if (!mode) edits?.cancel();
+    if (!mode) edits?.leaveMode();
     if (!commenting) draft = null;
     setCursor(active());
     schedule(); report(modeRequest);
