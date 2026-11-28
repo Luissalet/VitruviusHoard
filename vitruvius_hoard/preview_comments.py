@@ -9,7 +9,7 @@ an export.
 Life cycle (who moves it):
 
     pending  --acknowledge (agent)-->  seen
-    seen  --resolve with a summary (agent)-->  resolved
+    pending|seen  --resolve with a summary (agent)-->  resolved
     seen  --reply (agent)-->  answered                (a question or answer for the person)
     seen  --dismiss (agent)-->  dismissed
     pending|seen|answered  --dismiss (person)-->  dismissed
@@ -18,8 +18,8 @@ Life cycle (who moves it):
     resolved  --undo the source fix (system)-->  pending
     any step  --undo-->  the state before it
 
-The agent acknowledges a comment before it answers it, so the person always sees "seen" first. A batch of
-acknowledgements is all or nothing. Every step is kept in the comment's ``history`` and can be undone.
+The agent acknowledges a comment before replying or dismissing it. Resolving a pending comment records
+the acknowledgement and resolution in one save and one undo. A batch of acknowledgements is all or nothing.
 """
 from __future__ import annotations
 
@@ -45,6 +45,11 @@ PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 JPEG_MAGIC = b"\xff\xd8\xff"
 _BOX = ("x", "y", "w", "h")
 _FIELDS = ("summary", "reply", "resolved_in")
+
+
+def _anchor_state(comment, revision):
+    anchor = comment.get("anchor") or {}
+    return anchor.get("state", "unchecked") if anchor.get("revision") == revision else "unchecked"
 
 
 def _text(value, limit):
@@ -191,7 +196,10 @@ class PreviewComments:
 
     def _view(self, comment, current):
         item = {key: value for key, value in comment.items() if key not in ("history", "source_undo_ts")}
-        item["stale"] = comment["revision"] != current
+        state = _anchor_state(comment, current)
+        item["stale"] = state == "lost"
+        if state == "unchecked":
+            item["anchor"] = {**(comment.get("anchor") or {}), "state": state}
         item["has_crop"] = bool(comment.get("crop"))
         item["history"] = [dict(entry) for entry in comment["history"]]
         return item
@@ -239,11 +247,12 @@ class PreviewComments:
             current = self._current_revision(project_id)
         comments = data["comments"]
         counts = {name: sum(1 for c in comments if c["status"] == name) for name in STATUSES}
-        counts["lost"] = sum(1 for c in comments if (c.get("anchor") or {}).get("state") == "lost" and c["status"] in OPEN + ("answered",))
+        lost = [comment for comment in comments if _anchor_state(comment, current) == "lost"]
+        counts["lost"] = sum(comment["status"] in OPEN + ("answered",) for comment in lost)
         if status == "open":
             picked = [c for c in comments if c["status"] in OPEN]
         elif status == "lost":
-            picked = [c for c in comments if (c.get("anchor") or {}).get("state") == "lost"]
+            picked = lost
         elif status == "all":
             picked = list(comments)
         elif status in STATUSES:
@@ -333,7 +342,8 @@ class PreviewComments:
         comment["status"], comment["updated_ts"] = to, now
         comment.update(fields or {})
 
-    def _step(self, project_id, comment_id, by, to, allowed, text=None, fields=None, require_text=False, *, history_details=None):
+    def _step(self, project_id, comment_id, by, to, allowed, text=None, fields=None, require_text=False, *,
+              history_details=None, acknowledge_pending=False):
         text = _text(text, MAX_SUMMARY)
         if require_text and not text:
             raise ValueError("This step needs a text")
@@ -341,6 +351,9 @@ class PreviewComments:
             data = self._load(project_id)
             comment = self._find(data, comment_id)
             self._check_step(comment, to, allowed)
+            if acknowledge_pending and comment["status"] == "pending":
+                self._move(comment, by, "seen", "", None)
+                history_details = {**(history_details or {}), "automatic_ack": True}
             self._move(comment, by, to, text, fields)
             if history_details:
                 comment["history"][-1].update(history_details)
@@ -368,9 +381,10 @@ class PreviewComments:
         """Resolved with a summary of what changed; ``revision`` is the project revision holding the change (default: the current one)."""
         if revision is not None and revision not in self.app_projects.get(project_id)["revisions"]:
             raise ValueError(f"Unknown revision {revision}: a comment is resolved in a revision of this project")
-        return self._step(project_id, comment_id, "agent", "resolved", ("seen",), summary,
+        return self._step(project_id, comment_id, "agent", "resolved", OPEN, summary,
                           {"summary": _text(summary, MAX_SUMMARY), "resolved_in": revision or self._current_revision(project_id), "reply": None},
-                          require_text=True, history_details={"source_revision": revision} if revision else None)
+                          require_text=True, history_details={"source_revision": revision} if revision else None,
+                          acknowledge_pending=True)
 
     def resolve_person(self, project_id, comment_id):
         """Close an open comment from the preview, keeping the step in its undo history."""
@@ -402,7 +416,7 @@ class PreviewComments:
             comment["history"].pop()
             if last.get("source_undo"):
                 comment["source_undo_ts"] = now
-            before = last["before"]
+            before = comment["history"].pop()["before"] if last.get("automatic_ack") else last["before"]
             comment["status"] = before["status"]
             for key in _FIELDS:
                 comment[key] = before.get(key)

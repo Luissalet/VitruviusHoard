@@ -1080,16 +1080,16 @@ TOOLS: list[Tool] = [
     Tool("app_project_comments",
         "List the comments the person pinned on the application preview. Listar comentarios de la vista previa.\n"
         "Default status \"open\" is what waits for you (pending and seen). Each comment has its note, the element it is pinned to (source position, "
-        "selector, box), the revision it was made on (`stale` when the project moved on) and `anchor.state` (\"lost\" when the element is gone). "
+        "selector, box), the original revision and `anchor.state` (\"lost\" when the current preview cannot find the element, \"unchecked\" before it reports). `stale` marks a confirmed lost anchor. "
         "Sinónimos: comentarios anclados, pendientes del lienzo, notas.",
         AppCommentListArgs, ann(True), lambda services, args: list_comments(services, args.id, args.status), capped=False),
     Tool("app_project_comment_ack",
         "Mark pending comments as seen by you. Reconocer comentarios de la vista previa.\n"
-        "Do this first: resolve, reply and dismiss only work on seen comments; a batch is all or nothing. Undo with app_project_comment_undo.",
+        "Acknowledge before replying or dismissing. Resolving a pending comment already acknowledges it. A batch is all or nothing. Undo with app_project_comment_undo.",
         AppCommentAckArgs, ann(False, False, True), lambda services, args: acknowledge_comments(services, args.id, args.comment_ids), capped=False),
     Tool("app_project_comment_resolve",
         "Resolve a comment with a summary of what you changed. Resolver comentario de la vista previa.\n"
-        "Needs the comment seen (app_project_comment_ack). The summary is shown next to the pin; the comment records the project revision that holds the change. Undo with app_project_comment_undo.",
+        "Accepts pending or seen comments. A pending comment is acknowledged in the same operation. The summary is shown next to the pin and the comment records the revision with the fix. Undo with app_project_comment_undo.",
         AppCommentResolveArgs, ann(False, False, True), lambda services, args: resolve_comment(services, args.id, args.comment_id, args.summary, args.revision), capped=False),
     Tool("app_project_comment_reply",
         "Answer a comment with a question instead of a change. Contestar comentario de la vista previa.\n"

@@ -3139,7 +3139,7 @@
   },
   {
     "name": "app_project_comments",
-    "description": "List the comments the person pinned on the application preview. Listar comentarios de la vista previa.\nDefault status \"open\" is what waits for you (pending and seen). Each comment has its note, the element it is pinned to (source position, selector, box), the revision it was made on (`stale` when the project moved on) and `anchor.state` (\"lost\" when the element is gone). Sinónimos: comentarios anclados, pendientes del lienzo, notas.",
+    "description": "List the comments the person pinned on the application preview. Listar comentarios de la vista previa.\nDefault status \"open\" is what waits for you (pending and seen). Each comment has its note, the element it is pinned to (source position, selector, box), the original revision and `anchor.state` (\"lost\" when the current preview cannot find the element, \"unchecked\" before it reports). `stale` marks a confirmed lost anchor. Sinónimos: comentarios anclados, pendientes del lienzo, notas.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -3176,7 +3176,7 @@
   },
   {
     "name": "app_project_comment_ack",
-    "description": "Mark pending comments as seen by you. Reconocer comentarios de la vista previa.\nDo this first: resolve, reply and dismiss only work on seen comments; a batch is all or nothing. Undo with app_project_comment_undo.",
+    "description": "Mark pending comments as seen by you. Reconocer comentarios de la vista previa.\nAcknowledge before replying or dismissing. Resolving a pending comment already acknowledges it. A batch is all or nothing. Undo with app_project_comment_undo.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -3209,7 +3209,7 @@
   },
   {
     "name": "app_project_comment_resolve",
-    "description": "Resolve a comment with a summary of what you changed. Resolver comentario de la vista previa.\nNeeds the comment seen (app_project_comment_ack). The summary is shown next to the pin; the comment records the project revision that holds the change. Undo with app_project_comment_undo.",
+    "description": "Resolve a comment with a summary of what you changed. Resolver comentario de la vista previa.\nAccepts pending or seen comments. A pending comment is acknowledged in the same operation. The summary is shown next to the pin and the comment records the revision with the fix. Undo with app_project_comment_undo.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
