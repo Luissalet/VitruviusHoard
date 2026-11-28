@@ -20,8 +20,10 @@ in Select and Comment as well. In Navigate, the page handles its own input.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. A saved comment
 quotes the text of its anchor on the displayed page. When it changes, **Text when commented** contains the
 original quote and crop. The preview's edit confirmation and text
-editor use the same theme. The label above a selected element uses the same type and name as its card,
-with selectors and source paths available under Technical details. The label moves clear of the edit handles.
+editor use the same theme. The outline label uses the same type and name as the selection card,
+with selectors and source paths available under Technical details. It uses a free area near the element, clear of text,
+controls and edit handles. If only a shorter label fits, it shows the element type. In a fully occupied
+preview, the outline and the name in the selection card remain available.
 Inline text edits save when the field loses focus, when you click outside it, or when you press Enter.
 Escape cancels the draft. Edits that affect several rendered elements still ask for confirmation.
 Navigate clears the active selection from the sidebar, preview outline and agent context. Returning to Select
