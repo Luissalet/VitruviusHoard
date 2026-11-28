@@ -301,6 +301,7 @@ export function mountDictationMicrophone(button, {
   document.addEventListener("visibilitychange", whenHidden);
   setPhase("");
   return {
+    get phase() { return phase; },
     cancel,
     setDisabled(value) {
       disabled = value;

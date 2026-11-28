@@ -25,7 +25,7 @@ Open the project through `app_project_preview` and use **Speak** or type in the 
 
 On a new preview, Vitruvius discovers the voice service as part of the first request and reuses the discovered route for later turns. The same behaviour applies to assistants already saved in projects.
 
-In Canvas and Applications, the embedded preview can request microphone access for the origin serving the project. While the browser is asking, the panel shows the pending permission and offers **Cancel request** to return to **Speak**. If access is denied, allow the microphone in the browser’s site permissions and choose **Speak** again. You can type while permission is pending or denied.
+In Canvas and Applications, the embedded preview can request microphone access for the origin serving the project. From **Speak** until the browser resolves the request, the panel shows **Waiting for microphone permission…**, including during the initial voice availability check. **Cancel request** returns the panel to **Speak**. If access is denied, allow the microphone in the browser’s site permissions and choose **Speak** again. You can type while permission is pending or denied.
 
 The reply reads back the values cited and validated by dictation that are still in the form, including a value the person repeats. It keeps the project’s option labels, uses the page’s language for dates and says a field title once when the option begins with it. Boltagon synthesizes the complete reply, including the values, as requested by the turn.
 
@@ -34,6 +34,8 @@ The panel keeps the whole written reply visible and streams the same reply from 
 The owned preview resolves Boltagon through the family configuration. Set `CYRANO_URL` on the Vitruvius process to use an explicit loopback Boltagon for transcription, dictation and synthesis. The Qwen voice profile and text preparation live in the voice service. If synthesis is unavailable, the full reply stays in writing. If dictation is unavailable, the original form can still be filled manually. Exported projects retain the form and panel source. Their voice and dictation calls need Vitruvius’s preview relay.
 
 ## Uso en castellano
+
+**Esperando permiso del micrófono…** se mantiene desde **Hablar** hasta que el navegador resuelve la solicitud, también durante la comprobación inicial de voz. **Cancelar solicitud** vuelve a **Hablar**. Si el navegador deniega el acceso, puedes habilitarlo en los permisos del sitio y volver a pulsar **Hablar**. También puedes escribir mientras esperas o si el permiso está denegado.
 
 La herramienta añade el panel al formulario que coincida con `form_selector`. Usa los nombres `name` de sus campos como claves del esquema y sus títulos o alias para indicar cómo se nombran en voz alta. Abre la vista previa, pulsa **Hablar** o escribe la instrucción. En Lienzo y Aplicaciones, la vista previa puede solicitar el micrófono para el origen del proyecto. Si el navegador pide permiso, concédelo para hablar. Puedes dar varios datos juntos, contestar a una pregunta por el campo que falta y corregir un valor. **Procesamiento por turno** muestra quién transcribe, entiende, ejecuta y habla, así como los tiempos y las reservas. El español y el inglés siguen el idioma de la página.
 

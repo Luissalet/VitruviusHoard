@@ -552,7 +552,7 @@ export function mountTransferAssistant(root, options = {}) {
         adaptiveTurn = Boolean(available?.adaptive_turn);
         showDictation(available?.dictation_route, available?.dictation_name);
         sttWarning = available?.stt || dictation ? "" : copy.stt_unavailable;
-        show(captureStatus, sttWarning);
+        if (!mic.phase) show(captureStatus, sttWarning);
       }).finally(() => { voiceCheck = null; });
     }
     return voiceCheck;

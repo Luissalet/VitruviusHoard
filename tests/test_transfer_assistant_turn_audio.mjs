@@ -74,6 +74,57 @@ test("a pending microphone request can be cancelled and a late grant stops its t
   assert.equal(button.disabled, false);
 });
 
+test("the microphone permission message survives a delayed voice availability check", {timeout: 5000}, async t => {
+  const availability = Promise.withResolvers();
+  const permission = Promise.withResolvers();
+  const requesting = Promise.withResolvers();
+  let mic;
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, "MediaRecorder");
+  Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices: {
+    getUserMedia() {
+      requesting.resolve();
+      return permission.promise;
+    },
+  }}});
+  Object.defineProperty(globalThis, "MediaRecorder", {configurable: true, value: class {}});
+  globalThis.document = Object.assign(new EventTarget(), {
+    documentElement: {lang: "es"},
+    createElement: () => new Element(),
+    querySelectorAll: () => [],
+  });
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    if (mic?.textContent === "Cancelar solicitud") mic.dispatchEvent(new Event("click"));
+    availability.resolve(Response.json({dictation: true, stt: true}));
+    permission.resolve({getTracks: () => []});
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+    if (recorderDescriptor) Object.defineProperty(globalThis, "MediaRecorder", recorderDescriptor);
+    else delete globalThis.MediaRecorder;
+  });
+  t.mock.method(globalThis, "fetch", url => {
+    assert.ok(url.endsWith("/capabilities"), url);
+    return availability.promise;
+  });
+  const {mountTransferAssistant} = await import("../vitruvius_hoard/transfer_assistant/assistant.js");
+  const root = new Element();
+  mountTransferAssistant(root, {loadContext: async () => ({accounts: [], contacts: []})});
+  mic = root.children.flatMap(item => item.children).find(item => item.textContent === "Hablar");
+  mic.dispatchEvent(new Event("click"));
+  const waiting = root.children.find(item => item.textContent?.startsWith("Esperando permiso del micrófono"));
+  assert.ok(waiting);
+  availability.resolve(Response.json({dictation: true, stt: true, dictation_route: "direct"}));
+  await requesting.promise;
+  assert.match(waiting.textContent, /^Esperando permiso del micrófono/u);
+  assert.equal(mic.textContent, "Cancelar solicitud");
+  mic.dispatchEvent(new Event("click"));
+  assert.equal(mic.textContent, "Hablar");
+  assert.equal(waiting.textContent, "");
+});
+
 test("a reply computed while a newer turn is queued cannot start audio or be replayed", {timeout: 5000}, async t => {
   const field = new Element();
   field.dataset.transferSlot = "amountCents";
