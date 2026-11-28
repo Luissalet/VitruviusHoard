@@ -388,7 +388,8 @@ class AppProjects:
         return result
 
     def canvas_edit(self, id, vsrc, tag, expected_revision, change, path="/", operation="apply",
-                    expected_count=None, root_font_px=16, lang="en", *, actor=None, author=None, target_presentation=None):
+                    expected_count=None, root_font_px=16, lang="en", *, actor=None, author=None,
+                    target_presentation=None, project_fields=False):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision or current["preview"]["state"] != "running":
@@ -397,7 +398,7 @@ class AppProjects:
             try:
                 _, html = self._preview_html(id, path, revision=expected_revision)
                 changes, target, scale, token, count = plan_canvas_edit(
-                    current["files"], html, path, vsrc, tag, change, root_font_px,
+                    current["files"], html, path, vsrc, tag, change, root_font_px, project_fields=project_fields,
                 )
             except SourceMapError as error:
                 if lang == "es":
