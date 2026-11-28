@@ -36,6 +36,29 @@ def test_preview_metadata_binds_text_edit_proof_to_the_served_revision():
     }
 
 
+def test_preview_proves_comment_locations_from_before_unrelated_project_changes(tmp_path):
+    from vitruvius_hoard.app_projects import AppProjects
+
+    projects = AppProjects(tmp_path)
+    filename = "pages/index.html"
+    source = "<section><h2>First</h2></section><section><h2>Second</h2></section>"
+    initial = projects.create("Schedule", files={filename: source})
+    ident = initial["id"]
+    first = f"{filename}:1:10"
+    second = f"{filename}:1:{source.index('<h2>Second') + 1}"
+    pinned = projects.edit_source(ident, second, "h2", initial["revision"], {"kind": "text", "value": "Second as noted"})
+    restored = projects.undo(ident, pinned["revision"], pinned["updated_ts"], initial["revision"])
+    updated = projects.update(ident, {"notes.txt": "Unrelated update"}, restored["revision"])
+    current = projects.edit_source(ident, first, "h2", updated["revision"], {"kind": "text", "value": "A longer title"})
+
+    proofs = [entry for entry in projects._preview_text_edits(projects.root / ident, projects.get(ident))
+              if entry[0] == pinned["revision"]]
+    assert {entry[1] for entry in proofs} == {first, second}
+    shifted = next(entry for entry in proofs if entry[1] == second)
+    assert shifted[3] == f"{filename}:1:{current['files'][filename].index('<h2>Second') + 1}"
+    assert shifted[4] != shifted[5]
+
+
 @pytest.mark.parametrize("first_app_tag", [
     '<script src="/assets/listeners.js"></script>',
     '<link rel="stylesheet" href="/assets/app.css" onload="setup()">',

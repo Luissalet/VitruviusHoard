@@ -36,6 +36,7 @@ class _Tag:
     raw: str
     attrs: list
     top_level: bool
+    parent: tuple[str, int] | None
     text: list[tuple[int, int]] = field(default_factory=list)
 
 
@@ -69,7 +70,9 @@ class _HTML(HTMLParser):
         return f"{filename}:{line}:{offset - self.lines[line - 1] + 1}"
 
     def _open(self, name, attrs, *, closed=False):
-        tag = _Tag(name, self._offset(), self.get_starttag_text(), attrs, not self.stack)
+        parent = self.stack[-1] if self.stack else None
+        tag = _Tag(name, self._offset(), self.get_starttag_text(), attrs, parent is None,
+                   (parent.name, parent.start) if parent else None)
         self.tags.append(tag)
         if not closed and name not in _VOID:
             self.stack.append(tag)
@@ -354,6 +357,62 @@ def is_direct_text_edit(before, after, line, column, expected_tag):
                 and before[end:] == after[next_end:]):
             return True
     return False
+
+
+def text_edit_proofs(filename, selected, neighbors, edits, read_source):
+    """Map literal anchors through unchanged source and verified text edits in its history."""
+    current = read_source(selected)
+    if current is None:
+        return []
+    sources = {selected: current}
+    pending = [selected]
+    edited_slots = set()
+    locations = {}
+
+    def anchors(source):
+        if source not in locations:
+            parsed = _HTML(source)
+            locations[source] = [
+                (parsed.location(filename, tag.start), tag.name,
+                 (f"{tag.parent[0]}|{parsed.location(filename, tag.parent[1])}" if tag.parent else None),
+                 tuple(source[start:end] for start, end in tag.text))
+                for tag in parsed.tags
+            ]
+        return locations[source]
+
+    while pending:
+        revision = pending.pop()
+        source = sources[revision]
+        for other in neighbors.get(revision, ()):
+            if other in sources:
+                continue
+            previous = read_source(other)
+            if previous is None:
+                continue
+            if previous != source:
+                edit = edits.get(frozenset((revision, other)))
+                if edit is None or not is_direct_text_edit(source, previous, *edit):
+                    continue
+                line, column, _ = edit
+                position = f"{filename}:{line}:{column}"
+                edited_slots.add(next(index for index, entry in enumerate(anchors(source)) if entry[0] == position))
+            sources[other] = previous
+            pending.append(other)
+
+    if not edited_slots:
+        return []
+    proofs = []
+    new = anchors(current)
+    for revision, source in sources.items():
+        if source == current:
+            continue
+        old = anchors(source)
+        for slot in edited_slots:
+            position, tag, parent, text = old[slot]
+            new_position, _, new_parent, new_text = new[slot]
+            if text != new_text:
+                proofs.append((revision, position, tag, new_position, parent, new_parent))
+    return proofs
 
 
 def edit_source(source, line, column, expected_tag, change):

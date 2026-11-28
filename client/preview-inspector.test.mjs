@@ -337,6 +337,17 @@ test("an unnamed comment follows a verified text edit and cannot move to the nex
   assert.equal(find({ ...pin, selector: "h2:nth-of-type(1)" }, inSection([restored])).state, "lost", "source was not unique when pinned");
   assert.equal(find({ ...pin, own_vsrc: false }, inSection([restored])).state, "lost", "inherited source");
   assert.equal(find(pin, inSection([heading("New heading", vsrc, { id: "replacement" })])).state, "lost", "different declared identity");
+
+  const newSource = "pages/index.html:2:29";
+  const newSection = "pages/index.html:2:20";
+  const shifted = heading("Current records", newSource);
+  const shiftedProof = [["edited", vsrc, "h2", newSource, pin.parent, `section|${newSection}`]];
+  assert.equal(find(pin, inSection([shifted], newSection), "later", shiftedProof).element, shifted);
+  const other = heading(pin.text, "pages/index.html:2:90");
+  assert.equal(find(pin, inSection([shifted, other], newSection), "later", shiftedProof).element, shifted);
+  assert.equal(find({ ...pin, parent: "section|pages/index.html:1:170" }, inSection([shifted], newSection), "later", shiftedProof).state, "lost");
+  assert.equal(find(pin, inSection([shifted]), "later", shiftedProof).state, "lost");
+  assert.equal(find(pin, inSection([shifted, heading("Duplicate", newSource)], newSection), "later", shiftedProof).state, "lost");
 });
 
 test("the identity attributes of an element are the ones that tell look-alikes apart", () => {

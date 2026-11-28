@@ -2,7 +2,9 @@ import re
 
 import pytest
 
-from vitruvius_hoard.app_source_map import edit_source, is_direct_text_edit, render_template, source_count, source_position
+from vitruvius_hoard.app_source_map import (
+    edit_source, is_direct_text_edit, render_template, source_count, source_position, text_edit_proofs,
+)
 
 
 def test_text_edit_proof_rejects_deletion_even_when_the_next_heading_takes_the_source_position():
@@ -16,6 +18,27 @@ def test_text_edit_proof_rejects_deletion_even_when_the_next_heading_takes_the_s
     assert not is_direct_text_edit(before, edited.replace("Inventory", "Stock"), 1, 10, "h2")
     generated = before.replace("Watering", "{{name}}")
     assert not is_direct_text_edit(before, generated, 1, 10, "h2")
+
+
+def test_older_pins_follow_verified_text_edits_across_unchanged_source_and_shifted_lines():
+    filename = "pages/index.html"
+    middle = "<section><h2>Watering</h2></section><section><h2>Current records</h2></section>"
+    pinned = middle.replace("Current records", "Saved shifts")
+    shown = middle.replace("Watering", "Watering\nthis week")
+    removed = shown.replace("<h2>Current records</h2>", "")
+    sources = {"pinned": pinned, "middle": middle, "same": middle, "shown": shown, "removed": removed}
+    neighbors = {"pinned": ["middle"], "middle": ["pinned", "same"], "same": ["middle", "shown"],
+                 "shown": ["same", "removed"], "removed": ["shown"]}
+    edits = {frozenset(("pinned", "middle")): (1, 46, "h2"), frozenset(("same", "shown")): (1, 10, "h2"),
+             frozenset(("shown", "removed")): (2, 34, "h2")}
+
+    pins = [entry for entry in text_edit_proofs(filename, "shown", neighbors, edits, sources.get)
+            if entry[0] == "pinned"]
+    assert set(pins) == {
+        ("pinned", f"{filename}:1:10", "h2", f"{filename}:1:10", f"section|{filename}:1:1", f"section|{filename}:1:1"),
+        ("pinned", f"{filename}:1:46", "h2", f"{filename}:2:34", f"section|{filename}:1:37", f"section|{filename}:2:25"),
+    }
+    assert text_edit_proofs(filename, "removed", neighbors, edits, sources.get) == []
 
 
 def test_preview_annotations_preserve_positions_and_raw_markup(tmp_path):
