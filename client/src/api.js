@@ -16,7 +16,10 @@ async function request(method, path, { params, body } = {}) {
   } catch {
     data = { error: text };
   }
-  if (!response.ok) throw Object.assign(new Error((data && (data.error || (typeof data.detail === "string" && data.detail))) || `Error ${response.status}`), { status: response.status });
+  if (!response.ok) throw Object.assign(
+    new Error((data && (data.error || (typeof data.detail === "string" && data.detail))) || `Error ${response.status}`),
+    { status: response.status, code: data?.code, issues: data?.issues },
+  );
   if (data?.download_url?.startsWith('/api/')) data.download_url='/design'+data.download_url;
   if (path.startsWith('/design/api/diagrams') && data?.files) data.files=Object.fromEntries(Object.entries(data.files).map(([k,v])=>[k,typeof v==='string'&&v.startsWith('/api/')?'/design'+v:v]));
   return data;
@@ -143,7 +146,7 @@ export const api = {
   appTemplates: () => request("GET", "/design/api/app-projects/templates"),
   appProjects: (archived = false) => request("GET", "/design/api/app-projects", { params: { archived: archived || undefined } }),
   appProject: (id, revision) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}`, { params: { revision } }),
-  appProjectCreate: (body) => request("POST", "/design/api/app-projects", { body }),
+  appProjectCreate: (body, uiLang) => request("POST", "/design/api/app-projects", { body, params: { ui_lang: uiLang } }),
   appProjectArchive: (id, body) => request("POST", "/design/api/app-projects/" + encodeURIComponent(id) + "/archive", { body }),
   appProjectUpdate: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}`, { body }),
   appProjectUndoChange: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo-change`, { body }),

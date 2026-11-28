@@ -5,12 +5,16 @@ import json
 from pathlib import Path
 import re
 
+from .app_creation import ProjectCreationError
 from .tokens import best_on_color
 
 
+MIN_ITEMS = 1
+MAX_ITEMS = 100
 TEMPLATE = {
     "id": "booking", "name": "Booking", "name_es": "Reservas", "accent": "#18364d",
     "fields": [{"name": "name", "label": "Name", "type": "text"}],
+    "creation": {"items": {"min": MIN_ITEMS, "max": MAX_ITEMS}},
 }
 
 
@@ -18,30 +22,42 @@ def _json(value):
     return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
 
 
-def _localized(value, name, optional=False):
+def _localized(value, label_en, label_es, *, optional=False):
+    if value is None and not optional:
+        value = ""
     if isinstance(value, str):
         value = {"es": value, "en": value}
     if not isinstance(value, dict) or any(not isinstance(value.get(lang), str) for lang in ("es", "en")):
-        raise ValueError(f"{name} needs text or an es/en text pair")
+        raise ProjectCreationError(f"Enter {label_en} as text or in English and Spanish.",
+                                   f"Escribe {label_es} como texto o en castellano e inglés.")
     if not optional and any(not value[lang].strip() for lang in ("es", "en")):
-        raise ValueError(f"{name} must have text in both languages")
+        raise ProjectCreationError(f"Enter {label_en}.", f"Escribe {label_es}.")
     return {lang: value[lang].strip() for lang in ("es", "en")}
 
 
 def site_files(spec, accent, items, lang, description):
-    if not items or len(items) > 100:
-        raise ValueError("Booking needs one to 100 items")
+    if not MIN_ITEMS <= len(items or []) <= MAX_ITEMS:
+        raise ProjectCreationError(f"Booking needs one to {MAX_ITEMS} items",
+                                   f"Añade entre {MIN_ITEMS} y {MAX_ITEMS} opciones de reserva.")
     catalogue = []
     seen = set()
-    for row in items:
+    for position, row in enumerate(items, 1):
         ident = row.get("id")
         if not isinstance(ident, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", ident) or ident in seen:
-            raise ValueError("Each booking item needs a unique lowercase id")
+            raise ProjectCreationError("Each booking item needs a unique lowercase id",
+                                       f"La opción de reserva {position} necesita un identificador único en minúsculas.")
         seen.add(ident)
-        catalogue.append({"id": ident, "title": _localized(row.get("title"), "Item title"),
-                          "category": _localized(row.get("category"), "Item category"),
-                          "description": _localized(row.get("description", ""), "Item description", optional=True)})
-    site = {"lang": lang, "description": _localized(description, "Description", optional=True), "items": catalogue}
+        option_en = f"booking option {position}"
+        option_es = f"la opción de reserva {position}"
+        catalogue.append({
+            "id": ident,
+            "title": _localized(row.get("title"), f"a name for {option_en}", f"un nombre para {option_es}"),
+            "category": _localized(row.get("category"), f"a category for {option_en}", f"una categoría para {option_es}"),
+            "description": _localized(row.get("description", ""), f"the description for {option_en}",
+                                      f"la descripción de {option_es}", optional=True),
+        })
+    site = {"lang": lang, "description": _localized(description, "the description", "la descripción", optional=True),
+            "items": catalogue}
     fields = {"item": catalogue[0]["id"], "date": "2035-06-15",
               "name": "Synthetic booking", "email": "booking@example.invalid"}
     contract = {"version": 1, "form": {"path": "/api/forms", "schema": "submissions",

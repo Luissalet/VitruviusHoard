@@ -23,6 +23,56 @@ def request(url, method="GET", body=None):
         return response.status, response.read()
 
 
+def test_create_template_list_exposes_booking_requirements(client):
+    response = client.get("/api/app-projects/templates")
+    assert response.is_success
+    rows = {item["id"]: item for item in response.json()["templates"]}
+    assert set(rows) == {"work-board", "reference-library", "inventory", "booking", "static-page"}
+    assert rows["booking"]["creation"]["items"] == {"min": 1, "max": 100}
+    for key in set(rows) - {"booking"}:
+        assert not rows[key].get("creation")
+
+
+@pytest.mark.parametrize(("query", "payload", "expected"), [
+    ("?ui_lang=es", {"name": "Turnos", "template": "booking"},
+     "Añade entre 1 y 100 opciones de reserva."),
+    ("?ui_lang=en", {"name": "Turnos", "template": "booking", "lang": "es"},
+     "Booking needs one to 100 items"),
+    ("?ui_lang=es", {"name": "Turnos", "template": "booking",
+                     "items": [{"id": "north", "title": "Bancal", "category": " "}]},
+     "Escribe una categoría para la opción de reserva 1."),
+    ("?ui_lang=en", {"name": "Booking", "template": "booking",
+                     "items": [{"id": "north", "category": "Visit"}]},
+     "Enter a name for booking option 1."),
+    ("?ui_lang=es", {"name": " ", "template": "inventory"},
+     "Escribe un nombre para la aplicación."),
+    ("", {"name": " ", "template": "inventory"}, "Project needs a name"),
+])
+def test_create_endpoint_localizes_input_errors_without_saving(client, query, payload, expected):
+    response = client.post("/api/app-projects" + query, json=payload)
+    assert response.status_code == 400
+    assert response.json() == {"error": expected, "code": "project_creation_input"}
+    assert client.svc.app_projects.list() == []
+
+
+@pytest.mark.parametrize("template", ["work-board", "reference-library", "inventory", "static-page"])
+def test_starters_without_additional_creation_requirements_need_only_a_name(client, template):
+    response = client.post("/api/app-projects?ui_lang=es", json={"name": "Proyecto", "template": template})
+    assert response.status_code == 201
+    assert response.json()["template"] == template
+
+
+def test_create_accepts_booking_options_without_requiring_two_translations(client):
+    response = client.post("/api/app-projects?ui_lang=es", json={
+        "name": "Reservas", "template": "booking",
+        "items": [{"id": "north", "title": "Bancal norte", "category": "Riego"}],
+    })
+    assert response.status_code == 201
+    project = response.json()
+    assert "Bancal norte" in project["files"]["public/index.html"]
+    assert json.loads(project["files"]["website.json"])["form"]["fields"]["item"] == "north"
+
+
 @pytest.mark.parametrize(("template", "starter"), [("inventory", "inventory"), ("custom", "work-board")])
 def test_agent_create_completes_partial_source_from_starter(tmp_path, template, starter):
     projects = AppProjects(tmp_path)

@@ -1,6 +1,7 @@
 """Native application projects and owned local previews."""
 import asyncio
 import json
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
@@ -13,6 +14,7 @@ from ..agent_tools import (
     AppCritiqueUndoBody, AppExportArgs, AppPreviewArgs, AppRenderArgs, AppSourceEditArgs, AppUndoArgs, AppUpdateArgs,
     run_app_project_create,
 )
+from ..app_creation import ProjectCreationError
 from ..app_projects import templates
 from ..preview_inspector import StaleSelection, inspector_script, read_selection, write_selection
 from ..hoard_link.agentkit import AppError
@@ -136,8 +138,15 @@ def project_list(request: Request, archived: bool = False):
 
 
 @router.post("", status_code=201)
-def project_create(request: Request, body: AppCreateArgs):
-    return execute(lambda: run_app_project_create(services(request), body, author={"kind": "person"}))
+def project_create(request: Request, body: AppCreateArgs, ui_lang: Literal["en", "es"] | None = None):
+    def create():
+        try:
+            return run_app_project_create(services(request), body, author={"kind": "person"})
+        except ProjectCreationError as error:
+            message = error.es if (ui_lang or body.lang) == "es" else str(error)
+            raise HTTPException(400, {"error": message, "code": "project_creation_input"}) from error
+
+    return execute(create)
 
 
 @router.post("/{id}/voice-assistant/refresh")
