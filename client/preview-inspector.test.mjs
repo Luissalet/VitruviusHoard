@@ -8,7 +8,13 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue } = context.VitruviusInspectorCore;
+
+test("handle feedback shows the nearest whole pixel", () => {
+  assert.equal(formatHandleValue(390.4821), "390 px");
+  assert.equal(formatHandleValue(390.6821), "391 px");
+  assert.equal(formatHandleValue(-4.6821), "-5 px");
+});
 
 function node(tagName, attrs = {}, children = [], text = "") {
   const element = { tagName: tagName.toUpperCase(), attrs, children, parentElement: null, textContent: text, getAttribute: (name) => (name in attrs ? attrs[name] : null) };
