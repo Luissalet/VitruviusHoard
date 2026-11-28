@@ -9,12 +9,20 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel, outlineLabelTop } = context.VitruviusInspectorCore;
 
 test("handle feedback shows the nearest whole pixel", () => {
   assert.equal(formatHandleValue(390.4821), "390 px");
   assert.equal(formatHandleValue(390.6821), "391 px");
   assert.equal(formatHandleValue(-4.6821), "-5 px");
+});
+
+test("selection badges clear edit handles and stay inside the viewport", () => {
+  const margin = { left: 415, right: 437, top: 273, bottom: 295 };
+  assert.equal(outlineLabelTop({ top: 300, bottom: 342 }, 300, 180, 760, [margin]), 250);
+  assert.equal(outlineLabelTop({ top: 300, bottom: 342 }, 300, 100, 760, [margin]), 277);
+  const clipped = { left: 315, right: 337, top: 0, bottom: 22 };
+  assert.equal(outlineLabelTop({ top: 9, bottom: 47 }, 300, 180, 760, [clipped]), 51);
 });
 
 test("outline badges match selection cards in both languages and preserve their order", () => {

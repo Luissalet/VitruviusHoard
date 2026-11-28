@@ -110,6 +110,24 @@
     return number ? number + ' · ' + label : label;
   }
 
+  const OUTLINE_LABEL_HEIGHT = 20;
+  const OUTLINE_HANDLE_GAP = 3;
+
+  function outlineLabelTop(rect, left, width, height, handles) {
+    const last = Math.max(4, height - OUTLINE_LABEL_HEIGHT - 4);
+    const clamp = y => Math.max(4, Math.min(y, last));
+    const preferred = clamp(rect.top >= 25 ? rect.top - 23 : rect.top + 4);
+    const nearby = handles.filter(handle => left < handle.right + OUTLINE_HANDLE_GAP &&
+      left + width > handle.left - OUTLINE_HANDLE_GAP);
+    const fits = y => nearby.every(handle => y + OUTLINE_LABEL_HEIGHT <= handle.top - OUTLINE_HANDLE_GAP ||
+      y >= handle.bottom + OUTLINE_HANDLE_GAP);
+    if (fits(preferred)) return preferred;
+    const above = nearby.map(handle => handle.top - OUTLINE_LABEL_HEIGHT - OUTLINE_HANDLE_GAP)
+      .filter(y => y >= 4 && y < preferred).sort((a, b) => b - a);
+    const below = nearby.map(handle => clamp(handle.bottom + OUTLINE_HANDLE_GAP)).sort((a, b) => a - b);
+    return [...above, clamp(rect.bottom + 4), ...below].find(fits) ?? preferred;
+  }
+
   function describeElement(element, env) {
     const {count, rect, style, scroll} = env;
     const vsrcOwner = attrOf(element, 'data-vsrc') ? element : null;
@@ -243,7 +261,7 @@
 
   function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelTop, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -984,6 +1002,7 @@
 
     return {
       paint,
+      handleBounds: () => handles.filter(handle => !handle.hidden).map(handle => handle.getBoundingClientRect()),
       hit: event => event.composedPath().includes(stage),
       hitHandle: event => event.composedPath().some(node => node.classList?.contains('canvas-handle')),
       editing: () => Boolean(gesture || editor || confirmation),
@@ -1023,7 +1042,7 @@
     edits?.paint(mode && selected.length === 1 ? selected[0] : null);
   }
 
-  function drawOutline(drawings, element, kind, number) {
+  function drawOutline(drawings, element, kind, number, handles = []) {
     const r = element.getBoundingClientRect();
     if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return;
 
@@ -1039,8 +1058,9 @@
     tag.dir = 'auto';
     tag.textContent = formatOutlineLabel(presentationOf(element), /^es(?:-|$)/i.test(language), number);
     const left = Math.max(4, Math.min(r.left, innerWidth - 112));
-    const top = Math.max(4, Math.min(r.top >= 25 ? r.top - 23 : r.top + 4, innerHeight - 24));
-    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: Math.min(220, innerWidth - left - 4) + 'px'});
+    const width = Math.min(220, innerWidth - left - 4);
+    const top = outlineLabelTop(r, left, width, innerHeight, handles);
+    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: width + 'px'});
     drawings.append(box, tag);
   }
 
@@ -1051,13 +1071,16 @@
   function paint() {
     frame = 0;
     if (!layer) return;
+    paintEdits();
     const stage = root.getElementById('stage');
     const pinLayer = root.getElementById('pins');
     const stalePins = new Map([...pinLayer.children].map(button => [button.dataset.pin, button]));
     const drawings = document.createDocumentFragment();
     if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) drawOutline(drawings, hovered, 'hover');
     selected.forEach((element, index) => {
-      if (element !== draft && element.isConnected) drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0);
+      if (element !== draft && element.isConnected) {
+        drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0, edits?.handleBounds());
+      }
     });
     if (draft?.isConnected) drawOutline(drawings, draft, 'draft');
 
@@ -1092,7 +1115,6 @@
     stage.replaceChildren(drawings);
     const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || ''])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
-    paintEdits();
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
   // After a change of the served revision, or when the page replaced a selected element, each chosen element is matched
