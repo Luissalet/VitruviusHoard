@@ -204,7 +204,9 @@
     return event.origin === known ? known : null;
   }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
+
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -811,7 +813,7 @@
       const rect = current.element.getBoundingClientRect();
       if (nearby) drawGuide(current.property, rect, current.value);
       else guide.hidden = true;
-      const text = labels(current.property) + ' ' + current.value + ' px' + (nearby ? ' · ' + nearby.name : '');
+      const text = labels(current.property) + ' ' + formatHandleValue(current.value) + (nearby ? ' · ' + nearby.name : '');
       announce(text, rect, true);
     }
 

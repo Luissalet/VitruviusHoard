@@ -13,7 +13,8 @@ Requests and replies use the rail's full text area. Live actions scroll in a fix
 and scrolling in the preview leave the history in place.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. The element's
 text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
-editor use the same theme. History numbers each action in order and shows the source revision separately.
+editor use the same theme. The edit handles show the nearest whole pixel while applying and saving the precise value.
+History numbers each action in order and shows the source revision separately.
 Undoing the edit that resolved a comment reopens the comment and keeps the previous summary visible. The agent
 can name the exact revision of the fix, including a change in another file. Without an explicit revision the
 comment follows an unambiguous edit at its anchor or in the anchored file. Closing a comment by hand does not
