@@ -308,6 +308,33 @@ test("a pin follows its stable ID across text and line changes within its source
   assert.equal(locatePin(pin, () => [generated], "r2").element, generated);
 });
 
+test("an unnamed comment follows an in-place text edit with an unambiguous source and parent slot", () => {
+  const { locatePin } = context.VitruviusInspectorCore;
+  const vsrc = "pages/index.html:1:189";
+  const section = "pages/index.html:1:180";
+  const pin = {
+    selector: `[data-vsrc="${vsrc}"]`, tag: "h2", text: "Turnos apuntados", revision: "edited",
+    vsrc, own_vsrc: true, parent: `section|${section}`, index: 0,
+  };
+  const heading = (text, source = vsrc, attrs = {}) => node("h2", { "data-vsrc": source, ...attrs }, [], text);
+  const inSection = (children, source = section) => node("section", { "data-vsrc": source }, children);
+  const find = (target, root, revision = "original") =>
+    locatePin(target, (selector) => walk(root).filter((element) => seg(element, selector)), revision);
+  const restored = heading("Current records");
+  assert.equal(find(pin, inSection([restored])).element, restored);
+  const redone = heading(pin.text);
+  assert.equal(find(pin, inSection([redone]), "edited").element, redone);
+
+  assert.equal(find(pin, inSection([])).state, "lost", "deleted heading");
+  assert.equal(find(pin, inSection([heading("Other heading", "pages/index.html:1:220")])).state, "lost", "different source");
+  assert.equal(find(pin, inSection([restored], "pages/index.html:1:150")).state, "lost", "different parent");
+  assert.equal(find(pin, inSection([node("p"), restored])).state, "lost", "different sibling slot");
+  assert.equal(find(pin, inSection([restored, heading("Duplicate")])).state, "lost", "duplicate source");
+  assert.equal(find({ ...pin, selector: "h2:nth-of-type(1)" }, inSection([restored])).state, "lost", "source was not unique when pinned");
+  assert.equal(find({ ...pin, own_vsrc: false }, inSection([restored])).state, "lost", "inherited source");
+  assert.equal(find(pin, inSection([heading("New heading", vsrc, { id: "replacement" })])).state, "lost", "different declared identity");
+});
+
 test("the identity attributes of an element are the ones that tell look-alikes apart", () => {
   const { identityAttrs } = context.VitruviusInspectorCore;
   const found = identityAttrs(node("a", { id: "x", href: "/y", class: "btn", "data-vsrc": "p:1:1" }, [], "T"));
