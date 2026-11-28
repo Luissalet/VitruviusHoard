@@ -95,7 +95,7 @@ def test_confirmed_tool_deletion_receipt_and_other_projects(client):
 
     receipt = call_tool(client.svc, "app_project_delete", {"id": id, **_conditions(target)})
     assert receipt == {"id": id, "name": target["name"], "path": str(directory),
-                       "files": len(files), "bytes": sum(map(len, files.values())), "deleted": True}
+                       "files": len(files), "bytes": sum(map(len, files.values())), "deleted": True, "cleanup_complete": True}
     assert not Path(receipt["path"]).exists()
     assert process.poll() is not None
     assert preview["state"] == "running" and projects.status(id)["state"] == "stopped"
@@ -133,28 +133,71 @@ def test_delete_never_follows_reparse_entries(client, monkeypatch):
     assert _files(root) == before
 
 
-def test_storage_error_keeps_archive_available_for_a_retry(client, monkeypatch):
+def test_failed_rename_keeps_archive_intact_and_restorable(client, monkeypatch):
     projects = client.svc.app_projects
-    project = projects.create("Retry this archive")
+    project = projects.create("Keep this entire archive")
     archived = _archive(projects, project)
     root = projects.root / project["id"]
-    original_rmdir = Path.rmdir
+    original = _files(root)
+    original_rename = Path.rename
 
-    def rmdir(path):
+    def rename(path, destination):
         if path == root:
             raise PermissionError("Open directory in this test")
-        return original_rmdir(path)
+        return original_rename(path, destination)
 
-    route = f"/api/app-projects/{project['id']}/delete"
+    route = f"/api/app-projects/{project['id']}"
     with monkeypatch.context() as patch:
-        patch.setattr(Path, "rmdir", rmdir)
-        response = client.post(route, json=_conditions(archived))
+        patch.setattr(Path, "rename", rename)
+        response = client.post(route + "/delete", json={**_conditions(archived), "lang": "es"})
         assert response.status_code == 500 and response.json()["code"] == "delete_failed"
+        assert "sigue intacto en Archivados" in response.json()["error"]
+    assert _files(root) == original
     [row] = projects.list(archived=True)
     assert row["id"] == project["id"] and row["updated_ts"] == archived["updated_ts"]
-    assert client.post(route, json=_conditions(row)).status_code == 200
-    assert not root.exists()
+    restored = client.post(route + "/archive", json={**_conditions(row), "operation": "restore"})
+    assert restored.status_code == 200
+    read = client.get(route)
+    assert read.status_code == 200 and read.json()["files"] == project["files"]
 
+
+def test_failed_cleanup_reports_remainder_and_retired_index_never_reappears(client, monkeypatch):
+    from vitruvius_hoard.app_projects import AppProjects
+
+    projects = client.svc.app_projects
+    project = projects.create("Remove this project from the workspace")
+    archived = _archive(projects, project)
+    id = project["id"]
+    root = projects.root / id
+    original = _files(root)
+    original_unlink = Path.unlink
+
+    def unlink(path, *args, **kwargs):
+        if path.name == "project-index.json" and path.parent.name in {id, f".retired-{id}"}:
+            raise PermissionError("Locked retired index in this test")
+        return original_unlink(path, *args, **kwargs)
+
+    route = f"/api/app-projects/{id}"
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", unlink)
+        response = client.post(route + "/delete", json=_conditions(archived))
+    assert response.status_code == 200
+    receipt = response.json()
+    assert receipt["id"] == id and receipt["path"] == str(root)
+    assert receipt["deleted"] is True and receipt["cleanup_complete"] is False
+    assert receipt["warning"]
+    remaining = Path(receipt["remaining_path"])
+    assert remaining == root.with_name(f".retired-{id}") and not root.exists()
+    leftover = _files(remaining)
+    assert leftover["project-index.json"] == original["project-index.json"]
+    assert 0 < receipt["files"] == len(original.keys() - leftover.keys())
+    assert receipt["bytes"] == sum(len(original[name]) for name in original.keys() - leftover.keys())
+    assert client.get(route).status_code == 404
+    assert client.post(route + "/archive", json={**_conditions(archived), "operation": "restore"}).status_code == 404
+    assert client.post(route + "/delete", json=_conditions(archived)).status_code == 404
+
+    reopened = AppProjects(projects.root.parent)
+    assert reopened.list() == reopened.list(archived=True) == []
 
 
 def test_comment_store_cannot_write_across_project_removal(client, monkeypatch):

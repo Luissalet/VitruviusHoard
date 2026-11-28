@@ -236,13 +236,13 @@ export default function Projects({ param }) {
   const deleteArchived = async (item) => {
     setBusy("delete");
     try {
-      await api.appProjectDelete(item.id, {
+      const result = await api.appProjectDelete(item.id, {
         confirm: true, lang, expected_revision: item.revision, expected_updated_ts: item.updated_ts,
       });
       setProjects((current) => ({
         ...current, archived: current.archived.filter(({ id }) => id !== item.id),
       }));
-      notify(es ? "Proyecto borrado definitivamente" : "Project permanently deleted");
+      notify(result.warning || (es ? "Proyecto borrado definitivamente" : "Project permanently deleted"));
     } catch (error) {
       notify(error.message);
     } finally {

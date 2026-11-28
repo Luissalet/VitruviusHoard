@@ -2707,7 +2707,7 @@
   },
   {
     "name": "app_project_delete",
-    "description": "Permanently delete an archived project. Borrar definitivamente un proyecto archivado.\nRead app_project_list with archived=true first. Use its revision and updated_ts and confirm=true. Returns the deleted path, file count and bytes. No undo.",
+    "description": "Permanently delete an archived project. Borrar definitivamente un proyecto archivado.\nRead app_project_list with archived=true first. Use its revision and updated_ts and confirm=true. Returns the project path, deleted file count and bytes, and remaining_path if cleanup was incomplete. No undo.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,

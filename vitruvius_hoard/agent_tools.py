@@ -1069,7 +1069,7 @@ TOOLS: list[Tool] = [
         AppArchiveArgs, ann(False, False, True), lambda services, args: services.app_projects.archive(**args.model_dump())),
     Tool("app_project_delete", "Permanently delete an archived project. Borrar definitivamente un proyecto archivado.\n"
         "Read app_project_list with archived=true first. Use its revision and updated_ts and confirm=true. "
-        "Returns the deleted path, file count and bytes. No undo.",
+        "Returns the project path, deleted file count and bytes, and remaining_path if cleanup was incomplete. No undo.",
         AppDeleteArgs, ann(False, True, False), lambda services, args: services.app_projects.delete(**args.model_dump())),
     Tool("app_project_change_undo", "Undo one recorded project edit. Deshacer un cambio del historial.",
         AppChangeUndoArgs, ann(False, False, True),
