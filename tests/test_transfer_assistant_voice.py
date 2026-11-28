@@ -78,6 +78,48 @@ def loopback(monkeypatch, tmp_path):
     return voice.TransferVoice(), reads, calls, tools, reject_discovery
 
 
+def test_first_typed_turn_discovers_voice_without_a_capabilities_request(loopback):
+    relay, reads, calls, _, reject = loopback
+    assert not reads and not calls
+
+    first = post(relay, "understand", version=voice.DICTATION_VERSION,
+                 text="Apunta a Marta para el sabado por la manana", schema={"type": "object"})
+    assert first[0] == 200, payload(first)
+    assert payload(first)["dictation_route"] == "direct"
+    assert reads == ["directory"]
+    assert [path for _, path, _ in calls] == ["/api/agent/tools"] * 3 + ["/api/dictation/understand"]
+
+    reject.set()
+    assert post(relay, "understand", version=voice.DICTATION_VERSION, text="Cuarenta")[0] == 200
+    assert reads == ["directory"]
+
+
+def test_concurrent_first_turns_share_the_initial_discovery(loopback, monkeypatch):
+    relay, reads, calls, _, _ = loopback
+    discover = voice_directory._hub_apps
+    entered, release = Event(), Event()
+
+    def delayed_discovery():
+        entered.set()
+        assert release.wait(3)
+        return discover()
+
+    monkeypatch.setattr(voice_directory, "_hub_apps", delayed_discovery)
+    args = {"version": voice.DICTATION_VERSION, "text": "Cuarenta"}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(post, relay, "understand", **args)
+        try:
+            assert entered.wait(1)
+            second = pool.submit(post, relay, "understand", **args)
+            with pytest.raises(TimeoutError):
+                second.result(timeout=0.1)
+        finally:
+            release.set()
+        assert first.result(timeout=2)[0] == second.result(timeout=2)[0] == 200
+    assert reads == ["directory"]
+    assert [path for _, path, _ in calls].count("/api/dictation/understand") == 2
+
+
 def test_one_discovery_and_zero_hub_reads_during_typed_spoken_and_provisional_turns(loopback):
     relay, reads, calls, _, reject = loopback
     assert payload(relay.handle("GET", "capabilities", "", "", b"")) == {

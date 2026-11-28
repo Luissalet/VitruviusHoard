@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
-from threading import Lock, Thread
+from threading import Event, Lock, Thread
 from time import monotonic
 
 import httpx
@@ -85,7 +85,7 @@ def _lookup(row, url, *, token_file=""):
 class VoiceDirectory:
     def __init__(self):
         self._lock = Lock()
-        self._ready = False
+        self._ready = Event()
         self._refreshing = False
         self._refresh_at = self._retry_at = float("-inf")
         self._apps = {}
@@ -107,13 +107,16 @@ class VoiceDirectory:
         return app.url if app else None
 
     def prepare(self):
-        """Initial discovery is part of page setup. Subsequent reads use the cached snapshot."""
+        """Discover once before using an empty directory, then refresh the snapshot in the background."""
         with self._lock:
-            first = not self._ready and not self._refreshing
+            initial = not self._ready.is_set()
+            first = initial and not self._refreshing
             if first:
                 self._refreshing = True
         if first:
             self._load()
+        elif initial:
+            self._ready.wait()
         else:
             self.refresh()
 
@@ -145,12 +148,14 @@ class VoiceDirectory:
             self._apps = apps
         finally:
             with self._lock:
-                self._ready = True
                 self._refreshing = False
                 self._retry_at = monotonic() + RETRY_S
                 self._refresh_at = monotonic() + (REFRESH_S if rows is not None else RETRY_S)
+                self._ready.set()
 
     def _call(self, app_id, path, args, *, timeout, agent=False, trace=None):
+        if not self._ready.is_set() and self.app(app_id) is None:
+            self.prepare()
         app = self.app(app_id)
         if app is None:
             self.refresh(failed=True)
