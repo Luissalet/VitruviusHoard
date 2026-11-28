@@ -71,6 +71,45 @@
       || (caption && textOf(caption))).slice(0, MAX_TEXT);
   }
 
+  function presentationOf(element) {
+    const tag = tagOf(element);
+    return {
+      tag,
+      role: compact(attrOf(element, 'role')).split(' ')[0],
+      label: displayLabel(element, tag),
+      text: textOf(element),
+    };
+  }
+
+  // The preview is served as a standalone script. The Node parity test keeps
+  // its outline labels in step with the workbench's selection cards.
+  const ELEMENT_LABELS = {
+    a: ['Enlace', 'Link'], link: ['Enlace', 'Link'], button: ['Botón', 'Button'],
+    heading: ['Título', 'Heading'], section: ['Sección', 'Section'], region: ['Sección', 'Section'],
+    article: ['Artículo', 'Article'], main: ['Contenido principal', 'Main content'], aside: ['Panel', 'Panel'],
+    nav: ['Navegación', 'Navigation'], navigation: ['Navegación', 'Navigation'],
+    header: ['Cabecera', 'Header'], footer: ['Pie de página', 'Footer'], form: ['Formulario', 'Form'],
+    input: ['Campo', 'Field'], textarea: ['Campo de texto', 'Text field'], textbox: ['Campo de texto', 'Text field'],
+    select: ['Lista desplegable', 'Dropdown'], combobox: ['Lista desplegable', 'Dropdown'],
+    checkbox: ['Casilla', 'Checkbox'], radio: ['Opción', 'Option'], switch: ['Interruptor', 'Switch'],
+    img: ['Imagen', 'Image'], figure: ['Figura', 'Figure'], p: ['Párrafo', 'Paragraph'],
+    ul: ['Lista', 'List'], ol: ['Lista', 'List'], list: ['Lista', 'List'],
+    li: ['Elemento de lista', 'List item'], listitem: ['Elemento de lista', 'List item'], table: ['Tabla', 'Table'],
+    tr: ['Fila', 'Row'], td: ['Celda', 'Cell'], th: ['Celda de cabecera', 'Header cell'],
+  };
+  const DEFAULT_LABEL = ['Elemento', 'Element'];
+
+  function formatOutlineLabel(item, es, number) {
+    const tag = /^h[1-6]$/.test(item.tag) ? 'heading' : item.tag;
+    const kind = Object.hasOwn(ELEMENT_LABELS, item.role) ? item.role : tag;
+    const type = (Object.hasOwn(ELEMENT_LABELS, kind) ? ELEMENT_LABELS[kind] : DEFAULT_LABEL)[es ? 0 : 1];
+    const text = compact(item.label || item.text);
+    const characters = Array.from(text);
+    const name = characters.length > 56 ? characters.slice(0, 55).join('').trimEnd() + '…' : text;
+    const label = name ? type + ' · ' + name : type;
+    return number ? number + ' · ' + label : label;
+  }
+
   function describeElement(element, env) {
     const {count, rect, style, scroll} = env;
     const vsrcOwner = attrOf(element, 'data-vsrc') ? element : null;
@@ -81,9 +120,7 @@
     const styles = style(element) || {};
     for (const key of COMPUTED) if (styles[key] !== undefined && styles[key] !== '') computed[key] = String(styles[key]).slice(0, 120);
     const classes = String(attrOf(element, 'class') || '').split(/\s+/).filter(Boolean).slice(0, 12);
-    const tag = tagOf(element);
-    const role = compact(attrOf(element, 'role')).split(' ')[0];
-    const label = displayLabel(element, tag);
+    const {tag, role, label, text} = presentationOf(element);
     return {
       vsrc: vsrc || null,
       own_vsrc: Boolean(vsrcOwner),
@@ -94,7 +131,7 @@
       classes,
       ...(role ? {role} : {}),
       ...(label ? {label} : {}),
-      text: textOf(element),
+      text,
       box: {x: Math.round(box.left + scroll.x), y: Math.round(box.top + scroll.y), w: Math.round(box.width), h: Math.round(box.height)},
       computed,
       ...relationOf(element),
@@ -206,7 +243,7 @@
 
   function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -995,15 +1032,12 @@
     box.setAttribute('aria-hidden', 'true');
     Object.assign(box.style, {left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px'});
 
-    const name = compact(attrOf(element, 'aria-label'));
-    const id = attrOf(element, 'id');
-    const firstClass = element.classList?.[0];
-    const label = name || (tagOf(element) + (id ? '#' + id : firstClass ? '.' + firstClass : ''));
+    const language = hostLanguage || document.documentElement.lang;
     const tag = document.createElement('div');
     tag.className = `tag ${kind}`;
     tag.setAttribute('aria-hidden', 'true');
     tag.dir = 'auto';
-    tag.textContent = number ? `${number} · ${label}` : label;
+    tag.textContent = formatOutlineLabel(presentationOf(element), /^es(?:-|$)/i.test(language), number);
     const left = Math.max(4, Math.min(r.left, innerWidth - 112));
     const top = Math.max(4, Math.min(r.top >= 25 ? r.top - 23 : r.top + 4, innerHeight - 24));
     Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: Math.min(220, innerWidth - left - 4) + 'px'});
@@ -1228,6 +1262,7 @@
       hostTheme = data.theme;
       edits?.setLanguage(hostLanguage);
       edits?.setTheme(hostTheme);
+      schedule();
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/read-selection' && typeof data.id === 'string') {
       if (selected.length && (revision() !== lastRevision || selected.some(element => !element.isConnected))) settle();

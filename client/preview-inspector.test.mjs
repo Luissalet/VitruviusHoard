@@ -2,18 +2,38 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import { chipText } from "./src/preview-selection.js";
 
 // The inspector is a plain script for the preview page: load its pure core under a flag, with a tiny fake DOM.
 const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/preview-inspector.js", import.meta.url), "utf8");
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel } = context.VitruviusInspectorCore;
 
 test("handle feedback shows the nearest whole pixel", () => {
   assert.equal(formatHandleValue(390.4821), "390 px");
   assert.equal(formatHandleValue(390.6821), "391 px");
   assert.equal(formatHandleValue(-4.6821), "-5 px");
+});
+
+test("outline badges match selection cards in both languages and preserve their order", () => {
+  const link = { tag: "a", selector: "#quick-transfer", text: "Nueva transferencia" };
+  assert.equal(formatOutlineLabel(link, false), "Link · Nueva transferencia");
+  assert.equal(formatOutlineLabel(link, true, 2), "2 · Enlace · Nueva transferencia");
+
+  const items = [
+    link,
+    { tag: "a", role: "button", classes: ["boton"], text: "  Reservar\n para un grupo " },
+    { tag: "section", selector: "#portada", label: "Portada", text: "Portada y detalles" },
+    { tag: "img", label: "🙂".repeat(58) },
+    { tag: "div", role: "constructor", selector: "#internal" },
+    ...("a link button h1 h6 heading section region article main aside nav navigation header footer form input textarea textbox"
+      + " select combobox checkbox radio switch img figure p ul ol list li listitem table tr td th").split(" ").map(tag => ({ tag })),
+  ];
+  for (const item of items) {
+    for (const es of [true, false]) assert.equal(formatOutlineLabel(item, es), chipText(item, es), item.tag);
+  }
 });
 
 function node(tagName, attrs = {}, children = [], text = "") {
