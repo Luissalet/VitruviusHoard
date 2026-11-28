@@ -160,6 +160,13 @@ def extract_missing(call, value, options, text, rules_ms, *, correction=False):
         if not _valid(proposed, spec):
             continue
         quote = _quote(text, proposed, _labels(context, key, proposed))
+        if quote and isinstance(candidates, list):
+            mentioned = [choice for choice in candidates if _valid(choice, spec)
+                         and _quote(text, choice, _labels(context, key, choice))]
+            if len(mentioned) > 1:
+                if not any(row.get("field") == key for row in ambiguities):
+                    ambiguities.append({"field": key, "candidates": mentioned})
+                continue
         if quote:
             fields[key] = {"value": proposed, "quote": quote, "validation": "valid"}
             ambiguities = [row for row in ambiguities if row.get("field") != key]

@@ -85,6 +85,12 @@ def test_rules_and_draft_values_are_preserved_and_only_the_target_can_be_correct
     assert result["fields"] == {}
 
 
+def test_two_supported_options_remain_ambiguous_even_if_the_model_picks_one():
+    result = turn("A las 10:00 o a las 12:00", proposal({"franja": "10:00"}))
+    assert result["fields"] == {}
+    assert result["ambiguous"] == [{"field": "franja", "candidates": ["10:00", "12:00"]}]
+
+
 def test_timeout_retains_rules_and_legacy_understand_does_not_consult_model():
     def timeout(*_, **__):
         raise TimeoutError

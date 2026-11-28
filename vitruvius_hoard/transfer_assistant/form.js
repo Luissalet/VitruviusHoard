@@ -14,7 +14,8 @@ const COPY = {
     micDown: "No se ha podido abrir el micrófono. Puedes escribir la instrucción.",
     sttDown: "La transcripción no responde. Puedes escribir la instrucción.",
     dictationDown: "El servicio que interpreta la instrucción no responde. Puedes rellenar el formulario a mano.",
-    extractionUnavailable: "No he podido completar la interpretación con el modelo.", rules: "reglas", model: "modelo",
+    extractionUnavailable: "El modelo no está disponible.", extractionTimeout: "El modelo ha agotado el tiempo de respuesta.",
+    rules: "reglas", model: "modelo",
     choices: "Opciones",
     ask: name => "¿Qué pongo en «" + name + "»?", ambiguous: name => "¿Puedes concretar «" + name + "»?",
     changed: "He actualizado el formulario.", yes: "Sí", no: "No", review: "Revisa los datos.",
@@ -34,7 +35,8 @@ const COPY = {
     micDown: "The microphone could not be opened. You can type the instruction.",
     sttDown: "Transcription is unavailable. You can type the instruction.",
     dictationDown: "The dictation service is unavailable. You can fill in the form by hand.",
-    extractionUnavailable: "The model could not complete the interpretation.", rules: "rules", model: "model",
+    extractionUnavailable: "The model is unavailable.", extractionTimeout: "The model ran out of time.",
+    rules: "rules", model: "model",
     choices: "Options",
     ask: name => "What should I enter for “" + name + "”?", ambiguous: name => "Can you clarify “" + name + "”?",
     changed: "I’ve updated the form.", yes: "Yes", no: "No", review: "Check the details.",
@@ -341,8 +343,10 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       const question = asked && [ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)),
         choices?.length && copy.choices + ": " + choices.slice(0, 8).map(value => choiceLabel(asked, value)).join(", ") + ".",
       ].filter(Boolean).join(" ");
-      const unavailable = steps.some(step => step.outcome === "unavailable" || step.outcome === "timeout");
-      const message = [cited.length && (summarize(current) || copy.changed), unavailable && copy.extractionUnavailable, question ||
+      const outcome = steps.find(step => step.method === "model")?.outcome;
+      const modelNotice = outcome === "timeout" ? copy.extractionTimeout
+        : outcome === "unavailable" ? copy.extractionUnavailable : "";
+      const message = [cited.length && (summarize(current) || copy.changed), modelNotice, question ||
         (cited.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
       respond(turn, message.filter(Boolean).join(" "));
     } finally {
