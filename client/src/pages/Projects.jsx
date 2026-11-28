@@ -6,6 +6,7 @@ import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
 import CaptureWarning from "../components/CaptureWarning.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
+import { rememberProject } from "../canvas/recentProject.js";
 
 export default function Projects({ param }) {
   const { lang, notify } = useApp();
@@ -88,12 +89,18 @@ export default function Projects({ param }) {
     return () => { loadSequence.current++; };
   }, [param]);
   useCopilotRefresh(() => { loadList(); if (param) loadProject(param); });
+  const loadedProjectId = project?.id;
+  useEffect(() => {
+    if (loadedProjectId && loadedProjectId === param) rememberProject(loadedProjectId);
+  }, [loadedProjectId, param]);
+
   const create = async (event) => {
     event.preventDefault(); setBusy("create");
     const submitted = { name, description, template };
     const submittedRoute = window.location.hash;
     try {
       const data = await api.appProjectCreate(submitted);
+      rememberProject(data.id);
       if (createDraft.current.name === submitted.name) setName("");
       if (createDraft.current.description === submitted.description) setDescription("");
       await loadList();
@@ -220,6 +227,7 @@ export default function Projects({ param }) {
           <h2 className="text-[16px] font-semibold break-words">{project.name}</h2>
           <div className="flex gap-2 items-center flex-wrap mt-3">
             <label className="label">{es ? "Versión" : "Revision"}<select aria-label={es ? "Versión" : "Revision"} className="field" value={project.selected_revision} onChange={(event) => loadProject(project.id, event.target.value)}>{project.revisions.map((revision, index) => <option key={revision} value={revision}>{index + 1}{revision === project.revision ? (es ? " · actual" : " · current") : ""}</option>)}</select></label>
+            <a className="btn" href={`#/canvas/${project.id}`}>{es ? "Abrir en el Lienzo" : "Open in Canvas"}</a>
             <button className="btn" disabled={!!busy} onClick={() => run("start")}>{busy === "start" ? (es ? "Abriendo…" : "Opening…") : (es ? "Abrir vista previa" : "Open preview")}</button>
             {preview?.state === "running" && <a className="btn" href={`/design${preview.open_path}?lang=${lang}`} target="_blank" rel="noopener noreferrer">{es ? "Abrir en pestaña" : "Open in tab"}</a>}
             {preview?.state === "running" && <button className="btn" disabled={!!busy} onClick={() => run("stop")}>{es ? "Detener vista previa" : "Stop preview"}</button>}
