@@ -25,6 +25,8 @@ Open the project through `app_project_preview` and use **Speak** or type in the 
 
 On a new preview, Vitruvius discovers the voice service as part of the first request and reuses the discovered route for later turns. The same behaviour applies to assistants already saved in projects.
 
+For generated forms, Vitruvius can give the configured family model up to three seconds to extract required values left open by the dictation rules. It checks proposed values against the form's types and options and looks for their evidence in the current instruction. For multiple possible choices it asks which one to use. When the model is unavailable, the assistant still asks for the missing fields and says that model interpretation was unavailable. The turn trace shows separate timings for rules and model. Existing project copies can pick up this change with `app_project_refresh_voice_assistant` and its undo receipt.
+
 In Canvas and Applications, the embedded preview can request microphone access for the origin serving the project. Grant access if the browser prompts you when you choose **Speak**.
 
 The reply reads back the values cited and validated by dictation that are still in the form, including a value the person repeats. It keeps the project’s option labels, uses the page’s language for dates and says a field title once when the option begins with it. Boltagon synthesizes the complete reply, including the values, as requested by the turn.

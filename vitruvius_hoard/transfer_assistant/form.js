@@ -14,6 +14,8 @@ const COPY = {
     micDown: "No se ha podido abrir el micrófono. Puedes escribir la instrucción.",
     sttDown: "La transcripción no responde. Puedes escribir la instrucción.",
     dictationDown: "El servicio que interpreta la instrucción no responde. Puedes rellenar el formulario a mano.",
+    extractionUnavailable: "No he podido completar la interpretación con el modelo.", rules: "reglas", model: "modelo",
+    choices: "Opciones",
     ask: name => "¿Qué pongo en «" + name + "»?", ambiguous: name => "¿Puedes concretar «" + name + "»?",
     changed: "He actualizado el formulario.", yes: "Sí", no: "No", review: "Revisa los datos.",
     confirm: "Si están bien, di «sí, confirmo» para enviarlo.",
@@ -32,6 +34,8 @@ const COPY = {
     micDown: "The microphone could not be opened. You can type the instruction.",
     sttDown: "Transcription is unavailable. You can type the instruction.",
     dictationDown: "The dictation service is unavailable. You can fill in the form by hand.",
+    extractionUnavailable: "The model could not complete the interpretation.", rules: "rules", model: "model",
+    choices: "Options",
     ask: name => "What should I enter for “" + name + "”?", ambiguous: name => "Can you clarify “" + name + "”?",
     changed: "I’ve updated the form.", yes: "Yes", no: "No", review: "Check the details.",
     confirm: "If they’re correct, say “I confirm” to submit.",
@@ -157,13 +161,13 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     return turn;
   }
 
-  function trace(turn, stage, service, ms, fallback = false) {
+  function trace(turn, stage, service, ms, fallback = false, rowKey = stage) {
     const step = {service, ms: round(ms), fallback};
     const list = turn.item.querySelector("ul");
-    let row = list.querySelector('[data-stage="' + stage + '"]');
+    let row = list.querySelector('[data-stage="' + rowKey + '"]');
     if (!row) {
       row = document.createElement("li");
-      row.dataset.stage = stage;
+      row.dataset.stage = rowKey;
       list.append(row);
     }
     row.textContent = [copy.stages[stage], service, round(ms) + " ms", fallback && copy.fallback]
@@ -245,6 +249,14 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       }).join(" ");
   }
 
+  function choiceLabel(name, value) {
+    const control = controlsFor(form, name)[0];
+    if (control?.tagName === "SELECT") {
+      return [...control.options].find(option => option.value === String(value))?.label || String(value);
+    }
+    return String(value);
+  }
+
   async function interpret(text, transcription, timing) {
     speech?.abort();
     speech = undefined;
@@ -277,11 +289,16 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       }
       setStatus(copy.understanding);
       let understood;
+      const correction = copy.repair.test(text);
+      const field = (correction && lastChanged) || asked;
       try {
-        const field = (copy.repair.test(text) && lastChanged) || asked;
+        const option_labels = Object.fromEntries(entries.filter(([, spec]) => Array.isArray(spec.enum)).map(([name, spec]) => [
+          name, Object.fromEntries(spec.enum.map(value => [String(value), choiceLabel(name, value)])),
+        ]));
         const signal = AbortSignal.any([active.signal, AbortSignal.timeout(12_000)]);
-        understood = await request("understand", JSON.stringify({version: "cyrano.dictation/v0",
-          language: locale, schema, text, vocabulary: aliases, context: {draft: values, ...(field ? {field} : {})}}),
+        understood = await request("form-understand", JSON.stringify({version: "cyrano.dictation/v0",
+          language: locale, schema, text, vocabulary: aliases, correction,
+          context: {draft: values, option_labels, ...(field ? {field} : {})}}),
         "application/json", signal);
         if (understood.version !== "cyrano.dictation/v0" || understood.is_final !== true) {
           throw new Error("dictation_version");
@@ -295,8 +312,11 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
         return;
       }
       if (active.signal.aborted) return;
-      trace(turn, "understand", understood.dictation_name || "Boltagon", performance.now() - started,
-        understood.dictation_fallback === true);
+      const steps = understood.understanding_steps || [];
+      for (const step of steps) {
+        trace(turn, "understand", copy[step.method], step.ms,
+          step.outcome === "unavailable" || step.outcome === "timeout", "understand-" + step.method);
+      }
       const began = performance.now();
       const cited = [];
       let lastApplied;
@@ -314,10 +334,15 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       trace(turn, "execute", "Vitruvius", performance.now() - began);
       const current = draft();
       const ambiguous = understood.ambiguous?.find(({field}) => Object.hasOwn(schema.properties, field));
-      asked = ambiguous?.field || required.find(name => current[name] === undefined);
+      asked = ambiguous?.field || required.find(name => current[name] === undefined)
+        || (correction && !cited.length && Array.isArray(schema.properties[field]?.enum) ? field : undefined);
       ready = !asked && cited.length ? JSON.stringify(current) : undefined;
-      const question = asked && (ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)));
-      const message = [cited.length && (summarize(current) || copy.changed), question ||
+      const choices = asked && (ambiguous?.candidates?.length ? ambiguous.candidates : schema.properties[asked]?.enum);
+      const question = asked && [ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)),
+        choices?.length && copy.choices + ": " + choices.slice(0, 8).map(value => choiceLabel(asked, value)).join(", ") + ".",
+      ].filter(Boolean).join(" ");
+      const unavailable = steps.some(step => step.outcome === "unavailable" || step.outcome === "timeout");
+      const message = [cited.length && (summarize(current) || copy.changed), unavailable && copy.extractionUnavailable, question ||
         (cited.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
       respond(turn, message.filter(Boolean).join(" "));
     } finally {

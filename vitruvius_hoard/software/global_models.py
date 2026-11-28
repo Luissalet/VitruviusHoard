@@ -68,6 +68,9 @@ class GlobalSync(SyncFacade):
         return self._run(lambda link: link.vision_chat(
             messages, images=images, effort=effort, timeout=timeout, max_tokens=max_tokens))
 
+    def short_json_chat(self, messages, *, timeout, max_tokens):
+        return self._run(lambda link: link.short_json_chat(messages, timeout=timeout, max_tokens=max_tokens))
+
     def close(self, timeout=None):
         if self._thread is threading.current_thread():
             raise RuntimeError('Close the global client from its owning module')
@@ -104,13 +107,13 @@ class GlobalLink(Link):
             selected = await self.resolve('llm')
             return {'llm': selected.to_dict()}
 
-    async def selection(self, *, deadline=None):
+    async def selection(self, *, deadline=None, descriptor_first=False):
         pinned = _job.get()
         urls = tuple(self.config.faustus_urls)
         if not urls:
             raise ValueError('Global model unavailable: no configured Faustus endpoint')
         if pinned is None:
-            return await self._selection(urls, deadline)
+            return await self._selection(urls, deadline, descriptor_first)
         key = (urls, self.config.faustus_token)
         # A job may resolve concurrently across native threads and event loops.
         # Lock only publication of its one future, never the HTTP request/chat.
@@ -122,7 +125,7 @@ class GlobalLink(Link):
         if not owner:
             return await asyncio.shield(asyncio.wrap_future(future))
         try:
-            selected = await self._selection(urls, deadline)
+            selected = await self._selection(urls, deadline, descriptor_first)
         except asyncio.CancelledError:
             # An expired owner must not cancel the other users of its selection.
             future.set_exception(TimeoutError("Global model resolution was cancelled"))
@@ -155,8 +158,25 @@ class GlobalLink(Link):
             spark = []
         return await asyncio.to_thread(where.reachable, spark + local, token=token) or urls[0]
 
-    async def _selection(self, urls, deadline):
+    async def _selection(self, urls, deadline, descriptor_first):
+        if descriptor_first:
+            candidates = await asyncio.to_thread(self.config.faustus_candidates)
+            if urls == _DEFAULT_FAUSTUS_URLS:
+                candidates = candidates[len(urls):] + candidates[:len(urls)]
+            for index, base in enumerate(candidates):
+                remaining = deadline - asyncio.get_running_loop().time()
+                try:
+                    # The descriptor proves readiness and the connection is reused for the turn.
+                    async with asyncio.timeout(max(0.0, remaining) * 0.8 if index < len(candidates) - 1 else remaining):
+                        return await self._descriptor(base)
+                except (TimeoutError, httpx.HTTPError, ValueError):
+                    if index == len(candidates) - 1:
+                        raise
+            raise ValueError('Global model unavailable: no resolvable Faustus endpoint')
         base = await self._origin(urls, deadline)
+        return await self._descriptor(base)
+
+    async def _descriptor(self, base):
         headers = {'Authorization': 'Bearer ' + self.config.faustus_token} if self.config.faustus_token else {}
         response = await self._client.get(base + '/api/global-model', headers=headers)
         response.raise_for_status()
@@ -211,6 +231,13 @@ class GlobalLink(Link):
             except (ValueError, httpx.HTTPError) as error:
                 raise VisionUnavailable("model_error", "The selected vision model could not finish its response.",
                                         model=resolution.model) from error
+
+    async def short_json_chat(self, messages, *, timeout, max_tokens):
+        with global_job():
+            async with asyncio.timeout(timeout) as budget:
+                await self.selection(deadline=budget.when(), descriptor_first=True)
+                return await self.chat(messages, effort="off", max_tokens=max_tokens, temperature=0,
+                                       response_format={"type": "json_object"})
 
     async def _post_chat(self, provider, url, payload, level):
         selected = await self.selection()

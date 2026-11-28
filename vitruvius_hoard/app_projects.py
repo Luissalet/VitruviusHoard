@@ -170,7 +170,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir, host_port=5191, *, token_name=None):
+    def __init__(self, data_dir, host_port=5191, *, token_name=None, form_chat=None):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -178,6 +178,7 @@ class AppProjects:
         self.proxies = {}
         self.host_port = host_port
         self.token_name = token_name or (lambda _: None)
+        self.form_chat = form_chat
         self.canvas = CanvasSessions()
         self.revision_events = RevisionEvents()
 
@@ -801,7 +802,7 @@ class AppProjects:
             try:
                 proxy = self.proxies.get(id)
                 if proxy is None:
-                    proxy = self.proxies[id] = PreviewProxy(self.host_port)
+                    proxy = self.proxies[id] = PreviewProxy(self.host_port, form_chat=self.form_chat)
             except Exception:
                 self._close_process(candidate)
                 raise

@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlencode
 
 from ..hoard_link.waiting import DONE_STATES
 from ..software.runtime import profile
+from .form_extraction import extract_missing
 from .reply import ENGINE_ID, JOB_ID, VERSION as TTS_VERSION, ReplyError, ReplyRelay
 from .voice_directory import DICTATION_APP, STT_APP, TTS_APP, VoiceDirectory
 from .voice_trace import TurnTrace
@@ -97,11 +98,12 @@ def _cached_reply(root, phrase_id):
 
 
 class TransferVoice:
-    def __init__(self, *, replies=None, directory=None, tracer=None):
+    def __init__(self, *, replies=None, directory=None, tracer=None, form_chat=None):
         self.partial = Lock()
         self.directory = directory if directory is not None else VoiceDirectory()
         self.replies = replies if replies is not None else ReplyRelay(self.directory.origin)
         self.tracer = tracer if tracer is not None else TurnTrace()
+        self.form_chat = form_chat
 
     @property
     def dictation_name(self):
@@ -176,6 +178,8 @@ class TransferVoice:
             return self._transcribe(query, content_type, body, trace)
         if method == "POST" and route == "understand":
             return self._understand(body, trace)
+        if method == "POST" and route == "form-understand":
+            return self._understand(body, trace, form=True)
         if method == "POST" and route == "end-turn":
             return self._end_turn(body, trace)
         if method == "POST" and route == "speak":
@@ -289,7 +293,7 @@ class TransferVoice:
                                                  "dictation_name": self.dictation_name}}
         return _json(200, **value, service_ms=call.ms)
 
-    def _understand(self, body, trace):
+    def _understand(self, body, trace, *, form=False):
         try:
             request = json.loads(body)
         except (ValueError, UnicodeDecodeError):
@@ -304,6 +308,8 @@ class TransferVoice:
             return _json(400, code="invalid_dictation")
         text, audio = request.get("text"), request.get("audio")
         if (text is None) == (audio is None):
+            return _json(400, code="invalid_dictation")
+        if form and audio is not None:
             return _json(400, code="invalid_dictation")
         if text is not None:
             if not isinstance(text, str) or not 0 < len(text.strip()) <= 1000:
@@ -333,6 +339,9 @@ class TransferVoice:
         value = call.value
         if not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
             return _json(503, code=call.reason or "boltagon_contract_invalid", service_ms=call.ms)
+        if form and value.get("is_final") is True:
+            value = extract_missing(self.form_chat, value, options, text, call.ms,
+                                    correction=request.get("correction") is True)
         return _json(200, **{**value, "dictation_route": "direct", "dictation_name": self.dictation_name},
                      service_ms=call.ms)
 
