@@ -44,6 +44,8 @@ The edit handles show the nearest whole pixel
 while applying and saving the precise value.
 History and comments show the readable element name. Selectors, source locators and file lists are available
 under **Technical details**. Older history entries without a saved name still retain their locators there.
+Canvas edits to the project name or description keep a comment attached to its text binding when the anchor still matches. A cleared field or removed element cannot supply that anchor.
+
 A comment follows its anchor's name in the visible revision. If the name changes,
 **Text when commented** keeps the original name and any saved crop.
 The Canvas header names the source revision in the preview. History numbers each action and labels the revision
