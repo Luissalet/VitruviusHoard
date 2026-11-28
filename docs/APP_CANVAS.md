@@ -11,9 +11,18 @@ The dedicated **Canvas** places Navigate, Select and Comment together in its too
 
 Requests and replies use the rail's full text area. Live actions scroll in a fixed area below them, so clicks
 and scrolling in the preview leave the history in place.
+When Select or Comment opens, Canvas holds the first click until the preview confirms the mode.
+The click then selects or anchors the element without activating its link or form.
+The preview proxy loads the inspector before project scripts so its window capture handles subsequent clicks
+in Select and Comment as well. In Navigate, the page handles its own input.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. The element's
 text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
-editor use the same theme. The edit handles show the nearest whole pixel while applying and saving the precise value.
+editor use the same theme. The label above a selected element uses the same type and name as its card,
+with selectors and source paths available under Technical details. The label moves clear of the edit handles.
+Navigate keeps the selection in the inspector and clears its outline from the page.
+When an edit or undo updates the open preview, the selected cards reflect the newly displayed revision.
+The edit handles show the nearest whole pixel
+while applying and saving the precise value.
 History numbers each action in order and shows the source revision separately.
 Resolving a pending comment as an agent records its acknowledgement and resolution together. Undo on the comment
 restores the previous pending state. Undoing the source edit that resolved a comment reopens the comment and keeps

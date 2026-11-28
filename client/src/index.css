@@ -165,6 +165,7 @@ html[data-hoard-copilot-position="left"] .hoard-copilot { left: 14px; right: aut
     gap var(--canvas-rail-duration) var(--canvas-rail-ease);
 }
 .canvas-workspace[data-panel-closed] { gap: 0; }
+.canvas-mode-shield { position: absolute; inset: 0; z-index: 2; cursor: crosshair; touch-action: none; }
 .canvas-rail-slot {
   display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; overflow: clip;
   transition: grid-template-rows var(--canvas-rail-duration) var(--canvas-rail-ease),

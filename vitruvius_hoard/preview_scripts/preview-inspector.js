@@ -71,6 +71,63 @@
       || (caption && textOf(caption))).slice(0, MAX_TEXT);
   }
 
+  function presentationOf(element) {
+    const tag = tagOf(element);
+    return {
+      tag,
+      role: compact(attrOf(element, 'role')).split(' ')[0],
+      label: displayLabel(element, tag),
+      text: textOf(element),
+    };
+  }
+
+  // The preview is served as a standalone script. The Node parity test keeps
+  // its outline labels in step with the workbench's selection cards.
+  const ELEMENT_LABELS = {
+    a: ['Enlace', 'Link'], link: ['Enlace', 'Link'], button: ['Botón', 'Button'],
+    heading: ['Título', 'Heading'], section: ['Sección', 'Section'], region: ['Sección', 'Section'],
+    article: ['Artículo', 'Article'], main: ['Contenido principal', 'Main content'], aside: ['Panel', 'Panel'],
+    nav: ['Navegación', 'Navigation'], navigation: ['Navegación', 'Navigation'],
+    header: ['Cabecera', 'Header'], footer: ['Pie de página', 'Footer'], form: ['Formulario', 'Form'],
+    input: ['Campo', 'Field'], textarea: ['Campo de texto', 'Text field'], textbox: ['Campo de texto', 'Text field'],
+    select: ['Lista desplegable', 'Dropdown'], combobox: ['Lista desplegable', 'Dropdown'],
+    checkbox: ['Casilla', 'Checkbox'], radio: ['Opción', 'Option'], switch: ['Interruptor', 'Switch'],
+    img: ['Imagen', 'Image'], figure: ['Figura', 'Figure'], p: ['Párrafo', 'Paragraph'],
+    ul: ['Lista', 'List'], ol: ['Lista', 'List'], list: ['Lista', 'List'],
+    li: ['Elemento de lista', 'List item'], listitem: ['Elemento de lista', 'List item'], table: ['Tabla', 'Table'],
+    tr: ['Fila', 'Row'], td: ['Celda', 'Cell'], th: ['Celda de cabecera', 'Header cell'],
+  };
+  const DEFAULT_LABEL = ['Elemento', 'Element'];
+
+  function formatOutlineLabel(item, es, number) {
+    const tag = /^h[1-6]$/.test(item.tag) ? 'heading' : item.tag;
+    const kind = Object.hasOwn(ELEMENT_LABELS, item.role) ? item.role : tag;
+    const type = (Object.hasOwn(ELEMENT_LABELS, kind) ? ELEMENT_LABELS[kind] : DEFAULT_LABEL)[es ? 0 : 1];
+    const text = compact(item.label || item.text);
+    const characters = Array.from(text);
+    const name = characters.length > 56 ? characters.slice(0, 55).join('').trimEnd() + '…' : text;
+    const label = name ? type + ' · ' + name : type;
+    return number ? number + ' · ' + label : label;
+  }
+
+  const OUTLINE_LABEL_HEIGHT = 20;
+  const OUTLINE_HANDLE_GAP = 3;
+
+  function outlineLabelTop(rect, left, width, height, handles) {
+    const last = Math.max(4, height - OUTLINE_LABEL_HEIGHT - 4);
+    const clamp = y => Math.max(4, Math.min(y, last));
+    const preferred = clamp(rect.top >= 25 ? rect.top - 23 : rect.top + 4);
+    const nearby = handles.filter(handle => left < handle.right + OUTLINE_HANDLE_GAP &&
+      left + width > handle.left - OUTLINE_HANDLE_GAP);
+    const fits = y => nearby.every(handle => y + OUTLINE_LABEL_HEIGHT <= handle.top - OUTLINE_HANDLE_GAP ||
+      y >= handle.bottom + OUTLINE_HANDLE_GAP);
+    if (fits(preferred)) return preferred;
+    const above = nearby.map(handle => handle.top - OUTLINE_LABEL_HEIGHT - OUTLINE_HANDLE_GAP)
+      .filter(y => y >= 4 && y < preferred).sort((a, b) => b - a);
+    const below = nearby.map(handle => clamp(handle.bottom + OUTLINE_HANDLE_GAP)).sort((a, b) => a - b);
+    return [...above, clamp(rect.bottom + 4), ...below].find(fits) ?? preferred;
+  }
+
   function describeElement(element, env) {
     const {count, rect, style, scroll} = env;
     const vsrcOwner = attrOf(element, 'data-vsrc') ? element : null;
@@ -81,9 +138,7 @@
     const styles = style(element) || {};
     for (const key of COMPUTED) if (styles[key] !== undefined && styles[key] !== '') computed[key] = String(styles[key]).slice(0, 120);
     const classes = String(attrOf(element, 'class') || '').split(/\s+/).filter(Boolean).slice(0, 12);
-    const tag = tagOf(element);
-    const role = compact(attrOf(element, 'role')).split(' ')[0];
-    const label = displayLabel(element, tag);
+    const {tag, role, label, text} = presentationOf(element);
     return {
       vsrc: vsrc || null,
       own_vsrc: Boolean(vsrcOwner),
@@ -94,7 +149,7 @@
       classes,
       ...(role ? {role} : {}),
       ...(label ? {label} : {}),
-      text: textOf(element),
+      text,
       box: {x: Math.round(box.left + scroll.x), y: Math.round(box.top + scroll.y), w: Math.round(box.width), h: Math.round(box.height)},
       computed,
       ...relationOf(element),
@@ -215,7 +270,7 @@
 
   function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelTop, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -353,13 +408,13 @@
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
-  function report() {
+  function report(modeRequest) {
     paintEdits();
     const message = snapshot();
     lastRevision = message.revision;
     updatedTs = message.selection.length ? Date.now() / 1000 : null;
     publishContext(message.selection);
-    post('dock/select', message);
+    post('dock/select', Number.isSafeInteger(modeRequest) ? {...message, mode_request: modeRequest} : message);
     scheduleElements();
   }
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
@@ -956,6 +1011,7 @@
 
     return {
       paint,
+      handleBounds: () => handles.filter(handle => !handle.hidden).map(handle => handle.getBoundingClientRect()),
       hit: event => event.composedPath().includes(stage),
       hitHandle: event => event.composedPath().some(node => node.classList?.contains('canvas-handle')),
       editing: () => Boolean(gesture || editor || confirmation),
@@ -995,7 +1051,7 @@
     edits?.paint(mode && selected.length === 1 ? selected[0] : null);
   }
 
-  function drawOutline(drawings, element, kind, number) {
+  function drawOutline(drawings, element, kind, number, handles = []) {
     const r = element.getBoundingClientRect();
     if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return;
 
@@ -1004,18 +1060,16 @@
     box.setAttribute('aria-hidden', 'true');
     Object.assign(box.style, {left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px'});
 
-    const name = compact(attrOf(element, 'aria-label'));
-    const id = attrOf(element, 'id');
-    const firstClass = element.classList?.[0];
-    const label = name || (tagOf(element) + (id ? '#' + id : firstClass ? '.' + firstClass : ''));
+    const language = hostLanguage || document.documentElement.lang;
     const tag = document.createElement('div');
     tag.className = `tag ${kind}`;
     tag.setAttribute('aria-hidden', 'true');
     tag.dir = 'auto';
-    tag.textContent = number ? `${number} · ${label}` : label;
+    tag.textContent = formatOutlineLabel(presentationOf(element), /^es(?:-|$)/i.test(language), number);
     const left = Math.max(4, Math.min(r.left, innerWidth - 112));
-    const top = Math.max(4, Math.min(r.top >= 25 ? r.top - 23 : r.top + 4, innerHeight - 24));
-    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: Math.min(220, innerWidth - left - 4) + 'px'});
+    const width = Math.min(220, innerWidth - left - 4);
+    const top = outlineLabelTop(r, left, width, innerHeight, handles);
+    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: width + 'px'});
     drawings.append(box, tag);
   }
 
@@ -1026,13 +1080,16 @@
   function paint() {
     frame = 0;
     if (!layer) return;
+    paintEdits();
     const stage = root.getElementById('stage');
     const pinLayer = root.getElementById('pins');
     const stalePins = new Map([...pinLayer.children].map(button => [button.dataset.pin, button]));
     const drawings = document.createDocumentFragment();
     if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) drawOutline(drawings, hovered, 'hover');
-    selected.forEach((element, index) => {
-      if (element !== draft && element.isConnected) drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0);
+    if (active()) selected.forEach((element, index) => {
+      if (element !== draft && element.isConnected) {
+        drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0, edits?.handleBounds());
+      }
     });
     if (draft?.isConnected) drawOutline(drawings, draft, 'draft');
 
@@ -1067,7 +1124,6 @@
     stage.replaceChildren(drawings);
     const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || ''])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
-    paintEdits();
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
   // After a change of the served revision, or when the page replaced a selected element, each chosen element is matched
@@ -1120,22 +1176,6 @@
   function scheduleElements() {
     if (listRequested && !listFrame) listFrame = setTimeout(publishElements, 100);
   }
-  // A layer the page removed is put back. A change of the served revision (a live refresh patches the page in place)
-  // or a selected element that left the document settles the selection.
-  new MutationObserver(() => {
-    if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
-    if ((selected.length || pins.length || draft) && !watcher) watcher = requestAnimationFrame(() => {
-      watcher = 0;
-      if (draft && !draft.isConnected) draft = null;
-      if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
-      if (pins.length || draft) schedule();
-    });
-  }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
-  new MutationObserver(scheduleElements).observe(document.documentElement, {
-    childList: true, characterData: true, subtree: true, attributes: true,
-    attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
-  });
-
   function elementAt(event) {
     const hit = document.elementsFromPoint ? document.elementsFromPoint(event.clientX, event.clientY).find(element => !isOwn(element)) : event.target;
     return hit && hit !== document.documentElement ? hit : null;
@@ -1150,6 +1190,18 @@
   }
 
   const swallow = event => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.(); };
+  function keepInInspector(event) {
+    // The original would pass through the page's window before reaching the shadow controls.
+    // Forward it inside the shadow root and preserve cancellation of the native default.
+    event.stopImmediatePropagation();
+    const { bubbles, cancelable, detail, button, buttons, clientX, clientY, pointerId, pointerType,
+      isPrimary, altKey, ctrlKey, metaKey, shiftKey } = event;
+    const local = new event.constructor(event.type, {
+      bubbles, cancelable, composed: false, detail, button, buttons, clientX, clientY, pointerId,
+      pointerType, isPrimary, altKey, ctrlKey, metaKey, shiftKey,
+    });
+    if (!event.composedPath()[0].dispatchEvent(local)) event.preventDefault();
+  }
   function updateHover(element) {
     if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); }
   }
@@ -1169,22 +1221,27 @@
   function onClick(event) {
     const pin = pinOf(event);
     if (pin) { swallow(event); post('dock/comment-focus', {page: pageId(), revision: revision(), id: pin}); return; }
-    if (!active() || (mode && edits?.hit(event))) return;
+    if (!active()) return;
+    if (mode && edits?.hit(event)) { keepInInspector(event); return; }
     swallow(event);
-    if (commenting) { const target = elementAt(event); if (target) pickForComment(target); return; }
-    if (event.detail <= 1) choose(elementAt(event), event.shiftKey);
+    if (commenting || event.detail <= 1) pickElement(elementAt(event), event.shiftKey);
+  }
+  function pickElement(element, additive) {
+    if (!element) return;
+    if (commenting) pickForComment(element);
+    else choose(element, additive);
   }
   function onBlock(event) {
-    if (!active() || pinOf(event)) return;
-    if (commenting) { event.preventDefault(); event.stopPropagation(); return; }
+    if (!active()) return;
+    if (pinOf(event)) { keepInInspector(event); return; }
+    if (commenting) { swallow(event); return; }
     const hitOverlay = edits?.hit(event);
     if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
       const element = edits?.doubleClick(event, hitOverlay);
       if (element) { selected = [element]; schedule(); report(); swallow(event); return; }
     }
-    if (hitOverlay) return;
-    event.preventDefault();
-    event.stopPropagation();
+    if (hitOverlay) { keepInInspector(event); return; }
+    swallow(event);
   }
   function onKey(event) {
     if (event.altKey && event.shiftKey && event.code === 'KeyS') { event.preventDefault(); setMode(!mode); return; }
@@ -1203,14 +1260,14 @@
   }
 
   // Select and Comment exclude each other: turning one on turns the other off.
-  function setMode(on, kind = 'select') {
+  function setMode(on, kind = 'select', modeRequest) {
     if (kind === 'comment') { commenting = Boolean(on); if (commenting) mode = false; } else { mode = Boolean(on); if (mode) commenting = false; }
     ensureLayer();
     if (!active()) hovered = null;
     if (!mode) edits?.cancel();
     if (!commenting) draft = null;
     setCursor(active());
-    schedule(); report();
+    schedule(); report(modeRequest);
   }
 
   // A new document (a reload, or the frame replaced after an edit of the layout) gets the selection back: every item is
@@ -1226,7 +1283,7 @@
     selected = found; expired = lost; ensureLayer(); schedule(); report();
   }
 
-  window.addEventListener('message', event => {
+  function onMessage(event) {
     const accepted = gate(hostOrigin, event, window.parent);
     if (accepted === null) return;
     hostOrigin = accepted;
@@ -1237,13 +1294,18 @@
       hostTheme = data.theme;
       edits?.setLanguage(hostLanguage);
       edits?.setTheme(hostTheme);
+      schedule();
     } else if (data.type === 'inspect/hello') { const message = snapshot(); lastRevision = message.revision; publishContext(message.selection); post('dock/inspector-ready', message); }
     else if (data.type === 'inspect/read-selection' && typeof data.id === 'string') {
       if (selected.length && (revision() !== lastRevision || selected.some(element => !element.isConnected))) settle();
       const { selection, revision: servedRevision } = snapshot();
       post('dock/result', { id: data.id, ok: true, result: { selection, revision: servedRevision, updated_ts: updatedTs } });
     }
-    else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select');
+    else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select', data.mode_request);
+    else if (data.type === 'inspect/pick' && active() && Number.isFinite(data.x) && Number.isFinite(data.y) &&
+      data.x >= 0 && data.y >= 0 && data.x < innerWidth && data.y < innerHeight) {
+      pickElement(elementAt({clientX: data.x, clientY: data.y}), data.additive === true);
+    }
     else if (data.type === 'inspect/elements') {
       listRequested = true; listKey = ''; scheduleElements();
     } else if (data.type === 'inspect/element-select' && data.page === pageId() && data.revision === revision()) {
@@ -1276,15 +1338,37 @@
     else if (data.type === 'inspect/dismiss') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < expired.length) { expired.splice(at, 1); report(); } }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }
     else if (data.type === 'inspect/restore') restore(data.items);
-  });
+  }
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('mouseout', event => { if (!event.relatedTarget) updateHover(null); }, true);
   window.addEventListener('blur', () => updateHover(null));
-  document.addEventListener('click', onClick, true);
-  for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) document.addEventListener(type, onBlock, true);
+  window.addEventListener('click', onClick, true);
+  for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) window.addEventListener(type, onBlock, true);
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', () => { schedule(); scheduleElements(); });
+  // Send the updated selection before the refresh acknowledges the rendered revision.
+  window.addEventListener('vitruvius:preview-updated', () => { if (selected.length) settle(); });
   window.__vitruviusInspector = {version: 1, core};
-  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
+  function start() {
+    // The proxy registers input capture during parsing. Wait for the complete DOM and preview metadata before talking to Canvas.
+    window.addEventListener('message', onMessage);
+    // Reattach a removed layer and reconcile the selection when the page or served revision changes.
+    new MutationObserver(() => {
+      if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
+      if ((selected.length || pins.length || draft) && !watcher) watcher = requestAnimationFrame(() => {
+        watcher = 0;
+        if (draft && !draft.isConnected) draft = null;
+        if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
+        if (pins.length || draft) schedule();
+      });
+    }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
+    new MutationObserver(scheduleElements).observe(document.documentElement, {
+      childList: true, characterData: true, subtree: true, attributes: true,
+      attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
+    });
+    try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
+  else start();
 })();

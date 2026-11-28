@@ -20,14 +20,23 @@ from .transfer_assistant.voice import TransferVoice, VOICE_PREFIX, _json
 
 SCRIPT_ROOT = "/__vitruvius_preview__/"
 # Additional preview-only scripts live alongside the application package.
-PREVIEW_SCRIPTS = ("preview-inspector.js", "preview-refresh.js")
+INSPECTOR_SCRIPT = "preview-inspector.js"
+PREVIEW_SCRIPTS = (INSPECTOR_SCRIPT, "preview-refresh.js")
 SCRIPT_DIR = Path(__file__).with_name("preview_scripts")
 
 
-class _DocumentEnds(HTMLParser):
+class _DocumentBoundaries(HTMLParser):
     CDATA_CONTENT_ELEMENTS = ("script", "style", "textarea", "title")
+    HEAD_PREFIX = frozenset({"html", "head", "base", "link", "meta", "title", "style"})
+    before_content = None
     head_end = None
     body_end = None
+
+    def handle_starttag(self, tag, attrs):
+        if self.before_content is None and (
+            tag not in self.HEAD_PREFIX or any(name.startswith("on") for name, _ in attrs)
+        ):
+            self.before_content = self.getpos()
 
     def handle_endtag(self, tag):
         if tag == "head" and self.head_end is None:
@@ -37,7 +46,7 @@ class _DocumentEnds(HTMLParser):
 
 
 def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", session: str = "") -> str:
-    parser = _DocumentEnds()
+    parser = _DocumentBoundaries()
     try:
         parser.feed(source)
         parser.close()
@@ -53,16 +62,24 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", se
         return offsets[line - 1] + column
 
     body = index(parser.body_end)
-    includes = "".join(f'<script defer src="{SCRIPT_ROOT}{name}"></script>' for name in scripts)
+    head = min(index(parser.head_end), body)
+    deferred = "".join(
+        f'<script defer src="{SCRIPT_ROOT}{name}"></script>' for name in scripts if name != INSPECTOR_SCRIPT
+    )
+    insertions = [(body, deferred)]
+    if INSPECTOR_SCRIPT in scripts:
+        # Keep leading metadata (including charset and CSP) ahead of the inspector.
+        # Run it before the project can add its own window capture listeners.
+        early = min(index(parser.before_content), head)
+        insertions.append((early, f'<script src="{SCRIPT_ROOT}{INSPECTOR_SCRIPT}"></script>'))
     if revision:
         meta = f'<meta name="vitruvius-preview-revision" content="{escape(revision, quote=True)}">'
         if session:  # which opening of the preview this page came from: it outlives the live refresh, a stop and a new start changes it
             meta += f'<meta name="vitruvius-preview-session" content="{escape(session, quote=True)}">'
-        head = index(parser.head_end)
-        if head < body:
-            return source[:head] + meta + source[head:body] + includes + source[body:]
-        includes = meta + includes
-    return source[:body] + includes + source[body:]
+        insertions.append((head, meta))
+    for at, markup in sorted(insertions, key=lambda insertion: insertion[0], reverse=True):
+        source = source[:at] + markup + source[at:]
+    return source
 
 
 class PreviewProxy:

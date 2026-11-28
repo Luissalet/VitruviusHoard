@@ -40,6 +40,16 @@ export function modeMessages(mode, current) {
   return [mode === "select" ? { type: "inspect/mode", on: true } : { type: "inspect/mode", on: true, kind: mode }];
 }
 
+/** Translate a click on the host's temporary shield into the preview viewport. */
+export function previewPick(frame, { clientX, clientY, shiftKey }) {
+  const rect = frame.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const x = (clientX - rect.left) * frame.offsetWidth / rect.width - frame.clientLeft;
+  const y = (clientY - rect.top) * frame.offsetHeight / rect.height - frame.clientTop;
+  if (x < 0 || y < 0 || x >= frame.clientWidth || y >= frame.clientHeight) return null;
+  return { type: "inspect/pick", x, y, additive: shiftKey };
+}
+
 /** `tag.class` of an element. */
 export function elementLabel(item) {
   const name = (item?.tag || "element") + (item?.classes?.length ? "." + item.classes.slice(0, 2).join(".") : "");
