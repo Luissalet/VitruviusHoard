@@ -156,8 +156,10 @@ export default function Canvas({ param }) {
   const originOf = (frame) => { try { return new URL(frame.src, window.location.href).origin; } catch { return null; } };
   const send = (message) => {
     const frame = frameRef.current;
-    const target = frame && originOf(frame);
-    if (frame?.contentWindow && target) frame.contentWindow.postMessage({ hoardDock: 1, ...message }, target);
+    // A new iframe still holds the host's about:blank document until the preview commits.
+    if (!frame?.contentWindow || frame.contentDocument?.URL === "about:blank") return;
+    const target = originOf(frame);
+    if (target) frame.contentWindow.postMessage({ hoardDock: 1, ...message }, target);
   };
 
   function clearModeChange() {

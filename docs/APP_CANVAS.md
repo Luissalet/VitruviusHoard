@@ -15,6 +15,7 @@ While connecting to the preview, the mode toolbar shows that it is waiting for t
 or Comment stays pending and starts when the inspector answers. Navigate and Escape cancel the pending request.
 Canvas holds the first click until the preview confirms the mode.
 The click then selects or anchors the element without activating its link or form.
+The host waits for the preview document before sending its greeting to the preview's origin.
 The preview proxy loads the inspector before project scripts so its window capture handles subsequent clicks
 in Select and Comment as well. In Navigate, the page handles its own input.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. A saved comment
