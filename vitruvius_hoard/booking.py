@@ -22,14 +22,16 @@ def _json(value):
     return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
 
 
-def _localized(value, name, label_es, *, optional=False):
+def _localized(value, label_en, label_es, *, optional=False):
+    if value is None and not optional:
+        value = ""
     if isinstance(value, str):
         value = {"es": value, "en": value}
     if not isinstance(value, dict) or any(not isinstance(value.get(lang), str) for lang in ("es", "en")):
-        raise ProjectCreationError(f"{name} needs text or an es/en text pair",
+        raise ProjectCreationError(f"Enter {label_en} as text or in English and Spanish.",
                                    f"Escribe {label_es} como texto o en castellano e inglés.")
     if not optional and any(not value[lang].strip() for lang in ("es", "en")):
-        raise ProjectCreationError(f"{name} must have text in both languages", f"Escribe {label_es}.")
+        raise ProjectCreationError(f"Enter {label_en}.", f"Escribe {label_es}.")
     return {lang: value[lang].strip() for lang in ("es", "en")}
 
 
@@ -45,15 +47,16 @@ def site_files(spec, accent, items, lang, description):
             raise ProjectCreationError("Each booking item needs a unique lowercase id",
                                        f"La opción de reserva {position} necesita un identificador único en minúsculas.")
         seen.add(ident)
-        option = f"la opción de reserva {position}"
+        option_en = f"booking option {position}"
+        option_es = f"la opción de reserva {position}"
         catalogue.append({
             "id": ident,
-            "title": _localized(row.get("title"), "Item title", f"un nombre para {option}"),
-            "category": _localized(row.get("category"), "Item category", f"una categoría para {option}"),
-            "description": _localized(row.get("description", ""), "Item description", f"la descripción de {option}",
-                                      optional=True),
+            "title": _localized(row.get("title"), f"a name for {option_en}", f"un nombre para {option_es}"),
+            "category": _localized(row.get("category"), f"a category for {option_en}", f"una categoría para {option_es}"),
+            "description": _localized(row.get("description", ""), f"the description for {option_en}",
+                                      f"la descripción de {option_es}", optional=True),
         })
-    site = {"lang": lang, "description": _localized(description, "Description", "la descripción", optional=True),
+    site = {"lang": lang, "description": _localized(description, "the description", "la descripción", optional=True),
             "items": catalogue}
     fields = {"item": catalogue[0]["id"], "date": "2035-06-15",
               "name": "Synthetic booking", "email": "booking@example.invalid"}
