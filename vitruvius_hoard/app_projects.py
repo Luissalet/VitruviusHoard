@@ -394,13 +394,16 @@ class AppProjects:
         with self.lock:
             root = self._project_path(id)
             try:
+                # Check from the volume root before opening anything inside the archive.
+                for parent in reversed(Path(os.path.abspath(root)).parents):
+                    self._deletion_stat(parent, es)
                 self._deletion_stat(root, es)
                 self._deletion_stat(root / "project-index.json", es)
                 _, index = self._load_index(id, include_archived=True)
             except (FileNotFoundError, LookupError, NotADirectoryError) as error:
                 raise AppError("not_found", "No se ha encontrado el proyecto." if es
                                else "Application project not found") from error
-            if index["id"] != id:
+            if index.get("id") != id:
                 raise AppError("unsafe_project_data", "El registro no corresponde al proyecto." if es
                                else "The stored record does not match this project.")
             if not self._archived(root, index):

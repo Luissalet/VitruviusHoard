@@ -234,3 +234,69 @@ def test_comment_store_cannot_write_across_project_removal(client, monkeypatch):
     archive = _archive(projects, project)
     receipt = projects.delete(**{"id": project["id"], **_conditions(archive)})
     assert not Path(receipt["path"]).exists()
+
+@pytest.mark.parametrize("ancestor", ("app-projects", "design", "profile"))
+def test_delete_rejects_reparse_ancestors_before_opening_index(client, monkeypatch, ancestor):
+    import stat
+    from types import SimpleNamespace
+
+    projects = client.svc.app_projects
+    project = projects.create("Reject a redirected archive store")
+    archived = _archive(projects, project)
+    root = projects.root / project["id"]
+    forbidden = {
+        "app-projects": projects.root,
+        "design": projects.root.parent,
+        "profile": projects.root.parent.parent,
+    }[ancestor]
+    original_lstat = Path.lstat
+    before = _files(root)
+
+    def lstat(path):
+        if path == forbidden:
+            return SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        return original_lstat(path)
+
+    def must_not_read_project(*args, **kwargs):
+        pytest.fail("A redirected storage path was accepted for project lookup")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "lstat", lstat)
+        patch.setattr(projects, "_load_index", must_not_read_project)
+        patch.setattr(projects, "stop", must_not_read_project)
+        response = client.post(f"/api/app-projects/{project['id']}/delete", json=_conditions(archived))
+    assert response.status_code == 400 and response.json()["code"] == "unsafe_project_data"
+    assert _files(root) == before
+    assert not root.with_name(f".retired-{project['id']}").exists()
+
+
+@pytest.mark.parametrize("invalid_id", ("..", "../0123456789abcdef", r"..\0123456789abcdef",
+                                         "ABCDEF0123456789", "0123456789abcde:"))
+def test_delete_rejects_noncanonical_ids(services, invalid_id):
+    projects = services.app_projects
+    archived = _archive(projects, projects.create("Keep this archive"))
+    with pytest.raises(ValueError, match="Invalid project id"):
+        projects.delete(invalid_id, **_conditions(archived))
+    assert [row["id"] for row in projects.list(archived=True)] == [archived["id"]]
+
+
+def test_delete_checks_on_disk_id_before_renaming(client, monkeypatch):
+    import json
+
+    projects = client.svc.app_projects
+    target = _archive(projects, projects.create("Archive with a mismatched index"))
+    other = projects.create("Keep neighboring data")
+    root = projects.root / target["id"]
+    index = root / "project-index.json"
+    index.write_text(json.dumps({**json.loads(index.read_text(encoding="utf-8")), "id": other["id"]}), encoding="utf-8")
+    before = _files(root)
+    other_before = _files(projects.root / other["id"])
+
+    def must_not_rename(*args, **kwargs):
+        pytest.fail("A project with a mismatched index was about to be renamed")
+
+    monkeypatch.setattr(Path, "rename", must_not_rename)
+    response = client.post(f"/api/app-projects/{target['id']}/delete", json=_conditions(target))
+    assert response.status_code == 400 and response.json()["code"] == "unsafe_project_data"
+    assert _files(root) == before
+    assert _files(projects.root / other["id"]) == other_before
