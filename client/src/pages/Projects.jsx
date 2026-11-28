@@ -17,6 +17,8 @@ export default function Projects({ param }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [template, setTemplate] = useState("work-board");
+  const [createLanguageOverride, setCreateLanguageOverride] = useState(null);
+  const createLanguage = createLanguageOverride ?? lang;
   const [project, setProject] = useState(null);
   const [file, setFile] = useState("pages/index.html");
   const [drafts, setDrafts] = useState({});
@@ -38,7 +40,10 @@ export default function Projects({ param }) {
   const source = project ? drafts[draftKey] ?? project.files[file] ?? "" : "";
   const draftPaths = Object.keys(drafts).filter((key) => key.startsWith(draftPrefix)).map((key) => key.slice(draftPrefix.length));
   activeView.current = { revision: project?.selected_revision, file, dirty: !!draftPaths.length };
-  useCopilotForm("app-create-draft", { initial: { name: "", description: "", template: "work-board" }, current: { name, description, template } });
+  useCopilotForm("app-create-draft", {
+    initial: { name: "", description: "", template: "work-board", lang },
+    current: { name, description, template, lang: createLanguage },
+  });
   useCopilotForm("app-source-draft", { objectId: project?.id, initial: { file, source: project?.files[file] ?? "" }, current: { file, source, revision: project?.selected_revision } });
   useCopilotObjects(project ? [{ kind: "app_project", id: project.id }] : []);
   const loadList = async () => {
@@ -90,12 +95,13 @@ export default function Projects({ param }) {
   useCopilotRefresh(() => { loadList(); if (param) loadProject(param); });
   const create = async (event) => {
     event.preventDefault(); setBusy("create");
-    const submitted = { name, description, template };
+    const submitted = { name, description, template, lang: createLanguage };
     const submittedRoute = window.location.hash;
     try {
       const data = await api.appProjectCreate(submitted);
       if (createDraft.current.name === submitted.name) setName("");
       if (createDraft.current.description === submitted.description) setDescription("");
+      setCreateLanguageOverride((current) => current === createLanguageOverride ? null : current);
       await loadList();
       if (window.location.hash === submittedRoute) {
         setShowArchived(false);
@@ -189,6 +195,12 @@ export default function Projects({ param }) {
       <div className="grid md:grid-cols-2 gap-3">
         <label className="label">{es ? "Nombre" : "Name"}<input className="field mt-1" value={name} onChange={(event) => setName(event.target.value)} required /></label>
         <label className="label">{es ? "Punto de partida" : "Starting point"}<select aria-label={es ? "Punto de partida" : "Starting point"} className="field mt-1" value={template} onChange={(event) => setTemplate(event.target.value)}>{templates.map((item) => <option key={item.id} value={item.id}>{es ? item.name_es : item.name}</option>)}</select></label>
+        <label className="label">{es ? "Idioma de la aplicación" : "Application language"}
+          <select aria-label={es ? "Idioma de la aplicación" : "Application language"} className="field mt-1" value={createLanguage} onChange={(event) => setCreateLanguageOverride(event.target.value)}>
+            <option value="es" lang="es">Español</option>
+            <option value="en" lang="en">English</option>
+          </select>
+        </label>
       </div>
       <label className="label">{es ? "Descripción" : "Description"}<input className="field mt-1" value={description} onChange={(event) => setDescription(event.target.value)} /></label>
       <p className="help">{es ? "Incluye páginas, datos persistentes y servidor propio. El código se puede editar y exportar para usarlo por separado." : "Includes pages, persistent data and its own server. Edit and export the code to run it independently."}</p>
