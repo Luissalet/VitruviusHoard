@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlencode
 
 from ..hoard_link.waiting import DONE_STATES
 from ..software.runtime import profile
-from .form_extraction import extract_missing
+from .form_extraction import understand_form
 from .reply import ENGINE_ID, JOB_ID, VERSION as TTS_VERSION, ReplyError, ReplyRelay
 from .voice_directory import DICTATION_APP, STT_APP, TTS_APP, VoiceDirectory
 from .voice_trace import TurnTrace
@@ -335,13 +335,14 @@ class TransferVoice:
             text = json.loads(transcription[1])["text"]
             if not text.strip():
                 return _json(422, code="dictation_empty")
-        call = self.directory.dictation("dictation_understand", {**options, "text": text}, timeout=1.2, trace=trace)
+        def rules():
+            return self.directory.dictation("dictation_understand", {**options, "text": text}, timeout=1.2, trace=trace)
+
+        call = (understand_form(self.form_chat, rules, options, text, correction=request.get("correction") is True)
+                if form else rules())
         value = call.value
         if not isinstance(value, dict) or value.get("version") != DICTATION_VERSION:
             return _json(503, code=call.reason or "boltagon_contract_invalid", service_ms=call.ms)
-        if form and value.get("is_final") is True:
-            value = extract_missing(self.form_chat, value, options, text, call.ms,
-                                    correction=request.get("correction") is True)
         return _json(200, **{**value, "dictation_route": "direct", "dictation_name": self.dictation_name},
                      service_ms=call.ms)
 

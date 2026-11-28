@@ -98,7 +98,7 @@ class Services:
             self.link_sync = self._link.sync
 
         self.app_projects = AppProjects(config.data_dir, host_port=config.port, token_name=self._tokens_name,
-                                        form_chat=getattr(self.link_sync, "short_json_chat", None))
+                                        form_chat=getattr(self.link_sync, "submit_short_json_chat", None))
         self.preview_selections = PreviewSelections()
         self.preview_comments = PreviewComments(self.app_projects)
         self.alternatives = AlternativeStudies(self)

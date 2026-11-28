@@ -68,8 +68,10 @@ class GlobalSync(SyncFacade):
         return self._run(lambda link: link.vision_chat(
             messages, images=images, effort=effort, timeout=timeout, max_tokens=max_tokens))
 
-    def short_json_chat(self, messages, *, timeout, max_tokens):
-        return self._run(lambda link: link.short_json_chat(messages, timeout=timeout, max_tokens=max_tokens))
+    def submit_short_json_chat(self, messages, *, timeout, max_tokens):
+        loop = self._ensure_loop()
+        return asyncio.run_coroutine_threadsafe(self._twin().short_json_chat(
+            messages, timeout=timeout, max_tokens=max_tokens), loop)
 
     def close(self, timeout=None):
         if self._thread is threading.current_thread():

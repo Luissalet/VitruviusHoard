@@ -1,5 +1,7 @@
 import asyncio
+from concurrent.futures import Future
 import json
+from threading import Event
 from types import SimpleNamespace
 
 import httpx
@@ -7,6 +9,7 @@ import pytest
 
 from hoard_link import LinkConfig
 from vitruvius_hoard.software.global_models import GlobalLink
+from vitruvius_hoard.transfer_assistant.form_extraction import understand_form
 from vitruvius_hoard.transfer_assistant.voice import DICTATION_VERSION, TransferVoice
 from vitruvius_hoard.transfer_assistant.voice_directory import VoiceCall
 
@@ -45,7 +48,9 @@ def proposal(value):
         assert timeout == 3 and max_tokens <= 96
         payload = json.loads(messages[-1]["content"])
         assert "fields" in payload
-        return SimpleNamespace(text=json.dumps(value), model="sample-model")
+        result = Future()
+        result.set_result(SimpleNamespace(text=json.dumps(value), model="sample-model"))
+        return result
     return chat
 
 
@@ -100,6 +105,46 @@ def test_timeout_retains_rules_and_legacy_understand_does_not_consult_model():
     assert result["understanding_steps"][1]["outcome"] == "timeout"
     assert turn("Marta", None)["understanding_steps"][1]["outcome"] == "unavailable"
     assert "understanding_steps" not in turn("Marta", timeout, route="understand")
+
+
+def test_complete_rules_cancel_the_model_already_started_in_parallel():
+    started = Event()
+    pending = Future()
+
+    def submit(*_, **__):
+        started.set()
+        return pending
+
+    def rules():
+        assert started.wait(1)
+        fields = {"persona": {"value": "Marta", "quote": "Marta", "validation": "valid"},
+                  "franja": {"value": "10:00", "quote": "10:00", "validation": "valid"}}
+        return Rules(fields).dictation("dictation_understand", {})
+
+    result = understand_form(submit, rules, {"version": DICTATION_VERSION, "schema": SCHEMA}, "Marta a las 10:00")
+    assert result.value["fields"]["franja"]["value"] == "10:00"
+    assert result.value["understanding_steps"][1]["outcome"] == "superseded"
+    assert pending.cancelled()
+
+
+def test_complete_model_can_finish_before_rules_return():
+    started, release = Event(), Event()
+
+    def rules():
+        started.set()
+        assert release.wait(2)
+        return Rules().dictation("dictation_understand", {})
+
+    def submit(*args, **kwargs):
+        assert started.wait(1)
+        return proposal({"persona": "Marta", "franja": "10:00"})(*args, **kwargs)
+
+    try:
+        result = understand_form(submit, rules, {"version": DICTATION_VERSION, "schema": SCHEMA}, "Marta a las 10:00")
+        assert result.value["missing"] == []
+        assert result.value["understanding_steps"][0]["outcome"] == "superseded"
+    finally:
+        release.set()
 
 
 @pytest.mark.asyncio

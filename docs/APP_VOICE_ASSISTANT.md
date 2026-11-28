@@ -39,6 +39,6 @@ La herramienta añade el panel al formulario que coincida con `form_selector`. U
 
 ## Model-assisted form extraction
 
-For generated forms, Vitruvius can give the configured family model up to three seconds to extract required values left open by the dictation rules. It checks proposed values against the form's types and options and looks for their evidence in the current instruction. For multiple possible choices it asks which one to use. The turn trace shows separate timings for rules and model. Existing project copies can pick up this change with `app_project_refresh_voice_assistant` and its undo receipt.
+For generated forms with required fields still open, the dictation rules and a brief request to the configured family model run in parallel, with up to three seconds for the model. A fully validated result can finish the turn. Partial results are combined, preserving fields already validated by the rules. For multiple possible choices the assistant asks which one to use. The turn trace shows separate timings for rules and model. Existing project copies can pick up this change with `app_project_refresh_voice_assistant` and its undo receipt.
 
 Si las reglas dejan campos obligatorios pendientes, el modelo de la familia dispone de hasta tres segundos para proponer valores. El asistente valida cada propuesta con el esquema y la frase. Si ve varias opciones, pregunta por cuál usar. Si el modelo no responde o no está disponible, lo indica y pregunta por los datos que faltan.

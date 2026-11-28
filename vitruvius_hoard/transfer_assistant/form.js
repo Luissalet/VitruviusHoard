@@ -15,7 +15,7 @@ const COPY = {
     sttDown: "La transcripción no responde. Puedes escribir la instrucción.",
     dictationDown: "El servicio que interpreta la instrucción no responde. Puedes rellenar el formulario a mano.",
     extractionUnavailable: "El modelo no está disponible.", extractionTimeout: "El modelo ha agotado el tiempo de respuesta.",
-    rules: "reglas", model: "modelo",
+    rules: "reglas", model: "modelo", superseded: "descartado",
     choices: "Opciones",
     ask: name => "¿Qué pongo en «" + name + "»?", ambiguous: name => "¿Puedes concretar «" + name + "»?",
     changed: "He actualizado el formulario.", yes: "Sí", no: "No", review: "Revisa los datos.",
@@ -36,7 +36,7 @@ const COPY = {
     sttDown: "Transcription is unavailable. You can type the instruction.",
     dictationDown: "The dictation service is unavailable. You can fill in the form by hand.",
     extractionUnavailable: "The model is unavailable.", extractionTimeout: "The model ran out of time.",
-    rules: "rules", model: "model",
+    rules: "rules", model: "model", superseded: "discarded",
     choices: "Options",
     ask: name => "What should I enter for “" + name + "”?", ambiguous: name => "Can you clarify “" + name + "”?",
     changed: "I’ve updated the form.", yes: "Yes", no: "No", review: "Check the details.",
@@ -316,7 +316,8 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       if (active.signal.aborted) return;
       const steps = understood.understanding_steps || [];
       for (const step of steps) {
-        trace(turn, "understand", copy[step.method], step.ms,
+        const service = copy[step.method] + (step.outcome === "superseded" ? " (" + copy.superseded + ")" : "");
+        trace(turn, "understand", service, step.ms,
           step.outcome === "unavailable" || step.outcome === "timeout", "understand-" + step.method);
       }
       const began = performance.now();

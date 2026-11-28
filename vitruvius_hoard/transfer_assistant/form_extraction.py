@@ -1,5 +1,6 @@
 """Ground proposed model values in the current form and its utterance."""
 
+from concurrent.futures import CancelledError, FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import json
 import math
 import re
@@ -12,11 +13,14 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry
 from referencing.exceptions import Unresolvable
 
+from .voice_directory import VoiceCall
+
 
 MODEL_TIMEOUT_S = 3.0
 MODEL_MAX_TOKENS = 96
 _FORMATS = FormatChecker()
 _REGISTRY = Registry()
+_RULES = ThreadPoolExecutor(max_workers=8, thread_name_prefix="form-dictation")
 _HOURS = (
     "cero zero", "una uno one", "dos two", "tres three", "cuatro four", "cinco five", "seis six",
     "siete seven", "ocho eight", "nueve nine", "diez ten", "once eleven", "doce twelve",
@@ -87,38 +91,26 @@ def _labels(context, key, value):
     return [label] if isinstance(label, str) and label.strip() else []
 
 
-def extract_missing(call, value, options, text, rules_ms, *, correction=False):
-    """Extend a valid rules result. A proposal is advisory until it passes schema and evidence checks."""
-    steps = [{"method": "rules", "ms": rules_ms}]
-    base = {**value, "understanding_steps": steps}
+def _scope(options, text, correction):
     schema = options.get("schema", {})
     properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
     required = schema.get("required", []) if isinstance(schema, dict) else []
-    if not isinstance(properties, dict) or not isinstance(required, list) or not re.search(r"\w", text):
-        return base
+    required = [key for key in required if isinstance(key, str)] if isinstance(required, list) else []
     context = options.get("context")
     context = context if isinstance(context, dict) else {}
     draft = context.get("draft")
     draft = draft if isinstance(draft, dict) else {}
-    rules_fields = value.get("fields")
-    fields = dict(rules_fields) if isinstance(rules_fields, dict) else {}
     targets = {}
+    if not isinstance(properties, dict) or not re.search(r"\w", text):
+        return required, context, draft, targets
     for key in required:
-        spec = properties.get(key) if isinstance(key, str) else None
-        rule = fields.get(key) if isinstance(key, str) else None
-        if not isinstance(spec, dict) or isinstance(rule, dict) and rule.get("validation") == "valid":
-            continue
-        if key not in draft or draft[key] in (None, "") or correction and context.get("field") == key:
+        spec = properties.get(key)
+        if isinstance(spec, dict) and (draft.get(key) in (None, "") or correction and context.get("field") == key):
             targets[key] = spec
-    if not targets:
-        return base
+    return required, context, draft, targets
 
-    start = monotonic()
-    model_step = {"method": "model", "ms": 0, "outcome": "unavailable"}
-    steps.append(model_step)
-    if call is None:
-        return base
 
+def _messages(targets, context, text):
     requested = {}
     for key, spec in targets.items():
         field = {k: spec[k] for k in ("type", "title", "format", "enum") if k in spec}
@@ -128,27 +120,44 @@ def extract_missing(call, value, options, text, rules_ms, *, correction=False):
             if labels:
                 field["option_labels"] = labels
         requested[key] = field
-    messages = [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": json.dumps({
+    return [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": json.dumps({
         "fields": requested, "context_field": context.get("field"), "utterance": text,
     }, ensure_ascii=False, separators=(",", ":"))}]
-    try:
-        response = call(messages, timeout=MODEL_TIMEOUT_S, max_tokens=MODEL_MAX_TOKENS)
-        proposal = json.loads(response.text)
-        if not isinstance(proposal, dict):
-            return base
-        model_step["outcome"] = "no_match"
-        model_step["model"] = response.model
-    except (TimeoutError, httpx.TimeoutException):
-        model_step["outcome"] = "timeout"
-        return base
-    except (ValueError, TypeError, AttributeError, OSError, httpx.HTTPError, HoardLinkError):
-        return base
-    finally:
-        model_step["ms"] = (monotonic() - start) * 1000
 
+
+def _result(model, step):
+    try:
+        response = model.result()
+        proposal = json.loads(response.text)
+        if isinstance(proposal, dict):
+            step.update(outcome="no_match", model=response.model)
+            return proposal
+    except (TimeoutError, httpx.TimeoutException):
+        step["outcome"] = "timeout"
+    except (CancelledError, ValueError, TypeError, AttributeError, OSError, RuntimeError, httpx.HTTPError, HoardLinkError):
+        pass
+    return {}
+
+
+def _valid_rule(fields, key, spec):
+    field = fields.get(key)
+    return (isinstance(field, dict) and field.get("validation") == "valid"
+            and _valid(field.get("value"), spec) and bool(field.get("quote")))
+
+
+def _complete(value, targets):
+    fields = value.get("fields")
+    return isinstance(fields, dict) and all(_valid_rule(fields, key, spec) for key, spec in targets.items())
+
+
+def _apply(value, proposal, targets, required, context, draft, text, model_step):
+    rules_fields = value.get("fields")
+    fields = dict(rules_fields) if isinstance(rules_fields, dict) else {}
     ambiguities = [row for row in (value.get("ambiguous") or []) if isinstance(row, dict)]
     changed = list(value.get("changed") or [])
     for key, spec in targets.items():
+        if _valid_rule(fields, key, spec):
+            continue
         proposed = proposal.get(key)
         candidates = spec.get("enum")
         if isinstance(candidates, list) and (isinstance(proposed, list) or key in proposal and not _valid(proposed, spec)):
@@ -174,4 +183,74 @@ def extract_missing(call, value, options, text, rules_ms, *, correction=False):
                 changed.append(key)
             model_step["outcome"] = "applied"
     missing = [key for key in required if isinstance(key, str) and key not in fields and draft.get(key) in (None, "")]
-    return {**base, "fields": fields, "missing": missing, "ambiguous": ambiguities, "changed": changed}
+    return {**value, "fields": fields, "missing": missing, "ambiguous": ambiguities, "changed": changed}
+
+
+def understand_form(submit, rules_call, options, text, *, correction=False):
+    """Let a complete result finish the turn. Merge partial results without replacing validated rules."""
+    required, context, draft, targets = _scope(options, text, correction)
+    empty = {"version": options["version"], "is_final": True, "raw_transcript": text,
+             "text_clean": text, "fields": {}, "missing": required}
+    model_step = {"method": "model", "ms": 0, "outcome": "unavailable"}
+
+    def wire(value, rules_step, model_tried):
+        steps = [rules_step, model_step] if model_tried else [rules_step]
+        return VoiceCall({**value, "understanding_steps": steps}, ms=rules_step["ms"])
+
+    if not targets or submit is None:
+        result = rules_call()
+        if not result.value or result.value.get("is_final") is not True:
+            return result
+        return wire(result.value, {"method": "rules", "ms": result.ms}, bool(targets))
+
+    start = monotonic()
+    deadline = start + MODEL_TIMEOUT_S
+    rules = _RULES.submit(rules_call)
+    try:
+        model = submit(_messages(targets, context, text), timeout=MODEL_TIMEOUT_S, max_tokens=MODEL_MAX_TOKENS)
+    except (ValueError, OSError, RuntimeError, httpx.HTTPError, HoardLinkError) as error:
+        model = Future()
+        model.set_exception(error)
+    finished = {}
+    model.add_done_callback(lambda _: finished.setdefault("model", monotonic()))
+    waiting = {rules, model}
+    rule_result = None
+    rule_step = {"method": "rules", "ms": 0, "outcome": "superseded"}
+    proposal = {}
+    value = empty
+    try:
+        while waiting:
+            done, waiting = wait(waiting, timeout=max(0.0, deadline - monotonic()), return_when=FIRST_COMPLETED)
+            if not done:
+                break
+            if rules in done:
+                rule_result = rules.result()
+                rule_step = {"method": "rules", "ms": rule_result.ms}
+                if rule_result.value and rule_result.value.get("is_final") is True:
+                    value = rule_result.value
+                    if _complete(value, targets):
+                        model_step.update(outcome="superseded", ms=(finished.get("model", monotonic()) - start) * 1000)
+                        return wire(value, rule_step, True)
+                else:
+                    rule_step["outcome"] = "unavailable"
+            if model in done:
+                model_step["ms"] = (finished.get("model", monotonic()) - start) * 1000
+                proposal = _result(model, model_step)
+            if proposal and rule_result is None:
+                early = _apply(empty, proposal, targets, required, context, draft, text, model_step)
+                if _complete(early, targets):
+                    rule_step["ms"] = (monotonic() - start) * 1000
+                    return wire(early, rule_step, True)
+        if rules in waiting:
+            rule_step.update(outcome="timeout", ms=(monotonic() - start) * 1000)
+        if model in waiting:
+            model_step.update(outcome="timeout", ms=(monotonic() - start) * 1000)
+        if value is empty and not proposal:
+            return rule_result or VoiceCall(reason="boltagon_timeout", ms=rule_step["ms"])
+        if model_step["outcome"] == "applied":
+            model_step["outcome"] = "no_match"
+        value = _apply(value, proposal, targets, required, context, draft, text, model_step)
+        return wire(value, rule_step, True)
+    finally:
+        rules.cancel()
+        model.cancel()
