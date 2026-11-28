@@ -271,9 +271,9 @@
     return found;
   }
   // A stable name follows edits within its source file. For unnamed elements, use the text when it still matches.
-  // An in-place text change can also keep a unique source selector and the same slot in a sourced parent.
+  // A verified text edit in the revision history can also keep a unique source selector and the same parent slot.
   // The caller only sends pins for the current page. `all(selector)` lists matching elements.
-  function locatePin(pin, all, pageRevision) {
+  function locatePin(pin, all, pageRevision, textEdits = []) {
     const lost = {state: 'lost', element: null};
     const attrs = pin.attrs && typeof pin.attrs === 'object' ? pin.attrs : {};
     const attrsOk = element => IDENTITY_ATTRS.every(name => !attrs[name] || compactAttr(attrOf(element, name)) === attrs[name]);
@@ -303,6 +303,8 @@
       if (pick.length === 1) return {state: 'ok', element: pick[0]};
       if (hasTextMatch || !pin.revision || !pageRevision || !pin.own_vsrc || !source ||
           pin.selector !== source || !/\|.+:\d+:\d+$/.test(pin.parent || '')) return lost;
+      if (!textEdits.some(edit => Array.isArray(edit) && edit[0] === pin.revision &&
+          edit[1] === pin.vsrc && edit[2] === pin.tag)) return lost;
       const here = all(source);
       if (here.length !== 1 || !sameTag.includes(here[0])) return lost;
       const element = here[0];
@@ -360,6 +362,16 @@
   const pageId = () => location.pathname + location.search;
   const sessionId = () => { const meta = document.querySelector('meta[name="vitruvius-preview-session"]'); return (meta && meta.content) || null; };
   const revision = () => { const meta = document.querySelector('meta[name="vitruvius-preview-revision"]'); return (meta && meta.content) || null; };
+  function verifiedTextEdits(current) {
+    const proof = document.querySelector('meta[name="vitruvius-preview-revision"]')?.getAttribute('data-vtext-edits');
+    if (proof) {
+      try {
+        const {revision: served, edits} = JSON.parse(proof);
+        if (served === current && Array.isArray(edits)) return edits;
+      } catch (_) { /* An invalid proof cannot reattach a pin. */ }
+    }
+    return [];
+  }
   const describe = element => {
     const item = {...describeElement(element, env), revision: revision()};
     if (!picked.has(element)) picked.set(element, item);
@@ -1218,8 +1230,9 @@
 
     const anchors = []; const slots = new Map(); const now = revision();
     const labels = hostLanguage === 'es' ? commentLabels.es : commentLabels.en;
+    const textEdits = verifiedTextEdits(now);
     for (const pin of pins) {
-      const found = locatePin(pin, all, now);
+      const found = locatePin(pin, all, now, textEdits);
       if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
       const r = found.element.getBoundingClientRect();
       const slot = slots.get(found.element) || 0; slots.set(found.element, slot + 1);
@@ -1461,7 +1474,8 @@
       if (target.origin === location.origin && target.pathname + target.search !== pageId()) location.assign(target.href);
     } else if (data.type === 'inspect/pin-focus') {
       const pin = pins.find(entry => entry.id === data.id);
-      const found = pin && locatePin(pin, all, revision());
+      const now = revision();
+      const found = pin && locatePin(pin, all, now, verifiedTextEdits(now));
       post('dock/comment-jump', {id: data.id, found: Boolean(found?.element)});
       if (found && found.element) { found.element.scrollIntoView?.({block: 'center', behavior: reduced() ? 'auto' : 'smooth'}); flash = pin.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash = ''; schedule(); }, 1600); schedule(); }
     }

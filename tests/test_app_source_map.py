@@ -2,7 +2,20 @@ import re
 
 import pytest
 
-from vitruvius_hoard.app_source_map import edit_source, render_template, source_count, source_position
+from vitruvius_hoard.app_source_map import edit_source, is_direct_text_edit, render_template, source_count, source_position
+
+
+def test_text_edit_proof_rejects_deletion_even_when_the_next_heading_takes_the_source_position():
+    first = "<h2>Watering</h2>\n"
+    before = f"<section>{first}<h2>Inventory</h2></section>"
+    edited = before.replace("Watering", "Water &amp; tools")
+    deleted = before.replace(first, "")
+    assert is_direct_text_edit(before, edited, 1, 10, "h2")
+    assert is_direct_text_edit(edited, before, 1, 10, "h2")
+    assert not is_direct_text_edit(before, deleted, 1, 10, "h2")
+    assert not is_direct_text_edit(before, edited.replace("Inventory", "Stock"), 1, 10, "h2")
+    generated = before.replace("Watering", "{{name}}")
+    assert not is_direct_text_edit(before, generated, 1, 10, "h2")
 
 
 def test_preview_annotations_preserve_positions_and_raw_markup(tmp_path):

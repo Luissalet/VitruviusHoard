@@ -1,6 +1,7 @@
 """Serve each owned preview at a stable, separate loopback origin."""
 from __future__ import annotations
 
+import json
 import re
 import threading
 import uuid
@@ -45,7 +46,7 @@ class _DocumentBoundaries(HTMLParser):
             self.body_end = self.getpos()
 
 
-def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", session: str = "") -> str:
+def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", session: str = "", *, text_edits=()) -> str:
     parser = _DocumentBoundaries()
     try:
         parser.feed(source)
@@ -73,7 +74,11 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", se
         early = min(index(parser.before_content), head)
         insertions.append((early, f'<script src="{SCRIPT_ROOT}{INSPECTOR_SCRIPT}"></script>'))
     if revision:
-        meta = f'<meta name="vitruvius-preview-revision" content="{escape(revision, quote=True)}">'
+        proof = ""
+        if text_edits:
+            value = json.dumps({"revision": revision, "edits": text_edits}, separators=(",", ":"))
+            proof = f' data-vtext-edits="{escape(value, quote=True)}"'
+        meta = f'<meta name="vitruvius-preview-revision" content="{escape(revision, quote=True)}"{proof}>'
         if session:  # which opening of the preview this page came from: it outlives the live refresh, a stop and a new start changes it
             meta += f'<meta name="vitruvius-preview-session" content="{escape(session, quote=True)}">'
         insertions.append((head, meta))
@@ -87,6 +92,7 @@ class PreviewProxy:
         self.backend: tuple[int, str] | None = None
         self.session = uuid.uuid4().hex[:16]  # one per opening of the preview (the proxy lives until it is stopped)
         self.voice_revision = ""
+        self.text_edits = ("", ())
         voice = self.voice = TransferVoice(form_chat=form_chat)
         scripts = {"app-bridge.js": BRIDGE_JS.encode("utf-8")}
         for name in PREVIEW_SCRIPTS:
@@ -192,7 +198,9 @@ class PreviewProxy:
                 if self.command == "GET" and response.headers.get_content_type() == "text/html":
                     charset = response.headers.get_content_charset() or "utf-8"
                     try:
-                        payload = inject_scripts(payload.decode(charset), tuple(scripts), revision, proxy.session).encode(charset)
+                        proof_revision, text_edits = proxy.text_edits
+                        payload = inject_scripts(payload.decode(charset), tuple(scripts), revision, proxy.session,
+                                                 text_edits=text_edits if proof_revision == revision else ()).encode(charset)
                     except (UnicodeError, LookupError):
                         pass
                 extra = [(key, value) for key, value in response.headers.items() if key.lower() in {
