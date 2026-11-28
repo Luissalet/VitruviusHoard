@@ -9,7 +9,7 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel, outlineLabelTop } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel, outlineLabelPosition } = context.VitruviusInspectorCore;
 
 test("handle feedback shows the nearest whole pixel", () => {
   assert.equal(formatHandleValue(390.4821), "390 px");
@@ -17,13 +17,36 @@ test("handle feedback shows the nearest whole pixel", () => {
   assert.equal(formatHandleValue(-4.6821), "-5 px");
 });
 
-test("selection badges clear edit handles and stay inside the viewport", () => {
-  const margin = { left: 415, right: 437, top: 273, bottom: 295 };
-  assert.equal(outlineLabelTop({ top: 300, bottom: 342 }, 300, 180, 760, [margin]), 250);
-  assert.equal(outlineLabelTop({ top: 300, bottom: 342 }, 300, 100, 760, [margin]), 277);
-  const clipped = { left: 315, right: 337, top: 0, bottom: 22 };
-  assert.equal(outlineLabelTop({ top: 9, bottom: 47 }, 300, 180, 760, [clipped]), 51);
+test("selection labels avoid the title above and fit below a full-width element", () => {
+  const viewport = {width: 480, height: 360};
+  const rect = {left: 0, right: 480, top: 100, bottom: 134};
+  const headline = {left: 0, right: 350, top: 74, bottom: 99};
+  const label = {width: 180, height: 20};
+  assert.deepEqual({...outlineLabelPosition(rect, label, viewport, [headline])}, {x: 4, y: 137});
 });
+
+test("a label at the top can move sideways when a handle blocks the space below", () => {
+  const viewport = {width: 480, height: 360};
+  const rect = {left: 4, right: 79, top: 4, bottom: 24};
+  const control = {...rect};
+  const handle = {left: 10, right: 32, top: 20, bottom: 42};
+  const label = {width: 120, height: 20};
+  assert.deepEqual({...outlineLabelPosition(rect, label, viewport, [control, handle])}, {x: 82, y: 4});
+});
+
+test("a displaced label stays close to the outline and off visible content", () => {
+  const viewport = {width: 320, height: 340};
+  const rect = {left: 0, right: 320, top: 110, bottom: 135};
+  const label = {width: 160, height: 20};
+  const blocks = [
+    {left: 0, right: 320, top: 85, bottom: 159},
+    {left: 0, right: 320, top: 0, bottom: 32},
+  ];
+  assert.deepEqual({...outlineLabelPosition(rect, label, viewport, blocks)}, {x: 4, y: 162});
+  assert.equal(outlineLabelPosition(rect, label, viewport, [{left: 0, right: 320, top: 0, bottom: 340}]), null);
+  assert.equal(outlineLabelPosition(rect, label, {width: 320, height: 24}, []), null);
+});
+
 
 test("outline badges match selection cards in both languages and preserve their order", () => {
   const link = { tag: "a", selector: "#quick-transfer", text: "Nueva transferencia" };

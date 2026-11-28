@@ -110,22 +110,65 @@
     return number ? number + ' · ' + label : label;
   }
 
-  const OUTLINE_LABEL_HEIGHT = 20;
-  const OUTLINE_HANDLE_GAP = 3;
+  const OUTLINE_INSET = 4;
+  const OUTLINE_GAP = 3;
 
-  function outlineLabelTop(rect, left, width, height, handles) {
-    const last = Math.max(4, height - OUTLINE_LABEL_HEIGHT - 4);
-    const clamp = y => Math.max(4, Math.min(y, last));
-    const preferred = clamp(rect.top >= 25 ? rect.top - 23 : rect.top + 4);
-    const nearby = handles.filter(handle => left < handle.right + OUTLINE_HANDLE_GAP &&
-      left + width > handle.left - OUTLINE_HANDLE_GAP);
-    const fits = y => nearby.every(handle => y + OUTLINE_LABEL_HEIGHT <= handle.top - OUTLINE_HANDLE_GAP ||
-      y >= handle.bottom + OUTLINE_HANDLE_GAP);
-    if (fits(preferred)) return preferred;
-    const above = nearby.map(handle => handle.top - OUTLINE_LABEL_HEIGHT - OUTLINE_HANDLE_GAP)
-      .filter(y => y >= 4 && y < preferred).sort((a, b) => b - a);
-    const below = nearby.map(handle => clamp(handle.bottom + OUTLINE_HANDLE_GAP)).sort((a, b) => a - b);
-    return [...above, clamp(rect.bottom + 4), ...below].find(fits) ?? preferred;
+  function outlineLabelPosition(rect, label, viewport, occupied) {
+    const {width, height} = label;
+    const right = viewport.width - width - OUTLINE_INSET;
+    const bottom = viewport.height - height - OUTLINE_INSET;
+    if (right < OUTLINE_INSET || bottom < OUTLINE_INSET) return null;
+    const clampX = x => Math.max(OUTLINE_INSET, Math.min(x, right));
+    const clampY = y => Math.max(OUTLINE_INSET, Math.min(y, bottom));
+    const overlapsColumn = (x, block) => x < block.right + OUTLINE_GAP && x + width > block.left - OUTLINE_GAP;
+    const fits = ({x, y}) => x >= OUTLINE_INSET && x <= right && y >= OUTLINE_INSET && y <= bottom &&
+      occupied.every(block => !overlapsColumn(x, block) || y + height <= block.top - OUTLINE_GAP ||
+        y >= block.bottom + OUTLINE_GAP);
+    const x = clampX(rect.left);
+    const y = clampY(rect.top);
+    const near = [
+      {x, y: rect.top - height - OUTLINE_GAP}, {x, y: rect.bottom + OUTLINE_GAP},
+      {x: rect.right + OUTLINE_GAP, y}, {x: rect.left - width - OUTLINE_GAP, y},
+      {x, y: rect.top + OUTLINE_GAP}, {x: clampX(rect.right - width), y: rect.top + OUTLINE_GAP},
+    ].find(fits);
+    if (near) return near;
+
+    // An obstacle's side can expose a column that the element's own edges miss.
+    const columns = new Set([x, OUTLINE_INSET, right]);
+    const ordered = [...occupied].sort((a, b) => a.top - b.top);
+    for (const block of ordered) {
+      columns.add(clampX(block.left - width - OUTLINE_GAP));
+      columns.add(clampX(block.right + OUTLINE_GAP));
+    }
+    const preferredY = [clampY(rect.top - height - OUTLINE_GAP), clampY(rect.bottom + OUTLINE_GAP)];
+    let best = null;
+    let distance = Infinity;
+    for (const column of [...columns].sort((a, b) => Math.abs(a - x) - Math.abs(b - x))) {
+      const horizontal = Math.abs(column - x);
+      if (horizontal >= distance) break;
+      let top = OUTLINE_INSET;
+      const consider = limit => {
+        const end = Math.min(bottom, limit);
+        if (end < top) return;
+        for (const preferred of preferredY) {
+          const y = Math.max(top, Math.min(preferred, end));
+          const score = horizontal + Math.abs(y - preferred);
+          if (score < distance) {
+            best = {x: column, y};
+            distance = score;
+          }
+        }
+      };
+      for (const block of ordered) {
+        if (!overlapsColumn(column, block)) continue;
+        consider(block.top - height - OUTLINE_GAP);
+        top = Math.max(top, block.bottom + OUTLINE_GAP);
+        if (top > bottom) break;
+      }
+      consider(bottom);
+    }
+    return best;
+
   }
 
   function describeElement(element, env) {
@@ -270,7 +313,7 @@
 
   function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelTop, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelPosition, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -438,7 +481,7 @@
       .hover{--edge:#526580}
       .picked{--edge:var(--inspection-blue)}
       .draft{--edge:var(--inspection-amber);border-style:dashed}
-      .tag{position:absolute;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+      .tag{position:absolute;left:0;top:0;width:max-content;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
         color:var(--inspection-ink);background:var(--inspection-paper);border:1px solid var(--edge);border-radius:4px;
         font:600 12px/16px system-ui,sans-serif;padding:1px 5px;pointer-events:none}
       .tag.draft{border-style:solid}
@@ -1069,26 +1112,74 @@
     edits?.paint(mode && selected.length === 1 ? selected[0] : null);
   }
 
-  function drawOutline(drawings, element, kind, number, handles = []) {
+  function drawOutline(drawings, badges, element, kind, number) {
     const r = element.getBoundingClientRect();
     if (!r.width || !r.height || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || r.top >= innerHeight) return;
 
     const box = document.createElement('div');
-    box.className = `box ${kind}`;
+    box.className = 'box ' + kind;
     box.setAttribute('aria-hidden', 'true');
     Object.assign(box.style, {left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px'});
 
     const language = hostLanguage || document.documentElement.lang;
     const tag = document.createElement('div');
-    tag.className = `tag ${kind}`;
+    tag.className = 'tag ' + kind;
     tag.setAttribute('aria-hidden', 'true');
     tag.dir = 'auto';
-    tag.textContent = formatOutlineLabel(presentationOf(element), /^es(?:-|$)/i.test(language), number);
-    const left = Math.max(4, Math.min(r.left, innerWidth - 112));
-    const width = Math.min(220, innerWidth - left - 4);
-    const top = outlineLabelTop(r, left, width, innerHeight, handles);
-    Object.assign(tag.style, {left: left + 'px', top: top + 'px', maxWidth: width + 'px'});
+    const item = presentationOf(element);
+    const es = /^es(?:-|$)/i.test(language);
+    tag.textContent = formatOutlineLabel(item, es, number);
+    tag.style.maxWidth = Math.max(0, Math.min(220, document.documentElement.clientWidth - 2 * OUTLINE_INSET)) + 'px';
     drawings.append(box, tag);
+    badges.push({tag, rect: r, shortLabel: formatOutlineLabel({tag: item.tag, role: item.role}, es, number)});
+  }
+
+  function visibleContentBounds() {
+    if (!document.body) return [];
+    const occupied = [];
+    const visibleRect = rect => rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 &&
+      rect.left < innerWidth && rect.top < innerHeight;
+    const range = document.createRange();
+    const nodes = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = nodes.nextNode(); node; node = nodes.nextNode()) {
+      if (!node.textContent.trim()) continue;
+      range.selectNodeContents(node);
+      const bounds = [...range.getClientRects()].filter(visibleRect);
+      if (bounds.length && getComputedStyle(node.parentElement).visibility === 'visible') occupied.push(...bounds);
+    }
+    const controls = 'img,svg,video,canvas,iframe,object,embed,input,button,select,textarea,progress,meter';
+    for (const element of document.body.querySelectorAll(controls)) {
+      if (getComputedStyle(element).visibility !== 'visible') continue;
+      const rect = element.getBoundingClientRect();
+      if (visibleRect(rect)) occupied.push(rect);
+    }
+    return occupied;
+  }
+
+  function placeOutlineLabels(badges, pinLayer) {
+    if (!badges.length) return;
+    const viewport = {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight};
+    const occupied = visibleContentBounds();
+    occupied.push(...(edits?.handleBounds() || []), ...[...pinLayer.children].map(pin => pin.getBoundingClientRect()));
+    const sizes = badges.map(({tag}) => tag.getBoundingClientRect());
+    badges.forEach(({tag, rect, shortLabel}, index) => {
+      let size = sizes[index];
+      let position = outlineLabelPosition(rect, size, viewport, occupied);
+      if (!position && tag.textContent !== shortLabel) {
+        tag.textContent = shortLabel;
+        size = tag.getBoundingClientRect();
+        position = outlineLabelPosition(rect, size, viewport, occupied);
+      }
+      if (!position) {
+        // The outline still points to the element. The selection card retains the full label.
+        tag.remove();
+        return;
+      }
+      const {x, y} = position;
+      tag.style.left = x + 'px';
+      tag.style.top = y + 'px';
+      occupied.push({left: x, top: y, right: x + size.width, bottom: y + size.height});
+    });
   }
 
   const commentLabels = {
@@ -1103,13 +1194,16 @@
     const pinLayer = root.getElementById('pins');
     const stalePins = new Map([...pinLayer.children].map(button => [button.dataset.pin, button]));
     const drawings = document.createDocumentFragment();
-    if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) drawOutline(drawings, hovered, 'hover');
+    const badges = [];
     if (active()) selected.forEach((element, index) => {
       if (element !== draft && element.isConnected) {
-        drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0, edits?.handleBounds());
+        drawOutline(drawings, badges, element, 'picked', selected.length > 1 ? index + 1 : 0);
       }
     });
-    if (draft?.isConnected) drawOutline(drawings, draft, 'draft');
+    if (draft?.isConnected) drawOutline(drawings, badges, draft, 'draft');
+    if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) {
+      drawOutline(drawings, badges, hovered, 'hover');
+    }
 
     const anchors = []; const slots = new Map(); const now = revision();
     const labels = hostLanguage === 'es' ? commentLabels.es : commentLabels.en;
@@ -1140,6 +1234,7 @@
     }
     for (const button of stalePins.values()) button.remove();
     stage.replaceChildren(drawings);
+    placeOutlineLabels(badges, pinLayer);
     const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc, a.tag, a.role, a.label, a.text])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
   }
@@ -1372,6 +1467,7 @@
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', () => { schedule(); scheduleElements(); });
+  document.fonts?.addEventListener('loadingdone', schedule);
   // Send the updated selection before the refresh acknowledges the rendered revision.
   window.addEventListener('vitruvius:preview-updated', () => { if (selected.length) settle(); });
   window.__vitruviusInspector = {version: 1, core};
@@ -1391,7 +1487,10 @@
       childList: true, characterData: true, subtree: true, attributes: true,
       attributeFilter: ['content', 'aria-label', 'aria-labelledby', 'role', 'alt', 'id', 'for'],
     });
-    new MutationObserver(scheduleElements).observe(document.documentElement, {
+    new MutationObserver(() => {
+      scheduleElements();
+      if (hovered || selected.length || draft) schedule();
+    }).observe(document.documentElement, {
       childList: true, characterData: true, subtree: true, attributes: true,
       attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
     });
