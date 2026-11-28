@@ -340,7 +340,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       asked = ambiguous?.field || required.find(name => current[name] === undefined)
         || (correction && !cited.length && Array.isArray(schema.properties[field]?.enum) ? field : undefined);
       ready = !asked && cited.length ? JSON.stringify(current) : undefined;
-      const choices = asked && (ambiguous?.candidates?.length ? ambiguous.candidates : schema.properties[asked]?.enum);
+      const choices = asked && (ambiguous?.candidates ?? schema.properties[asked]?.enum);
       const question = asked && [ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)),
         choices?.length && copy.choices + ": " + choices.slice(0, 8).map(value => choiceLabel(asked, value)).join(", ") + ".",
       ].filter(Boolean).join(" ");

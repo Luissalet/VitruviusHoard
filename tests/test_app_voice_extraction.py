@@ -194,6 +194,63 @@ def test_cold_local_rules_need_neither_remote_service(text, person, hour, offers
     assert [step["method"] for step in result["understanding_steps"]] == ["rules"]
 
 
+@pytest.mark.parametrize(("text", "offers"), [
+    ("No a las diez", ["12:00"]),
+    ("Mejor no a las diez", ["12:00"]),
+    ("A las diez no", ["12:00"]),
+    ("Que no sea a las diez", ["12:00"]),
+    ("No 10:00", ["12:00"]),
+    ("No a las diez ni a las doce", []),
+])
+def test_rejected_hours_stay_empty_and_are_not_offered(text, offers):
+    def untouched(*_, **__):
+        pytest.fail("A rejected hour should be resolved locally")
+
+    result = turn(text, untouched, context={"draft": {"persona": "Marta"}, "field": "franja"})
+    assert result["fields"] == {}
+    assert result["missing"] == ["franja"]
+    assert result["ambiguous"] == [{"field": "franja", "candidates": offers}]
+
+
+@pytest.mark.parametrize(("text", "non_name"), [
+    ("Nadie", "Nadie"),
+    ("Nadie más", "Nadie más"),
+    ("No apuntes a nadie", "nadie"),
+    ("Apunta a nadie", "nadie"),
+    ("Apunta a Nadie", "Nadie"),
+    ("Alguien", "Alguien"),
+    ("Todos", "Todos"),
+    ("Yo", "Yo"),
+    ("Él", "Él"),
+    ("Ella", "Ella"),
+    ("Vale", "Vale"),
+    ("Sí", "Sí"),
+    ("No", "No"),
+    ("Gracias", "Gracias"),
+    ("Mañana", "Mañana"),
+    ("Sábado", "Sábado"),
+])
+def test_person_field_rejects_non_names_even_when_upstream_marks_them_valid(text, non_name):
+    result = turn(text, proposal({"persona": non_name}), rules={
+        "persona": {"value": non_name, "quote": non_name, "validation": "valid"},
+    })
+    assert result["fields"] == {}
+    assert "persona" in result["missing"]
+
+
+def test_fallback_can_fill_the_name_without_reinstating_a_rejected_hour():
+    result = turn("La invitada es Marta, pero no a las diez", proposal({"persona": "Marta", "franja": "10:00"}),
+                  rules={"franja": {"value": "10:00", "quote": "a las diez", "validation": "valid"}})
+    assert result["fields"] == {"persona": {"value": "Marta", "quote": "Marta", "validation": "valid"}}
+    assert result["ambiguous"] == [{"field": "franja", "candidates": ["12:00"]}]
+
+
+def test_a_positive_correction_can_supply_a_new_hour():
+    result = turn("No, mejor a las doce", None, correction=True,
+                  context={"draft": {"persona": "Marta", "franja": "10:00"}, "field": "franja"})
+    assert result["fields"]["franja"]["value"] == "12:00"
+
+
 @pytest.mark.asyncio
 async def test_preparing_once_reuses_descriptor_and_discards_a_stale_revision(monkeypatch):
     origin = "http://test.invalid"

@@ -13,7 +13,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from .voice_directory import VoiceCall
-from .form_rules import HOURS, fold as _fold, form_rules
+from .form_rules import HOURS, fold as _fold, form_rules, name_candidate, person_field
 
 
 MODEL_TIMEOUT_S = 3.0
@@ -25,6 +25,7 @@ _SYSTEM = (
     "Extract ONLY requested form fields from the utterance. Return a compact JSON object keyed by field id. "
     "Omit unrelated, unsupported or unspecified values. Copy free text literally, without the field label. "
     "For choices output the exact value, not its label. Choose one only if the utterance singles it out. "
+    "Never return a rejected value or a pronoun in place of a person's name. "
     "If it fits several choices (e.g. morning with 10:00 and 12:00), return those values as an array. "
     "A day or a broad time is not an exact hour. Never invent names or choices. No explanation."
 )
@@ -86,6 +87,7 @@ def _labels(context, key, value):
 def _scope(options, text, correction):
     schema = options.get("schema", {})
     properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
+    properties = properties if isinstance(properties, dict) else {}
     required = schema.get("required", []) if isinstance(schema, dict) else []
     required = [key for key in required if isinstance(key, str)] if isinstance(required, list) else []
     context = options.get("context")
@@ -93,13 +95,13 @@ def _scope(options, text, correction):
     draft = context.get("draft")
     draft = draft if isinstance(draft, dict) else {}
     targets = {}
-    if not isinstance(properties, dict) or not re.search(r"\w", text):
-        return required, context, draft, targets
+    if not re.search(r"\w", text):
+        return required, context, draft, targets, properties
     for key in required:
         spec = properties.get(key)
         if isinstance(spec, dict) and (draft.get(key) in (None, "") or correction and context.get("field") == key):
             targets[key] = spec
-    return required, context, draft, targets
+    return required, context, draft, targets, properties
 
 
 def _messages(targets, context, text):
@@ -158,7 +160,7 @@ def _apply(value, proposal, targets, required, context, draft, text, model_step)
             if not any(row.get("field") == key for row in ambiguities):
                 ambiguities.append({"field": key, "candidates": choices or allowed})
             continue
-        if not _valid(proposed, spec):
+        if not _valid(proposed, spec) or person_field(key, spec) and not name_candidate(proposed):
             continue
         quote = _quote(text, proposed, _labels(context, key, proposed))
         if quote and isinstance(candidates, list):
@@ -180,7 +182,7 @@ def _apply(value, proposal, targets, required, context, draft, text, model_step)
 
 def understand_form(submit, rules_call, options, text, *, correction=False):
     """Let a complete result finish the turn. Merge partial results without replacing validated rules."""
-    required, context, draft, targets = _scope(options, text, correction)
+    required, context, draft, targets, properties = _scope(options, text, correction)
     empty = {"version": options["version"], "is_final": True, "raw_transcript": text,
              "text_clean": text, "fields": {}, "missing": required}
     model_step = {"method": "model", "ms": 0, "outcome": "unavailable"}
@@ -190,9 +192,13 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
         return VoiceCall({**value, "understanding_steps": steps}, ms=rules_step["ms"])
 
     started_local = monotonic()
-    proposal, exclusive = form_rules(text, targets, context, correction)
-    if proposal:
-        local = _apply(empty, proposal, targets, required, context, draft, text, {})
+    proposal, exclusive, alternatives = form_rules(text, targets, context, correction)
+    if proposal or alternatives:
+        seeded = {**empty, "ambiguous": [
+            {"field": key, "candidates": [option for option in choices if _valid(option, targets[key])]}
+            for key, choices in alternatives.items()
+        ]}
+        local = _apply(seeded, proposal, targets, required, context, draft, text, {})
         settled = set(local["fields"]) | {item["field"] for item in local["ambiguous"]}
     else:
         local, settled = empty, set()
@@ -200,15 +206,22 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
     if settled and (exclusive or settled >= targets.keys()):
         return wire(local, {"method": "rules", "ms": local_ms}, False)
     targets = {key: spec for key, spec in targets.items() if key not in settled}
+    people = {key for key, spec in properties.items() if isinstance(spec, dict) and person_field(key, spec)}
 
     def merge_rules(remote):
-        if not settled:
-            return remote
-        fields = {**(remote.get("fields") or {}), **local["fields"]}
-        ambiguous = [item for item in (remote.get("ambiguous") or []) if item.get("field") not in settled]
-        ambiguous.extend(local["ambiguous"])
+        remote_fields = remote.get("fields")
+        remote_fields = remote_fields if isinstance(remote_fields, dict) else {}
+        discarded = settled | {key for key in people & remote_fields.keys()
+                               if not isinstance(remote_fields[key], dict)
+                               or not name_candidate(remote_fields[key].get("value"))}
+        fields = {key: field for key, field in remote_fields.items() if key not in discarded}
+        fields.update(local["fields"])
+        ambiguous = [item for item in (remote.get("ambiguous") or [])
+                     if isinstance(item, dict) and item.get("field") not in settled]
+        ambiguous.extend(local.get("ambiguous", []))
+        changed = [key for key in (remote.get("changed") or []) if key not in discarded]
         return {**remote, "fields": fields, "ambiguous": ambiguous,
-                "changed": list(dict.fromkeys([*(remote.get("changed") or []), *local["changed"]]))}
+                "changed": list(dict.fromkeys([*changed, *local.get("changed", [])]))}
 
     if not targets or submit is None:
         result = rules_call()
