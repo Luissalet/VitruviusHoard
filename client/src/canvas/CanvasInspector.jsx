@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { partitionLegacyHistory } from "./canvasPanel.js";
+import { canvasHistoryEntries, canvasRevisionLabel, partitionLegacyHistory } from "./canvasPanel.js";
 import { api } from "../api.js";
 import { CanvasMaterials } from "./CanvasActivity.jsx";
-import { canvasHistoryEntries } from "./canvasPanel.js";
 
 export function CanvasElements({ elements, onSelect, onRetry, es }) {
   const items = elements?.items || [];
@@ -63,6 +62,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
     : `${previous.length} earlier ${previous.length === 1 ? "revision" : "revisions"} without an author`;
   const last = history.at(-1);
   const currentIndex = recordedEntries.findIndex((entry) => entry.revision === project.revision);
+  const previewIndex = recordedEntries.findIndex((entry) => entry.revision === visibleRevision);
   const legacy = !last || last.action === "legacy";
   const savedIndex = project.revisions.indexOf(project.revision);
   const undoTarget = legacy && savedIndex > 0 ? project.revisions[savedIndex - 1] : last?.undo_revision;
@@ -72,7 +72,7 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
     if (author?.kind === "agent") return author.name || (author.id !== "agent" && author.id) || (es ? "Agente" : "Agent");
     return es ? "Autor sin registrar" : "Author unrecorded";
   };
-  const revisionLabel = (revision) => (es ? "Versión " : "Revision ") + (project.revisions.indexOf(revision) + 1);
+  const revisionLabel = (revision) => canvasRevisionLabel(project.revisions, revision, es);
   const stepLabel = (step) => (es ? "Paso " : "Step ") + step;
   const labels = es ? { create: "Creación", edit: "Edición", undo: "Deshacer", "undo-change": "Paso deshecho", "critique-restore": "Mejor versión restaurada", "critique-undo": "Ronda deshecha", legacy: "Guardada" }
     : { create: "Created", edit: "Edited", undo: "Undo", "undo-change": "Step undone", "critique-restore": "Best revision restored", "critique-undo": "Round undone", legacy: "Saved" };
@@ -123,26 +123,32 @@ export function CanvasHistory({ project, visibleRevision, onChange, es }) {
       {entries.length > 0 && <span className="canvas-count">{entries.length}</span>}
     </h2>
     {entries.length ? <ol className="canvas-history-list" id="canvas-history-entries">
-      {visibleEntries.map((entry, index) => <li key={entry.id || `${entry.revision}-${entry.ts || "legacy"}`}>
-        <div className="canvas-history-line">
-          <strong>{stepLabel(entry.step)}</strong>
-          {index === currentIndex && <span className="chip chip-accent">{entry.revision === visibleRevision ? (es ? "Actual" : "Current") : (es ? "Guardada" : "Saved")}</span>}
-        </div>
-        <div className="canvas-history-meta">
-          <span>{labels[entry.action || "legacy"]} · {revisionLabel(entry.revision)} · {authorLabel(entry)}</span>
-          {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
-        </div>
-        {(entry.target || entry.files?.length > 0) && <p className="canvas-step-target" title={entry.files?.join(", ")}>
-          {(entry.target || entry.files?.length === 1) && <code>{entry.target || entry.files[0]}</code>}
-          {entry.files?.length > 1 && <span>{entry.target && " · "}
-            {es ? `${entry.files.length} ficheros` : `${entry.files.length} files`}
-          </span>}
-        </p>}
-        <CanvasMaterials materials={entry.materials} es={es} />
-        {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"
-          aria-disabled={undoing} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
-          onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
-      </li>)}
+      {visibleEntries.map((entry, index) => {
+        const status = index === previewIndex ? (es ? "En pantalla" : "In preview")
+          : index === currentIndex ? (es ? "Guardada" : "Saved") : null;
+        return <li key={entry.id || `${entry.revision}-${entry.ts || "legacy"}`}>
+          <div className="canvas-history-line">
+            <strong>{stepLabel(entry.step)}</strong>
+            <span className={status ? "chip chip-accent" : "help"}>
+              {revisionLabel(entry.revision)}{status && ` · ${status}`}
+            </span>
+          </div>
+          <div className="canvas-history-meta">
+            <span>{labels[entry.action || "legacy"]} · {authorLabel(entry)}</span>
+            {entry.ts && <time dateTime={new Date(entry.ts * 1000).toISOString()}>{date.format(entry.ts * 1000)}</time>}
+          </div>
+          {(entry.target || entry.files?.length > 0) && <p className="canvas-step-target" title={entry.files?.join(", ")}>
+            {(entry.target || entry.files?.length === 1) && <code>{entry.target || entry.files[0]}</code>}
+            {entry.files?.length > 1 && <span>{entry.target && " · "}
+              {es ? `${entry.files.length} ficheros` : `${entry.files.length} files`}
+            </span>}
+          </p>}
+          <CanvasMaterials materials={entry.materials} es={es} />
+          {entry.action === "edit" && entry.id && <button type="button" className="btn-link canvas-step-undo"
+            aria-disabled={undoing} aria-label={`${es ? "Deshacer" : "Undo"} · ${stepLabel(entry.step)}`}
+            onClick={() => { if (!undoing) void undo(entry); }}>{es ? "Deshacer paso" : "Undo step"}</button>}
+        </li>;
+      })}
       {previous.length > 0 && <li>
         <details className="canvas-history-legacy">
           <summary>{previousLabel}</summary>

@@ -1,7 +1,7 @@
 import { partitionLegacyHistory } from "../src/canvas/canvasPanel.js";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canvasContext, canvasHistoryEntries, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../src/canvas/canvasPanel.js";
+import { canvasContext, canvasHistoryEntries, canvasRevisionLabel, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../src/canvas/canvasPanel.js";
 
 test("the toolbar offers only the modes the preview supports", () => {
   assert.deepEqual(supportedModes(undefined), ["navigate"]);
@@ -29,6 +29,16 @@ test("only the visible preview frame, from its own origin, is heard", () => {
   assert.equal(isCanvasMessage({ ...ok, origin: "http://127.0.0.1:5002" }, frame, "http://127.0.0.1:5001"), false);
   assert.equal(isCanvasMessage({ ...ok, data: { ...ok.data, type: "dock/call" } }, frame, "http://127.0.0.1:5001"), false);
   assert.equal(isCanvasMessage({ ...ok, data: { ...ok.data, hoardDock: 2 } }, frame, "http://127.0.0.1:5001"), false);
+});
+
+test("a restored revision keeps its number and a snapshot not yet in the catalog has no number", () => {
+  const revisions = ["one", "two", "three"];
+  const history = [{ revision: "one" }, { revision: "two" }, { revision: "three" }, { revision: "two", action: "undo" }];
+  const [latest] = canvasHistoryEntries({ revisions, history });
+  assert.equal(latest.step, 4);
+  assert.equal(canvasRevisionLabel(revisions, latest.revision, false), "Revision 2");
+  assert.equal(canvasRevisionLabel(revisions, latest.revision, true), "Versión 2");
+  assert.equal(canvasRevisionLabel(revisions, "four", false), null);
 });
 
 test("a guarded click keeps its coordinates inside the preview and preserves Shift", () => {

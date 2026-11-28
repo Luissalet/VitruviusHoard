@@ -9,7 +9,7 @@ import { CanvasConversation, CanvasTimeline } from "../canvas/CanvasActivity.jsx
 import { conversationEntry, recordCanvasActivity } from "../canvas/canvasConversation.js";
 import ProjectCritiqueLoop from "../components/ProjectCritiqueLoop.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
-import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../canvas/canvasPanel.js";
+import { canvasContext, canvasRevisionLabel, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../canvas/canvasPanel.js";
 
 const MODE_TEXT = {
   navigate: ["Navegar", "Navigate", "Usa la aplicación como siempre.", "Use the application as usual."],
@@ -84,6 +84,8 @@ export default function Canvas({ param }) {
     onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
   });
   const running = preview?.state === "running" && Boolean(visible);
+  const visibleRevision = running ? visible.revision : undefined;
+  const previewRevisionLabel = canvasRevisionLabel(project?.revisions || [], visibleRevision, es);
   const frameKey = frames[0]?.key;
   const hasFrame = running && frameKey !== undefined;
   const previewSession = running ? (preview.session || preview.url) : null;
@@ -387,7 +389,9 @@ export default function Canvas({ param }) {
         <button className="btn canvas-focus-toggle" type="button" aria-pressed={focusMode} onClick={() => setFocusMode((held) => !held)}>
           {es ? "Modo enfoque" : "Focus mode"}
         </button>
-        {running && <span className="help">{es ? "Versión" : "Revision"} {project.revisions.indexOf(visible.revision) + 1}{visible.revision === project.revision ? (es ? " · actual" : " · current") : ""}</span>}
+        {running && <span className="help" role="status">{previewRevisionLabel
+          ? `${es ? "Vista previa" : "Preview"} · ${previewRevisionLabel}`
+          : (es ? "Vista previa abierta" : "Preview open")}</span>}
       </>}
     </div>
     {!param && projectsState === "loading" ? <p className="help" role="status">{es ? "Cargando aplicaciones…" : "Loading applications…"}</p>
@@ -441,7 +445,7 @@ export default function Canvas({ param }) {
                   && (step.kind !== "edit" || step.revision === visible?.revision))} es={es} />
                 <ProjectCritiqueLoop key={project.id} project={project} visibleRevision={visible?.revision}
                   lang={lang} onRevision={syncRevision} />
-                <CanvasHistory key={project.id} project={project} visibleRevision={visible?.revision} onChange={updateHistory} es={es} />
+                <CanvasHistory key={project.id} project={project} visibleRevision={visibleRevision} onChange={updateHistory} es={es} />
               </div>
               <div id="canvas-pane-elements" role="tabpanel" aria-labelledby="canvas-tab-elements" hidden={rail !== "elements"}>
                 {running

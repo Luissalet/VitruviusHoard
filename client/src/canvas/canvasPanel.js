@@ -68,6 +68,12 @@ export function canvasHistoryEntries({ revisions, history }) {
   return entries.map((entry, index) => ({ ...entry, step: index + 1 })).reverse();
 }
 
+/** Name a retained snapshot by its position in the catalog, independently of the history step. */
+export function canvasRevisionLabel(revisions, revision, es) {
+  const index = revisions.indexOf(revision);
+  return index < 0 ? null : `${es ? "Versión" : "Revision"} ${index + 1}`;
+}
+
 /**
  * The screen context the Dock bridge sends to the host (Faustus) with each change. The host keeps `focus` as
  * `{kind, id, label}` and `summary` up to 400 characters, so the selection and the open comments travel as short text
