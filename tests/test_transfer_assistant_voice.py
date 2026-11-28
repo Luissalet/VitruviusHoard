@@ -35,6 +35,7 @@ def test_exposed_sources_can_be_saved_as_project_assets():
 
 @pytest.fixture
 def loopback(monkeypatch, tmp_path):
+    monkeypatch.delenv("BOLTAGON_URL", raising=False)
     monkeypatch.delenv("CYRANO_URL", raising=False)
     token = tmp_path / "mcp-token"
     token.write_text("fixture", encoding="ascii")
@@ -315,6 +316,6 @@ def test_turn_trace_enqueues_without_waiting_and_limits_metadata(monkeypatch):
     assert root["parent_id"] is None and child["parent_id"] == root["span_id"]
     assert root["trace_id"] == child["trace_id"] == TRACE_ID
     assert (child["caller"], child["callee"], child["operation"], child["duration_ms"]) == (
-        "vitruvius", "cyrano", "voice.transcribe", 300,
+        "vitruvius", "boltagon", "voice.transcribe", 300,
     )
     assert "private" not in repr(sent)

@@ -1,6 +1,7 @@
 """Cached loopback routes for the transfer assistant's voice services."""
 
 from dataclasses import dataclass
+import logging
 import os
 from pathlib import Path
 from threading import Event, Lock, Thread
@@ -13,7 +14,9 @@ from ..hoard_link._hubclient import fetch
 from .reply import ReplyError, _loopback_origin
 
 
-DICTATION_APP = "cyrano"
+log = logging.getLogger(__name__)
+DICTATION_APP = "boltagon"
+LEGACY_DICTATION_APP = "cyrano"
 STT_APP = "funes"
 TTS_APP = "prospero"
 REFRESH_S = 120
@@ -89,7 +92,10 @@ class VoiceDirectory:
         self._refreshing = False
         self._refresh_at = self._retry_at = float("-inf")
         self._apps = {}
-        configured = os.environ.get("CYRANO_URL")
+        configured = os.environ.get("BOLTAGON_URL")
+        if configured is None and "CYRANO_URL" in os.environ:
+            log.warning("CYRANO_URL is deprecated; use BOLTAGON_URL")
+            configured = os.environ["CYRANO_URL"]
         if configured is not None:
             try:
                 origin = _loopback_origin(configured)
@@ -133,11 +139,15 @@ class VoiceDirectory:
         try:
             rows = _hub_apps()
             by_id = {row["id"]: row for row in rows or () if isinstance(row, dict) and row.get("id") in (
-                DICTATION_APP, STT_APP, TTS_APP,
+                DICTATION_APP, LEGACY_DICTATION_APP, STT_APP, TTS_APP,
             )}
             for app_id in (DICTATION_APP, STT_APP, TTS_APP):
                 row = by_id.get(app_id, {})
                 override = self._configured if app_id == DICTATION_APP else None
+                if app_id == DICTATION_APP and not row and override is None:
+                    row = by_id.get(LEGACY_DICTATION_APP, {})
+                    if row:
+                        log.warning("Using legacy dictation ID %s", LEGACY_DICTATION_APP)
                 url = override if override is not None else row.get("url")
                 # Never send an installed or discovered app token to an override.
                 path = row.get("token_file") if override is None else None

@@ -17,7 +17,7 @@ from ..hoard_link.waiting import DONE_STATES
 from ..software.runtime import profile
 from .form_extraction import understand_form
 from .reply import ENGINE_ID, JOB_ID, VERSION as TTS_VERSION, ReplyError, ReplyRelay
-from .voice_directory import DICTATION_APP, STT_APP, TTS_APP, VoiceDirectory
+from .voice_directory import DICTATION_APP, LEGACY_DICTATION_APP, STT_APP, TTS_APP, VoiceDirectory
 from .voice_trace import TurnTrace
 
 
@@ -31,7 +31,7 @@ DICTATION_TOOLS = {"dictation_understand", "dictation_audio"}
 SPEECH_TOOL = "speech_transcribe"
 END_TURN_TOOL = "dictation_end_turn"
 FAMILY_TRANSCRIPTION = "Funes / Talos (reserva)"
-CYRANO_SPEECH_S = 6
+LOCAL_SPEECH_S = 6
 FINAL_TRANSCRIPTION_S = 21
 SPANISH_TTS_VOICE = "es_ES-davefx-medium"
 VOICE_MODE = os.getenv("VITRUVIUS_TRANSFER_VOICE_MODE", "cache-natural")
@@ -54,10 +54,12 @@ def _visible_dictation_name(candidate):
         return None
     name = candidate.strip()
     label = re.sub(r"['’]s Hoard$", "", name, flags=re.IGNORECASE).strip()
-    return name if label and label.casefold() not in (DICTATION_APP, "cyrano-hoard") else None
+    if not label or label.casefold() in {LEGACY_DICTATION_APP, "cyrano-hoard", "boltagon-hoard"} or name == DICTATION_APP:
+        return None
+    return name
 
 
-def _cyrano_transcription_provider(result, name):
+def _dictation_transcription_provider(result, name):
     if result.get("engine") == "family":
         return FAMILY_TRANSCRIPTION
     model, gpu = result.get("model"), result.get("gpu")
@@ -238,7 +240,7 @@ class TransferVoice:
         if preview and not self.partial.acquire(blocking=False):
             return _json(429, code="partial_busy")
         try:
-            window = 1 if preview else CYRANO_SPEECH_S
+            window = 1 if preview else LOCAL_SPEECH_S
             call = self.directory.dictation(SPEECH_TOOL, {
                 "audio": {"mime_type": content_type, "data_base64": base64.b64encode(body).decode("ascii")},
                 "language": language, "initial_prompt": prompt,
@@ -249,7 +251,7 @@ class TransferVoice:
             speech = speech if isinstance(speech, dict) else {}
             if isinstance(value.get("text"), str):
                 return _json(200, text=value["text"], final=not preview,
-                             provider=_cyrano_transcription_provider(value, self.dictation_name),
+                             provider=_dictation_transcription_provider(value, self.dictation_name),
                              timing={"gateway_ms": (monotonic() - started) * 1000, "service_ms": call.ms},
                              **({"fallback_reason": speech["fallback_reason"]} if speech.get("fallback_reason") else {}))
             why = call.reason or "boltagon_contract_invalid"

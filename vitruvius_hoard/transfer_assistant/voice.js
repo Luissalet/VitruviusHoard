@@ -1,6 +1,7 @@
 import {isTransferCommand, isTransferConfirmation} from "./dialogue.js";
 
 const API = "/__vitruvius_preview__/transfer-voice";
+// The wire version remains stable across the application rename.
 const VERSION = "cyrano.dictation/v0";
 const CONFIRMATION_SILENCE_MS = 1500;
 const WIRE_FIELDS = {

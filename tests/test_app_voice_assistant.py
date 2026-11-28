@@ -54,4 +54,3 @@ def test_invalid_field_schema_does_not_create_a_revision(tmp_path, schema):
     with pytest.raises(ValueError, match="[Ss]chema|required"):
         projects.add_voice_assistant(original["id"], original["revision"], "pages/index.html", "form", schema)
     assert projects.get(original["id"])["revision"] == original["revision"]
-

@@ -13,19 +13,20 @@ import httpx
 
 from ..hoard_link import family
 from .reply import ReplyError, _loopback_origin
+from .voice_directory import DICTATION_APP
 
 
-# The bus uses these fixed IDs and the original v1 wire labels.
+# The bus uses the registered app IDs and the original v1 wire labels.
 STAGES = {
     "voice.turn": ("vitruvius", "Etapa", "Stage"),
     "voice.cut": ("vitruvius", "Etapa", "Stage"),
     "voice.upload": ("vitruvius", "Etapa", "Stage"),
-    "voice.transcribe": ("cyrano", "Transcribir", "Transcribe"),
+    "voice.transcribe": (DICTATION_APP, "Transcribir", "Transcribe"),
     "voice.transcribe_reserve": ("funes", "Transcribir", "Transcribe"),
-    "voice.understand": ("cyrano", "Entender", "Understand"),
+    "voice.understand": (DICTATION_APP, "Entender", "Understand"),
     "voice.local_understand": ("vitruvius", "Entender", "Understand"),
-    "voice.speak": ("cyrano", "Hablar", "Speak"),
-    "voice.cache": ("cyrano", "Hablar", "Speak"),
+    "voice.speak": (DICTATION_APP, "Hablar", "Speak"),
+    "voice.cache": (DICTATION_APP, "Hablar", "Speak"),
     "voice.execute": ("vitruvius", "Ejecutar", "Execute"),
 }
 OUTCOMES = {"ok", "fallback", "timeout", "error", "cancelled"}

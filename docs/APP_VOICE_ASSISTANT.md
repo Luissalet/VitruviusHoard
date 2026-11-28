@@ -33,7 +33,7 @@ The reply reads back the values cited and validated by dictation that are still 
 
 The panel keeps the whole written reply visible and streams the same reply from Boltagon’s configured Qwen voice. **Turn processing** shows the service, elapsed time and any fallback for the steps used in each turn. The first-audio figure measures from the browser’s detected end of speech to the scheduled first audio at the output device. It is also available locally in the `voice-assistant:latency` event as `detail.firstAudioMs`. It includes the pause used to recognise the end of the turn. The trace stays in the current page session.
 
-The owned preview resolves Boltagon through the family configuration. Set `CYRANO_URL` on the Vitruvius process to use an explicit loopback Boltagon for transcription, dictation and synthesis. The Qwen voice profile and text preparation live in the voice service. If synthesis is unavailable, the full reply stays in writing. If dictation is unavailable, the original form can still be filled manually. Exported projects retain the form and panel source. Their voice and dictation calls need Vitruvius’s preview relay.
+The owned preview resolves Boltagon through the family configuration. Set `BOLTAGON_URL` on the Vitruvius process to use an explicit loopback Boltagon for transcription, dictation and synthesis. Existing `CYRANO_URL` settings are accepted during the transition. The Qwen voice profile and text preparation live in the voice service. If synthesis is unavailable, the full reply stays in writing. If dictation is unavailable, the original form can still be filled manually. Exported projects retain the form and panel source. Their voice and dictation calls need Vitruvius’s preview relay.
 
 ## Uso en castellano
 
