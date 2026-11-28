@@ -1115,7 +1115,7 @@
       if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
       const r = found.element.getBoundingClientRect();
       const slot = slots.get(found.element) || 0; slots.set(found.element, slot + 1);
-      anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null, text: textOf(found.element),
+      anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null, ...presentationOf(found.element),
         box: {x: Math.round(r.left + window.scrollX), y: Math.round(r.top + window.scrollY), w: Math.round(r.width), h: Math.round(r.height)}});
       if (!r.width && !r.height) continue;
 
@@ -1137,7 +1137,7 @@
     }
     for (const button of stalePins.values()) button.remove();
     stage.replaceChildren(drawings);
-    const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || '', a.text])]);
+    const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc, a.tag, a.role, a.label, a.text])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
@@ -1378,7 +1378,10 @@
         if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
         if (pins.length || draft) schedule();
       });
-    }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
+    }).observe(document.documentElement, {
+      childList: true, characterData: true, subtree: true, attributes: true,
+      attributeFilter: ['content', 'aria-label', 'aria-labelledby', 'role', 'alt', 'id', 'for'],
+    });
     new MutationObserver(scheduleElements).observe(document.documentElement, {
       childList: true, characterData: true, subtree: true, attributes: true,
       attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],

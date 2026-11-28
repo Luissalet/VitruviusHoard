@@ -368,10 +368,9 @@ class AppProjects:
             if updated == source:
                 return current
             target = {**(target or {}), "vsrc": vsrc}
-            if change["kind"] == "text":
-                target["presentation"] = self._edit_presentation(tag, change)
+            presentation = self._edit_presentation(tag, change) if change["kind"] == "text" else None
             return self.update(id, {filename: updated}, expected_revision, actor=actor,
-                               target=target, author=author)
+                               target=target, author=author, target_presentation=presentation)
 
     def canvas_scale(self, id, revision, path="/", root_font_px=16):
         with self.lock:
@@ -414,7 +413,7 @@ class AppProjects:
                 return result
             presentation = self._edit_presentation(tag, change, target_presentation)
             updated = self.update(id, changes, expected_revision, actor=actor,
-                                  target={"vsrc": vsrc, "presentation": presentation}, author=author)
+                                  target={"vsrc": vsrc}, author=author, target_presentation=presentation)
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"],
                     **{key: updated[key] for key in ("preview_warning",) if key in updated}}
 
@@ -570,7 +569,6 @@ class AppProjects:
             "files": sorted(path for path in current["files"].keys() | files.keys()
                             if files.get(path) != current["files"].get(path)),
             "target": target.get("vsrc") or target.get("selector"),
-            **({"target_presentation": target["presentation"]} if target.get("presentation") else {}),
             "examples": list(dict.fromkeys(references))[:12],
             "tokens_id": tokens[:120] if isinstance(tokens, str) else None,
         }
@@ -632,7 +630,7 @@ class AppProjects:
             return saved, sorted(changes)
 
     def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None,
-               author=None):
+               author=None, target_presentation=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -670,8 +668,9 @@ class AppProjects:
                 author = ({"kind": "agent", "id": actor.get("id", "agent"), "name": actor.get("name")}
                           if actor else {"kind": "person"})
             details = self._change_details(current, merged, target, examples, tokens_id)
+            history_details = {**details, "target_presentation": target_presentation} if target_presentation else details
             root, index = self._load_index(id)
-            saved = self._save(root, index, merged, author=author, details=details,
+            saved = self._save(root, index, merged, author=author, details=history_details,
                                before_commit=before_commit if actor is not None else None)
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
