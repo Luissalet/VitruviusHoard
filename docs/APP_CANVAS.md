@@ -33,7 +33,8 @@ preview, the outline and the name in the selection card remain available.
 Inline text edits save when the field loses focus, when you click outside it, or when you press Enter.
 Double-clicking a text node bound entirely to `{{name}}` or `{{description}}` edits the corresponding project field.
 The editor identifies the field and says the value is shared across the application. Those edits keep the template
-bindings in the source and can be undone from History.
+bindings in the source and can be undone from History. The application selector updates to the saved name
+when the name is edited, undone or redone.
 Escape cancels the draft. Edits that affect several rendered elements still ask for confirmation.
 Navigate clears the active selection from the sidebar, preview outline and agent context. Returning to Select
 restores the last selection on that page. Picking an element from the list starts a new selection.
