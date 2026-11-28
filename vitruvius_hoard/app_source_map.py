@@ -359,11 +359,29 @@ def is_direct_text_edit(before, after, line, column, expected_tag):
     return False
 
 
-def text_edit_proofs(filename, selected, neighbors, edits, read_source):
-    """Map literal anchors through unchanged source and verified text edits in its history."""
+
+def _is_project_field_edit(source, location, field, before, after):
+    if location is None or {key for key in before.keys() | after.keys()
+                            if before.get(key) != after.get(key)} != {field}:
+        return False
+    try:
+        tag = source_tag(source, *location)
+    except SourceMapError:
+        return False
+    return any(project_text_field(source, tag, index) == field
+               for index in range(len(_direct_text_spans(source, tag))))
+
+
+def text_edit_proofs(filename, selected, neighbors, edits, read_source, *, binding=None):
+    """Map anchors through unchanged source and verified edits to literal or bound text."""
     current = read_source(selected)
     if current is None:
         return []
+    if binding is not None:
+        field, field_edits, read_fields = binding
+        current_value = read_fields(selected).get(field)
+        if not isinstance(current_value, str) or not current_value.strip():
+            return []
     sources = {selected: current}
     pending = [selected]
     edited_slots = set()
@@ -389,10 +407,21 @@ def text_edit_proofs(filename, selected, neighbors, edits, read_source):
             previous = read_source(other)
             if previous is None:
                 continue
-            if previous != source:
-                edit = edits.get(frozenset((revision, other)))
-                if edit is None or not is_direct_text_edit(source, previous, *edit):
+            edge = frozenset((revision, other))
+            literal_edit = edits.get(edge)
+            if previous != source and (literal_edit is None or not is_direct_text_edit(source, previous, *literal_edit)):
+                continue
+            edit = literal_edit if binding is None and previous != source else None
+            if binding is not None:
+                before, after = read_fields(revision), read_fields(other)
+                value = after.get(field)
+                if not isinstance(value, str) or not value.strip():
                     continue
+                if before.get(field) != value:
+                    edit = field_edits.get(edge)
+                    if previous != source or not _is_project_field_edit(source, edit, field, before, after):
+                        continue
+            if edit:
                 line, column, _ = edit
                 position = f"{filename}:{line}:{column}"
                 edited_slots.add(next(index for index, entry in enumerate(anchors(source)) if entry[0] == position))
@@ -404,13 +433,14 @@ def text_edit_proofs(filename, selected, neighbors, edits, read_source):
     proofs = []
     new = anchors(current)
     for revision, source in sources.items():
-        if source == current:
+        unchanged = (source == current if binding is None else read_fields(revision).get(field) == current_value)
+        if unchanged:
             continue
         old = anchors(source)
         for slot in edited_slots:
             position, tag, parent, text = old[slot]
             new_position, _, new_parent, new_text = new[slot]
-            if text != new_text:
+            if binding is not None or text != new_text:
                 proofs.append((revision, position, tag, new_position, parent, new_parent))
     return proofs
 

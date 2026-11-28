@@ -59,6 +59,44 @@ def test_preview_proves_comment_locations_from_before_unrelated_project_changes(
     assert shifted[4] != shifted[5]
 
 
+def test_preview_proves_project_description_anchor_across_field_edits(tmp_path):
+    from vitruvius_hoard.app_projects import AppProjects
+    from vitruvius_hoard.app_template_data import template_data_changes
+
+    projects = AppProjects(tmp_path)
+    start = projects.create("Schedule", template="static-page", description="First description")
+    ident = start["id"]
+    filename = "pages/index.html"
+    paragraph = f"{filename}:2:1"
+
+    def edit_description(value):
+        current = projects.get(ident)
+        return projects.update(
+            ident, template_data_changes(current["files"], {"description": value}), current["revision"],
+            target={"vsrc": paragraph}, target_presentation={"tag": "p", "text": value},
+        )
+
+    def proofs():
+        return projects._preview_text_edits(projects.root / ident, projects.get(ident))
+
+    first = edit_description("Second description")
+    current = edit_description("Third description")
+    assert projects.get(ident)["files"][filename] == start["files"][filename]
+    assert proofs() == sorted([
+        (start["revision"], paragraph, "p", paragraph, None, None),
+        (first["revision"], paragraph, "p", paragraph, None, None),
+    ])
+
+    blank = edit_description("")
+    assert proofs() == []
+    projects.undo(ident, blank["revision"], blank["updated_ts"], current["revision"])
+    assert proofs()
+
+
+    projects.update(ident, {filename: "<h1>{{name}}</h1>\n<p>Another paragraph</p>\n"}, current["revision"])
+    assert proofs() == []
+
+
 @pytest.mark.parametrize("first_app_tag", [
     '<script src="/assets/listeners.js"></script>',
     '<link rel="stylesheet" href="/assets/app.css" onload="setup()">',

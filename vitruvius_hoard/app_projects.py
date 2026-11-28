@@ -17,6 +17,7 @@ import uuid
 import zipfile
 from collections import defaultdict
 from contextlib import closing, contextmanager
+from functools import cache
 from http.client import HTTPConnection, HTTPException
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
@@ -984,6 +985,7 @@ class AppProjects:
         selected = project["selected_revision"]
         neighbors = defaultdict(set)
         edits_by_file = defaultdict(dict)
+        field_edits_by_file = defaultdict(dict)
         for step in project.get("history", []):
             before, after = step.get("previous_revision"), step.get("revision")
             if not before or not after or before == after:
@@ -998,9 +1000,16 @@ class AppProjects:
                 filename, line, column = source_position(vsrc)
             except SourceMapError:
                 continue
-            if step.get("files") == [filename] and filename in project["files"]:
-                edits_by_file[filename][frozenset((before, after))] = (line, column, tag)
+            if filename not in project["files"]:
+                continue
+            edge = frozenset((before, after))
+            if step.get("files") == [filename]:
+                edits_by_file[filename][edge] = (line, column, tag)
+            elif step.get("files") == ["project.json"]:
+                field_edits_by_file[filename][edge] = (line, column, tag)
 
+        filenames = edits_by_file.keys() | field_edits_by_file.keys()
+        snapshot_files = filenames | {"project.json"}
         known_revisions = set(project["revisions"])
         snapshots = {selected: project["files"]}
 
@@ -1012,13 +1021,29 @@ class AppProjects:
                     files = self._read_snapshot(root, revision)["files"]
                 except FileNotFoundError:
                     files = {}
-                snapshots[revision] = {name: files[name] for name in edits_by_file if name in files}
+                snapshots[revision] = {name: files[name] for name in snapshot_files if name in files}
             return snapshots[revision].get(filename)
 
+        @cache
+        def read_fields(revision):
+            try:
+                data = json.loads(read_source(revision, "project.json") or "{}")
+            except ValueError:
+                return {}
+            return data if isinstance(data, dict) else {}
+
         proofs = []
-        for filename, edits in edits_by_file.items():
-            proofs.extend(text_edit_proofs(filename, selected, neighbors, edits,
-                                           lambda revision: read_source(revision, filename)))
+        for filename in filenames:
+            def read_html(revision):
+                return read_source(revision, filename)
+
+            edits, field_edits = edits_by_file[filename], field_edits_by_file[filename]
+            if edits:
+                proofs.extend(text_edit_proofs(filename, selected, neighbors, edits, read_html))
+            if field_edits:
+                for field in ("name", "description"):
+                    proofs.extend(text_edit_proofs(filename, selected, neighbors, edits, read_html,
+                                                   binding=(field, field_edits, read_fields)))
         return sorted(proofs)
 
     def preview(self, id, revision=None):
