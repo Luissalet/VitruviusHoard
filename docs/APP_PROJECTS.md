@@ -246,6 +246,10 @@ In **Applications**, **File** opens `public/index.html` by default for new and s
 
 En **Aplicaciones**, **Archivo** abre por defecto `public/index.html`, la portada que sirve la vista previa de Reservas. Los demás archivos siguen disponibles en el selector, también en los proyectos ya guardados.
 
+On the booking home, double-clicking text in **Select** shows its source beside it. To edit it in **Applications**, open **File** and choose `public/index.html` for the title and catalogue data, or `public/assets/booking.js` for translated labels such as “Catalogue”. Text with a source map, for example on the records pages, keeps its existing in-place editor.
+
+En la portada de Reservas, un doble clic sobre el texto en **Seleccionar** indica junto al elemento dónde editarlo. En **Aplicaciones**, abre **Archivo** y elige `public/index.html` para el título y los datos del catálogo, o `public/assets/booking.js` para los rótulos traducidos como «Catálogo». Los textos con un mapa de origen, por ejemplo los de las páginas de registros, se siguen editando en el sitio.
+
 Export the booking revision with `app_project_export`. The publishable site is under `public/`, with a root `website.json` form contract. Register the ZIP and publish it with `hub_website_publish_piece`. On the published site, the form returns the reference written to the publication inbox. The owned preview uses the same page and assets for design checks. Es posible filtrar, cambiar de idioma y rellenar la solicitud en la vista previa. Envía la solicitud desde la web publicada para recibir la referencia.
 
 ## Standalone output

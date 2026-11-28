@@ -9,7 +9,25 @@ const source = fs.readFileSync(new URL("../vitruvius_hoard/preview_scripts/previ
 const context = { __VITRUVIUS_INSPECTOR_TEST__: true };
 context.globalThis = context;
 vm.runInNewContext(source, context);
-const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel, outlineLabelPosition } = context.VitruviusInspectorCore;
+const { selectorFor, describeElement, reconcile, anchorOf, gate, escapeCss, formatHandleValue, formatOutlineLabel, outlineLabelPosition, bookingTextKind } = context.VitruviusInspectorCore;
+
+test("the static booking page distinguishes literal copy, translations and catalogue data", () => {
+  const data = 'script#catalogue-data[type="application/json"]';
+  const form = 'form#reservation[action="/api/forms"]';
+  const kindAt = (visibleAncestor, ...markers) => bookingTextKind({
+    ownerDocument: { querySelector: selector => markers.includes(selector) ? {} : null },
+    closest: selectors => selectors.split(", ").includes(visibleAncestor) ? {} : null,
+  });
+
+  assert.equal(kindAt("h1", data, form), "page");
+  assert.equal(kindAt("[data-label]", data, form), "copy");
+  assert.equal(kindAt("#confirmation", data, form), "copy");
+  assert.equal(kindAt("#catalogue", data, form), "data");
+  assert.equal(kindAt("#description", data, form), "data");
+  assert.equal(kindAt("h1", data), null);
+  assert.equal(kindAt("[data-label]", form), null);
+  assert.equal(kindAt("h1"), null);
+});
 
 test("handle feedback shows the nearest whole pixel", () => {
   assert.equal(formatHandleValue(390.4821), "390 px");

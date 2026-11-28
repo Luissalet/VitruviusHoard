@@ -326,9 +326,19 @@
     return event.origin === known ? known : null;
   }
 
+  // The booking home is a static public page. Its localized copy and catalogue values are populated by booking.js.
+  function bookingTextKind(element) {
+    const doc = element.ownerDocument;
+    if (!doc.querySelector('script#catalogue-data[type="application/json"]')
+      || !doc.querySelector('form#reservation[action="/api/forms"]')) return null;
+    if (element.closest('[data-label], #results, #confirmation')) return 'copy';
+    if (element.closest('#catalogue, #description')) return 'data';
+    return 'page';
+  }
+
   function formatHandleValue(pixels) { return Math.round(pixels) + ' px'; }
 
-  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelPosition, COMPUTED, MAX_TEXT, MAX_SELECTION};
+  const core = {selectorFor, describeElement, reconcile, relationOf, anchorOf, textOf, locatePin, identityAttrs, compactAttr, gate, escapeCss, compact, formatHandleValue, formatOutlineLabel, outlineLabelPosition, bookingTextKind, COMPUTED, MAX_TEXT, MAX_SELECTION};
   if (globalThis.__VITRUVIUS_INSPECTOR_TEST__) { globalThis.VitruviusInspectorCore = core; return; }
   if (window.__vitruviusInspector) return;
   if (window === window.parent) return; // only meaningful inside the workbench frame
@@ -586,6 +596,11 @@
         count: count => count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements',
         pageCount: count => (count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements') + ' on this page.',
         shared: 'This stylesheet is shared. The change can also affect other pages.',
+        bookingText: {
+          page: 'Read-only home page text. Edit public/index.html in Applications.',
+          copy: 'Text generated for this language. Edit public/assets/booking.js in Applications.',
+          data: 'Text from booking data. Edit the catalogue data in public/index.html in Applications.',
+        },
       },
       es: {
         width: 'Ancho', height: 'Alto', margin: 'Margen', padding: 'Relleno',
@@ -599,6 +614,11 @@
         count: count => count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos',
         pageCount: count => (count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos') + ' en esta página.',
         shared: 'La hoja de estilos es compartida. El cambio puede afectar también a otras páginas.',
+        bookingText: {
+          page: 'Texto de portada, de solo lectura. Edita public/index.html en Aplicaciones.',
+          copy: 'Texto generado según el idioma. Edita public/assets/booking.js en Aplicaciones.',
+          data: 'Texto de los datos de Reservas. Edita los datos del catálogo en public/index.html en Aplicaciones.',
+        },
       },
     };
     let lang = document.documentElement.lang.startsWith('es') ? 'es' : 'en';
@@ -1119,14 +1139,21 @@
       focus: () => handles.find(handle => !handle.hidden)?.focus({ preventScroll: true }),
       doubleClick: (event, throughHandle) => {
         const node = literalAt(event, throughHandle);
-        if (!node || node.nodeType !== Node.TEXT_NODE || !source(node.parentElement) || !trim(node.data)) return null;
+        if (!node || node.nodeType !== Node.TEXT_NODE || !trim(node.data)) return null;
         // Only edit the actual run of text the pointer hit, not the nearest line in a paragraph.
         const range = document.createRange();
         range.selectNodeContents(node);
         if (![...range.getClientRects()].some(rect => event.clientX >= rect.left && event.clientX <= rect.right
           && event.clientY >= rect.top && event.clientY <= rect.bottom)) return null;
-        void editNode(node);
-        return node.parentElement;
+        const element = node.parentElement;
+        if (source(element)) {
+          void editNode(node);
+        } else {
+          const kind = bookingTextKind(element);
+          if (!kind) return null;
+          announce(copy().bookingText[kind], element.getBoundingClientRect());
+        }
+        return element;
       },
       setLanguage: value => { if (value) { lang = value === 'es' ? 'es' : 'en'; redraw(); } },
       setTheme: theme => {
