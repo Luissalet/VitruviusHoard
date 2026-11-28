@@ -80,12 +80,14 @@ function setField(controls, spec, value) {
   if (!field || Object.is(readField(controls, spec), value)) return false;
   let changed = field;
   if (field.type === "radio") {
-    changed = controls.find(control => control.value === String(value));
+    changed = controls.find(control => value === undefined ? control.checked : control.value === String(value));
     if (!changed) return false;
-    changed.checked = true;
+    changed.checked = value !== undefined;
   } else if (field.type === "checkbox") {
     if (typeof value !== "boolean") return false;
     field.checked = value;
+  } else if (value === undefined) {
+    field.value = "";
   } else {
     const previous = field.value;
     field.value = String(value);
@@ -322,22 +324,32 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       }
       const began = performance.now();
       const cited = [];
+      const cleared = [];
       let lastApplied;
       for (const [name, spec] of entries) {
-        const result = understood.fields?.[name];
-        if (result?.validation !== "valid" || typeof result.quote !== "string" || !result.quote.trim()) continue;
         const controls = controlsFor(form, name);
+        const rejected = understood.cleared?.[name];
+        if (rejected !== undefined && Object.is(readField(controls, spec), rejected)
+            && setField(controls, spec, undefined)) {
+          validated.delete(name);
+          cleared.push(name);
+          continue;
+        }
+        const result = understood.fields?.[name];
+        if (result?.validation !== "valid" || result.value === undefined
+            || typeof result.quote !== "string" || !result.quote.trim()) continue;
         if (setField(controls, spec, result.value)) lastApplied = name;
         if (controls.length && result.value !== undefined && Object.is(readField(controls, spec), result.value)) {
           validated.set(name, result.value);
           cited.push(name);
         }
       }
-      lastChanged = lastApplied || cited.at(-1) || lastChanged;
+      lastChanged = lastApplied || cited.at(-1) || cleared.at(-1) || lastChanged;
       trace(turn, "execute", "Vitruvius", performance.now() - began);
       const current = draft();
       const ambiguous = understood.ambiguous?.find(({field}) => Object.hasOwn(schema.properties, field));
-      asked = ambiguous?.field || required.find(name => current[name] === undefined)
+      asked = ambiguous?.field || cleared.find(name => current[name] === undefined)
+        || required.find(name => current[name] === undefined)
         || (correction && !cited.length && Array.isArray(schema.properties[field]?.enum) ? field : undefined);
       ready = !asked && cited.length ? JSON.stringify(current) : undefined;
       const choices = asked && (ambiguous?.candidates ?? schema.properties[asked]?.enum);

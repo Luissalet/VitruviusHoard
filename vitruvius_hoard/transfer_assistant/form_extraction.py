@@ -13,7 +13,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from .voice_directory import VoiceCall
-from .form_rules import HOURS, fold as _fold, form_rules, name_candidate, person_field
+from .form_rules import HOURS, fold as _fold, form_rejections, form_rules, name_candidate, person_field
 
 
 MODEL_TIMEOUT_S = 3.0
@@ -189,21 +189,25 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
 
     def wire(value, rules_step, model_tried):
         steps = [rules_step, model_step] if model_tried else [rules_step]
-        return VoiceCall({**value, "understanding_steps": steps}, ms=rules_step["ms"])
+        return VoiceCall({**value, "cleared": cleared, "understanding_steps": steps}, ms=rules_step["ms"])
 
     started_local = monotonic()
+    rejected, cleared, name_only = form_rejections(text, properties, targets, context, draft)
+    targets = {key: spec for key, spec in targets.items() if key not in rejected}
+    draft = {key: value for key, value in draft.items() if key not in cleared}
     proposal, exclusive, alternatives = form_rules(text, targets, context, correction)
-    if proposal or alternatives:
+    alternatives.update({key: choices for key, choices in rejected.items() if choices is not None})
+    if proposal or alternatives or rejected:
         seeded = {**empty, "ambiguous": [
-            {"field": key, "candidates": [option for option in choices if _valid(option, targets[key])]}
+            {"field": key, "candidates": [option for option in choices if _valid(option, properties[key])]}
             for key, choices in alternatives.items()
         ]}
         local = _apply(seeded, proposal, targets, required, context, draft, text, {})
-        settled = set(local["fields"]) | {item["field"] for item in local["ambiguous"]}
+        settled = set(rejected) | set(local["fields"]) | {item["field"] for item in local["ambiguous"]}
     else:
         local, settled = empty, set()
     local_ms = (monotonic() - started_local) * 1000
-    if settled and (exclusive or settled >= targets.keys()):
+    if settled and (exclusive or name_only or settled >= targets.keys()):
         return wire(local, {"method": "rules", "ms": local_ms}, False)
     targets = {key: spec for key, spec in targets.items() if key not in settled}
     people = {key for key, spec in properties.items() if isinstance(spec, dict) and person_field(key, spec)}

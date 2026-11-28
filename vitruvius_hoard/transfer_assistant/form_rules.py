@@ -28,6 +28,7 @@ _CLOCK_VALUE = re.compile(r"(?:[01]\d|2[0-3]):[0-5]\d")
 _REJECT_BEFORE = re.compile(r"\b(?:no(?:\s+(?:sea|sean|quiero|puede|puedo|pongas|ponga))?|"
                             r"ni|not|nor|except(?: for)?)\s*$")
 _REJECT_AFTER = re.compile(r"^\s*,?\s+(?:no|not)\b(?=\s*(?:$|[,.;!?]|\b(?:pero|but|gracias|thanks)\b))")
+_NEGATION = re.compile(r"\b(?:no|not|ni|nor|except)\b")
 
 
 def fold(text):
@@ -75,7 +76,16 @@ def _person_name(text):
     return None
 
 
-def _clock_choices(text, options, *, correction=False):
+def _rejects(text, match):
+    return _REJECT_BEFORE.search(text[:match.start()]) or _REJECT_AFTER.match(text[match.end():])
+
+
+def _rejects_value(text, value):
+    literal = re.escape(fold(str(value))).replace(r"\ ", r"\s+")
+    return bool(literal and any(_rejects(text, match) for match in re.finditer(r"(?<!\w)" + literal + r"(?!\w)", text)))
+
+
+def _clock_mentions(text):
     matched = list(_CLOCK.finditer(text))
     bare = text.strip(" .!?")
     if not matched:
@@ -88,16 +98,21 @@ def _clock_choices(text, options, *, correction=False):
         hour = int(word) if word.isascii() and word.isdigit() else _HOUR_WORDS.get(word)
         if hour is not None and 0 <= hour < 24:
             value = f"{hour:02d}:{minute or '00'}"
-            if _REJECT_BEFORE.search(text[:match.start()]) or _REJECT_AFTER.match(text[match.end():]):
+            if _rejects(text, match):
                 rejected.add(value)
             else:
                 clocks.add(value)
+    exclusive = len(matched) == 1 and matched[0][0] == bare
+    return clocks, rejected, exclusive
+
+
+def _clock_choices(text, options, *, correction=False):
+    clocks, rejected, exclusive = _clock_mentions(text)
     if rejected:
         return None, True, rejected
     if clocks:
         choices = [option for option in options if option in clocks]
         exact = len(clocks) == len(choices) == 1
-        exclusive = len(matched) == 1 and matched[0][0] == bare
         return (choices[0] if exact else choices or options), exclusive, rejected
 
     for pattern, start, end in (
@@ -109,6 +124,51 @@ def _clock_choices(text, options, *, correction=False):
     if correction and re.search(r"\b(?:" + "|".join(_DAYS.split()) + r")\b", text):
         return options, True, rejected
     return None, False, rejected
+
+
+def form_rejections(text, properties, targets, context, draft):
+    folded = fold(text).strip(" .!?")
+    if not _NEGATION.search(folded):
+        return {}, {}, False
+    _, rejected_hours, _ = _clock_mentions(folded)
+    labels = context.get("option_labels")
+    labels = labels if isinstance(labels, dict) else {}
+    rejected, cleared = {}, {}
+    for key, spec in properties.items():
+        if not isinstance(spec, dict) or spec.get("type") not in ("string", "number", "integer"):
+            continue
+        current = draft.get(key)
+        choices = spec.get("enum")
+        if isinstance(choices, list) and (key in targets or current not in (None, "")):
+            names = labels.get(key)
+            names = names if isinstance(names, dict) else {}
+            declined = [value for value in choices if type(value) in (str, int, float) and (
+                str(value) in rejected_hours or _rejects_value(folded, value)
+                or isinstance(names.get(str(value)), str) and _rejects_value(folded, names[str(value)]))]
+            if declined:
+                is_current = current in declined
+                needs_choice = is_current or current in (None, "")
+                rejected[key] = [value for value in choices if value not in declined] if needs_choice else None
+                if is_current:
+                    cleared[key] = current
+        elif type(current) in (str, int, float) and _rejects_value(folded, current):
+            rejected[key] = None
+            cleared[key] = current
+
+    # A short rejection of a name also makes sense when that field is empty.
+    phrase = text.strip(" .!?")
+    literal_name = re.sub(r"^(?:no|not)\s+|[,\s]+(?:no|not)$", "", phrase, flags=re.I)
+    if literal_name != phrase:
+        literal_name = re.sub(r"^no,\s*", "", literal_name, flags=re.I)
+    name_only = (literal_name != phrase and re.fullmatch(_WORD + r"(?:\s+" + _WORD + r"){0,3}", literal_name)
+                 and name_candidate(literal_name)
+                 and (literal_name[0].isupper() or any(fold(str(value)) == fold(literal_name)
+                                                       for value in cleared.values())))
+    if name_only and not rejected:
+        people = [key for key, spec in targets.items() if person_field(key, spec)]
+        if len(people) == 1:
+            rejected[people[0]] = None
+    return rejected, cleared, bool(name_only)
 
 
 def form_rules(text, targets, context, correction):

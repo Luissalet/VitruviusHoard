@@ -251,6 +251,43 @@ def test_a_positive_correction_can_supply_a_new_hour():
     assert result["fields"]["franja"]["value"] == "12:00"
 
 
+@pytest.mark.parametrize(("text", "draft", "cleared", "missing", "alternatives"), [
+    ("No a las diez", {"persona": "Marta", "franja": "10:00"}, {"franja": "10:00"}, ["franja"], ["12:00"]),
+    ("A las diez no", {"persona": "Marta", "franja": "10:00"}, {"franja": "10:00"}, ["franja"], ["12:00"]),
+    ("No a las diez", {"persona": "Marta"}, {}, ["franja"], ["12:00"]),
+    ("No a las diez", {"persona": "Marta", "franja": "12:00"}, {}, [], None),
+    ("No, Marta no", {"persona": "Marta", "franja": "10:00"}, {"persona": "Marta"}, ["persona"], None),
+    ("No, Marta no", {"franja": "10:00"}, {}, ["persona"], None),
+    ("No, Marta no", {"persona": "Marta"}, {"persona": "Marta"}, ["persona", "franja"], None),
+])
+def test_an_explicit_rejection_clears_only_the_rejected_draft_value(text, draft, cleared, missing, alternatives):
+    def untouched(*_, **__):
+        pytest.fail("An explicit rejection should be resolved locally")
+
+    result = understand_form(untouched, untouched, {"version": DICTATION_VERSION, "schema": SCHEMA,
+                                                   "context": {"draft": draft, "field": "franja"}}, text).value
+    assert result.get("cleared", {}) == cleared
+    assert result["fields"] == {}
+    assert result["missing"] == missing
+    assert result["ambiguous"] == ([] if alternatives is None else [{"field": "franja", "candidates": alternatives}])
+
+
+def test_a_rejected_choice_can_be_named_by_the_forms_label():
+    schema = {"type": "object", "required": ["visit"], "properties": {
+        "visit": {"type": "string", "enum": ["am", "pm"]},
+    }}
+    context = {"draft": {"visit": "pm"}, "option_labels": {"visit": {"am": "Mañana", "pm": "Tarde"}}}
+
+    def untouched(*_, **__):
+        pytest.fail("The selected label should be rejected locally")
+
+    result = understand_form(untouched, untouched, {"version": DICTATION_VERSION, "schema": schema,
+                                                   "context": context}, "Tarde, no").value
+    assert result["cleared"] == {"visit": "pm"}
+    assert result["missing"] == ["visit"]
+    assert result["ambiguous"] == [{"field": "visit", "candidates": ["am"]}]
+
+
 @pytest.mark.asyncio
 async def test_preparing_once_reuses_descriptor_and_discards_a_stale_revision(monkeypatch):
     origin = "http://test.invalid"
