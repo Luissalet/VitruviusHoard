@@ -51,7 +51,7 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     if (!running || !frame) return undefined;
     const hello = () => send("inspect/hello");
     // A swapped-in frame has already loaded: greet it now. The first frame is greeted by its own load event instead.
-    if (lastFrame.current !== undefined && frameKey !== undefined && lastFrame.current !== frameKey) hello();
+    if (!canvas && lastFrame.current !== undefined && frameKey !== undefined && lastFrame.current !== frameKey) hello();
     lastFrame.current = frameKey;
     const onMessage = (event) => {
       const current = frameRef.current;
@@ -74,8 +74,10 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
         page.current = event.data.page ?? null;
         if (!samePage && held.items.length) setItems([]);
         else if (!selection.length && held.items.length) send("inspect/restore", { items: identitiesOf(held.items) });
-        if (held.mode && !pageMode) send("inspect/mode", { on: true });
-        else if (held.commentMode && !event.data.comment_mode) send("inspect/mode", { on: true, kind: "comment" });
+        if (!canvas) {
+          if (held.mode && !pageMode) send("inspect/mode", { on: true });
+          else if (held.commentMode && !event.data.comment_mode) send("inspect/mode", { on: true, kind: "comment" });
+        }
         setReady((count) => count + 1);
         if (selection.length && samePage) setItems(selection);
         return;
@@ -84,14 +86,14 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
       setMode(Boolean(pageMode)); setItems(selection);
     };
     window.addEventListener("message", onMessage);
-    frame.addEventListener("load", hello); // before it loads, the frame is still the empty document of this page: nothing to greet
+    if (!canvas) frame.addEventListener("load", hello); // Canvas owns its greeting and mode changes.
     return () => { window.removeEventListener("message", onMessage); frame.removeEventListener("load", hello); };
-  }, [running, preview?.url, projectId, frameKey]);
+  }, [running, preview?.url, projectId, frameKey, canvas]);
 
   const toggle = () => { const next = !state.current.mode; setMode(next); if (next) setCommentMode(false); send("inspect/mode", { on: next }); };
   const toggleComment = () => { const next = !state.current.commentMode; setCommentMode(next); if (next) setMode(false); send("inspect/mode", { on: next, kind: "comment" }); };
   useEffect(() => {
-    if (!running) return undefined;
+    if (!running || canvas) return undefined;
     const onKey = (event) => {
       if (event.altKey && event.shiftKey && event.code === "KeyS") { event.preventDefault(); toggle(); }
       else if (event.altKey && event.shiftKey && event.code === "KeyC") { event.preventDefault(); toggleComment(); }
@@ -100,7 +102,7 @@ export default function PreviewSelection({ project, preview, frameRef, frameKey,
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running, projectId]);
+  }, [running, projectId, canvas]);
   useCopilotForm("app-preview-selection", { objectId: projectId, initial: { selection: [], comments: [] }, current: { revision: items.length ? served.current || undefined : undefined, selection: copilotSelection(items), comments: waiting } });
 
   if (!running) return null;

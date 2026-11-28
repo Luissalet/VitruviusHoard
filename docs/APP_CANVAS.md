@@ -11,7 +11,9 @@ The dedicated **Canvas** places Navigate, Select and Comment together in its too
 
 Requests and replies use the rail's full text area. Live actions scroll in a fixed area below them, so clicks
 and scrolling in the preview leave the history in place.
-When Select or Comment opens, Canvas holds the first click until the preview confirms the mode.
+While connecting to the preview, the mode toolbar shows that it is waiting for the inspector. A request for Select
+or Comment stays pending and starts when the inspector answers. Navigate and Escape cancel the pending request.
+Canvas holds the first click until the preview confirms the mode.
 The click then selects or anchors the element without activating its link or form.
 The preview proxy loads the inspector before project scripts so its window capture handles subsequent clicks
 in Select and Comment as well. In Navigate, the page handles its own input.
