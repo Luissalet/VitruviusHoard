@@ -240,6 +240,50 @@ def test_generated_text_and_stale_preview_are_rejected(opened):
         edit(projects, project, 3, lang="es")
 
 
+def test_canvas_http_edits_project_fields_without_replacing_bindings(client):
+    projects = client.svc.app_projects
+    project = projects.create("Huerto", description="Riego y cuidado")
+    page = "<h1>{{name}}</h1>\n<p>{{description}}</p>\n<p>Turnos de {{name}}</p>"
+    project = projects.update(project["id"], {"pages/index.html": page}, project["revision"])
+    project_id = project["id"]
+    base = f"/api/app-projects/{project_id}"
+
+    def edit_field(line, tag, original, value, revision=project["revision"], operation="apply"):
+        return client.post(base + "/canvas-edit", json={
+            "vsrc": f"pages/index.html:{line}:1", "tag": tag, "expected_revision": revision,
+            "change": {"kind": "text", "index": 0, "original": original, "value": value},
+            "operation": operation, "lang": "es",
+        })
+
+    assert client.post(base + "/preview", json={}).status_code == 200
+    try:
+        plan = edit_field(1, "h1", "Huerto", "Huerto", operation="plan")
+        assert plan.status_code == 200, plan.text
+        assert plan.json()["target"] == {
+            "kind": "project_field", "file": "project.json", "field": "name", "max_length": 160,
+        }
+        assert not plan.json()["changed"]
+        assert projects.get(project_id)["revision"] == project["revision"]
+        assert edit_field(1, "h1", "Otro", "Nombre").status_code == 400
+        assert edit_field(1, "h1", "Huerto", " ").status_code == 400
+        assert edit_field(3, "p", "Turnos de Huerto", "Otro").status_code == 400
+        saved = edit_field(1, "h1", "Huerto", "Huerto & semillero")
+        assert saved.status_code == 200, saved.text
+        renamed = saved.json()
+        assert renamed["changed"] and projects.get(project_id)["name"] == "Huerto & semillero"
+        assert edit_field(2, "p", "Riego y cuidado", "").status_code == 400  # The old revision.
+        cleared = edit_field(2, "p", "Riego y cuidado", "", renamed["revision"])
+        assert cleared.status_code == 200, cleared.text
+        updated = projects.get(project_id)
+        assert updated["files"]["pages/index.html"] == page
+        assert updated["history"][-1]["files"] == ["project.json"]
+        assert updated["history"][-1]["author"]["kind"] == "person"
+        assert json.loads(updated["files"]["project.json"])["description"] == ""
+        assert projects.undo(**cleared.json()["undo"]["arguments"])["revision"] == renamed["revision"]
+    finally:
+        projects.stop(project_id)
+
+
 def test_http_and_agent_share_the_same_plan_and_agent_catalog(client):
     row = next(tool for tool in tool_catalog() if tool["name"] == "app_project_canvas_edit")
     path = Path(__file__).resolve().parents[1] / "vitruvius_hoard" / "software" / "catalog.json"

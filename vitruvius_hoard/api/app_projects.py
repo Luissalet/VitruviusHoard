@@ -235,7 +235,7 @@ class CanvasEditBody(AppCanvasEditArgs):
 @router.post("/{id}/canvas-edit")
 def project_canvas_edit(request: Request, id: str, body: CanvasEditBody):
     return execute(lambda: services(request).app_projects.canvas_edit(
-        id, **body.model_dump(exclude={"id"}), author={"kind": "person"}))
+        id, **body.model_dump(exclude={"id"}), author={"kind": "person"}, project_fields=True))
 
 
 @router.get("/{id}/canvas-edit/scale")

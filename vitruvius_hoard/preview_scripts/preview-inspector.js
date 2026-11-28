@@ -553,6 +553,9 @@
         width: 'Width', height: 'Height', margin: 'Margin', padding: 'Padding',
         top: 'top', right: 'right', bottom: 'bottom', left: 'left',
         text: 'Edit text', apply: 'Apply', cancel: 'Cancel', saving: 'Saving…',
+        fields: { name: 'Project name', description: 'Project description' },
+        sharedField: 'This value is shared across the application.',
+        nameRequired: 'Enter a project name.',
         saved: 'Revision saved', unchanged: 'No change', missing: 'Select the element in the current preview.',
         timeout: 'The edit could not be confirmed. Check the current revision.',
         count: count => count === 1 ? 'Affects 1 element' : 'Affects ' + count + ' elements',
@@ -563,6 +566,9 @@
         width: 'Ancho', height: 'Alto', margin: 'Margen', padding: 'Relleno',
         top: 'superior', right: 'derecho', bottom: 'inferior', left: 'izquierdo',
         text: 'Editar texto', apply: 'Aplicar', cancel: 'Cancelar', saving: 'Guardando…',
+        fields: { name: 'Nombre del proyecto', description: 'Descripción del proyecto' },
+        sharedField: 'Este valor se usa en toda la aplicación.',
+        nameRequired: 'Escribe un nombre para el proyecto.',
         saved: 'Versión guardada', unchanged: 'Sin cambios', missing: 'Selecciona el elemento en la vista previa actual.',
         timeout: 'No se ha podido confirmar la edición. Comprueba la revisión actual.',
         count: count => count === 1 ? 'Afecta a 1 elemento' : 'Afecta a ' + count + ' elementos',
@@ -735,6 +741,10 @@
     function commitEditor(focus = false) {
       if (!editor) return;
       const value = trim(input.value);
+      if (editor.field === 'name' && !value) {
+        announce(copy().nameRequired, input.getBoundingClientRect());
+        return;
+      }
       // Clear the draft before hiding the input or moving focus, which can fire blur.
       const { args } = closeEditor(focus);
       if (value !== args.change.original) void save({ ...args, change: { ...args.change, value } }, handles[0]);
@@ -1008,15 +1018,18 @@
       const args = argumentsFor(element, { kind: 'text', original, value: original, index });
       saving = true;
       try {
-        await request(args, 'plan');
+        const plan = await request(args, 'plan');
         if (!node.isConnected || args.expected_revision !== meta.content) throw new Error(copy().missing);
         const range = document.createRange();
         range.selectNodeContents(node);
         const rect = range.getBoundingClientRect();
         const computed = getComputedStyle(element);
-        editor = { args, rect };
+        const field = plan.target.kind === 'project_field' ? plan.target.field : null;
+        editor = { args, rect, field };
         input.value = original;
-        input.setAttribute('aria-label', copy().text);
+        input.setAttribute('aria-label', field ? copy().fields[field] : copy().text);
+        if (field) input.maxLength = plan.target.max_length;
+        else input.removeAttribute('maxlength');
         input.style.fontSize = computed.fontSize;
         input.style.fontFamily = computed.fontFamily;
         input.style.fontWeight = computed.fontWeight;
@@ -1024,6 +1037,7 @@
         input.style.height = Math.max(30, (parseFloat(computed.fontSize) || 16) * 1.35 + 10) + 'px';
         input.hidden = false;
         sizeEditor();
+        if (field) announce(copy().sharedField, input.getBoundingClientRect());
         input.focus({ preventScroll: true });
         input.select();
       } catch (error) {

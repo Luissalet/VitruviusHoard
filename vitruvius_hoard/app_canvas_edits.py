@@ -3,10 +3,12 @@ from bisect import bisect_right
 from dataclasses import dataclass
 from decimal import Decimal
 from hashlib import sha256
+import json
 import re
 from urllib.parse import unquote, urljoin, urlsplit
 
-from .app_source_map import SourceMapError, _HTML, edit_source, source_position, source_tag
+from .app_source_map import SourceMapError, _HTML, _SPACE, edit_source, project_text_field, source_position, source_tag
+from .app_template_data import template_data_changes
 
 
 STYLE_PROPERTIES = (
@@ -304,7 +306,26 @@ def _style_plan(files, page, route, vsrc, source, tag, line, column, change, roo
     return changes, target, scale, token, None
 
 
-def plan_canvas_edit(files, html, route, vsrc, expected_tag, change, root_font_px):
+def _project_field_plan(files, field, change):
+    spec = json.loads(files["project.json"])
+    original = spec.get(field)
+    original = str(original if original is not None else "").replace("\r\n", "\n").replace("\r", "\n").strip(_SPACE)
+    if original != change["original"]:
+        raise _error("The project field changed. Select the current text again.",
+                     "El campo del proyecto cambió. Vuelve a seleccionar el texto actual.")
+    limit = 160 if field == "name" else 2000
+    value = change["value"]
+    target = {"kind": "project_field", "file": "project.json", "field": field, "max_length": limit}
+    if value == original:
+        return {}, target
+    if field == "name" and not value.strip():
+        raise _error("Enter a project name.", "Escribe un nombre para el proyecto.")
+    if len(value) > limit:
+        raise _error(f"Use up to {limit} characters.", f"Usa hasta {limit} caracteres.")
+    return template_data_changes(files, {field: value}), target
+
+
+def plan_canvas_edit(files, html, route, vsrc, expected_tag, change, root_font_px, *, project_fields=False):
     filename, line, column = source_position(vsrc)
     source = files.get(filename)
     if source is None:
@@ -317,6 +338,10 @@ def plan_canvas_edit(files, html, route, vsrc, expected_tag, change, root_font_p
         raise _error("This source position is missing from the preview page. Select the element again.",
                      "La posición ya no aparece en la página. Vuelve a seleccionar el elemento.")
     if change["kind"] == "text":
+        field = project_text_field(source, tag, change["index"]) if project_fields else None
+        if field:
+            changes, target = _project_field_plan(files, field, change)
+            return changes, target, [], None, occurrences
         updated = edit_source(source, line, column, expected_tag, change)
         return ({filename: updated} if updated != source else {},
                 {"kind": "text", "file": filename}, [], None, occurrences)

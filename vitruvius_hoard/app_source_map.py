@@ -217,11 +217,26 @@ def _literal(value):
     return _MARKER.sub(lambda match: "&#123;&#123;" + match[1] + "}}", escape(value, quote=True))
 
 
+def _direct_text_spans(source, tag):
+    return [(start, end) for start, end in tag.text if source[start:end].strip(_SPACE)]
+
+
+def project_text_field(source, tag, index):
+    """Recognise a complete text binding, excluding mixed text and generated markup."""
+    spans = _direct_text_spans(source, tag)
+    if tag.name not in _RAW and 0 <= index < len(spans):
+        start, end = spans[index]
+        marker = _MARKER.fullmatch(source[start:end].strip(_SPACE))
+        if marker and marker[1] in {"name", "description"}:
+            return marker[1]
+    return None
+
+
 def _text_edit(source, tag, change):
     if tag.name in _RAW:
         raise SourceMapError("Edit script or style contents in the source file.",
                              "Edita el contenido de scripts o estilos en el fichero fuente.")
-    spans = [(start, end) for start, end in tag.text if source[start:end].strip(_SPACE)]
+    spans = _direct_text_spans(source, tag)
     if "index" in change:
         index = change["index"]
         if not 0 <= index < len(spans):
