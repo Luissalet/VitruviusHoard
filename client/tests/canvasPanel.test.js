@@ -1,7 +1,7 @@
 import { partitionLegacyHistory } from "../src/canvas/canvasPanel.js";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canvasContext, canvasHistoryEntries, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../src/canvas/canvasPanel.js";
+import { canvasContext, canvasHistoryEntries, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../src/canvas/canvasPanel.js";
 
 test("the toolbar offers only the modes the preview supports", () => {
   assert.deepEqual(supportedModes(undefined), ["navigate"]);
@@ -29,6 +29,17 @@ test("only the visible preview frame, from its own origin, is heard", () => {
   assert.equal(isCanvasMessage({ ...ok, origin: "http://127.0.0.1:5002" }, frame, "http://127.0.0.1:5001"), false);
   assert.equal(isCanvasMessage({ ...ok, data: { ...ok.data, type: "dock/call" } }, frame, "http://127.0.0.1:5001"), false);
   assert.equal(isCanvasMessage({ ...ok, data: { ...ok.data, hoardDock: 2 } }, frame, "http://127.0.0.1:5001"), false);
+});
+
+test("a guarded click keeps its coordinates inside the preview and preserves Shift", () => {
+  const frame = {
+    clientLeft: 1, clientTop: 1, clientWidth: 398, clientHeight: 298, offsetWidth: 400, offsetHeight: 300,
+    getBoundingClientRect: () => ({ left: 40, top: 60, width: 800, height: 600 }),
+  };
+  assert.deepEqual(previewPick(frame, { clientX: 80, clientY: 100, shiftKey: true }),
+    { type: "inspect/pick", x: 19, y: 19, additive: true });
+  assert.equal(previewPick(frame, { clientX: 40, clientY: 100 }), null, "iframe border");
+  assert.equal(previewPick(frame, { clientX: 840, clientY: 100 }), null, "outside iframe");
 });
 
 test("the Dock context fits what the host keeps: focus and a short summary with selection and comments", () => {

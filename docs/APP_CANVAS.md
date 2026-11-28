@@ -11,6 +11,8 @@ The dedicated **Canvas** places Navigate, Select and Comment together in its too
 
 Requests and replies use the rail's full text area. Live actions scroll in a fixed area below them, so clicks
 and scrolling in the preview leave the history in place.
+When Select or Comment opens, Canvas holds the first click until the preview confirms the mode.
+The click then selects or anchors the element without activating its link or form.
 Picking an element in Comment mode brings the whole form into view and focuses the note field. The element's
 text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
 editor use the same theme. The label above a selected element uses the same type and name as its card,

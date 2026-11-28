@@ -399,13 +399,13 @@
     const cards = items.map(({clip, ...card}) => ({...card, ...(clip ? {clip: {mime: clip.mime, w: clip.w, h: clip.h, bytes: clip.bytes, omitted: clip.omitted || []}} : {})}));
     try { app.setContext(() => ({summary: summary.slice(0, 400), ...(items[0] ? {focus: items[0].selector} : {}), view: {kind: 'preview-selection', revision: revision(), selection: cards}})); } catch (_) { /* the bridge must not break selection */ }
   }
-  function report() {
+  function report(modeRequest) {
     paintEdits();
     const message = snapshot();
     lastRevision = message.revision;
     updatedTs = message.selection.length ? Date.now() / 1000 : null;
     publishContext(message.selection);
-    post('dock/select', message);
+    post('dock/select', Number.isSafeInteger(modeRequest) ? {...message, mode_request: modeRequest} : message);
     scheduleElements();
   }
   const isOwn = element => !element || element === layer || (element.closest && element.closest('[data-vitruvius-inspector-layer]'));
@@ -1218,20 +1218,23 @@
     if (pin) { swallow(event); post('dock/comment-focus', {page: pageId(), revision: revision(), id: pin}); return; }
     if (!active() || (mode && edits?.hit(event))) return;
     swallow(event);
-    if (commenting) { const target = elementAt(event); if (target) pickForComment(target); return; }
-    if (event.detail <= 1) choose(elementAt(event), event.shiftKey);
+    if (commenting || event.detail <= 1) pickElement(elementAt(event), event.shiftKey);
+  }
+  function pickElement(element, additive) {
+    if (!element) return;
+    if (commenting) pickForComment(element);
+    else choose(element, additive);
   }
   function onBlock(event) {
     if (!active() || pinOf(event)) return;
-    if (commenting) { event.preventDefault(); event.stopPropagation(); return; }
+    if (commenting) { swallow(event); return; }
     const hitOverlay = edits?.hit(event);
     if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
       const element = edits?.doubleClick(event, hitOverlay);
       if (element) { selected = [element]; schedule(); report(); swallow(event); return; }
     }
     if (hitOverlay) return;
-    event.preventDefault();
-    event.stopPropagation();
+    swallow(event);
   }
   function onKey(event) {
     if (event.altKey && event.shiftKey && event.code === 'KeyS') { event.preventDefault(); setMode(!mode); return; }
@@ -1250,14 +1253,14 @@
   }
 
   // Select and Comment exclude each other: turning one on turns the other off.
-  function setMode(on, kind = 'select') {
+  function setMode(on, kind = 'select', modeRequest) {
     if (kind === 'comment') { commenting = Boolean(on); if (commenting) mode = false; } else { mode = Boolean(on); if (mode) commenting = false; }
     ensureLayer();
     if (!active()) hovered = null;
     if (!mode) edits?.cancel();
     if (!commenting) draft = null;
     setCursor(active());
-    schedule(); report();
+    schedule(); report(modeRequest);
   }
 
   // A new document (a reload, or the frame replaced after an edit of the layout) gets the selection back: every item is
@@ -1291,7 +1294,11 @@
       const { selection, revision: servedRevision } = snapshot();
       post('dock/result', { id: data.id, ok: true, result: { selection, revision: servedRevision, updated_ts: updatedTs } });
     }
-    else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select');
+    else if (data.type === 'inspect/mode') setMode(data.on, data.kind === 'comment' ? 'comment' : 'select', data.mode_request);
+    else if (data.type === 'inspect/pick' && active() && Number.isFinite(data.x) && Number.isFinite(data.y) &&
+      data.x >= 0 && data.y >= 0 && data.x < innerWidth && data.y < innerHeight) {
+      pickElement(elementAt({clientX: data.x, clientY: data.y}), data.additive === true);
+    }
     else if (data.type === 'inspect/elements') {
       listRequested = true; listKey = ''; scheduleElements();
     } else if (data.type === 'inspect/element-select' && data.page === pageId() && data.revision === revision()) {
@@ -1328,8 +1335,8 @@
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('mouseout', event => { if (!event.relatedTarget) updateHover(null); }, true);
   window.addEventListener('blur', () => updateHover(null));
-  document.addEventListener('click', onClick, true);
-  for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) document.addEventListener(type, onBlock, true);
+  window.addEventListener('click', onClick, true);
+  for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'dblclick', 'auxclick', 'contextmenu']) window.addEventListener(type, onBlock, true);
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', () => { schedule(); scheduleElements(); });

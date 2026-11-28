@@ -9,7 +9,7 @@ import { CanvasConversation, CanvasTimeline } from "../canvas/CanvasActivity.jsx
 import { conversationEntry, recordCanvasActivity } from "../canvas/canvasConversation.js";
 import ProjectCritiqueLoop from "../components/ProjectCritiqueLoop.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
-import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, supportedModes } from "../canvas/canvasPanel.js";
+import { canvasContext, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../canvas/canvasPanel.js";
 
 const MODE_TEXT = {
   navigate: ["Navegar", "Navigate", "Usa la aplicación como siempre.", "Use the application as usual."],
@@ -35,6 +35,7 @@ export default function Canvas({ param }) {
   const [busy, setBusy] = useState("");
   const [modes, setModes] = useState(["navigate"]);
   const [mode, setMode] = useState("navigate");
+  const [modeShield, setModeShield] = useState(false);
   const [selection, setSelection] = useState([]);
   const [elements, setElements] = useState(null);
   const [projectError, setProjectError] = useState(false);
@@ -49,6 +50,8 @@ export default function Canvas({ param }) {
   currentId.current = param;
   const held = useRef(mode);
   held.current = mode;
+  const modeChange = useRef(null);
+  const modeRequest = useRef(0);
 
   const loadProject = async (id) => {
     const request = ++projectRequest.current;
@@ -126,7 +129,12 @@ export default function Canvas({ param }) {
 
   // A new project, a stopped or reopened preview, or a swapped frame knows nothing yet: only Navigate until the
   // inspector in that frame announces what it supports. The selection itself is kept and restored by PreviewSelection.
-  useEffect(() => { setModes(["navigate"]); setMode("navigate"); }, [param, running, visible?.url, frameKey]);
+  useEffect(() => {
+    setModes(["navigate"]);
+    setMode("navigate");
+    clearModeChange();
+    return () => clearTimeout(modeChange.current?.timer);
+  }, [param, running, visible?.url, frameKey]);
   useEffect(() => { if (!running) setSelection([]); }, [running, param]);
   useEffect(() => { setSelection([]); }, [param]);
 
@@ -135,6 +143,39 @@ export default function Canvas({ param }) {
     const frame = frameRef.current;
     const target = frame && originOf(frame);
     if (frame?.contentWindow && target) frame.contentWindow.postMessage({ hoardDock: 1, ...message }, target);
+  };
+
+  function clearModeChange() {
+    clearTimeout(modeChange.current?.timer);
+    modeChange.current = null;
+    setModeShield(false);
+  }
+
+  const finishModeChange = () => {
+    const pending = modeChange.current;
+    if (!pending?.ready || pending.pointer) return;
+    if (pending.pick) send(pending.pick);
+    clearModeChange();
+  };
+
+  const shieldDown = (event) => {
+    const pending = modeChange.current;
+    if (!pending || pending.pick || pending.pointer || event.button !== 0 || !event.isPrimary) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pending.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+
+  const shieldEnd = (event) => {
+    const pending = modeChange.current;
+    const pointer = pending?.pointer;
+    if (!pointer || pointer.id !== event.pointerId) return;
+    if (event.type === "pointerup" && frameRef.current &&
+        Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) <= 8) {
+      pending.pick = previewPick(frameRef.current, event);
+    }
+    pending.pointer = null;
+    finishModeChange();
   };
 
   const requestElements = () => {
@@ -154,15 +195,23 @@ export default function Canvas({ param }) {
       const data = event.data;
       if (data.type === "dock/inspector-ready") {
         setModes(supportedModes(data));
-        setMode(modeFromPage(data));
+        const pending = modeChange.current;
+        if (pending) send(pending.message);
+        else setMode(modeFromPage(data));
         requestElements();
         if (Array.isArray(data.selection) && data.selection.length) setSelection(data.selection); // empty: PreviewSelection restores it
         return;
       }
       if (data.type === "dock/select") {
         const next = modeFromPage(data);
-        if (next === "comment" && held.current !== "comment") { setPanelOpen(true); setRail("activity"); }
-        setMode(next);
+        const pending = modeChange.current;
+        if (pending && data.mode_request === pending.message.mode_request && next === pending.mode) {
+          pending.ready = true;
+          finishModeChange();
+        } else if (!pending && data.mode_request === undefined) {
+          if (next === "comment" && held.current !== "comment") { setPanelOpen(true); setRail("activity"); }
+          setMode(next);
+        }
         if (Array.isArray(data.selection)) setSelection(data.selection);
       }
       if (data.type === "dock/comment-target" || data.type === "dock/comment-focus") { setPanelOpen(true); setRail("activity"); }
@@ -187,15 +236,42 @@ export default function Canvas({ param }) {
   const choose = (next) => {
     const current = held.current;
     if (next === current) next = "navigate";
-    modeMessages(next, current).forEach(send);
+    clearModeChange();
+    const messages = modeMessages(next, current);
+    if (next === "select" || next === "comment") {
+      const message = { ...messages[0], mode_request: ++modeRequest.current };
+      const pending = { mode: next, message, ready: false, pointer: null, pick: null };
+      modeChange.current = pending;
+      setModeShield(true);
+      pending.timer = setTimeout(() => {
+        if (modeChange.current !== pending || pending.ready) return;
+        modeMessages("navigate", next).forEach(send);
+        clearModeChange();
+        setMode("navigate");
+        notify(es ? "No se pudo activar el modo en la vista previa." : "Could not activate the mode in the preview.");
+      }, 3500);
+      send(message);
+    } else messages.forEach(send);
+    held.current = next;
     setMode(next);
     if (next === "comment") { setPanelOpen(true); setRail("activity"); }
   };
   useEffect(() => {
-    // Select has its own Esc in PreviewSelection; the handles mode is left from here.
-    const onKey = (event) => { if (event.key === "Escape" && held.current === "handles") choose("navigate"); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Route the host's mode shortcuts through the same handoff as the toolbar.
+    const onKey = (event) => {
+      if (event.altKey && event.shiftKey && (event.code === "KeyS" || event.code === "KeyC")) {
+        const next = event.code === "KeyS" ? "select" : "comment";
+        if (running && modes.includes(next)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          choose(next);
+        }
+      } else if (event.key === "Escape" && (held.current === "handles" || modeChange.current)) {
+        choose("navigate");
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   });
 
   const moveModeFocus = (event) => {
@@ -272,7 +348,11 @@ export default function Canvas({ param }) {
         </div>
         <div className="canvas-workspace" data-panel-closed={!panelOpen || undefined}>
           {running
-            ? <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="var(--canvas-height)" />
+            ? <div className="relative min-w-0">
+                <PreviewFrames frames={frames} frameRef={attachFrame} allow={previewAllow(project)} title={es ? "Vista previa de aplicación" : "Application preview"} height="var(--canvas-height)" />
+                {modeShield && <div className="canvas-mode-shield" aria-hidden="true" onPointerDown={shieldDown}
+                  onPointerUp={shieldEnd} onPointerCancel={shieldEnd} onLostPointerCapture={shieldEnd} />}
+              </div>
             : <Empty>{es ? "Abre la vista previa para trabajar sobre la aplicación." : "Open the preview to work on the application."}</Empty>}
           <div className="canvas-rail-slot" inert={!panelOpen}>
             <aside id="canvas-rail" className="canvas-inspector" aria-label={es ? "Panel del lienzo" : "Canvas inspector"}>
