@@ -83,11 +83,11 @@ def inject_scripts(source: str, scripts: tuple[str, ...], revision: str = "", se
 
 
 class PreviewProxy:
-    def __init__(self, host_port: int):
+    def __init__(self, host_port: int, *, form_chat=None):
         self.backend: tuple[int, str] | None = None
         self.session = uuid.uuid4().hex[:16]  # one per opening of the preview (the proxy lives until it is stopped)
         self.voice_revision = ""
-        voice = self.voice = TransferVoice()
+        voice = self.voice = TransferVoice(form_chat=form_chat)
         scripts = {"app-bridge.js": BRIDGE_JS.encode("utf-8")}
         for name in PREVIEW_SCRIPTS:
             path = SCRIPT_DIR / name

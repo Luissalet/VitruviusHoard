@@ -87,14 +87,6 @@ class Services:
         write_url(config)
         self.db = Database(config.db_path)
 
-        self.app_projects = AppProjects(config.data_dir, host_port=config.port, token_name=self._tokens_name)
-        self.preview_selections = PreviewSelections()
-        self.preview_comments = PreviewComments(self.app_projects)
-        self.alternatives = AlternativeStudies(self)
-        self.instruments = Instruments(self.app_projects)
-        self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")
-        self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s, profile=config.url_profile)
-
         if link is not None:
             self.link_sync = link  # test double, already "sync-shaped"
             self._link = None
@@ -104,6 +96,16 @@ class Services:
                                           app="vitruvius")
             self._link = Link(link_config)
             self.link_sync = self._link.sync
+
+        self.app_projects = AppProjects(config.data_dir, host_port=config.port, token_name=self._tokens_name,
+                                        form_chat=getattr(self.link_sync, "submit_short_json_chat", None),
+                                        prepare_form_chat=getattr(self.link_sync, "prepare_short_json_chat", None))
+        self.preview_selections = PreviewSelections()
+        self.preview_comments = PreviewComments(self.app_projects)
+        self.alternatives = AlternativeStudies(self)
+        self.instruments = Instruments(self.app_projects)
+        self.app_browser = browser or BrowserWorker(config.data_dir / "app-previews", timeout_s=config.render_timeout_s, profile="operator_local")
+        self.browser = browser or BrowserWorker(config.data_dir, timeout_s=config.render_timeout_s, profile=config.url_profile)
 
         self._ingest_autostart = autostart_ingest and config.autostart
         self.ingest_runner = IngestRunner(self.db, self.config, emit=self._emit_event)
