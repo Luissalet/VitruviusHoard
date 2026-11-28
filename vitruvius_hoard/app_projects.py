@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 import zipfile
+from collections import defaultdict
 from contextlib import closing, contextmanager
 from http.client import HTTPConnection, HTTPException
 from pathlib import Path, PurePosixPath
@@ -27,7 +28,7 @@ from .app_preview import PreviewProxy
 from . import app_critique_loop
 from .app_revision_events import RevisionEvents, revision_change
 from .app_runtime import validate_spec
-from .app_source_map import SourceMapError, edit_source, first_changed_source, is_direct_text_edit, source_count, source_position
+from .app_source_map import SourceMapError, edit_source, first_changed_source, source_count, source_position, text_edit_proofs
 from .booking import TEMPLATE as BOOKING_TEMPLATE, site_files
 from .hoard_link.agentkit import AppError
 from .hoard_link.atomic import write_json_atomic
@@ -282,13 +283,17 @@ class AppProjects:
     def _directory(self, id):
         return self._load_index(id)[0]
 
+    @staticmethod
+    def _read_snapshot(root, revision):
+        return json.loads((root / "revisions" / revision / "snapshot.json").read_text(encoding="utf-8"))
+
     def get(self, id, revision=None):
         with self.lock:
             root, index = self._load_index(id)
             selected = revision or index["revision"]
             if selected not in index["revisions"]:
                 raise LookupError("Project revision not found")
-            snapshot = json.loads((root / "revisions" / selected / "snapshot.json").read_text(encoding="utf-8"))
+            snapshot = self._read_snapshot(root, selected)
             public = self._public_index(index)
             if "history" in index:
                 public["history"] = [self._with_materials(entry) for entry in index["history"]]
@@ -882,33 +887,46 @@ class AppProjects:
                 self._close_process(item)
             return {"state": "stopped"}
 
-    def _preview_text_edits(self, id, project):
+    def _preview_text_edits(self, root, project):
         selected = project["selected_revision"]
-        snapshots = {}
-        edits = set()
+        neighbors = defaultdict(set)
+        edits_by_file = defaultdict(dict)
         for step in project.get("history", []):
-            edge = (step.get("previous_revision"), step.get("revision"))
+            before, after = step.get("previous_revision"), step.get("revision")
+            if not before or not after or before == after:
+                continue
+            neighbors[before].add(after)
+            neighbors[after].add(before)
             presentation = step.get("target_presentation") or {}
             vsrc, tag = step.get("target"), presentation.get("tag")
-            if (step.get("action") != "edit" or selected not in edge or not vsrc or not tag
-                    or "text" not in presentation):
-                continue
-            other = edge[1] if edge[0] == selected else edge[0]
-            if not other or (other, vsrc, tag) in edits:
+            if step.get("action") != "edit" or not vsrc or not tag or "text" not in presentation:
                 continue
             try:
                 filename, line, column = source_position(vsrc)
-                if step.get("files") != [filename]:
-                    continue
-                if other not in snapshots:
-                    snapshots[other] = self.get(id, other)["files"]
-                before = snapshots[other].get(filename)
-                after = project["files"].get(filename)
-                if before is not None and after is not None and is_direct_text_edit(before, after, line, column, tag):
-                    edits.add((other, vsrc, tag))
-            except (SourceMapError, LookupError):
+            except SourceMapError:
                 continue
-        return sorted(edits)
+            if step.get("files") == [filename] and filename in project["files"]:
+                edits_by_file[filename][frozenset((before, after))] = (line, column, tag)
+
+        known_revisions = set(project["revisions"])
+        snapshots = {selected: project["files"]}
+
+        def read_source(revision, filename):
+            if revision not in known_revisions:
+                return None
+            if revision not in snapshots:
+                try:
+                    files = self._read_snapshot(root, revision)["files"]
+                except FileNotFoundError:
+                    files = {}
+                snapshots[revision] = {name: files[name] for name in edits_by_file if name in files}
+            return snapshots[revision].get(filename)
+
+        proofs = []
+        for filename, edits in edits_by_file.items():
+            proofs.extend(text_edit_proofs(filename, selected, neighbors, edits,
+                                           lambda revision: read_source(revision, filename)))
+        return sorted(proofs)
 
     def preview(self, id, revision=None):
         with self.lock:
@@ -919,8 +937,8 @@ class AppProjects:
                 self.prepare_form_chat()
             if status["state"] == "running" and status["revision"] == selected:
                 return status
-            text_edits = self._preview_text_edits(id, project)
             root = self._directory(id)
+            text_edits = self._preview_text_edits(root, project)
             run = root / "runs" / uuid.uuid4().hex
             candidate = self._start_runtime(project, run, root / "data" / "app.db")
             try:

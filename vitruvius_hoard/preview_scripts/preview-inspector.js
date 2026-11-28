@@ -271,7 +271,7 @@
     return found;
   }
   // A stable name follows edits within its source file. For unnamed elements, use the text when it still matches.
-  // A verified text edit in the revision history can also keep a unique source selector and the same parent slot.
+  // Verified text edits can map a unique source position and its parent across revisions.
   // The caller only sends pins for the current page. `all(selector)` lists matching elements.
   function locatePin(pin, all, pageRevision, textEdits = []) {
     const lost = {state: 'lost', element: null};
@@ -296,22 +296,24 @@
         }) : sameTag;
         return named.length === 1 ? {state: 'ok', element: named[0]} : lost;
       }
+      if (pin.revision && pageRevision && pin.own_vsrc && source && pin.selector === source && /\|.+:\d+:\d+$/.test(pin.parent || '')) {
+        const proof = textEdits.find(edit => Array.isArray(edit) && edit[0] === pin.revision &&
+            edit[1] === pin.vsrc && edit[2] === pin.tag);
+        if (proof) {
+          if (proof[4] && proof[4] !== pin.parent) return lost;
+          const here = all(`[data-vsrc="${quote(proof[3] || pin.vsrc)}"]`);
+          if (here.length !== 1 || !sameTag.includes(here[0])) return lost;
+          const element = here[0];
+          const at = relationOf(element);
+          if (at.parent !== (proof[5] || pin.parent) || at.index !== pin.index ||
+              IDENTITY_ATTRS.some(name => !attrs[name] && attrOf(element, name))) return lost;
+          return {state: 'ok', element};
+        }
+      }
       let pick = sameTag.filter(element => textOf(element) === (pin.text || ''));
-      const hasTextMatch = pick.length > 0;
       if (pick.length > 1 && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === pin.vsrc);
       if (pick.length > 1 && typeof pin.parent === 'string') pick = pick.filter(element => { const at = relationOf(element); return at.parent === pin.parent && at.index === pin.index; });
-      if (pick.length === 1) return {state: 'ok', element: pick[0]};
-      if (hasTextMatch || !pin.revision || !pageRevision || !pin.own_vsrc || !source ||
-          pin.selector !== source || !/\|.+:\d+:\d+$/.test(pin.parent || '')) return lost;
-      if (!textEdits.some(edit => Array.isArray(edit) && edit[0] === pin.revision &&
-          edit[1] === pin.vsrc && edit[2] === pin.tag)) return lost;
-      const here = all(source);
-      if (here.length !== 1 || !sameTag.includes(here[0])) return lost;
-      const element = here[0];
-      const at = relationOf(element);
-      if (at.parent !== pin.parent || at.index !== pin.index ||
-          IDENTITY_ATTRS.some(name => !attrs[name] && attrOf(element, name))) return lost;
-      return {state: 'ok', element};
+      return pick.length === 1 ? {state: 'ok', element: pick[0]} : lost;
     } catch (_) { return lost; }
   }
 
