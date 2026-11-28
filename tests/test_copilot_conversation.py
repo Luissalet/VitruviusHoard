@@ -103,10 +103,11 @@ def test_destination_tracks_the_endpoint_that_answers(monkeypatch, tmp_path, mod
     assert client.post(proxy, json={"path": CONVERSATION}).headers[HEADER] == "spark:3"
 
     state["online"] = set()
-    assert client.post(proxy, json={"path": CONVERSATION}).status_code == 503
     unavailable = client.get("/api/copilot/info")
     assert unavailable.status_code == 503
     assert unavailable.headers[HEADER] == "unavailable"
+    failed = client.post(proxy, json={"path": CONVERSATION})
+    assert failed.status_code == 503 and failed.headers[HEADER] == "unavailable"
 
 
 def test_relay_passes_the_native_rename_form(monkeypatch, tmp_path):
@@ -133,7 +134,7 @@ def test_inline_conversation_renames_and_handles_unavailable_faustus(monkeypatch
         return route.fulfill(status=response.status_code, headers=dict(response.headers), body=response.content)
 
     with playwright.sync_playwright() as instance:
-        browser = instance.chromium.launch(channel="chrome", headless=True, args=["--disable-gpu"])
+        browser = instance.chromium.launch(channel="chrome", headless=True, args=["--disable-gpu", "--mute-audio"])
         try:
             page = browser.new_page(viewport={"width": 390, "height": 850})
             page.route("**/*", respond)
@@ -141,10 +142,28 @@ def test_inline_conversation_renames_and_handles_unavailable_faustus(monkeypatch
             page.goto(HOST)
             page.get_by_role("button", name="Abrir conversación").click()
             playwright.expect(page.get_by_role("alert")).to_contain_text("Ningún Faustus responde")
-            state["online"] = {SPARK}
+            state["online"] = {PC, SPARK}
             page.get_by_role("button", name="Reintentar").click()
+            playwright.expect(page.get_by_text("Faustus · PC")).to_be_visible()
+            chat = page.locator("faustus-chat")
+            playwright.expect(chat).to_have_text("Título inicial")
+            mounted = chat.element_handle()
+
+            close = page.get_by_role("button", name="Cerrar Faustus")
+            opener = page.get_by_role("button", name="Abrir conversación")
+            close.click()
+            state["online"].clear()
+            with page.expect_response("**/api/copilot/info") as reopened:
+                opener.click()
+            assert reopened.value.status == 503
+            playwright.expect(page.get_by_text("Ningún Faustus responde.", exact=True)).to_be_visible()
+
+            close.click()
+            state["online"] = {SPARK}
+            opener.click()
             playwright.expect(page.get_by_text("Faustus · Spark 3")).to_be_visible()
-            playwright.expect(page.locator("faustus-chat")).to_have_text("Título inicial")
+            assert mounted.evaluate("(element) => element === document.querySelector('faustus-chat')")
+            assert state["patches"] == []
 
             page.get_by_text("Renombrar conversación").click()
             page.get_by_label("Nuevo nombre").fill("Notas del encargo")

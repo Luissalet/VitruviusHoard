@@ -120,14 +120,15 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
     space_id = space_file.read_text(encoding="utf-8").strip()
     selected = None
 
-    async def locate():
+    async def locate(*, recheck=False):
         import asyncio
         import time
         from . import where
 
         nonlocal selected
-        if selected and time.monotonic() < selected["until"]:
-            return selected
+        previous = selected
+        if not recheck and previous and time.monotonic() < previous["until"]:
+            return previous
         # The placed endpoint is a fallback. A configured endpoint that answers keeps precedence.
         placement = await asyncio.to_thread(where.current, config.hub_url)
         candidates = where.faustus_urls(urls, placement)
@@ -145,6 +146,8 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
                         return selected
                 except (httpx.HTTPError, ValueError):
                     continue
+        if selected is previous:
+            selected = None
         raise HTTPException(503, "Faustus copilot is unavailable on the configured endpoints",
                             headers={DESTINATION_HEADER: "unavailable"})
 
@@ -176,7 +179,7 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
 
     @router.get("/info")
     async def info():
-        target = await locate()
+        target = await locate(recheck=True)
         return {"app_id": app_id, "app_name": app_name or app_id, "data_space_id": space_id,
                 "panel_url": "/api/copilot/panel.js", "server": "/", "tool_server_id": app_id,
                 "settings_url": target["url"] + "/studio/settings", "destination": target["destination"]}
