@@ -1,6 +1,8 @@
 # App preview canvas
 
-In **Applications**, open a project and choose **Open preview**. The preview runs on its own loopback origin and keeps the same address when the project switches revisions. Links, stylesheets and record actions use the project's own routes. Opening the preview in another tab is still available.
+In **Applications**, choose **Open in Canvas** to select the project on the Canvas. Entering Canvas from the sidebar
+selects the last active project created or opened in this browser. Use the project picker to switch or clear the selection.
+Choose **Open preview** to start the preview in either view. The preview runs on its own loopback origin and keeps the same address when the project switches revisions. Links, stylesheets and record actions use the project's own routes. Opening the preview in another tab is still available.
 
 - `app_project_canvas_view(id, scope?, max_chars?, actor?)` reads the displayed page or current viewport and returns control references.
 - `app_project_canvas_act(id, action, args, actor?, target?)` supports `click`, `fill`, `select`, `navigate`, `scroll`, `highlight` and `wait`. It uses the App Dock arguments for that action. Send `actor: {id, name, color}` to identify the cursor. To point out part of a page, call `highlight` with a `ref` or `text` and an optional `note`.

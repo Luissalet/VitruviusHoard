@@ -9,6 +9,7 @@ import { CanvasConversation, CanvasTimeline } from "../canvas/CanvasActivity.jsx
 import { conversationEntry, recordCanvasActivity } from "../canvas/canvasConversation.js";
 import ProjectCritiqueLoop from "../components/ProjectCritiqueLoop.jsx";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
+import { recentProjectId, rememberProject } from "../canvas/recentProject.js";
 import { canvasContext, canvasRevisionLabel, isCanvasMessage, modeFromPage, modeMessages, previewPick, supportedModes } from "../canvas/canvasPanel.js";
 
 const MODE_TEXT = {
@@ -101,6 +102,18 @@ export default function Canvas({ param }) {
     }
   };
   useEffect(() => { void loadProjects(); }, []);
+  const recent = !param && projectsState === "ready" ? recentProjectId(projects) : null;
+  useEffect(() => {
+    if (!recent) return;
+    const [page, id] = window.location.hash.replace(/^#\/?/, "").split("?")[0].split("/");
+    if (page === "canvas" && !id) window.location.replace(`#/canvas/${recent}`);
+  }, [recent]);
+
+  const loadedProjectId = project?.id;
+  useEffect(() => {
+    if (loadedProjectId && loadedProjectId === param) rememberProject(loadedProjectId);
+  }, [loadedProjectId, param]);
+
   useEffect(() => {
     setProject(null); setPreview(null); setProjectError(false); setComments([]); setLiveSteps([]);
     if (param) loadProject(param);
@@ -380,7 +393,11 @@ export default function Canvas({ param }) {
     <div className="flex items-center gap-3 flex-wrap">
       <h1 className="text-[20px] font-semibold">{es ? "Lienzo" : "Canvas"}</h1>
       <label className="label flex-row items-center gap-2">{es ? "Aplicación" : "Application"}
-        <select aria-label={es ? "Aplicación" : "Application"} className="field" value={param || ""} onChange={(event) => { window.location.hash = event.target.value ? `#/canvas/${event.target.value}` : "#/canvas"; }}>
+        <select aria-label={es ? "Aplicación" : "Application"} className="field" value={param || ""} onChange={(event) => {
+          const id = event.target.value;
+          if (!id) rememberProject(null);
+          window.location.hash = id ? `#/canvas/${id}` : "#/canvas";
+        }}>
           <option value="">{es ? "Elige una aplicación" : "Choose an application"}</option>
           {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
@@ -398,7 +415,7 @@ export default function Canvas({ param }) {
           : (es ? "Vista previa abierta" : "Preview open")}</span>}
       </>}
     </div>
-    {!param && projectsState === "loading" ? <p className="help" role="status">{es ? "Cargando aplicaciones…" : "Loading applications…"}</p>
+    {!param && (projectsState === "loading" || recent) ? <p className="help" role="status">{es ? "Cargando aplicaciones…" : "Loading applications…"}</p>
       : !param && projectsState === "error" ? <Empty><p role="alert">{es ? "No se pudieron cargar las aplicaciones." : "Could not load applications."}</p><button type="button" className="btn" onClick={loadProjects}>{es ? "Reintentar" : "Retry"}</button></Empty>
       : !param ? <Empty>{projects.length ? (es ? "Elige una aplicación para verla en el lienzo." : "Choose an application to see it on the canvas.") : (es ? "Crea una aplicación en Aplicaciones para empezar." : "Create an application in Applications to begin.")}</Empty>
       : !project ? (projectError
