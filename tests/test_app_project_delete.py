@@ -42,10 +42,14 @@ def test_delete_http_requires_confirmation_and_an_archived_project(client):
     before = _files(root)
     unconfirmed = client.post(route, json={**body, "confirm": False})
     assert unconfirmed.status_code == 400 and unconfirmed.json()["code"] == "confirm_required"
-    assert client.post(route, json={**body, "confirm": "true"}).status_code == 422
-    for required in ("expected_revision", "expected_updated_ts"):
-        assert client.post(route, json={key: value for key, value in body.items() if key != required}).status_code == 422
-    assert client.post(route, json={**body, "expected_updated_ts": None}).status_code == 422
+    for invalid_body in (
+        {**body, "confirm": "true"},
+        {**body, "expected_updated_ts": None},
+        {key: value for key, value in body.items() if key != "expected_revision"},
+        {key: value for key, value in body.items() if key != "expected_updated_ts"},
+    ):
+        invalid = client.post(route, json=invalid_body)
+        assert invalid.status_code == 400 and invalid.json()["code"] == "invalid_arguments"
     assert _files(root) == before
 
 
@@ -150,3 +154,40 @@ def test_storage_error_keeps_archive_available_for_a_retry(client, monkeypatch):
     assert row["id"] == project["id"] and row["updated_ts"] == archived["updated_ts"]
     assert client.post(route, json=_conditions(row)).status_code == 200
     assert not root.exists()
+
+
+
+def test_comment_store_cannot_write_across_project_removal(client, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from vitruvius_hoard import preview_comments
+
+    projects = client.svc.app_projects
+    project = projects.create("Concurrent comment")
+    writing = Event()
+    release = Event()
+    write = preview_comments.write_json_atomic
+
+    def pause_at_write(path, data):
+        writing.set()
+        assert release.wait(timeout=5)
+        return write(path, data)
+
+    monkeypatch.setattr(preview_comments, "write_json_atomic", pause_at_write)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        pending = executor.submit(client.svc.preview_comments.add, project["id"], "My note", project["revision"],
+                                  "/", {"selector": "h1"})
+        try:
+            assert writing.wait(timeout=5)
+            acquired = projects.lock.acquire(blocking=False)
+            if acquired:
+                projects.lock.release()
+            assert not acquired
+        finally:
+            release.set()
+        pending.result(timeout=5)
+
+    archive = _archive(projects, project)
+    receipt = projects.delete(**{"id": project["id"], **_conditions(archive)})
+    assert not Path(receipt["path"]).exists()
