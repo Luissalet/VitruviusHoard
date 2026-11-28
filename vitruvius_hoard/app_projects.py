@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 
 from .app_canvas import CanvasSessions
 from .app_canvas_edits import canvas_token_scale, plan_canvas_edit
+from .app_creation import ProjectCreationError
 from .app_materials import describe_materials
 from .app_preview import PreviewProxy
 from . import app_critique_loop
@@ -110,10 +111,12 @@ def starter_files(name, template="work-board", description="", accent=None, fiel
                   description_es=None):
     selected = next((row for row in templates() if row["id"] == template), None)
     if not selected:
-        raise ValueError("Unknown application template")
+        raise ProjectCreationError("Unknown application template", "Elige un punto de partida de la lista.")
+    if not isinstance(name, str) or not name.strip():
+        raise ProjectCreationError("Project needs a name", "Escribe un nombre para la aplicación.")
     colour = accent or selected["accent"]
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", colour):
-        raise ValueError("accent must be a six-digit hex colour")
+        raise ProjectCreationError("accent must be a six-digit hex colour", "Indica un color hexadecimal de seis dígitos.")
     static = template == STATIC_PAGE_TEMPLATE["id"]
     locale = "es" if lang == "es" else "en"
     copy = _RECORD_STARTER_COPY[locale]
