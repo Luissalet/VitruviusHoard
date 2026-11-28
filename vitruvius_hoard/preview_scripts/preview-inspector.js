@@ -172,11 +172,9 @@
     for (const name of IDENTITY_ATTRS) { const value = attrOf(element, name); if (value) found[name] = compactAttr(value); }
     return found;
   }
-  // Where a pinned comment's element is now. A pin names the element by its tag, its visible text and the attributes above;
-  // an explicit attribute that changed means another element, whatever the text says. On the revision the pin was made on a
-  // unique source position is enough; on any other revision source positions mean other lines, so the tag, a non-empty
-  // text (or an identity attribute) and, when several look alike, the place among the siblings must single one out.
-  // Otherwise the pin has no anchor: it is never moved to a neighbour. `all(selector)` lists the matching elements.
+  // On a different revision, a unique stable name in the same source file survives a text edit. A source position
+  // alone can move when lines change. For unnamed elements, keep the text and sibling checks and reject ambiguity.
+  // The caller only sends pins for the current page. `all(selector)` lists matching elements.
   function locatePin(pin, all, pageRevision) {
     const lost = {state: 'lost', element: null};
     const attrs = pin.attrs && typeof pin.attrs === 'object' ? pin.attrs : {};
@@ -188,7 +186,18 @@
         if (here.length === 1) return {state: 'ok', element: here[0]};
       }
       if (!pin.text && !Object.keys(attrs).length) return lost;
-      let pick = all(String(pin.tag)).filter(element => tagOf(element) === pin.tag && textOf(element) === (pin.text || '') && attrsOk(element));
+      const sameTag = all(String(pin.tag)).filter(element => tagOf(element) === pin.tag && attrsOk(element));
+      if (attrs.id || attrs['data-vid']) {
+        const sourceFile = position => /^(.*):\d+:\d+$/.exec(position || '')?.[1];
+        const file = sourceFile(pin.vsrc);
+        const named = file ? sameTag.filter(element => {
+          const generated = element.closest?.('[data-vgen]');
+          const position = attrOf(element, 'data-vsrc') || (generated && attrOf(generated, 'data-vsrc'));
+          return sourceFile(position) === file;
+        }) : sameTag;
+        return named.length === 1 ? {state: 'ok', element: named[0]} : lost;
+      }
+      let pick = sameTag.filter(element => textOf(element) === (pin.text || ''));
       if (pick.length > 1 && pin.revision === pageRevision && pin.own_vsrc && pin.vsrc) pick = pick.filter(element => attrOf(element, 'data-vsrc') === pin.vsrc);
       if (pick.length > 1 && typeof pin.parent === 'string') pick = pick.filter(element => { const at = relationOf(element); return at.parent === pin.parent && at.index === pin.index; });
       return pick.length === 1 ? {state: 'ok', element: pick[0]} : lost;

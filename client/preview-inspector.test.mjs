@@ -238,6 +238,25 @@ test("a pinned comment keeps its identity: attributes first, then source positio
   assert.equal(locatePin(rowPin, lookup({ li: [first, second] }), "r2").element, second);
 });
 
+test("a pin follows its stable ID across text and line changes within its source file", () => {
+  const { locatePin } = context.VitruviusInspectorCore;
+  const button = (attrs, text) => node("button", attrs, [], text);
+  const original = { selector: "#preparar", tag: "button", text: "Preparar visita", revision: "r1",
+    attrs: { id: "preparar" }, vsrc: "pages/index.html:6:1", own_vsrc: true };
+  const edited = button({ id: "preparar", "data-vsrc": "pages/index.html:9:1" }, "Confirmar visita");
+  const neighbour = button({ id: "cancelar", "data-vsrc": "pages/index.html:6:1" }, original.text);
+  const foreignFile = button({ id: "preparar", "data-vsrc": "pages/otra.html:6:1" }, original.text);
+  const wrongTag = node("a", { id: "preparar", "data-vsrc": original.vsrc }, [], original.text);
+  assert.equal(locatePin(original, () => [neighbour, edited], "r2").element, edited);
+  assert.equal(locatePin(original, () => [neighbour], "r2").state, "lost");
+  assert.equal(locatePin(original, () => [foreignFile, wrongTag], "r2").state, "lost");
+  assert.equal(locatePin(original, () => [edited, button(edited.attrs, "Duplicado")], "r2").state, "lost");
+  const generated = button({ "data-vid": "booking-confirm" }, "Confirmar reserva");
+  node("section", { "data-vgen": "form", "data-vsrc": "pages/index.html:12:1" }, [generated]);
+  const pin = { ...original, attrs: { "data-vid": "booking-confirm" }, own_vsrc: false };
+  assert.equal(locatePin(pin, () => [generated], "r2").element, generated);
+});
+
 test("the identity attributes of an element are the ones that tell look-alikes apart", () => {
   const { identityAttrs } = context.VitruviusInspectorCore;
   const found = identityAttrs(node("a", { id: "x", href: "/y", class: "btn", "data-vsrc": "p:1:1" }, [], "T"));

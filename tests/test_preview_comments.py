@@ -214,13 +214,25 @@ def test_an_element_that_left_the_page_leaves_the_pin_without_anchor_but_keeps_t
     assert store.list(project["id"], "lost")["count"] == 0
 
 
-def test_a_comment_made_on_an_older_revision_says_it_is_stale(services, project):
-    add(services, project)
-    newer = services.app_projects.update(project["id"], {"pages/index.html": "<h1>Changed</h1>\n"}, project["revision"])
-    comment = services.preview_comments.list(project["id"])["comments"][0]
-    assert comment["revision"] == project["revision"] != newer["revision"] and comment["stale"] is True
-    services.preview_comments.acknowledge(project["id"], ["c1"])
-    assert services.preview_comments.resolve(project["id"], "c1", "Done")["resolved_in"] == newer["revision"]
+def test_only_a_lost_anchor_on_the_current_revision_is_stale(services, project, monkeypatch):
+    pid, store = project["id"], services.preview_comments
+    add(services, project, selector="#preparar")
+    serving(services, project, monkeypatch)
+    store.set_anchors(pid, project["revision"], [{"id": "c1", "state": "lost"}], "opening-1")
+    assert store.list(pid, "lost")["comments"][0]["stale"] is True
+
+    newer = services.app_projects.update(pid, {"pages/index.html": '<h1 id="preparar">Changed</h1>\n'}, project["revision"])
+    [unchecked] = store.list(pid)["comments"]
+    assert unchecked["anchor"]["state"] == "unchecked" and unchecked["stale"] is False
+    assert store.list(pid, "lost")["count"] == 0
+
+    serving(services, newer, monkeypatch)
+    store.set_anchors(pid, newer["revision"], [{"id": "c1", "state": "ok", "vsrc": "pages/index.html:1:1"}], "opening-1")
+    [anchored] = store.list(pid)["comments"]
+    assert anchored["revision"] == project["revision"] != newer["revision"]
+    assert anchored["anchor"]["revision"] == newer["revision"] and anchored["stale"] is False
+    store.set_anchors(pid, newer["revision"], [{"id": "c1", "state": "lost"}], "opening-1")
+    assert store.list(pid, "lost")["comments"][0]["stale"] is True
 
 
 def test_comments_are_saved_in_the_project_data_and_survive_a_restart(services, project, tmp_path):
@@ -308,16 +320,36 @@ def test_api_covers_what_the_person_does(client):
     assert client.get("/api/app-projects/" + "0" * 16 + "/comments").status_code == 404
 
 
-def test_the_agent_cannot_skip_seen_and_only_the_person_dismisses_what_is_not_seen(services, project):
+def test_agent_resolution_acknowledges_pending_in_one_reversible_call(services, project):
+    pid, store = project["id"], services.preview_comments
+    original = add(services, project)
+    with pytest.raises(ValueError, match="needs a text"):
+        store.resolve(pid, original["id"], " ")
+    with pytest.raises(ValueError, match="Unknown revision"):
+        store.resolve(pid, original["id"], "Done", "unknown")
+    assert store.list(pid)["comments"] == [original]
+
+    resolved = call_tool(services, "app_project_comment_resolve", {
+        "id": pid, "comment_id": original["id"], "summary": "Done", "revision": project["revision"],
+    })
+    assert resolved["status"] == "resolved" and resolved["resolved_in"] == project["revision"]
+    assert [step["status"] for step in resolved["history"]] == ["pending", "seen", "resolved"]
+    assert resolved["history"][-1]["source_revision"] == project["revision"]
+    restored = call_tool(services, "app_project_comment_undo", {"id": pid, "comment_id": original["id"]})
+    assert restored["status"] == "pending" and restored["summary"] is None
+    assert restored["history"] == original["history"]
+
+
+def test_reply_and_agent_dismiss_still_require_seen_and_answered_cannot_be_resolved(services, project):
     store, pid = services.preview_comments, project["id"]
     add(services, project)
-    for step in (lambda: store.resolve(pid, "c1", "Done"), lambda: store.reply(pid, "c1", "Which?"), lambda: store.dismiss(pid, "c1", "no")):
+    for step in (lambda: store.reply(pid, "c1", "Which?"), lambda: store.dismiss(pid, "c1", "no")):
         with pytest.raises(ValueError, match="only from seen"):
             step()
     assert store.list(pid, "pending")["count"] == 1
     store.acknowledge(pid, ["c1"])
     store.reply(pid, "c1", "Which one?")
-    with pytest.raises(ValueError, match="only from seen"):
+    with pytest.raises(ValueError, match="only from pending, seen"):
         store.resolve(pid, "c1", "Done")  # answered: the person has to reply first
     with pytest.raises(ValueError, match="only from seen"):
         store.dismiss(pid, "c1", "no", "agent")
