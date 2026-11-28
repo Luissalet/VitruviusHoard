@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from functools import cache
 from html.parser import HTMLParser
 
 from .app_source_map import _TEXT_ONLY, _VOID
@@ -40,6 +41,7 @@ class _Markup(HTMLParser):
         self.stack = []
         self.document_ends = set()
         self.has_h1 = False
+        self.shows_content = False
         self.issue = None
         self.feed(source)
         if _INCOMPLETE.match(self.rawdata):
@@ -83,6 +85,13 @@ class _Markup(HTMLParser):
     def handle_startendtag(self, tag, attrs):
         self._start(tag, self_closing=True)
 
+    def handle_data(self, data):
+        if "{{content}}" in data and not any(
+            name in _TEXT_ONLY or name in {"template", "noscript"} or foreign
+            for name, foreign, _ in self.stack
+        ):
+            self.shows_content = True
+
     def handle_endtag(self, tag):
         while self.stack and self.stack[-1][0] != tag and self._optional_end():
             self.stack.pop()
@@ -104,32 +113,52 @@ def _message(lang, es, en):
 
 
 def validate_revision_markup(files, previous, *, preserve_h1, lang):
-    for name, source in files.items():
-        before = previous.get(name)
-        if not name.lower().endswith(".html") or source == before:
-            continue
+    changed = [name for name, source in files.items()
+               if name.lower().endswith(".html") and source != previous.get(name)]
+
+    @cache
+    def parse(source):
         try:
-            markup = _Markup(source)
+            return _Markup(source)
         except (AssertionError, ValueError):
-            raise AppError("invalid_html", _message(lang, f"Revisa el cierre del HTML en {name}.",
-                                                   f"Check the HTML closing tags in {name}."), details={"file": name}) from None
-        if markup.issue is not None:
+            return None
+
+    for name in changed:
+        markup = parse(files[name])
+        if markup is not None and markup.issue is None:
+            continue
+        details = {"file": name}
+        es, en = f"Revisa el cierre del HTML en {name}.", f"Check the HTML closing tags in {name}."
+        if markup is not None:
             line, column = markup.issue
+            details.update(line=line, column=column + 1)
+            es = f"Revisa el cierre del HTML en {name}, línea {line}."
+            en = f"Check the HTML closing tags in {name}, line {line}."
+        raise AppError("invalid_html", _message(lang, es, en), details=details)
+
+    if not preserve_h1 or not changed:
+        return
+
+    previous_layout = parse(previous.get("layout.html", ""))
+    layout = parse(files.get("layout.html", ""))
+
+    def has_heading(name, sources, wrapper):
+        page = parse(sources.get(name, ""))
+        local_heading = page is not None and page.has_h1
+        if name.startswith("pages/"):
+            return wrapper is not None and (wrapper.has_h1 or wrapper.shows_content and local_heading)
+        return local_heading
+
+    affected = dict.fromkeys(changed)
+    if "layout.html" in affected:
+        affected.update(dict.fromkeys(name for name in previous
+                                      if name.startswith("pages/") and name.lower().endswith(".html")))
+        affected.pop("layout.html")
+    for name in affected:
+        if has_heading(name, previous, previous_layout) and not has_heading(name, files, layout):
             raise AppError(
-                "invalid_html",
-                _message(lang, f"Revisa el cierre del HTML en {name}, línea {line}.",
-                         f"Check the HTML closing tags in {name}, line {line}."),
-                details={"file": name, "line": line, "column": column + 1},
+                "missing_h1",
+                _message(lang, f"Conserva el encabezado h1 de {name}.",
+                         f"Keep an h1 heading on the page for {name}."),
+                details={"file": name},
             )
-        if preserve_h1 and before and not markup.has_h1:
-            try:
-                had_h1 = _Markup(before).has_h1
-            except (AssertionError, ValueError):
-                continue  # Allow recovery from legacy markup the parser cannot read.
-            if had_h1:
-                raise AppError(
-                    "missing_h1",
-                    _message(lang, f"Conserva el encabezado h1 en {name}.",
-                             f"Keep the h1 heading in {name}."),
-                    details={"file": name},
-                )

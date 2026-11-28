@@ -99,6 +99,33 @@ def test_patch_checks_final_markup_and_accepts_omitted_html_end_tags(client, pro
     assert client.svc.app_projects.get(project["id"])["files"]["pages/index.html"].startswith("<h1>Revised</h1>")
 
 
+def test_patch_can_move_heading_into_shared_layout(client, project):
+    response = patch(client, project, [
+        replacement("pages/index.html", "<h1>Initial</h1>", "<p>Details</p>"),
+        replacement("layout.html", "{{content}}", "<h1>Initial</h1>{{content}}"),
+    ])
+    assert response.status_code == 200, response.text
+    current = client.svc.app_projects.get(project["id"])
+    assert "<h1>Initial</h1>" in current["files"]["layout.html"]
+    assert "<h1>" not in current["files"]["pages/index.html"]
+
+
+def test_patch_keeps_heading_on_other_pages_when_editing_shared_layout(client):
+    projects = client.svc.app_projects
+    project = projects.create("Shared heading", files={
+        "layout.html": "<main><h1>Shared</h1>{{content}}</main>",
+        "pages/index.html": "<p>Home</p>", "pages/other.html": "<p>Other</p>",
+    })
+    response = patch(client, project, [
+        replacement("layout.html", "<h1>Shared</h1>", ""),
+        replacement("pages/index.html", "<p>Home</p>", "<h1>Home</h1>"),
+    ])
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "missing_h1"
+    assert response.json()["file"] == "pages/other.html"
+    assert projects.get(project["id"])["revision"] == project["revision"]
+
+
 def test_multiple_replacements_are_ordered_and_saved_together(client, project):
     response = patch(client, project, [
         replacement("assets/style.css", "12px", "16px"),
