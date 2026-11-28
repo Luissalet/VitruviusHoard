@@ -1,11 +1,13 @@
 """Library discovery, shipped exports and the actual Rehacer dispatch contract."""
 import asyncio
+import os
 import hashlib
 import io
 import json
 import re
 import shutil
 import zipfile
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -97,7 +99,8 @@ def test_cold_host_routes_and_tools_need_no_design(tmp_path, monkeypatch):
     from vitruvius_hoard.software.host import create_app
     app = create_app()
     with TestClient(app, base_url="http://127.0.0.1:5191") as client:
-        token = (tmp_path / "mcp-token").read_text().strip()
+        token_file = Path(os.environ.get("VITRUVIUS_TOKEN_FILE") or tmp_path / "mcp-token")
+        token = token_file.read_text().strip()
         headers = {"Authorization": "Bearer " + token}
         catalogue = client.get("/api/agent/tools").json()["tools"]
         assert {row["name"] for row in catalogue if row["name"].startswith("showcase_")} == {

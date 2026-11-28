@@ -91,8 +91,11 @@ async def test_project_tools_and_stable_preview_paths_with_other_modules_off(tmp
 
 @pytest.mark.asyncio
 async def test_native_project_revision_environment_artifact_result_roundtrip(tmp_path,monkeypatch):
+    if not (ROOT / "babel_client" / "dist" / "index.html").is_file():
+        pytest.skip("Babel client is not built: babel_client/dist/index.html is missing")
     monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
     from vitruvius_hoard.software.host import create_app
+    from vitruvius_hoard.software.native import port
     app=create_app()
     async with app.router.lifespan_context(app):
         call=app.state.execute
@@ -125,7 +128,7 @@ async def test_native_project_revision_environment_artifact_result_roundtrip(tmp
         assert result['native']['result']['artifact_sha256']==artifact['file_sha256']
         assert result['native']['retained_analysis']['artifact_sha256']==artifact['file_sha256']
         assert result['native_sha256']
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://127.0.0.1:5191') as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url=f"http://127.0.0.1:{port()}") as client:
             for module,marker in [('design','/design/assets/'),('babel','/babel/assets/'),('theseus','/theseus/static/app.js')]:
                 page=await client.get('/'+module+'/')
                 assert page.status_code==200,page.text
@@ -164,10 +167,11 @@ async def test_theseus_native_frontend_uses_mounted_api_and_owner_limits(tmp_pat
     (tmp_path / "software-modules.json").write_text('{"version":1,"modules":{}}', encoding="utf-8")
     monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
     from vitruvius_hoard.software.host import create_app
+    from vitruvius_hoard.software.native import port
     app=create_app()
     async with app.router.lifespan_context(app):
         await app.state.execute('software_module_set',{'module':'theseus','enabled':True})
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='http://127.0.0.1:5191') as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url=f"http://127.0.0.1:{port()}") as client:
             page=await client.get('/theseus/')
             assert page.status_code==200
             assert 'href="/api/software/theseus-limits"' in page.text
@@ -286,6 +290,8 @@ async def test_cancel_drain_and_independent_close():
 
 @pytest.mark.asyncio
 async def test_owned_node_analysis_reads_source_without_executing_it(tmp_path,monkeypatch):
+    if not (ROOT / "software_native" / "engine" / "dist" / "entry.js").is_file():
+        pytest.skip("Theseus analysis engine is not built: software_native/engine/dist/entry.js is missing")
     monkeypatch.setenv('VITRUVIUS_PROFILE_DIR',str(tmp_path))
     from vitruvius_hoard.software.host import create_app
     app=create_app()
