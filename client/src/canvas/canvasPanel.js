@@ -57,7 +57,17 @@ export function elementLabel(item) {
   return name + text;
 }
 
-/** Number history transitions in order even when a rollback reuses an older source snapshot. */
+function activeHistoryEdits(source) {
+  const active = new Set();
+  const reverted = new Set();
+  for (let node = source; node; node = node.previous) {
+    if (node.entry.action === "undo-change") reverted.add(node.entry.reverted_change);
+    else if (!reverted.has(node.entry.id)) active.add(node.entry.id);
+  }
+  return active;
+}
+
+/** Number transitions and follow the recorded source when an earlier revision is restored. */
 export function canvasHistoryEntries({ revisions, history }) {
   const journal = history || [];
   const recorded = new Set(journal.map((entry) => entry.revision));
@@ -65,7 +75,38 @@ export function canvasHistoryEntries({ revisions, history }) {
     ...revisions.filter((revision) => !recorded.has(revision)).map((revision) => ({ revision })),
     ...journal,
   ];
-  return entries.map((entry, index) => ({ ...entry, step: index + 1 })).reverse();
+  const sources = new Map();
+  const redoSteps = new Set();
+  let source = null;
+  entries.forEach((entry, index) => {
+    const prior = entries[index - 1];
+    if ((entry.action === "edit" && entry.id) || (entry.action === "undo-change" && entry.reverted_change)) {
+      source = { entry, previous: source };
+    } else if (["undo", "critique-restore", "critique-undo"].includes(entry.action)) {
+      // Revision IDs identify source content. Reusing one restores its recorded edit ancestry.
+      if (sources.has(entry.revision)) source = sources.get(entry.revision);
+      if (entry.action === "undo" && prior?.previous_revision === entry.revision &&
+          (prior.action === "undo-change" || (prior.action === "undo" && !redoSteps.has(index - 1)))) {
+        redoSteps.add(index);
+      }
+    }
+    sources.set(entry.revision, source);
+  });
+  const active = activeHistoryEdits(source);
+  const latest = entries.at(-1);
+  const latestIndex = entries.length - 1;
+  let redoRevision;
+  if (latest?.previous_revision && ["undo", "undo-change"].includes(latest.action) && !redoSteps.has(latestIndex)) {
+    const before = activeHistoryEdits(sources.get(latest.previous_revision));
+    if ([...before].some((id) => !active.has(id))) redoRevision = latest.previous_revision;
+  }
+  return entries.map((entry, index) => ({
+    ...entry,
+    step: index + 1,
+    ...(entry.action === "edit" && entry.id && !active.has(entry.id) ? { undone: true } : {}),
+    ...(redoSteps.has(index) ? { action: "redo" } : {}),
+    ...(index === latestIndex && redoRevision ? { redoRevision } : {}),
+  })).reverse();
 }
 
 /** Name a retained snapshot by its position in the catalog, independently of the history step. */
