@@ -19,6 +19,8 @@ from .owned_http import OwnedAsyncClient,close_client
 _job = ContextVar('vitruvius_global_job', default=None)
 VISION_RESOLUTION_TIMEOUT_S = 6.0
 SPARK_HEALTH_TIMEOUT_S = 3.0
+SHORT_SELECTION_TTL_S = 45.0
+SHORT_PREPARE_TIMEOUT_S = 8.0
 _DEFAULT_FAUSTUS_URLS = LinkConfig().faustus_urls
 
 
@@ -73,6 +75,10 @@ class GlobalSync(SyncFacade):
         return asyncio.run_coroutine_threadsafe(self._twin().short_json_chat(
             messages, timeout=timeout, max_tokens=max_tokens), loop)
 
+    def prepare_short_json_chat(self):
+        loop = self._ensure_loop()
+        return asyncio.run_coroutine_threadsafe(self._twin()._prepared_short_selection(), loop)
+
     def close(self, timeout=None):
         if self._thread is threading.current_thread():
             raise RuntimeError('Close the global client from its owning module')
@@ -80,6 +86,8 @@ class GlobalSync(SyncFacade):
             loop,inner,thread=self._loop,self._inner,self._thread
             if loop is not None:
                 async def drain():
+                    if inner is not None:
+                        await inner._cancel_short_preparation()
                     if inner is not None and inner._owns_client:
                         await close_client(inner._client)
                     if self._link._owns_client:
@@ -97,11 +105,15 @@ class GlobalSync(SyncFacade):
 
 class GlobalLink(Link):
     def __init__(self, config, client=None):
-        super().__init__(config,OwnedAsyncClient(trust_env=False) if client is None else client)
+        limits = httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=SHORT_SELECTION_TTL_S)
+        super().__init__(config,OwnedAsyncClient(trust_env=False, limits=limits) if client is None else client)
         self._owns_client=client is None
         self.sync = GlobalSync(self)
+        self._short_selection = None
+        self._short_preparation = None
 
     async def aclose(self):
+        await self._cancel_short_preparation()
         await asyncio.to_thread(self.sync.close)
 
     async def status(self, task=None):
@@ -162,21 +174,41 @@ class GlobalLink(Link):
 
     async def _selection(self, urls, deadline, descriptor_first):
         if descriptor_first:
-            candidates = await asyncio.to_thread(self.config.faustus_candidates)
+            return await self._prepared_short_selection()
+        base = await self._origin(urls, deadline)
+        return await self._descriptor(base)
+
+    async def _prepared_short_selection(self):
+        if self._short_selection and self._short_selection[0] > time.monotonic():
+            return self._short_selection[1]
+        if self._short_preparation is None or self._short_preparation.done():
+            self._short_preparation = asyncio.create_task(self._prepare_short_selection())
+            self._short_preparation.add_done_callback(lambda task: None if task.cancelled() else task.exception())
+        return await asyncio.shield(self._short_preparation)
+
+    async def _prepare_short_selection(self):
+        async with asyncio.timeout(SHORT_PREPARE_TIMEOUT_S) as budget:
+            urls = tuple(self.config.faustus_urls)
+            candidates = await asyncio.to_thread(self.config.faustus_candidates) if urls else []
             if urls == _DEFAULT_FAUSTUS_URLS:
                 candidates = candidates[len(urls):] + candidates[:len(urls)]
             for index, base in enumerate(candidates):
-                remaining = deadline - asyncio.get_running_loop().time()
+                remaining = budget.when() - asyncio.get_running_loop().time()
                 try:
-                    # The descriptor proves readiness and the connection is reused for the turn.
+                    # The descriptor also opens the HTTP connection used for generation.
                     async with asyncio.timeout(max(0.0, remaining) * 0.8 if index < len(candidates) - 1 else remaining):
-                        return await self._descriptor(base)
+                        selected = await self._descriptor(base)
+                    self._short_selection = (time.monotonic() + SHORT_SELECTION_TTL_S, selected)
+                    return selected
                 except (TimeoutError, httpx.HTTPError, ValueError):
                     if index == len(candidates) - 1:
                         raise
             raise ValueError('Global model unavailable: no resolvable Faustus endpoint')
-        base = await self._origin(urls, deadline)
-        return await self._descriptor(base)
+
+    async def _cancel_short_preparation(self):
+        if self._short_preparation is not None:
+            self._short_preparation.cancel()
+            await asyncio.gather(self._short_preparation, return_exceptions=True)
 
     async def _descriptor(self, base):
         headers = {'Authorization': 'Bearer ' + self.config.faustus_token} if self.config.faustus_token else {}
@@ -237,9 +269,15 @@ class GlobalLink(Link):
     async def short_json_chat(self, messages, *, timeout, max_tokens):
         with global_job():
             async with asyncio.timeout(timeout) as budget:
-                await self.selection(deadline=budget.when(), descriptor_first=True)
-                return await self.chat(messages, effort="off", max_tokens=max_tokens, temperature=0,
-                                       response_format={"type": "json_object"})
+                selected = await self.selection(deadline=budget.when(), descriptor_first=True)
+                try:
+                    return await self.chat(messages, effort="off", max_tokens=max_tokens, temperature=0,
+                                           response_format={"type": "json_object"})
+                except httpx.HTTPStatusError as error:
+                    if (error.response.status_code in (404, 409, 410) and self._short_selection
+                            and self._short_selection[1] is selected):
+                        self._short_selection = None
+                    raise
 
     async def _post_chat(self, provider, url, payload, level):
         selected = await self.selection()

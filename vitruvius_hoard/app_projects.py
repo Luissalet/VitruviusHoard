@@ -170,7 +170,7 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 
 
 class AppProjects:
-    def __init__(self, data_dir, host_port=5191, *, token_name=None, form_chat=None):
+    def __init__(self, data_dir, host_port=5191, *, token_name=None, form_chat=None, prepare_form_chat=None):
         self.root = Path(data_dir) / "app-projects"
         self.root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -179,6 +179,7 @@ class AppProjects:
         self.host_port = host_port
         self.token_name = token_name or (lambda _: None)
         self.form_chat = form_chat
+        self.prepare_form_chat = prepare_form_chat
         self.canvas = CanvasSessions()
         self.revision_events = RevisionEvents()
 
@@ -794,6 +795,8 @@ class AppProjects:
             project = self.get(id, revision)
             selected = project["selected_revision"]
             status = self.status(id)
+            if FORM_ENTRY in project["files"] and self.prepare_form_chat is not None:
+                self.prepare_form_chat()
             if status["state"] == "running" and status["revision"] == selected:
                 return status
             root = self._directory(id)

@@ -5,7 +5,6 @@ import json
 import math
 import re
 from time import monotonic
-from unicodedata import normalize
 
 import httpx
 from hoard_link.errors import HoardLinkError
@@ -14,6 +13,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from .voice_directory import VoiceCall
+from .form_rules import HOURS, fold as _fold, form_rules
 
 
 MODEL_TIMEOUT_S = 3.0
@@ -21,10 +21,6 @@ MODEL_MAX_TOKENS = 96
 _FORMATS = FormatChecker()
 _REGISTRY = Registry()
 _RULES = ThreadPoolExecutor(max_workers=8, thread_name_prefix="form-dictation")
-_HOURS = (
-    "cero zero", "una uno one", "dos two", "tres three", "cuatro four", "cinco five", "seis six",
-    "siete seven", "ocho eight", "nueve nine", "diez ten", "once eleven", "doce twelve",
-)
 _SYSTEM = (
     "Extract ONLY requested form fields from the utterance. Return a compact JSON object keyed by field id. "
     "Omit unrelated, unsupported or unspecified values. Copy free text literally, without the field label. "
@@ -32,10 +28,6 @@ _SYSTEM = (
     "If it fits several choices (e.g. morning with 10:00 and 12:00), return those values as an array. "
     "A day or a broad time is not an exact hour. Never invent names or choices. No explanation."
 )
-
-
-def _fold(text):
-    return "".join(c for c in normalize("NFKD", text.casefold()) if not 0x300 <= ord(c) <= 0x36f)
 
 
 def _literal(text, value):
@@ -71,7 +63,7 @@ def _quote(text, value, labels):
             return exact[0]
         hour, minute = map(int, value.split(":"))
         if minute == 0:
-            words = [str(hour), *(_HOURS[hour].split() if hour < len(_HOURS) else ())]
+            words = [str(hour), *(HOURS[hour].split() if hour < len(HOURS) else ())]
             hour_pattern = r"(?:" + "|".join(words) + r")"
             folded = _fold(text.strip())
             if re.fullmatch(hour_pattern + r"[.!?]?", folded):
@@ -197,11 +189,33 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
         steps = [rules_step, model_step] if model_tried else [rules_step]
         return VoiceCall({**value, "understanding_steps": steps}, ms=rules_step["ms"])
 
+    started_local = monotonic()
+    proposal, exclusive = form_rules(text, targets, context, correction)
+    if proposal:
+        local = _apply(empty, proposal, targets, required, context, draft, text, {})
+        settled = set(local["fields"]) | {item["field"] for item in local["ambiguous"]}
+    else:
+        local, settled = empty, set()
+    local_ms = (monotonic() - started_local) * 1000
+    if settled and (exclusive or settled >= targets.keys()):
+        return wire(local, {"method": "rules", "ms": local_ms}, False)
+    targets = {key: spec for key, spec in targets.items() if key not in settled}
+
+    def merge_rules(remote):
+        if not settled:
+            return remote
+        fields = {**(remote.get("fields") or {}), **local["fields"]}
+        ambiguous = [item for item in (remote.get("ambiguous") or []) if item.get("field") not in settled]
+        ambiguous.extend(local["ambiguous"])
+        return {**remote, "fields": fields, "ambiguous": ambiguous,
+                "changed": list(dict.fromkeys([*(remote.get("changed") or []), *local["changed"]]))}
+
     if not targets or submit is None:
         result = rules_call()
         if not result.value or result.value.get("is_final") is not True:
-            return result
-        return wire(result.value, {"method": "rules", "ms": result.ms}, bool(targets))
+            return wire(local, {"method": "rules", "ms": local_ms}, bool(targets)) if settled else result
+        value = _apply(merge_rules(result.value), {}, targets, required, context, draft, text, {})
+        return wire(value, {"method": "rules", "ms": local_ms + result.ms}, bool(targets))
 
     start = monotonic()
     deadline = start + MODEL_TIMEOUT_S
@@ -217,7 +231,7 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
     rule_result = None
     rule_step = {"method": "rules", "ms": 0, "outcome": "superseded"}
     proposal = {}
-    value = empty
+    value = local
     try:
         while waiting:
             done, waiting = wait(waiting, timeout=max(0.0, deadline - monotonic()), return_when=FIRST_COMPLETED)
@@ -225,19 +239,19 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
                 break
             if rules in done:
                 rule_result = rules.result()
-                rule_step = {"method": "rules", "ms": rule_result.ms}
+                rule_step = {"method": "rules", "ms": local_ms + rule_result.ms}
                 if rule_result.value and rule_result.value.get("is_final") is True:
-                    value = rule_result.value
+                    value = merge_rules(rule_result.value)
                     if _complete(value, targets):
                         model_step.update(outcome="superseded", ms=(finished.get("model", monotonic()) - start) * 1000)
-                        return wire(value, rule_step, True)
+                        return wire(_apply(value, {}, targets, required, context, draft, text, {}), rule_step, True)
                 else:
                     rule_step["outcome"] = "unavailable"
             if model in done:
                 model_step["ms"] = (finished.get("model", monotonic()) - start) * 1000
                 proposal = _result(model, model_step)
             if proposal and rule_result is None:
-                early = _apply(empty, proposal, targets, required, context, draft, text, model_step)
+                early = _apply(local, proposal, targets, required, context, draft, text, model_step)
                 if _complete(early, targets):
                     rule_step["ms"] = (monotonic() - start) * 1000
                     return wire(early, rule_step, True)
