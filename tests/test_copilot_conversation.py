@@ -1,4 +1,5 @@
 """The Canvas route and launcher use the selected Faustus and rename an existing session."""
+import asyncio
 import base64
 import os
 from urllib.parse import parse_qs
@@ -48,18 +49,27 @@ PAGE = """
 
 def fake_app(monkeypatch, tmp_path, modules=(copilot, where)):
     relay, placement = modules
-    state = {"online": {PC, SPARK}, "name": "Título inicial", "rename_status": 200, "patches": []}
+    state = {"online": {PC, SPARK}, "name": "Título inicial", "rename_status": 200, "patches": [],
+             "delays": {}, "probes": [], "cancelled": []}
     document = {"location": "sparks", "node": "Spark 3", "urls": {"faustus": SPARK}, "job": {"running": False}}
     monkeypatch.setattr(placement, "current", lambda hub=None: document)
 
-    def upstream(request):
+    async def upstream(request):
         base = str(request.url).removesuffix(request.url.path)
         assert base in {PC, SPARK}
         assert request.headers["authorization"] == "Bearer fixture-token"
+        path = request.url.path
+        capabilities = request.method == "GET" and path == "/api/hoard-copilot/capabilities"
+        if capabilities:
+            state["probes"].append(base)
+            try:
+                await asyncio.sleep(state["delays"].get(base, 0))
+            except asyncio.CancelledError:
+                state["cancelled"].append(base)
+                raise
         if base not in state["online"]:
             raise httpx.ConnectError("Offline", request=request)
-        path = request.url.path
-        if request.method == "GET" and path == "/api/hoard-copilot/capabilities":
+        if capabilities:
             return httpx.Response(200, json={"contract_version": "1.0"})
         if request.method == "GET" and path == "/api/hoard-copilot/panel.js":
             return httpx.Response(200, text=PANEL, headers={"content-type": "application/javascript"})
@@ -110,6 +120,20 @@ def test_destination_tracks_the_endpoint_that_answers(monkeypatch, tmp_path, mod
     assert failed.status_code == 503 and failed.headers[HEADER] == "unavailable"
 
 
+@pytest.mark.parametrize("modules", [(copilot, where), (shared_copilot, shared_where)])
+def test_fast_destination_wins_and_is_preferred_on_recheck(monkeypatch, tmp_path, modules):
+    client, state = fake_app(monkeypatch, tmp_path, modules)
+    state["delays"][PC] = 3
+    assert client.get("/api/copilot/info").json()["destination"] == "spark:3"
+    assert state["probes"] == [PC, SPARK]
+    assert state["cancelled"] == [PC]
+
+    state["probes"].clear()
+    state["delays"].clear()
+    assert client.get("/api/copilot/info").json()["destination"] == "spark:3"
+    assert state["probes"] == [SPARK]
+
+
 def test_relay_passes_the_native_rename_form(monkeypatch, tmp_path):
     client, state = fake_app(monkeypatch, tmp_path)
     envelope = {"path": RENAME, "method": "PATCH", "content_type": "application/x-www-form-urlencoded",
@@ -125,8 +149,14 @@ def test_inline_conversation_renames_and_handles_unavailable_faustus(monkeypatch
     playwright = pytest.importorskip("playwright.sync_api")
     client, state = fake_app(monkeypatch, tmp_path)
 
+    pending_info = []
+    hold_info = True
+
     def respond(route):
         request = route.request
+        if hold_info and request.url == HOST + "/api/copilot/info":
+            pending_info.append(route)
+            return
         if not request.url.startswith(HOST + "/"):
             return route.abort()
         response = client.request(request.method, request.url, content=request.post_data_buffer,
@@ -140,7 +170,12 @@ def test_inline_conversation_renames_and_handles_unavailable_faustus(monkeypatch
             page.route("**/*", respond)
             state["online"] = set()
             page.goto(HOST)
-            page.get_by_role("button", name="Abrir conversación").click()
+            with page.expect_request(HOST + "/api/copilot/info"):
+                page.get_by_role("button", name="Abrir conversación").click()
+            playwright.expect(page.get_by_text("Buscando Faustus…", exact=True)).to_be_visible()
+            assert len(pending_info) == 1
+            hold_info = False
+            respond(pending_info.pop())
             playwright.expect(page.get_by_role("alert")).to_contain_text("Ningún Faustus responde")
             state["online"] = {PC, SPARK}
             page.get_by_role("button", name="Reintentar").click()

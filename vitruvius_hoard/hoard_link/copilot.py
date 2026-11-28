@@ -119,33 +119,53 @@ def make_copilot_router(app_id, data_dir, *, faustus_urls=None, token=None, app_
         pass
     space_id = space_file.read_text(encoding="utf-8").strip()
     selected = None
+    last_good = None
 
     async def locate(*, recheck=False):
         import asyncio
         import time
         from . import where
 
-        nonlocal selected
+        nonlocal selected, last_good
         previous = selected
         if not recheck and previous and time.monotonic() < previous["until"]:
             return previous
-        # The placed endpoint is a fallback. A configured endpoint that answers keeps precedence.
         placement = await asyncio.to_thread(where.current, config.hub_url)
-        candidates = where.faustus_urls(urls, placement)
+        candidates = list(dict.fromkeys(where.faustus_urls(urls, placement)))
+        if last_good in candidates:
+            candidates.remove(last_good)
+            candidates.insert(0, last_good)
+
         async with httpx.AsyncClient(timeout=3, trust_env=False) as client:
-            for base in candidates:
+            async def probe(base, preferred):
+                # Give the last good or configured first endpoint a short head start.
+                if not preferred:
+                    await asyncio.sleep(0.15)
                 try:
                     response = await client.get(base + "/api/hoard-copilot/capabilities", headers=headers,
                                                 timeout=3 if base.startswith("http://127.") else 8)
-                    if response.status_code != 200:
-                        continue
-                    capabilities = response.json()
-                    if isinstance(capabilities, dict) and capabilities.get("contract_version"):
+                    if response.status_code == 200:
+                        capabilities = response.json()
+                        if isinstance(capabilities, dict) and capabilities.get("contract_version"):
+                            return base
+                except (httpx.HTTPError, ValueError):
+                    pass
+                return None
+
+            probes = [asyncio.create_task(probe(base, index == 0)) for index, base in enumerate(candidates)]
+            try:
+                for completed in asyncio.as_completed(probes):
+                    base = await completed
+                    if base is not None:
+                        last_good = base
                         selected = {"url": base, "destination": where.faustus_destination(base, placement),
                                     "until": time.monotonic() + 20}
                         return selected
-                except (httpx.HTTPError, ValueError):
-                    continue
+            finally:
+                for task in probes:
+                    task.cancel()
+                await asyncio.gather(*probes, return_exceptions=True)
+
         if selected is previous:
             selected = None
         raise HTTPException(503, "Faustus copilot is unavailable on the configured endpoints",

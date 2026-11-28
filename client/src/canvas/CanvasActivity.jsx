@@ -27,8 +27,7 @@ export function CanvasConversation({ es, projectId }) {
 
   return <section className="canvas-inspector-section">
     <button type="button" className="btn btn-sm" aria-controls="canvas-conversation"
-      aria-expanded={open} onClick={show}>{open ? (es ? "Ir al chat" : "Go to chat")
-        : (es ? "Abrir conversación" : "Open conversation")}</button>
+      aria-expanded={open} onClick={show}>{es ? "Abrir conversación" : "Open conversation"}</button>
     <div id="canvas-conversation" ref={slot} data-hoard-copilot-inline-slot />
   </section>;
 }

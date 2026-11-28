@@ -337,6 +337,7 @@ LAUNCHER_JS = r"""
     const es = lang() === 'es';
     const spark = /^spark:(\d+)$/.exec(value);
     const labels = {
+      searching: es ? 'Buscando Faustus…' : 'Looking for Faustus…',
       pc: 'Faustus · PC',
       spark: 'Faustus · Spark',
       remote: es ? 'Faustus · Servidor remoto' : 'Faustus · Remote server',
@@ -349,15 +350,26 @@ LAUNCHER_JS = r"""
     conversationControls.destination.hidden = false;
   }
 
+  let discovery = 0;
   async function readInfo() {
-    const response = await fetch('/api/copilot/info', { headers: APP_HEADERS, credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) {
-      showDestination(response.headers.get('X-Hoard-Copilot-Destination'));
-      throw new Error((await response.text()) || ('HTTP ' + response.status));
+    const request = ++discovery;
+    showDestination('searching');
+    let destination = 'unavailable';
+    try {
+      const response = await fetch('/api/copilot/info', { headers: APP_HEADERS, credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) {
+        destination = response.headers.get('X-Hoard-Copilot-Destination') || 'unavailable';
+        throw new Error((await response.text()) || ('HTTP ' + response.status));
+      }
+      const data = await response.json();
+      destination = data.destination;
+      return data;
+    } finally {
+      if (request === discovery) {
+        if (destination) showDestination(destination);
+        else conversationControls.destination.hidden = true;
+      }
     }
-    const data = await response.json();
-    showDestination(data.destination);
-    return data;
   }
 
   function syncRename(element) {
@@ -505,6 +517,13 @@ LAUNCHER_JS = r"""
 
   async function mount(body, title) {
     info = await readInfo();
+    if (aside?.hasAttribute('data-inline')) {
+      const status = document.createElement('p');
+      status.className = 'hoard-copilot-loading';
+      status.setAttribute('role', 'status');
+      status.textContent = lang() === 'es' ? 'Cargando conversación…' : 'Loading conversation…';
+      body.replaceChildren(status);
+    }
     title.textContent = 'Faustus · ' + (info.app_name || info.app_id);
     await import(info.panel_url);
     // One conversation per app data space (and per project when the app names one): the route of every turn travels
@@ -618,13 +637,7 @@ LAUNCHER_JS = r"""
   }
 
   function attach(body, title) {
-    if (aside?.hasAttribute('data-inline')) {
-      const status = document.createElement('p');
-      status.className = 'hoard-copilot-loading';
-      status.setAttribute('role', 'status');
-      status.textContent = lang() === 'es' ? 'Cargando conversación…' : 'Loading conversation…';
-      body.replaceChildren(status);
-    }
+    if (aside?.hasAttribute('data-inline')) body.replaceChildren();
     mounting = mount(body, title).catch((error) => { panel = null; syncRename(null); conversationControls.destination.hidden = true; unavailable(body, title, error); }).finally(() => { mounting = null; });
     return mounting;
   }
