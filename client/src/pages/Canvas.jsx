@@ -114,6 +114,16 @@ export default function Canvas({ param }) {
     if (loadedProjectId && loadedProjectId === param) rememberProject(loadedProjectId);
   }, [loadedProjectId, param]);
 
+  const loadedProjectName = project?.name;
+  useEffect(() => {
+    if (!loadedProjectId || loadedProjectId !== param || projectsState !== "ready") return;
+    setProjects((items) => {
+      const listed = items.find((item) => item.id === loadedProjectId);
+      if (!listed || listed.name === loadedProjectName) return items;
+      return items.map((item) => item === listed ? { ...item, name: loadedProjectName } : item);
+    });
+  }, [loadedProjectId, loadedProjectName, param, projectsState]);
+
   useEffect(() => {
     setProject(null); setPreview(null); setProjectError(false); setComments([]); setLiveSteps([]);
     if (param) loadProject(param);
