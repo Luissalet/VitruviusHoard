@@ -1,6 +1,8 @@
 """Vendored web guides, their search and reader, the legacy scan and the cold MCP tools."""
 import asyncio
+import os
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -105,7 +107,8 @@ def test_host_catalogue_and_routes(tmp_path, monkeypatch):
     monkeypatch.setenv("HOARD_EVENTS", "0")
     from vitruvius_hoard.software.host import create_app
     with TestClient(create_app(), base_url="http://127.0.0.1:5191") as client:
-        token = (tmp_path / "mcp-token").read_text().strip()
+        token_file = Path(os.environ.get("VITRUVIUS_TOKEN_FILE") or tmp_path / "mcp-token")
+        token = token_file.read_text().strip()
         names = {row["name"] for row in client.get("/api/agent/tools").json()["tools"]}
         assert {"web_guide_search", "web_guide_read", "web_legacy_scan"} <= names
         assert client.get("/api/webguide", params={"query": "dialog"}).json()["guides"]

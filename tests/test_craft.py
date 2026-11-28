@@ -1,8 +1,10 @@
 """Craft library: textures, heroes, 3D scenes, dashboard rules, the model-site recipe, the critique rules and the cold tools."""
 import asyncio
+import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -125,7 +127,8 @@ def test_cold_tools_and_host_routes(tmp_path, monkeypatch):
     monkeypatch.setenv("HOARD_EVENTS", "0")
     from vitruvius_hoard.software.host import create_app
     with TestClient(create_app(), base_url="http://127.0.0.1:5191") as client:
-        token = (tmp_path / "mcp-token").read_text().strip()
+        token_file = Path(os.environ.get("VITRUVIUS_TOKEN_FILE") or tmp_path / "mcp-token")
+        token = token_file.read_text().strip()
         names = {row["name"] for row in client.get("/api/agent/tools").json()["tools"]}
         assert {"craft_search", "craft_read", "craft_page", "craft_model_site"} <= names
         for url in ("/craft/", "/craft/textures/", "/craft/dashboard/index.html", "/craft/scenes.js", "/craft/heroes/index-list/index.html",
