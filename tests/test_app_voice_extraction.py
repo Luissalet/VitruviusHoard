@@ -340,6 +340,58 @@ def test_a_service_cannot_put_back_a_previously_rejected_choice():
     assert result["rejected_options"] == {"franja": ["10:00"]}
 
 
+def test_spoken_booking_details_are_grounded_in_the_actual_form_options():
+    schema = {"type": "object", "required": ["concert", "date", "seats", "group_name"], "properties": {
+        "concert": {"type": "string", "enum": ["aurora", "bruma"]},
+        "date": {"type": "string", "format": "date"},
+        "seats": {"type": "integer", "title": "Plazas", "minimum": 1, "maximum": 100},
+        "group_name": {"type": "string", "title": "Nombre del grupo", "maxLength": 80},
+    }}
+    labels = {"concert": {"aurora": "Aurora · 15 de diciembre", "bruma": "Bruma · 20 de diciembre"},
+              "date": {"2026-12-15": "Martes 15 de diciembre", "2026-12-20": "Domingo 20 de diciembre"}}
+
+    def untouched(*_, **__):
+        pytest.fail("The booking details should be understood without the model")
+
+    options = {"version": DICTATION_VERSION, "schema": schema, "context": {"option_labels": labels}}
+    first = understand_form(untouched, untouched, options,
+                            "Vamos de parte del Coro de la Vega. Preferimos la función del domingo veinte de diciembre.").value
+    draft = {key: field["value"] for key, field in first["fields"].items()}
+    assert draft == {"concert": "bruma", "date": "2026-12-20", "group_name": "Coro de la Vega"}
+    assert first["missing"] == ["seats"]
+    options["context"]["draft"] = draft
+    second = understand_form(untouched, untouched, options, "Contad con cuarenta personas de nuestro coro.").value
+    assert second["fields"]["seats"]["value"] == 40
+    assert second["missing"] == []
+
+
+@pytest.mark.asyncio
+async def test_streaming_short_chat_stops_at_a_complete_json_object(monkeypatch):
+    origin = "http://test.invalid"
+    monkeypatch.setattr(LinkConfig, "faustus_candidates", lambda _: [origin])
+
+    class Events(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            for content in ('{"seats":', "40}"):
+                event = json.dumps({"choices": [{"delta": {"content": content}}]})
+                yield ("data: " + event + "\n\n").encode()
+            pytest.fail("Reading should stop once the JSON object is complete")
+
+    def handler(request):
+        if request.method == "GET":
+            return httpx.Response(200, json={"endpoint_id": "family", "connection_revision": "8", "model": "sample",
+                                             "chat_path": "/api/global-model/v1/chat/completions"})
+        payload = json.loads(request.content)
+        assert payload["stream"] and not payload["chat_template_kwargs"]["enable_thinking"]
+        assert payload["response_format"] == {"type": "json_object"}
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=Events())
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        link = GlobalLink(LinkConfig(faustus_urls=(origin,)), client=client)
+        result = await link.short_json_chat([{"role": "user", "content": "JSON"}], timeout=1, max_tokens=16)
+    assert json.loads(result.text) == {"seats": 40}
+
+
 @pytest.mark.asyncio
 async def test_preparing_once_reuses_descriptor_and_discards_a_stale_revision(monkeypatch):
     origin = "http://test.invalid"

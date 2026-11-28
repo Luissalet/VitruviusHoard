@@ -25,7 +25,7 @@ const COPY = {
     confirm: "Si están bien, di «sí, confirmo» para enviarlo.",
     noChanges: "No he encontrado un cambio para el formulario. Di el nombre del campo y el valor.",
     submitted: "He solicitado el envío del formulario.", invalid: "Revisa los campos marcados antes de enviar.",
-    accepted: /^(?:sí[,.]?\s*)?confirmo[.!]?$/iu,
+    accepted: /^(?:s[ií][,.]?\s+)?confirmo[.!]?$/iu,
     repair: /^(?:no[,\s]+)?mejor\b/iu,
   },
   en: {
@@ -145,6 +145,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   let pending;
   let speech;
   let lastChanged;
+  let lastTouched;
   let asked;
   let ready;
   let latest;
@@ -285,9 +286,15 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     try {
       const started = performance.now();
       const values = draft();
-      if (allowSubmit && ready === JSON.stringify(values) && copy.accepted.test(text.trim())) {
+      if (copy.accepted.test(text.trim())) {
         trace(turn, "understand", "Vitruvius", performance.now() - started);
         const began = performance.now();
+        if (!allowSubmit || ready !== JSON.stringify(values)) {
+          const missing = required.find(name => values[name] === undefined);
+          trace(turn, "execute", "Vitruvius", performance.now() - began);
+          respond(turn, missing ? copy.ask(label(missing)) : copy.review);
+          return;
+        }
         const valid = HTMLFormElement.prototype.reportValidity.call(form);
         if (valid) {
           ready = undefined;
@@ -303,13 +310,16 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       const correction = copy.repair.test(text);
       const field = (correction && lastChanged) || asked;
       try {
-        const option_labels = Object.fromEntries(entries.filter(([, spec]) => Array.isArray(spec.enum)).map(([name, spec]) => [
-          name, Object.fromEntries(spec.enum.map(value => [String(value), choiceLabel(name, value)])),
-        ]));
+        const option_labels = Object.fromEntries(entries.flatMap(([name, spec]) => {
+          const control = controlsFor(form, name)[0];
+          const values = spec.enum ?? (spec.format === "date" && control?.tagName === "SELECT"
+            ? [...control.options].filter(option => !option.disabled && option.value).map(option => option.value) : []);
+          return values.length ? [[name, Object.fromEntries(values.map(value => [String(value), choiceLabel(name, value)]))]] : [];
+        }));
         const signal = AbortSignal.any([active.signal, AbortSignal.timeout(12_000)]);
         understood = await request("form-understand", JSON.stringify({version: "cyrano.dictation/v0",
           language: locale, schema, text, vocabulary: aliases, correction,
-          context: {draft: values, option_labels, field, last_changed: lastChanged,
+          context: {draft: values, option_labels, field, last_changed: lastTouched,
             rejected_options: Object.fromEntries(rejectedOptions)}}),
         "application/json", signal);
         if (understood.version !== "cyrano.dictation/v0" || understood.is_final !== true) {
@@ -331,12 +341,13 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
           step.outcome === "unavailable" || step.outcome === "timeout", "understand-" + step.method);
       }
       const began = performance.now();
+      const beforeApply = draft();
       const cited = [];
       const cleared = [];
       let lastApplied;
       for (const [name, spec] of entries) {
         const controls = controlsFor(form, name);
-        if (!Object.is(readField(controls, spec), values[name])) continue;
+        if (!Object.is(beforeApply[name], values[name])) continue;
         const denied = understood.rejected_options?.[name];
         if (Array.isArray(denied) && Array.isArray(spec.enum)) {
           rejectedOptions.set(name, denied.filter(choice => spec.enum.includes(choice)));
@@ -356,7 +367,8 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
           cited.push(name);
         }
       }
-      lastChanged = lastApplied || cited.at(-1) || cleared.at(-1) || lastChanged;
+      const changed = lastApplied || cited.at(-1) || cleared.at(-1);
+      if (changed) lastChanged = lastTouched = changed;
       trace(turn, "execute", "Vitruvius", performance.now() - began);
       const current = draft();
       const ambiguous = understood.ambiguous?.find(({field}) => Object.hasOwn(schema.properties, field));
@@ -440,13 +452,13 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     if (!event.isTrusted || !Object.hasOwn(schema.properties, name) || !controlsFor(form, name).includes(event.target)) return;
     rejectedOptions.delete(name);
     validated.delete(name);
-    lastChanged = name;
+    lastTouched = name;
     ready = undefined;
   }
   function onFormReset() {
     rejectedOptions.clear();
     validated.clear();
-    lastChanged = asked = ready = undefined;
+    lastChanged = lastTouched = asked = ready = undefined;
   }
   form.addEventListener("input", onFormEdit);
   form.addEventListener("reset", onFormReset);

@@ -14,20 +14,18 @@ from referencing.exceptions import Unresolvable
 
 from .voice_directory import VoiceCall
 from .form_rules import HOURS, fold as _fold, form_rejections, form_rules, name_candidate, person_field
+from .form_values import spoken_form_values
 
 
 MODEL_TIMEOUT_S = 3.0
-MODEL_MAX_TOKENS = 96
+MODEL_MAX_TOKENS = 64
 _FORMATS = FormatChecker()
 _REGISTRY = Registry()
 _RULES = ThreadPoolExecutor(max_workers=8, thread_name_prefix="form-dictation")
 _SYSTEM = (
-    "Extract ONLY requested form fields from the utterance. Return a compact JSON object keyed by field id. "
-    "Omit unrelated, unsupported or unspecified values. Copy free text literally, without the field label. "
-    "For choices output the exact value, not its label. Choose one only if the utterance singles it out. "
-    "Never return a rejected value or a pronoun in place of a person's name. "
-    "If it fits several choices (e.g. morning with 10:00 and 12:00), return those values as an array. "
-    "A day or a broad time is not an exact hour. Never invent names or choices. No explanation."
+    "Return only a JSON object of explicitly supported fields, keyed by id. Omit unknown or rejected values. "
+    "Copy names literally. For choices use exact values; return an array if several fit. "
+    "Do not infer a year, exact time or name."
 )
 
 
@@ -161,7 +159,7 @@ def _complete(value, targets):
     return isinstance(fields, dict) and all(_valid_rule(fields, key, spec) for key, spec in targets.items())
 
 
-def _apply(value, proposal, targets, required, context, draft, text, model_step):
+def _apply(value, proposal, targets, required, context, draft, text, model_step, *, local_quotes=None):
     rules_fields = value.get("fields")
     fields = dict(rules_fields) if isinstance(rules_fields, dict) else {}
     ambiguities = [row for row in (value.get("ambiguous") or []) if isinstance(row, dict)]
@@ -179,7 +177,7 @@ def _apply(value, proposal, targets, required, context, draft, text, model_step)
             continue
         if not _valid(proposed, spec) or person_field(key, spec) and not name_candidate(proposed):
             continue
-        quote = _quote(text, proposed, _labels(context, key, proposed))
+        quote = (local_quotes or {}).get(key) or _quote(text, proposed, _labels(context, key, proposed))
         if quote and isinstance(candidates, list):
             mentioned = [choice for choice in candidates if _valid(choice, spec)
                          and _quote(text, choice, _labels(context, key, choice))]
@@ -230,6 +228,8 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
     targets = {key: spec for key, spec in targets.items() if key not in rejected}
     draft = {key: value for key, value in draft.items() if key not in cleared}
     proposal, exclusive, alternatives = form_rules(text, targets, context, correction)
+    spoken, quotes = spoken_form_values(text, targets, context)
+    proposal.update(spoken)
     alternatives.update({key: choices for key, choices in rejected.items() if choices is not None})
     if proposal or alternatives or rejected:
         seeded = {**empty, "ambiguous": [
@@ -237,11 +237,15 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
                                            and _valid(option, properties[key])]}
             for key, choices in alternatives.items()
         ]}
-        local = _apply(seeded, proposal, targets, required, context, draft, text, {})
+        local = _apply(seeded, proposal, targets, required, context, draft, text, {}, local_quotes=quotes)
         settled = set(rejected) | set(local["fields"]) | {item["field"] for item in local["ambiguous"]}
     else:
         local, settled = empty, set()
     local_ms = (monotonic() - started_local) * 1000
+    if any(targets[key].get("format") == "date" for key in spoken.keys() & local["fields"].keys()):
+        # A spoken date and its associated choices do not assert a quantity.
+        exclusive = exclusive or all(spec.get("type") in ("integer", "number") for key, spec in targets.items()
+                                     if key not in settled)
     if rejection_only or settled and (exclusive or settled >= targets.keys()):
         if not settled:
             local = _apply(local, {}, targets, required, context, draft, text, {})

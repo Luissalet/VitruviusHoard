@@ -8,12 +8,13 @@ from contextvars import ContextVar
 from functools import wraps
 from concurrent.futures import Future
 import asyncio
+import json
 import threading
 import time
 import httpx
 from hoard_link import Link, LinkConfig, where
 from hoard_link._sync import SyncFacade
-from hoard_link.types import Resolution
+from hoard_link.types import ChatResult, Resolution, Usage
 from .owned_http import OwnedAsyncClient,close_client
 
 _job = ContextVar('vitruvius_global_job', default=None)
@@ -271,13 +272,49 @@ class GlobalLink(Link):
             async with asyncio.timeout(timeout) as budget:
                 selected = await self.selection(deadline=budget.when(), descriptor_first=True)
                 try:
-                    return await self.chat(messages, effort="off", max_tokens=max_tokens, temperature=0,
-                                           response_format={"type": "json_object"})
+                    resolution = await self.resolve("llm")
+                    payload = self._chat_payload(resolution, messages, None, max_tokens, 0, {"type": "json_object"}, "off")
+                    payload.update({"stream": True, **{"expected_" + key: selected[key]
+                                    for key in ("endpoint_id", "model", "connection_revision")}})
+                    started = time.monotonic()
+                    async with self._client.stream("POST", resolution.url, json=payload,
+                                                   headers=selected["headers"]) as response:
+                        response.raise_for_status()
+                        text = await self._first_json_object(response)
+                    return ChatResult(text, resolution.model, resolution.provider, Usage(),
+                                      (time.monotonic() - started) * 1000, effort="off", finish_reason="stop")
                 except httpx.HTTPStatusError as error:
                     if (error.response.status_code in (404, 409, 410) and self._short_selection
                             and self._short_selection[1] is selected):
                         self._short_selection = None
                     raise
+
+    async def _first_json_object(self, response):
+        if "text/event-stream" not in response.headers.get("content-type", ""):
+            await response.aread()
+            choices = response.json().get("choices") or [{}]
+            text = (choices[0].get("message") or {}).get("content")
+            if choices[0].get("finish_reason") == "stop" and isinstance(text, str) and isinstance(json.loads(text), dict):
+                return text
+            raise ValueError("Global generation returned no complete JSON object")
+
+        text = ""
+        async for line in response.aiter_lines():
+            if not line.startswith("data:"):
+                continue
+            event = line[5:].strip()
+            if event == "[DONE]":
+                break
+            choice = (json.loads(event).get("choices") or [{}])[0]
+            content = (choice.get("delta") or {}).get("content")
+            if isinstance(content, str):
+                text += content
+                try:
+                    if isinstance(json.loads(text), dict):
+                        return text
+                except json.JSONDecodeError:
+                    pass
+        raise ValueError("Global generation returned no complete JSON object")
 
     async def _post_chat(self, provider, url, payload, level):
         selected = await self.selection()
