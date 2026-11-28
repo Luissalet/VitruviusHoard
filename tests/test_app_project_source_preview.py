@@ -13,13 +13,12 @@ from vitruvius_hoard.app_projects import AppProjects, starter_files
 
 def test_preview_repeated_source_edit_and_undo(tmp_path):
     projects = AppProjects(tmp_path)
-    initial = projects.create("Preview board")
-    project_id = initial["id"]
     files = {
         "layout.html": "<!doctype html>\r\n<html><body><main>{{content}}</main><aside>{{content}}</aside></body></html>",
         "pages/index.html": "\ufeff<h2>Original</h2>\r\n<div>{{table}}</div>",
     }
-    original = projects.update(project_id, files, initial["revision"])
+    original = projects.create("Preview board", files=files)
+    project_id = original["id"]
     vsrc = "pages/index.html:1:2"
     generated = "pages/index.html:2:6"
     try:
@@ -68,12 +67,11 @@ def test_preview_repeated_source_edit_and_undo(tmp_path):
 
 def test_same_revision_concurrent_edit_has_one_winner(tmp_path):
     projects = AppProjects(tmp_path)
-    project = projects.create("Race")
-    start = projects.update(project["id"], {"pages/index.html": "<h2>Initial</h2>"}, project["revision"])
+    start = projects.create("Race", files={"pages/index.html": "<h2>Initial</h2>"})
 
     def write(title):
         try:
-            return projects.edit_source(project["id"], "pages/index.html:1:1", "h2", start["revision"],
+            return projects.edit_source(start["id"], "pages/index.html:1:1", "h2", start["revision"],
                                         {"kind": "text", "value": title})
         except ValueError as error:
             return str(error)
@@ -83,7 +81,7 @@ def test_same_revision_concurrent_edit_has_one_winner(tmp_path):
     saved = [result for result in results if isinstance(result, dict)]
     assert len(saved) == 1 and "undo" in saved[0]
     assert any(isinstance(result, str) and "The revision changed." in result for result in results)
-    assert projects.get(project["id"])["revision"] == saved[0]["revision"]
+    assert projects.get(start["id"])["revision"] == saved[0]["revision"]
 
 
 @pytest.mark.parametrize("template", ["work-board", "booking"])

@@ -27,8 +27,8 @@ CSS = """:root { --accent: #f90; --step: 1.5rem; --alias: var(--step) }
 @pytest.fixture
 def opened(tmp_path):
     projects = AppProjects(tmp_path)
-    original = projects.create("Canvas", description="Generated description")
-    project = projects.update(original["id"], {"pages/index.html": PAGE, "assets/style.css": CSS}, original["revision"])
+    project = projects.create("Canvas", description="Generated description",
+                              files={"pages/index.html": PAGE, "assets/style.css": CSS})
     try:
         projects.preview(project["id"])
         yield projects, project
@@ -168,9 +168,8 @@ def test_new_class_is_written_once_and_reused(opened):
 
 def test_inline_declarations_keep_unrelated_properties_and_use_separate_rule(tmp_path):
     projects = AppProjects(tmp_path)
-    project = projects.create("Inline")
     page = '<article class="card" style="padding:8px;color:red">Example</article>'
-    project = projects.update(project["id"], {"pages/index.html": page, "assets/style.css": CSS}, project["revision"])
+    project = projects.create("Inline", files={"pages/index.html": page, "assets/style.css": CSS})
     try:
         projects.preview(project["id"])
         saved = edit(projects, project, 1, "padding-top", 18)
@@ -184,11 +183,10 @@ def test_inline_declarations_keep_unrelated_properties_and_use_separate_rule(tmp
 
 def test_repeat_without_stylesheet_saves_one_link_and_confirms_both_instances(tmp_path):
     projects = AppProjects(tmp_path)
-    original = projects.create("Repeated")
-    project = projects.update(original["id"], {
+    project = projects.create("Repeated", files={
         "layout.html": "<!doctype html><html><head></head><body>{{content}}{{content}}</body></html>",
         "pages/index.html": "<article>Example</article>",
-    }, original["revision"])
+    })
     try:
         projects.preview(project["id"])
         planned = edit(projects, project, 1, "width", 181)
@@ -290,8 +288,7 @@ def test_http_and_agent_share_the_same_plan_and_agent_catalog(client):
     entries = json.loads(path.read_text(encoding="utf-8"))
     assert row == {key: value for key, value in next(tool for tool in entries if tool["name"] == row["name"]).items() if key != "module"}
     projects = client.svc.app_projects
-    root = projects.create("Canvas HTTP")
-    project = projects.update(root["id"], {"pages/index.html": PAGE, "assets/style.css": CSS}, root["revision"])
+    project = projects.create("Canvas HTTP", files={"pages/index.html": PAGE, "assets/style.css": CSS})
     base = f"/api/app-projects/{project['id']}"
     assert client.post(base + "/preview", json={}).status_code == 200
     try:

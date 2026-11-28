@@ -67,6 +67,38 @@ def test_one_literal_patch_updates_live_preview_and_returns_undo(client, project
     assert restored.json()["preview"]["revision"] == project["revision"]
 
 
+@pytest.mark.parametrize(("old", "new", "code"), [
+    ("<h1>", 'X"titulo-taller">', "invalid_html"),
+    ("<h1>Initial</h1>", "<h2>Initial</h2>", "missing_h1"),
+    ("<h1>Initial</h1>", "<h1>Initial</h1><section>", "invalid_html"),
+    ("<h1>Initial</h1>", "<!-- <h1>Initial</h1> --><script>const heading = '<h1>Initial</h1>';</script>",
+     "missing_h1"),
+])
+def test_damaged_heading_patch_leaves_the_saved_revision_untouched(client, project, old, new, code):
+    projects = client.svc.app_projects
+    revisions = projects.root / project["id"] / "revisions"
+    before = sorted(path.name for path in revisions.iterdir())
+    response = patch(client, project, [
+        replacement("assets/style.css", "12px", "16px"),
+        replacement("pages/index.html", old, new),
+    ], lang="es")
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == code
+    assert response.json()["file"] == "pages/index.html"
+    assert projects.get(project["id"]) == project
+    assert sorted(path.name for path in revisions.iterdir()) == before
+
+
+def test_patch_checks_final_markup_and_accepts_omitted_html_end_tags(client, project):
+    response = patch(client, project, [
+        replacement("pages/index.html", "<h1>", "UNFINISHED"),
+        replacement("pages/index.html", "UNFINISHEDInitial</h1>",
+                    '<h1>Revised</h1><ul><li>One<li>Two</ul><p>Summary<hr><svg><path d="M0 0"/></svg>'),
+    ])
+    assert response.status_code == 200, response.text
+    assert client.svc.app_projects.get(project["id"])["files"]["pages/index.html"].startswith("<h1>Revised</h1>")
+
+
 def test_multiple_replacements_are_ordered_and_saved_together(client, project):
     response = patch(client, project, [
         replacement("assets/style.css", "12px", "16px"),

@@ -247,9 +247,9 @@ def test_update_conflict_and_path_preserve_existing_source(tmp_path):
     projects = AppProjects(tmp_path)
     original = projects.create("Board")
     id = original["id"]
-    projects.update(id, {"pages/index.html": "changed"}, original["revision"])
+    projects.update(id, {"pages/index.html": "<h1>Changed</h1>"}, original["revision"])
     with pytest.raises(ValueError, match="changed"):
-        projects.update(id, {"pages/index.html": "stale"}, original["revision"])
+        projects.update(id, {"pages/index.html": "<h1>Stale</h1>"}, original["revision"])
     current = projects.get(id)
     with pytest.raises(ValueError, match="relative"):
         projects.update(id, {"../outside.txt": "bad"}, current["revision"])
@@ -279,9 +279,9 @@ def test_every_starter_compiles_without_external_packages(tmp_path, template):
 def test_independent_file_updates_merge_and_originals_remain(tmp_path):
     projects = AppProjects(tmp_path)
     original = projects.create("Board")
-    first = projects.update(original["id"], {"pages/index.html": "one"}, original["revision"])
+    first = projects.update(original["id"], {"pages/index.html": "<h1>One</h1>"}, original["revision"])
     second = projects.update(original["id"], {"assets/style.css": "two"}, original["revision"])
-    assert second["files"]["pages/index.html"] == "one"
+    assert second["files"]["pages/index.html"] == "<h1>One</h1>"
     assert second["files"]["assets/style.css"] == "two"
     assert projects.get(original["id"], original["revision"])["files"] == original["files"]
 
@@ -481,8 +481,8 @@ def test_undo_one_history_step_preserves_other_changes_and_reports_conflict(clie
     assert reversed_step["undo"]["arguments"]["revision"] == second["revision"]
     assert undo(reversed_step).json()["already_undone"]
 
-    later = services.app_projects.update(project_id, {source: "Later edit"}, reversed_step["revision"])
+    later = services.app_projects.update(project_id, {source: "<h1>Later edit</h1>"}, reversed_step["revision"])
     response = undo(later)
     assert response.status_code == 409 and response.json()["files"] == [source]
     assert "Later changes overlap" in response.json()["error"]
-    assert services.app_projects.get(project_id)["files"][source] == "Later edit"
+    assert services.app_projects.get(project_id)["files"][source] == "<h1>Later edit</h1>"

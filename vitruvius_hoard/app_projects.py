@@ -24,6 +24,7 @@ from urllib.parse import urlsplit
 from .app_canvas import CanvasSessions
 from .app_canvas_edits import canvas_token_scale, plan_canvas_edit
 from .app_creation import ProjectCreationError
+from .app_markup import validate_revision_markup
 from .app_materials import describe_materials
 from .app_preview import PreviewProxy
 from . import app_critique_loop
@@ -515,7 +516,7 @@ class AppProjects:
                 return result
             presentation = self._edit_presentation(tag, change, target_presentation)
             updated = self.update(id, changes, expected_revision, actor=actor,
-                                  target={"vsrc": vsrc}, author=author, target_presentation=presentation)
+                                  target={"vsrc": vsrc}, author=author, target_presentation=presentation, lang=lang)
             return {**result, "revision": updated["revision"], "changed": True, "undo": updated["undo"],
                     **{key: updated[key] for key in ("preview_warning",) if key in updated}}
 
@@ -550,7 +551,8 @@ class AppProjects:
         return {"id": id, "revision": revision, "path": path, "vsrc": vsrc,
                 "same_vsrc_count": source_count(html, vsrc)}
 
-    def _save(self, root, index, files, *, before_commit=None, action="edit", author=None, details=None):
+    def _save(self, root, index, files, *, previous_files=None, before_commit=None, action="edit",
+              author=None, details=None, lang=None):
         destinations = set()
         for name, source in files.items():
             path = PurePosixPath(name)
@@ -564,6 +566,7 @@ class AppProjects:
         if not required.issubset(files):
             raise ValueError("Project needs project.json, server.py, layout.html and pages/index.html")
         spec = validate_spec(json.loads(files["project.json"]))
+        validate_revision_markup(files, previous_files or {}, preserve_h1=action == "edit", lang=lang)
         serialized = json.dumps(files, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
         revision = digest[:20]
@@ -728,11 +731,11 @@ class AppProjects:
                 staged[filename] = source[:first] + new + source[first + len(old):]
 
             changes = {path: text for path, text in staged.items() if text != files[path]}
-            saved = self.update(id, changes, expected_revision, actor=actor, author=author) if changes else current
+            saved = self.update(id, changes, expected_revision, actor=actor, author=author, lang=lang) if changes else current
             return saved, sorted(changes)
 
     def update(self, id, files, expected_revision, *, actor=None, target=None, examples=None, tokens_id=None,
-               author=None, target_presentation=None):
+               author=None, target_presentation=None, lang=None):
         with self.lock:
             current = self.get(id)
             if current["revision"] != expected_revision:
@@ -772,7 +775,8 @@ class AppProjects:
             details = self._change_details(current, merged, target, examples, tokens_id)
             history_details = {**details, "target_presentation": target_presentation} if target_presentation else details
             root, index = self._load_index(id)
-            saved = self._save(root, index, merged, author=author, details=history_details,
+            saved = self._save(root, index, merged, previous_files=current["files"], author=author,
+                               details=history_details, lang=lang,
                                before_commit=before_commit if actor is not None else None)
             self.revision_events.publish(id, change or revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
@@ -825,7 +829,7 @@ class AppProjects:
                 return {"id": id, "archived": True, "revision": expected_revision}
             previous = self.get(id, revision)
             change = revision_change(current, {**previous, "revision": revision})
-            saved = self._save(root, index, previous["files"], action="undo", author=author,
+            saved = self._save(root, index, previous["files"], previous_files=current["files"], action="undo", author=author,
                                details={"files": change["files"]})
             if saved["revision"] != current["revision"]:
                 self.revision_events.publish(id, change)
@@ -859,7 +863,7 @@ class AppProjects:
                 return {**current, "already_undone": True}
             details = {**self._change_details(current, files), "reverted_change": change_id}
             root, index = self._load_index(id)
-            saved = self._save(root, index, files,
+            saved = self._save(root, index, files, previous_files=current["files"],
                                action="undo-change", author=author, details=details)
             self.revision_events.publish(id, revision_change(current, saved))
             return {**saved, "undo": self._undo_call(saved, current["revision"])}
@@ -926,7 +930,7 @@ class AppProjects:
             return current, None
         id = current["id"]
         files = self.get(id, target)["files"]
-        saved = self._save(root, index, files, action=action, author={"kind": "system"},
+        saved = self._save(root, index, files, previous_files=current["files"], action=action, author={"kind": "system"},
                            details=self._change_details(current, files))
         self.revision_events.publish(id, revision_change(current, saved))
         return saved, saved.get("preview_warning")
