@@ -1,4 +1,4 @@
-import {mountDictationMicrophone} from "./microphone.js";
+import {MICROPHONE_TEXT, mountDictationMicrophone} from "./microphone.js";
 import {createTransferReplyVoice} from "./reply_audio.js";
 
 const API = "/__vitruvius_preview__/transfer-voice/";
@@ -110,6 +110,8 @@ function setField(controls, spec, value) {
 function mountFormAssistant(form, {schema, allowSubmit}) {
   const locale = document.documentElement.lang.toLowerCase().startsWith("en") ? "en-IE" : "es-ES";
   const copy = COPY[locale.slice(0, 2)];
+  const permissionCopy = MICROPHONE_TEXT[locale.slice(0, 2)];
+  const micStatus = {getting_mic: permissionCopy.waiting, recording: copy.listening, transcribing: copy.transcribing};
   const root = document.createElement("section");
   root.className = "voice-form-assistant";
   root.setAttribute("aria-label", copy.title);
@@ -407,16 +409,11 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       speech?.abort();
       speech = undefined;
       sttStarted = undefined;
-      send.disabled = true;
       return true;
     },
     onStatus(phase) {
-      if (phase === "recording") setStatus(copy.listening);
-      if (phase === "transcribing") setStatus(copy.transcribing);
-      if (!phase) {
-        send.disabled = false;
-        setStatus("");
-      }
+      send.disabled = phase === "recording" || phase === "transcribing";
+      setStatus(micStatus[phase] || "");
     },
     async request(blob, {signal}) {
       sttStarted = performance.now();
@@ -428,6 +425,10 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       void interpret(String(result.text || "").trim(), {...result, elapsed: result.elapsed || 0}, timing);
     },
     onError(code) {
+      if (code === "mic_permission_denied") {
+        setStatus(permissionCopy.denied);
+        return;
+      }
       const text = code === "stt_unavailable" ? copy.sttDown : copy.micDown;
       const turn = startTurn(text);
       trace(turn, "transcribe", "Vitruvius", sttStarted ? performance.now() - sttStarted : 0, true);
@@ -438,6 +439,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     event.preventDefault();
     const text = input.value.trim();
     if (send.disabled || !text) return;
+    microphone.cancel();
     voice.activate();
     input.value = "";
     void interpret(text);

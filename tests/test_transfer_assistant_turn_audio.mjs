@@ -19,6 +19,61 @@ class Element extends EventTarget {
   getClientRects() { return [true]; }
 }
 
+test("a pending microphone request can be cancelled and a late grant stops its tracks", async t => {
+  const {mountDictationMicrophone} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const pending = Promise.withResolvers();
+  const requestStarted = Promise.withResolvers();
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  let requests = 0;
+  let stopped = 0;
+  let captureInitializations = 0;
+  const recorder = Object.getOwnPropertyDescriptor(globalThis, "MediaRecorder");
+  Object.defineProperty(globalThis, "MediaRecorder", {configurable: true, value: class {
+    static isTypeSupported() { captureInitializations++; return false; }
+  }});
+  Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices: {
+    getUserMedia() {
+      requests++;
+      if (requests === 2) return Promise.reject(new DOMException("blocked", "NotAllowedError"));
+      requestStarted.resolve();
+      return pending.promise;
+    },
+  }}});
+  globalThis.document = new EventTarget();
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+    if (recorder) Object.defineProperty(globalThis, "MediaRecorder", recorder);
+    else delete globalThis.MediaRecorder;
+  });
+  const button = new Element();
+  const phases = [], errors = [];
+  mountDictationMicrophone(button, {request() { assert.fail("No audio should be sent"); },
+    onStatus: phase => phases.push(phase), onError: error => errors.push(error)});
+
+  button.dispatchEvent(new Event("click"));
+  await requestStarted.promise;
+  assert.equal(button.textContent, "Cancelar solicitud");
+  assert.equal(button.disabled, false);
+  button.dispatchEvent(new Event("click"));
+  assert.equal(button.textContent, "Hablar");
+  pending.resolve({getTracks: () => [{stop() { stopped++; }}]});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(stopped, 1);
+  assert.equal(captureInitializations, 0);
+  assert.deepEqual(phases, ["", "getting_mic", ""]);
+  assert.deepEqual(errors, []);
+
+  button.dispatchEvent(new Event("click"));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(errors, ["mic_permission_denied"]);
+  assert.equal(button.textContent, "Hablar");
+  assert.equal(button.disabled, false);
+});
+
 test("a reply computed while a newer turn is queued cannot start audio or be replayed", {timeout: 5000}, async t => {
   const field = new Element();
   field.dataset.transferSlot = "amountCents";

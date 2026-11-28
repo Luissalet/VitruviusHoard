@@ -25,7 +25,7 @@ Open the project through `app_project_preview` and use **Speak** or type in the 
 
 On a new preview, Vitruvius discovers the voice service as part of the first request and reuses the discovered route for later turns. The same behaviour applies to assistants already saved in projects.
 
-In Canvas and Applications, the embedded preview can request microphone access for the origin serving the project. Grant access if the browser prompts you when you choose **Speak**.
+In Canvas and Applications, the embedded preview can request microphone access for the origin serving the project. While the browser is asking, the panel shows the pending permission and offers **Cancel request** to return to **Speak**. If access is denied, allow the microphone in the browser’s site permissions and choose **Speak** again. You can type while permission is pending or denied.
 
 The reply reads back the values cited and validated by dictation that are still in the form, including a value the person repeats. It keeps the project’s option labels, uses the page’s language for dates and says a field title once when the option begins with it. Boltagon synthesizes the complete reply, including the values, as requested by the turn.
 
