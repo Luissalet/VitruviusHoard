@@ -1167,22 +1167,6 @@
   function scheduleElements() {
     if (listRequested && !listFrame) listFrame = setTimeout(publishElements, 100);
   }
-  // A layer the page removed is put back. A change of the served revision (a live refresh patches the page in place)
-  // or a selected element that left the document settles the selection.
-  new MutationObserver(() => {
-    if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
-    if ((selected.length || pins.length || draft) && !watcher) watcher = requestAnimationFrame(() => {
-      watcher = 0;
-      if (draft && !draft.isConnected) draft = null;
-      if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
-      if (pins.length || draft) schedule();
-    });
-  }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
-  new MutationObserver(scheduleElements).observe(document.documentElement, {
-    childList: true, characterData: true, subtree: true, attributes: true,
-    attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
-  });
-
   function elementAt(event) {
     const hit = document.elementsFromPoint ? document.elementsFromPoint(event.clientX, event.clientY).find(element => !isOwn(element)) : event.target;
     return hit && hit !== document.documentElement ? hit : null;
@@ -1197,6 +1181,18 @@
   }
 
   const swallow = event => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.(); };
+  function keepInInspector(event) {
+    // The original would pass through the page's window before reaching the shadow controls.
+    // Forward it inside the shadow root and preserve cancellation of the native default.
+    event.stopImmediatePropagation();
+    const { bubbles, cancelable, detail, button, buttons, clientX, clientY, pointerId, pointerType,
+      isPrimary, altKey, ctrlKey, metaKey, shiftKey } = event;
+    const local = new event.constructor(event.type, {
+      bubbles, cancelable, composed: false, detail, button, buttons, clientX, clientY, pointerId,
+      pointerType, isPrimary, altKey, ctrlKey, metaKey, shiftKey,
+    });
+    if (!event.composedPath()[0].dispatchEvent(local)) event.preventDefault();
+  }
   function updateHover(element) {
     if (element !== hovered) { hovered = element; focusIndex = -1; schedule(); }
   }
@@ -1216,7 +1212,8 @@
   function onClick(event) {
     const pin = pinOf(event);
     if (pin) { swallow(event); post('dock/comment-focus', {page: pageId(), revision: revision(), id: pin}); return; }
-    if (!active() || (mode && edits?.hit(event))) return;
+    if (!active()) return;
+    if (mode && edits?.hit(event)) { keepInInspector(event); return; }
     swallow(event);
     if (commenting || event.detail <= 1) pickElement(elementAt(event), event.shiftKey);
   }
@@ -1226,14 +1223,15 @@
     else choose(element, additive);
   }
   function onBlock(event) {
-    if (!active() || pinOf(event)) return;
+    if (!active()) return;
+    if (pinOf(event)) { keepInInspector(event); return; }
     if (commenting) { swallow(event); return; }
     const hitOverlay = edits?.hit(event);
     if (event.type === 'dblclick' && (!hitOverlay || edits.hitHandle(event))) {
       const element = edits?.doubleClick(event, hitOverlay);
       if (element) { selected = [element]; schedule(); report(); swallow(event); return; }
     }
-    if (hitOverlay) return;
+    if (hitOverlay) { keepInInspector(event); return; }
     swallow(event);
   }
   function onKey(event) {
@@ -1276,7 +1274,7 @@
     selected = found; expired = lost; ensureLayer(); schedule(); report();
   }
 
-  window.addEventListener('message', event => {
+  function onMessage(event) {
     const accepted = gate(hostOrigin, event, window.parent);
     if (accepted === null) return;
     hostOrigin = accepted;
@@ -1331,7 +1329,7 @@
     else if (data.type === 'inspect/dismiss') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < expired.length) { expired.splice(at, 1); report(); } }
     else if (data.type === 'inspect/remove') { const at = Number(data.index); if (Number.isInteger(at) && at >= 0 && at < selected.length) { selected.splice(at, 1); schedule(); report(); } }
     else if (data.type === 'inspect/restore') restore(data.items);
-  });
+  }
   document.addEventListener('mousemove', onMove, true);
   document.addEventListener('mouseout', event => { if (!event.relatedTarget) updateHover(null); }, true);
   window.addEventListener('blur', () => updateHover(null));
@@ -1343,5 +1341,25 @@
   // Send the updated selection before the refresh acknowledges the rendered revision.
   window.addEventListener('vitruvius:preview-updated', () => { if (selected.length) settle(); });
   window.__vitruviusInspector = {version: 1, core};
-  try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
+  function start() {
+    // The proxy registers input capture during parsing. Wait for the complete DOM and preview metadata before talking to Canvas.
+    window.addEventListener('message', onMessage);
+    // Reattach a removed layer and reconcile the selection when the page or served revision changes.
+    new MutationObserver(() => {
+      if (layer && !layer.isConnected) document.documentElement.appendChild(layer);
+      if ((selected.length || pins.length || draft) && !watcher) watcher = requestAnimationFrame(() => {
+        watcher = 0;
+        if (draft && !draft.isConnected) draft = null;
+        if (selected.length && (selected.some(element => !element.isConnected) || revision() !== lastRevision)) settle();
+        if (pins.length || draft) schedule();
+      });
+    }).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['content']});
+    new MutationObserver(scheduleElements).observe(document.documentElement, {
+      childList: true, characterData: true, subtree: true, attributes: true,
+      attributeFilter: ['content', 'class', 'style', 'hidden', 'aria-label', 'alt', 'title', 'id', 'open'],
+    });
+    try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
+  else start();
 })();

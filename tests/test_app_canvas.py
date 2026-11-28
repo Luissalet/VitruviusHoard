@@ -6,20 +6,39 @@ import urllib.request
 import pytest
 
 from vitruvius_hoard.app_canvas import CanvasSessions
-from vitruvius_hoard.app_preview import PREVIEW_SCRIPTS, SCRIPT_ROOT, inject_scripts
+from vitruvius_hoard.app_preview import INSPECTOR_SCRIPT, PREVIEW_SCRIPTS, SCRIPT_ROOT, inject_scripts
 
 
 def test_injection_preserves_html_and_script_order():
     source = '<!doctype html>\n<HTML><body>Á<!-- </body> --><script>const example = "</body>";</script>\r\n</BODY></HTML>'
     scripts = ("app-bridge.js", *PREVIEW_SCRIPTS)
-    expected = "".join(f'<script defer src="{SCRIPT_ROOT}{name}"></script>' for name in scripts)
-    assert inject_scripts(source, scripts) == source.replace("</BODY>", expected + "</BODY>")
-    assert inject_scripts("<p>fragment", scripts) == "<p>fragment" + expected
+    inspector = f'<script src="{SCRIPT_ROOT}{INSPECTOR_SCRIPT}"></script>'
+    deferred = "".join(f'<script defer src="{SCRIPT_ROOT}{name}"></script>' for name in ("app-bridge.js", "preview-refresh.js"))
+    assert inject_scripts(source, scripts) == source.replace(
+        "<body>", inspector + "<body>",
+    ).replace("</BODY>", deferred + "</BODY>")
+    assert inject_scripts("<p>fragment", scripts) == inspector + "<p>fragment" + deferred
     document = '<html><head><title>Sample</title></head><body><textarea></body></textarea></body></html>'
     metadata = '<meta name="vitruvius-preview-revision" content="new">'
     assert inject_scripts(document, scripts, "new") == document.replace(
-        "</head>", metadata + "</head>",
-    ).replace("</textarea></body>", "</textarea>" + expected + "</body>")
+        "</head>", metadata + inspector + "</head>",
+    ).replace("</textarea></body>", "</textarea>" + deferred + "</body>")
+
+
+@pytest.mark.parametrize("first_app_tag", [
+    '<script src="/assets/listeners.js"></script>',
+    '<link rel="stylesheet" href="/assets/app.css" onload="setup()">',
+    '<template><script>setup()</script></template>',
+])
+def test_inspector_loads_before_project_markup_that_can_run_code(first_app_tag):
+    prefix = ('<!doctype html><html><head><meta charset="utf-8">'
+              '<meta http-equiv="Content-Security-Policy" content="script-src \'self\'">'
+              '<title>Sample</title>')
+    source = prefix + first_app_tag + '</head><body></body></html>'
+    served = inject_scripts(source, ("app-bridge.js", *PREVIEW_SCRIPTS), "new", "session")
+    assert served.startswith(prefix + f'<script src="{SCRIPT_ROOT}{INSPECTOR_SCRIPT}"></script>' + first_app_tag)
+    assert served.index('content="session"') < served.index('</head>')
+    assert served.index('app-bridge.js') < served.index('preview-refresh.js')
 
 
 def test_listed_preview_extension_and_frame_guard(tmp_path, monkeypatch):
@@ -39,7 +58,7 @@ def test_listed_preview_extension_and_frame_guard(tmp_path, monkeypatch):
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
             html = response.read().decode("utf-8")
             assert response.headers["X-Vitruvius-Revision"] == preview["revision"]
-        script_positions = [html.index(script) for script in ("app-bridge.js", *PREVIEW_SCRIPTS)]
+        script_positions = [html.index(script) for script in (INSPECTOR_SCRIPT, "app-bridge.js", "preview-refresh.js")]
         assert script_positions == sorted(script_positions)
         assert f'<meta name="vitruvius-preview-revision" content="{preview["revision"]}">' in html
         for script in PREVIEW_SCRIPTS:
