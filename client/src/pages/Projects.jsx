@@ -30,7 +30,7 @@ export default function Projects({ param }) {
   const selectedTemplate = templates.find((item) => item.id === template);
   const itemLimits = selectedTemplate?.creation?.items;
   const [project, setProject] = useState(null);
-  const [file, setFile] = useState("pages/index.html");
+  const [chosenFile, setFile] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [newFile, setNewFile] = useState("");
   const [preview, setPreview] = useState(null);
@@ -44,11 +44,14 @@ export default function Projects({ param }) {
   currentId.current = param;
   const createDraft = useRef();
   createDraft.current = { name, description, template, bookingOptions, lang };
-  const activeView = useRef({ revision: null, file });
   const draftPrefix = project ? `${project.id}:${project.selected_revision}:` : "";
+  const draftPaths = project ? Object.keys(drafts).filter((key) => key.startsWith(draftPrefix)).map((key) => key.slice(draftPrefix.length)) : [];
+  const filePaths = [...new Set([...Object.keys(project?.files ?? {}), ...draftPaths])].sort();
+  const homeFile = project?.template === "booking" ? "public/index.html" : "pages/index.html";
+  const file = [chosenFile, homeFile, "pages/index.html"].find((path) => filePaths.includes(path)) ?? filePaths[0] ?? "";
   const draftKey = draftPrefix + file;
   const source = project ? drafts[draftKey] ?? project.files[file] ?? "" : "";
-  const draftPaths = Object.keys(drafts).filter((key) => key.startsWith(draftPrefix)).map((key) => key.slice(draftPrefix.length));
+  const activeView = useRef({ revision: null, file });
   activeView.current = { revision: project?.selected_revision, file, dirty: !!draftPaths.length };
   useCopilotForm("app-create-draft", {
     initial: { name: "", description: "", template: "work-board", lang },
@@ -100,7 +103,7 @@ export default function Projects({ param }) {
   }, []);
   useEffect(() => {
     loadSequence.current++;
-    setProject(null); setPreview(null); setBundle(null); setRender(null); setFile("pages/index.html");
+    setProject(null); setPreview(null); setBundle(null); setRender(null); setFile(null);
     setArchivePending(null);
     if (param) loadProject(param, new URLSearchParams(window.location.search).get("source_revision") || undefined);
     return () => { loadSequence.current++; };
@@ -335,7 +338,7 @@ export default function Projects({ param }) {
         <PreviewSelection project={project} preview={preview} frameRef={previewFrame} frameKey={previewFrames[0]?.key} es={es} notify={notify} />
         <div className="panel">
           <h3 className="font-semibold">{es ? "Archivos de la aplicación" : "Application files"}</h3>
-          <label className="label mt-3">{es ? "Archivo" : "File"}<select aria-label={es ? "Archivo" : "File"} className="field" value={file} onChange={(event) => setFile(event.target.value)}>{Array.from(new Set([...Object.keys(project.files), ...draftPaths])).sort().map((path) => <option key={path} value={path}>{path}{drafts[draftPrefix + path] !== undefined ? " *" : ""}</option>)}</select></label>
+            <label className="label mt-3">{es ? "Archivo" : "File"}<select aria-label={es ? "Archivo" : "File"} className="field" value={file} onChange={(event) => setFile(event.target.value)}>{filePaths.map((path) => <option key={path} value={path}>{path}{drafts[draftPrefix + path] !== undefined ? " *" : ""}</option>)}</select></label>
           <label className="label mt-3">{es ? "Fuente editable" : "Editable source"}<textarea aria-label={es ? "Fuente editable" : "Editable source"} className="field mt-1" rows={12} value={source} onChange={(event) => setDrafts((current) => ({ ...current, [draftKey]: event.target.value }))} /></label>
           <div className="flex gap-2 items-center flex-wrap mt-3"><button className="btn btn-primary" disabled={!!busy || drafts[draftKey] === undefined} onClick={save}>{busy === "save" ? (es ? "Guardando…" : "Saving…") : (es ? "Guardar archivo" : "Save file")}</button><span className="help">{es ? "Guardar conserva las versiones anteriores y los datos." : "Saving retains earlier revisions and data."}</span></div>
           <details className="mt-3"><summary className="cursor-pointer help">{es ? "Añadir archivo" : "Add file"}</summary><div className="flex gap-2 flex-wrap mt-2"><input className="field flex-1 min-w-0" aria-label={es ? "Ruta del archivo nuevo" : "New file path"} placeholder="pages/about.html" value={newFile} onChange={(event) => setNewFile(event.target.value)} /><button className="btn" type="button" disabled={!newFile.trim()} onClick={() => { if (!Object.hasOwn(project.files, newFile)) setDrafts((current) => ({ ...current, [draftPrefix + newFile]: current[draftPrefix + newFile] ?? "" })); setFile(newFile); setNewFile(""); }}>{es ? "Añadir" : "Add"}</button></div></details>

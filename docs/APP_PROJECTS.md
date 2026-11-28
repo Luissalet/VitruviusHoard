@@ -242,6 +242,10 @@ While the Canvas screen is open, Vitruvius reports it to the Dock host through `
 
 For a new design, take the three directions from `design_brief` through [Alternatives](ALTERNATIVES.md#art-direction-before-building), then call `app_project_create` with `art_direction_study_id` and `template: "booking"`. Supply `items` with a stable lowercase `id`, `title`, `category` and optional `description` for each entry. A text value can be shared or supplied as an `{es, en}` pair. Set `lang: "es"` for Spanish on first load, with `description_es` for the introductory text and `description` for its English version. The site preserves the active category when switching languages.
 
+In **Applications**, **File** opens `public/index.html` by default for new and saved booking projects. This is the home page served by the owned preview. The other source files remain selectable, including the templates for `/records` in the standalone server.
+
+En **Aplicaciones**, **Archivo** abre por defecto `public/index.html`, la portada que sirve la vista previa de Reservas. Los demás archivos siguen disponibles en el selector, también en los proyectos ya guardados.
+
 Export the booking revision with `app_project_export`. The publishable site is under `public/`, with a root `website.json` form contract. Register the ZIP and publish it with `hub_website_publish_piece`. On the published site, the form returns the reference written to the publication inbox. The owned preview uses the same page and assets for design checks. Es posible filtrar, cambiar de idioma y rellenar la solicitud en la vista previa. Envía la solicitud desde la web publicada para recibir la referencia.
 
 ## Standalone output
