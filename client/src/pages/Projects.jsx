@@ -5,8 +5,11 @@ import { useCopilotForm, useCopilotObjects, useCopilotRefresh } from "../copilot
 import { Empty } from "../components/ui.jsx";
 import PreviewSelection from "../components/PreviewSelection.jsx";
 import CaptureWarning from "../components/CaptureWarning.jsx";
+import { prepareProjectCreation, projectCreationError } from "./projectCreation.js";
 import { PreviewFrames, previewAllow, useProjectPreviewCanvas } from "../canvas/projectPreview.jsx";
 import { rememberProject } from "../canvas/recentProject.js";
+
+const blankBookingOption = (key) => ({ key, title: "", category: "", description: "" });
 
 export default function Projects({ param }) {
   const { lang, notify } = useApp();
@@ -20,6 +23,12 @@ export default function Projects({ param }) {
   const [template, setTemplate] = useState("work-board");
   const [createLanguageOverride, setCreateLanguageOverride] = useState(null);
   const createLanguage = createLanguageOverride ?? lang;
+  const [bookingOptions, setBookingOptions] = useState(() => [blankBookingOption(0)]);
+  const nextBookingKey = useRef(1);
+  const [createError, setCreateError] = useState("");
+  const [templatesUnavailable, setTemplatesUnavailable] = useState(false);
+  const selectedTemplate = templates.find((item) => item.id === template);
+  const itemLimits = selectedTemplate?.creation?.items;
   const [project, setProject] = useState(null);
   const [file, setFile] = useState("pages/index.html");
   const [drafts, setDrafts] = useState({});
@@ -33,8 +42,8 @@ export default function Projects({ param }) {
   const listSequence = useRef(0);
   const currentId = useRef(param);
   currentId.current = param;
-  const createDraft = useRef({ name, description });
-  createDraft.current = { name, description };
+  const createDraft = useRef();
+  createDraft.current = { name, description, template, bookingOptions, lang };
   const activeView = useRef({ revision: null, file });
   const draftPrefix = project ? `${project.id}:${project.selected_revision}:` : "";
   const draftKey = draftPrefix + file;
@@ -85,7 +94,10 @@ export default function Projects({ param }) {
     projectId: project?.id === param ? param : null, preview, baseline: project?.revision, lang, onRevision: syncRevision,
     onError: () => notify(es ? "No se pudo actualizar la vista previa. Se mantiene la página anterior." : "The preview could not update. The previous page is still visible."),
   });
-  useEffect(() => { loadList(); api.appTemplates().then((data) => setTemplates(data.templates)).catch((error) => notify(error.message)); }, []);
+  useEffect(() => {
+    loadList();
+    api.appTemplates().then((data) => setTemplates(data.templates)).catch(() => setTemplatesUnavailable(true));
+  }, []);
   useEffect(() => {
     loadSequence.current++;
     setProject(null); setPreview(null); setBundle(null); setRender(null); setFile("pages/index.html");
@@ -99,23 +111,44 @@ export default function Projects({ param }) {
     if (loadedProjectId && loadedProjectId === param) rememberProject(loadedProjectId);
   }, [loadedProjectId, param]);
 
+  const changeBookingOptions = (update) => {
+    setBookingOptions(update);
+    setCreateError("");
+  };
+  const editBookingOption = (key, field, value) => {
+    changeBookingOptions((options) => options.map((option) => option.key === key ? { ...option, [field]: value } : option));
+  };
   const create = async (event) => {
-    event.preventDefault(); setBusy("create");
-    const submitted = { name, description, template, lang: createLanguage };
+    event.preventDefault();
+    if (busy || !selectedTemplate || !name.trim()) return;
+    const input = prepareProjectCreation({ name, description, template, lang: createLanguage }, itemLimits, bookingOptions, es);
+    if (input.error) {
+      setCreateError(input.error);
+      if (input.field) event.currentTarget.elements.namedItem(input.field)?.focus();
+      return;
+    }
+    setBusy("create");
+    setCreateError("");
     const submittedRoute = window.location.hash;
     try {
-      const data = await api.appProjectCreate(submitted);
+      const data = await api.appProjectCreate(input.body, lang);
       rememberProject(data.id);
-      if (createDraft.current.name === submitted.name) setName("");
-      if (createDraft.current.description === submitted.description) setDescription("");
+      if (createDraft.current.name === name) setName("");
+      if (createDraft.current.description === description) setDescription("");
       setCreateLanguageOverride((current) => current === createLanguageOverride ? null : current);
+      if (itemLimits && createDraft.current.bookingOptions === bookingOptions) {
+        setBookingOptions([blankBookingOption(nextBookingKey.current++)]);
+      }
       await loadList();
       if (window.location.hash === submittedRoute) {
         setShowArchived(false);
         window.location.hash = "#/projects/" + data.id;
       }
-    } catch (error) { notify(error.message); }
-    finally { setBusy(""); }
+    } catch (error) {
+      if (createDraft.current.template === template && createDraft.current.lang === lang) {
+        setCreateError(projectCreationError(error, es));
+      }
+    } finally { setBusy(""); }
   };
   const save = async () => {
     const captured = { id: project.id, file, source, revision: project.selected_revision, key: draftKey };
@@ -198,10 +231,10 @@ export default function Projects({ param }) {
   return <div className="flex flex-col gap-6">
     <h1 className="text-[20px] font-semibold">{es ? "Aplicaciones" : "Applications"}</h1>
     <details className="panel" open={!showArchived && !projects.length && !project}><summary className="cursor-pointer font-semibold">{es ? "Crear aplicación" : "Create application"}</summary>
-    <form className="flex flex-col gap-3 mt-3" onSubmit={create}>
+    <form className="flex flex-col gap-3 mt-3" onSubmit={create} noValidate>
       <div className="grid md:grid-cols-2 gap-3">
-        <label className="label">{es ? "Nombre" : "Name"}<input className="field mt-1" value={name} onChange={(event) => setName(event.target.value)} required /></label>
-        <label className="label">{es ? "Punto de partida" : "Starting point"}<select aria-label={es ? "Punto de partida" : "Starting point"} className="field mt-1" value={template} onChange={(event) => setTemplate(event.target.value)}>{templates.map((item) => <option key={item.id} value={item.id}>{es ? item.name_es : item.name}</option>)}</select></label>
+        <label className="label">{es ? "Nombre" : "Name"}<input className="field mt-1" value={name} onChange={(event) => { setName(event.target.value); setCreateError(""); }} required /></label>
+        <label className="label">{es ? "Punto de partida" : "Starting point"}<select aria-label={es ? "Punto de partida" : "Starting point"} className="field mt-1" value={template} onChange={(event) => { setTemplate(event.target.value); setCreateError(""); }}>{templates.map((item) => <option key={item.id} value={item.id}>{es ? item.name_es : item.name}</option>)}</select></label>
         <label className="label">{es ? "Idioma de la aplicación" : "Application language"}
           <select aria-label={es ? "Idioma de la aplicación" : "Application language"} className="field mt-1" value={createLanguage} onChange={(event) => setCreateLanguageOverride(event.target.value)}>
             <option value="es" lang="es">Español</option>
@@ -210,8 +243,44 @@ export default function Projects({ param }) {
         </label>
       </div>
       <label className="label">{es ? "Descripción" : "Description"}<input className="field mt-1" value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+      {itemLimits && <fieldset className="min-w-0 flex flex-col gap-3" aria-describedby="booking-creation-help">
+        <legend className="font-semibold mb-1">{es ? "Opciones de reserva" : "Booking options"}</legend>
+        <p id="booking-creation-help" className="help">{es
+          ? `Añade entre ${itemLimits.min} y ${itemLimits.max} opciones. El nombre y la categoría son obligatorios.`
+          : `Add between ${itemLimits.min} and ${itemLimits.max} options. Each needs a name and category.`}</p>
+        {bookingOptions.map((option, index) => <fieldset key={option.key} className="min-w-0 border-t pt-2" style={{ borderColor: "var(--line)" }}>
+          <legend className="label pr-2">{es ? "Opción" : "Option"} {index + 1}</legend>
+          <div className="grid md:grid-cols-2 gap-3">
+            <label className="label">{es ? "Nombre de la opción" : "Option name"}
+              <input name={`booking-${option.key}-title`} className="field mt-1" value={option.title} required
+                onChange={(event) => editBookingOption(option.key, "title", event.target.value)} />
+            </label>
+            <label className="label">{es ? "Categoría de la opción" : "Option category"}
+              <input name={`booking-${option.key}-category`} className="field mt-1" value={option.category} required
+                onChange={(event) => editBookingOption(option.key, "category", event.target.value)} />
+            </label>
+          </div>
+          <label className="label mt-3">{es ? "Descripción de la opción (opcional)" : "Option description (optional)"}
+            <input className="field mt-1" value={option.description} onChange={(event) => editBookingOption(option.key, "description", event.target.value)} />
+          </label>
+          {bookingOptions.length > itemLimits.min && <button className="btn mt-2" type="button"
+            onClick={() => changeBookingOptions((current) => current.filter((item) => item.key !== option.key))}>
+            {es ? "Quitar opción" : "Remove option"} {index + 1}
+          </button>}
+        </fieldset>)}
+        <button className="btn self-start" type="button" disabled={bookingOptions.length >= itemLimits.max}
+          onClick={() => {
+            const option = blankBookingOption(nextBookingKey.current++);
+            changeBookingOptions((current) => [...current, option]);
+          }}>{es ? "Añadir opción" : "Add option"}</button>
+      </fieldset>}
       <p className="help">{es ? "Incluye páginas, datos persistentes y servidor propio. El código se puede editar y exportar para usarlo por separado." : "Includes pages, persistent data and its own server. Edit and export the code to run it independently."}</p>
-      <button className="btn btn-primary self-start" disabled={!!busy || !name.trim()}>{busy === "create" ? (es ? "Creando…" : "Creating…") : (es ? "Crear" : "Create")}</button>
+      {(createError || templatesUnavailable) && <p role="alert" className="rounded-md border p-3 text-[13px] break-words"
+        style={{ background: "var(--danger-bg)", borderColor: "#e5534b66" }}>
+        {templatesUnavailable ? (es ? "No se pudieron cargar las plantillas. Vuelve a cargar la página."
+          : "Could not load the templates. Reload the page.") : createError}
+      </p>}
+      <button className="btn btn-primary self-start" disabled={!!busy || !selectedTemplate || !name.trim()}>{busy === "create" ? (es ? "Creando…" : "Creating…") : (es ? "Crear" : "Create")}</button>
     </form></details>
     <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-5">
       <aside className="panel">
