@@ -155,7 +155,8 @@ class PreviewComments:
                     break
 
     def _save(self, project_id, data):
-        write_json_atomic(self._path(project_id), data)
+        with self.app_projects.lock:
+            write_json_atomic(self._path(project_id), data)
 
     def _find(self, data, comment_id):
         for comment in data["comments"]:
@@ -273,7 +274,7 @@ class PreviewComments:
         if target is None:
             raise ValueError("A comment needs the element it is pinned to")
         png = self._decode_crop(crop)
-        with self._lock:
+        with self._lock, self.app_projects.lock:
             project = self.app_projects.get(project_id)
             self._check_revision(project_id, revision, "a comment")
             data = self._load(project_id)

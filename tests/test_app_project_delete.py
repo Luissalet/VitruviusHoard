@@ -1,0 +1,302 @@
+"""Permanent removal is guarded by both versions and scoped to one archive."""
+from pathlib import Path
+
+import pytest
+
+from vitruvius_hoard.agent_tools import call_tool
+from vitruvius_hoard.hoard_link.agentkit import AppError
+
+
+def _conditions(project):
+    return {"expected_revision": project["revision"], "expected_updated_ts": project["updated_ts"],
+            "confirm": True}
+
+
+def _archive(projects, project, operation="archive"):
+    return projects.archive(project["id"], operation=operation, **_conditions(project))
+
+
+def _files(root):
+    return {path.relative_to(root).as_posix(): path.read_bytes()
+            for path in root.rglob("*") if path.is_file()}
+
+
+def test_delete_http_requires_confirmation_and_an_archived_project(client):
+    projects = client.svc.app_projects
+    active = projects.create("Still active")
+    id = active["id"]
+    root = projects.root / id
+    before = _files(root)
+    route = f"/api/app-projects/{id}/delete"
+    body = {**_conditions(active), "lang": "es"}
+
+    active_result = client.post(route, json=body)
+    assert active_result.status_code == 409 and active_result.json()["code"] == "project_active"
+    assert "archiva" in active_result.json()["error"].lower()
+    absent = client.post("/api/app-projects/0000000000000000/delete", json=body)
+    assert absent.status_code == 404
+    assert _files(root) == before
+
+    archived = _archive(projects, active)
+    body = {**_conditions(archived), "lang": "es"}
+    before = _files(root)
+    unconfirmed = client.post(route, json={**body, "confirm": False})
+    assert unconfirmed.status_code == 400 and unconfirmed.json()["code"] == "confirm_required"
+    for invalid_body in (
+        {**body, "confirm": "true"},
+        {**body, "expected_updated_ts": None},
+        {key: value for key, value in body.items() if key != "expected_revision"},
+        {key: value for key, value in body.items() if key != "expected_updated_ts"},
+    ):
+        invalid = client.post(route, json=invalid_body)
+        assert invalid.status_code == 400 and invalid.json()["code"] == "invalid_arguments"
+    assert _files(root) == before
+
+
+def test_delete_rejects_stale_revision_and_archive_timestamp(client):
+    projects = client.svc.app_projects
+    original = projects.create("Changed since confirmation")
+    id = original["id"]
+    changed = projects.update(id, {"notes.txt": "New revision"}, original["revision"])
+    archive = _archive(projects, changed)
+    restored = _archive(projects, archive, "restore")
+    current = _archive(projects, restored)
+    assert archive["revision"] == current["revision"]
+    assert archive["updated_ts"] < current["updated_ts"]
+    root = projects.root / id
+    before = _files(root)
+
+    for body in (
+        {**_conditions(current), "expected_revision": original["revision"]},
+        _conditions(archive),
+    ):
+        response = client.post(f"/api/app-projects/{id}/delete", json=body)
+        assert response.status_code == 409 and response.json()["code"] == "conflict"
+        assert _files(root) == before
+    assert [row["id"] for row in projects.list(archived=True)] == [id]
+
+
+def test_confirmed_tool_deletion_receipt_and_other_projects(client):
+    projects = client.svc.app_projects
+    target = projects.create("Remove this archive")
+    neighbor = projects.create("Keep this active project")
+    other_archive = projects.create("Keep this archive")
+    _archive(projects, other_archive)
+    id = target["id"]
+    directory = projects.root / id
+    # Older versions used a marker. An existing preview may still be attached to one.
+    preview = projects.preview(id)
+    process = projects.processes[id]["process"]
+    (directory / "archived").touch()
+    files = _files(directory)
+    intact = {row["id"]: _files(projects.root / row["id"]) for row in (neighbor, other_archive)}
+    assert files and any(path.startswith("runs/") for path in files)
+    assert any(path.startswith("data/") for path in files)
+
+    receipt = call_tool(client.svc, "app_project_delete", {"id": id, **_conditions(target)})
+    assert receipt == {"id": id, "name": target["name"], "path": str(directory),
+                       "files": len(files), "bytes": sum(map(len, files.values())), "deleted": True, "cleanup_complete": True}
+    assert not Path(receipt["path"]).exists()
+    assert process.poll() is not None
+    assert preview["state"] == "running" and projects.status(id)["state"] == "stopped"
+    assert [row["id"] for row in projects.list()] == [neighbor["id"]]
+    assert [row["id"] for row in projects.list(archived=True)] == [other_archive["id"]]
+    assert {other_id: _files(projects.root / other_id) for other_id in intact} == intact
+    with pytest.raises(AppError) as missing:
+        call_tool(client.svc, "app_project_delete", {"id": id, **_conditions(target)})
+    assert missing.value.code == "not_found"
+    assert client.post(f"/api/app-projects/{id}/archive", json={**_conditions(target), "operation": "restore"}).status_code == 404
+
+
+def test_delete_never_follows_reparse_entries(client, monkeypatch):
+    import stat
+    from types import SimpleNamespace
+
+    projects = client.svc.app_projects
+    project = projects.create("Retain unexpected link")
+    archived = _archive(projects, project)
+    root = projects.root / project["id"]
+    link = root / "unexpected"
+    link.write_text("A reparse marker in this test")
+    before = _files(root)
+    original_lstat = Path.lstat
+
+    def lstat(path):
+        if path == link:
+            return SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        return original_lstat(path)
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    route = f"/api/app-projects/{project['id']}/delete"
+    response = client.post(route, json=_conditions(archived))
+    assert response.status_code == 400 and response.json()["code"] == "unsafe_project_data"
+    assert _files(root) == before
+
+
+def test_failed_rename_keeps_archive_intact_and_restorable(client, monkeypatch):
+    projects = client.svc.app_projects
+    project = projects.create("Keep this entire archive")
+    archived = _archive(projects, project)
+    root = projects.root / project["id"]
+    original = _files(root)
+    original_rename = Path.rename
+
+    def rename(path, destination):
+        if path == root:
+            raise PermissionError("Open directory in this test")
+        return original_rename(path, destination)
+
+    route = f"/api/app-projects/{project['id']}"
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "rename", rename)
+        response = client.post(route + "/delete", json={**_conditions(archived), "lang": "es"})
+        assert response.status_code == 500 and response.json()["code"] == "delete_failed"
+        assert "sigue intacto en Archivados" in response.json()["error"]
+    assert _files(root) == original
+    [row] = projects.list(archived=True)
+    assert row["id"] == project["id"] and row["updated_ts"] == archived["updated_ts"]
+    restored = client.post(route + "/archive", json={**_conditions(row), "operation": "restore"})
+    assert restored.status_code == 200
+    read = client.get(route)
+    assert read.status_code == 200 and read.json()["files"] == project["files"]
+
+
+def test_failed_cleanup_reports_remainder_and_retired_index_never_reappears(client, monkeypatch):
+    from vitruvius_hoard.app_projects import AppProjects
+
+    projects = client.svc.app_projects
+    project = projects.create("Remove this project from the workspace")
+    archived = _archive(projects, project)
+    id = project["id"]
+    root = projects.root / id
+    original = _files(root)
+    original_unlink = Path.unlink
+
+    def unlink(path, *args, **kwargs):
+        if path.name == "project-index.json" and path.parent.name in {id, f".retired-{id}"}:
+            raise PermissionError("Locked retired index in this test")
+        return original_unlink(path, *args, **kwargs)
+
+    route = f"/api/app-projects/{id}"
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", unlink)
+        response = client.post(route + "/delete", json=_conditions(archived))
+    assert response.status_code == 200
+    receipt = response.json()
+    assert receipt["id"] == id and receipt["path"] == str(root)
+    assert receipt["deleted"] is True and receipt["cleanup_complete"] is False
+    assert receipt["warning"]
+    remaining = Path(receipt["remaining_path"])
+    assert remaining == root.with_name(f".retired-{id}") and not root.exists()
+    leftover = _files(remaining)
+    assert leftover["project-index.json"] == original["project-index.json"]
+    assert 0 < receipt["files"] == len(original.keys() - leftover.keys())
+    assert receipt["bytes"] == sum(len(original[name]) for name in original.keys() - leftover.keys())
+    assert client.get(route).status_code == 404
+    assert client.post(route + "/archive", json={**_conditions(archived), "operation": "restore"}).status_code == 404
+    assert client.post(route + "/delete", json=_conditions(archived)).status_code == 404
+
+    reopened = AppProjects(projects.root.parent)
+    assert reopened.list() == reopened.list(archived=True) == []
+
+
+def test_comment_store_cannot_write_across_project_removal(client, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from vitruvius_hoard import preview_comments
+
+    projects = client.svc.app_projects
+    project = projects.create("Concurrent comment")
+    writing = Event()
+    release = Event()
+    write = preview_comments.write_json_atomic
+
+    def pause_at_write(path, data):
+        writing.set()
+        assert release.wait(timeout=5)
+        return write(path, data)
+
+    monkeypatch.setattr(preview_comments, "write_json_atomic", pause_at_write)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        pending = executor.submit(client.svc.preview_comments.add, project["id"], "My note", project["revision"],
+                                  "/", {"selector": "h1"})
+        try:
+            assert writing.wait(timeout=5)
+            acquired = projects.lock.acquire(blocking=False)
+            if acquired:
+                projects.lock.release()
+            assert not acquired
+        finally:
+            release.set()
+        pending.result(timeout=5)
+
+    archive = _archive(projects, project)
+    receipt = projects.delete(**{"id": project["id"], **_conditions(archive)})
+    assert not Path(receipt["path"]).exists()
+
+@pytest.mark.parametrize("ancestor", ("app-projects", "design", "profile"))
+def test_delete_rejects_reparse_ancestors_before_opening_index(client, monkeypatch, ancestor):
+    import stat
+    from types import SimpleNamespace
+
+    projects = client.svc.app_projects
+    project = projects.create("Reject a redirected archive store")
+    archived = _archive(projects, project)
+    root = projects.root / project["id"]
+    forbidden = {
+        "app-projects": projects.root,
+        "design": projects.root.parent,
+        "profile": projects.root.parent.parent,
+    }[ancestor]
+    original_lstat = Path.lstat
+    before = _files(root)
+
+    def lstat(path):
+        if path == forbidden:
+            return SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        return original_lstat(path)
+
+    def must_not_read_project(*args, **kwargs):
+        pytest.fail("A redirected storage path was accepted for project lookup")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "lstat", lstat)
+        patch.setattr(projects, "_load_index", must_not_read_project)
+        patch.setattr(projects, "stop", must_not_read_project)
+        response = client.post(f"/api/app-projects/{project['id']}/delete", json=_conditions(archived))
+    assert response.status_code == 400 and response.json()["code"] == "unsafe_project_data"
+    assert _files(root) == before
+    assert not root.with_name(f".retired-{project['id']}").exists()
+
+
+@pytest.mark.parametrize("invalid_id", ("..", "../0123456789abcdef", r"..\0123456789abcdef",
+                                         "ABCDEF0123456789", "0123456789abcde:"))
+def test_delete_rejects_noncanonical_ids(services, invalid_id):
+    projects = services.app_projects
+    archived = _archive(projects, projects.create("Keep this archive"))
+    with pytest.raises(ValueError, match="Invalid project id"):
+        projects.delete(invalid_id, **_conditions(archived))
+    assert [row["id"] for row in projects.list(archived=True)] == [archived["id"]]
+
+
+def test_delete_checks_on_disk_id_before_renaming(client, monkeypatch):
+    import json
+
+    projects = client.svc.app_projects
+    target = _archive(projects, projects.create("Archive with a mismatched index"))
+    other = projects.create("Keep neighboring data")
+    root = projects.root / target["id"]
+    index = root / "project-index.json"
+    index.write_text(json.dumps({**json.loads(index.read_text(encoding="utf-8")), "id": other["id"]}), encoding="utf-8")
+    before = _files(root)
+    other_before = _files(projects.root / other["id"])
+
+    def must_not_rename(*args, **kwargs):
+        pytest.fail("A project with a mismatched index was about to be renamed")
+
+    monkeypatch.setattr(Path, "rename", must_not_rename)
+    response = client.post(f"/api/app-projects/{target['id']}/delete", json=_conditions(target))
+    assert response.status_code == 400 and response.json()["code"] == "unsafe_project_data"
+    assert _files(root) == before
+    assert _files(projects.root / other["id"]) == other_before

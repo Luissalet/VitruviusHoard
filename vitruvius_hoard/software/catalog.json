@@ -2706,6 +2706,58 @@
     "module": "design"
   },
   {
+    "name": "app_project_delete",
+    "description": "Permanently delete an archived project. Borrar definitivamente un proyecto archivado.\nRead app_project_list with archived=true first. Use its revision and updated_ts and confirm=true. Returns the project path, deleted file count and bytes, and remaining_path if cleanup was incomplete. No undo.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "properties": {
+        "expected_revision": {
+          "description": "Current source revision from the archived project list.",
+          "title": "Expected Revision",
+          "type": "string"
+        },
+        "expected_updated_ts": {
+          "description": "Current updated_ts from the archived project list.",
+          "title": "Expected Updated Ts",
+          "type": "number"
+        },
+        "confirm": {
+          "default": false,
+          "description": "Set true to confirm permanent deletion.",
+          "title": "Confirm",
+          "type": "boolean"
+        },
+        "lang": {
+          "default": "en",
+          "enum": [
+            "en",
+            "es"
+          ],
+          "title": "Lang",
+          "type": "string"
+        },
+        "id": {
+          "description": "Archived application project ID.",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "expected_updated_ts",
+        "id"
+      ],
+      "title": "AppDeleteArgs",
+      "type": "object"
+    },
+    "module": "design"
+  },
+  {
     "name": "app_project_change_undo",
     "description": "Undo one recorded project edit. Deshacer un cambio del historial.",
     "annotations": {

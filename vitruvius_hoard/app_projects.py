@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sqlite3
+import stat
 import shutil
 import subprocess
 import sys
@@ -268,10 +269,13 @@ class AppProjects:
         # Earlier creation undos left an empty marker. An explicit index state takes precedence.
         return index["archived"] if "archived" in index else (root / "archived").exists()
 
-    def _load_index(self, id, *, include_archived=False):
+    def _project_path(self, id):
         if not re.fullmatch(r"[a-f0-9]{16}", id):
             raise ValueError("Invalid project id")
-        root = self.root / id
+        return self.root / id
+
+    def _load_index(self, id, *, include_archived=False):
+        root = self._project_path(id)
         try:
             index = json.loads((root / "project-index.json").read_text(encoding="utf-8"))
         except FileNotFoundError as error:
@@ -308,6 +312,8 @@ class AppProjects:
         with self.lock:
             result = []
             for path in sorted(self.root.glob("*/project-index.json")):
+                if path.parent.name.startswith(".retired-"):
+                    continue
                 item = json.loads(path.read_text(encoding="utf-8"))
                 if self._archived(path.parent, item) == archived:
                     metadata = self._public_index(item)
@@ -352,6 +358,93 @@ class AppProjects:
                     "operation": "restore" if archived else "archive", "confirm": True, "lang": lang,
                 }}
             return result
+
+    @staticmethod
+    def _deletion_stat(path, es):
+        info = path.lstat()
+        is_reparse_point = getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+        if is_reparse_point or not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+            raise AppError("unsafe_project_data",
+                           "El proyecto contiene un enlace o un tipo de archivo que no se puede borrar."
+                           if es else "The project contains a link or file type that cannot be deleted.")
+        return info
+
+    @classmethod
+    def _deletion_inventory(cls, root, es):
+        directories = []
+        pending = [root]
+        files = []
+        while pending:
+            directory = pending.pop()
+            directories.append(directory.relative_to(root))
+            for entry in directory.iterdir():
+                info = cls._deletion_stat(entry, es)
+                if stat.S_ISDIR(info.st_mode):
+                    pending.append(entry)
+                else:
+                    files.append((entry.relative_to(root), info.st_size))
+        return directories, files
+
+    def delete(self, id, expected_revision, expected_updated_ts, confirm=False, lang="en"):
+        es = lang == "es"
+        if confirm is not True:
+            raise AppError("confirm_required",
+                           "Confirma que quieres borrar definitivamente el proyecto."
+                           if es else "Confirm that you want to permanently delete the project.")
+        with self.lock:
+            root = self._project_path(id)
+            try:
+                # Check from the volume root before opening anything inside the archive.
+                for parent in reversed(Path(os.path.abspath(root)).parents):
+                    self._deletion_stat(parent, es)
+                self._deletion_stat(root, es)
+                self._deletion_stat(root / "project-index.json", es)
+                _, index = self._load_index(id, include_archived=True)
+            except (FileNotFoundError, LookupError, NotADirectoryError) as error:
+                raise AppError("not_found", "No se ha encontrado el proyecto." if es
+                               else "Application project not found") from error
+            if index.get("id") != id:
+                raise AppError("unsafe_project_data", "El registro no corresponde al proyecto." if es
+                               else "The stored record does not match this project.")
+            if not self._archived(root, index):
+                raise AppError("project_active", "Archiva el proyecto antes de borrarlo." if es
+                               else "Archive the project before deleting it.", status=409)
+            if index["revision"] != expected_revision or index["updated_ts"] != expected_updated_ts:
+                raise AppError("conflict", "El proyecto ha cambiado. Vuelve a cargar la lista de archivados." if es
+                               else "The project changed. Reload the archived projects.")
+
+            retired = root.with_name(f".retired-{id}")
+            try:
+                self.stop(id)
+                directories, files = self._deletion_inventory(root, es)
+                if os.path.lexists(retired):
+                    raise FileExistsError(retired)
+                # The same-volume rename removes the intact project from the workspace in one step.
+                root.rename(retired)
+            except OSError as error:
+                raise AppError("delete_failed",
+                               "No se ha podido retirar la carpeta. El proyecto sigue intacto en Archivados y puedes restaurarlo."
+                               if es else "Could not move the folder. The project is intact in Archived and can be restored.",
+                               status=500) from error
+
+            self.revision_events.close_project(id)
+            receipt = {"id": id, "name": index["name"], "path": str(root), "deleted": True,
+                       "files": 0, "bytes": 0, "cleanup_complete": True}
+            try:
+                for path, size in reversed(files):
+                    (retired / path).unlink()
+                    receipt["files"] += 1
+                    receipt["bytes"] += size
+                for path in reversed(directories):
+                    (retired / path).rmdir()
+            except OSError:
+                receipt.update(
+                    cleanup_complete=False, remaining_path=str(retired),
+                    warning=(f"Proyecto borrado. Queda pendiente limpiar la carpeta {retired}."
+                             if es else f"Project deleted. The folder {retired} still needs cleanup."),
+                )
+            return receipt
+
 
     def edit_source(self, id, vsrc, tag, expected_revision, change, lang="en", *, actor=None, target=None,
                     author=None):

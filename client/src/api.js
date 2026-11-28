@@ -148,6 +148,7 @@ export const api = {
   appProject: (id, revision) => request("GET", `/design/api/app-projects/${encodeURIComponent(id)}`, { params: { revision } }),
   appProjectCreate: (body, uiLang) => request("POST", "/design/api/app-projects", { body, params: { ui_lang: uiLang } }),
   appProjectArchive: (id, body) => request("POST", "/design/api/app-projects/" + encodeURIComponent(id) + "/archive", { body }),
+  appProjectDelete: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/delete`, { body }),
   appProjectUpdate: (id, body) => request("PUT", `/design/api/app-projects/${encodeURIComponent(id)}`, { body }),
   appProjectUndoChange: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo-change`, { body }),
   appProjectUndo: (id, body) => request("POST", `/design/api/app-projects/${encodeURIComponent(id)}/undo`, { body }),

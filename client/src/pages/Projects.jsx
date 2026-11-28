@@ -18,6 +18,7 @@ export default function Projects({ param }) {
   const [{ active: projects, archived }, setProjects] = useState({ active: [], archived: [] });
   const [showArchived, setShowArchived] = useState(false);
   const [archivePending, setArchivePending] = useState(null);
+  const [deletePending, setDeletePending] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [template, setTemplate] = useState("work-board");
@@ -105,6 +106,7 @@ export default function Projects({ param }) {
     loadSequence.current++;
     setProject(null); setPreview(null); setBundle(null); setRender(null); setFile(null);
     setArchivePending(null);
+    setDeletePending(null);
     if (param) loadProject(param, new URLSearchParams(window.location.search).get("source_revision") || undefined);
     return () => { loadSequence.current++; };
   }, [param]);
@@ -231,6 +233,25 @@ export default function Projects({ param }) {
     } finally { setBusy(""); }
   };
 
+  const deleteArchived = async (item) => {
+    setBusy("delete");
+    try {
+      const result = await api.appProjectDelete(item.id, {
+        confirm: true, lang, expected_revision: item.revision, expected_updated_ts: item.updated_ts,
+      });
+      setProjects((current) => ({
+        ...current, archived: current.archived.filter(({ id }) => id !== item.id),
+      }));
+      notify(result.warning || (es ? "Proyecto borrado definitivamente" : "Project permanently deleted"));
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      setDeletePending(null);
+      await loadList();
+      setBusy("");
+    }
+  };
+
   return <div className="flex flex-col gap-6">
     <h1 className="text-[20px] font-semibold">{es ? "Aplicaciones" : "Applications"}</h1>
     <details className="panel" open={!showArchived && !projects.length && !project}><summary className="cursor-pointer font-semibold">{es ? "Crear aplicación" : "Create application"}</summary>
@@ -289,15 +310,34 @@ export default function Projects({ param }) {
       <aside className="panel">
         <h2 className="font-semibold mb-3">{es ? "Proyectos" : "Projects"}</h2>
         <div className="flex gap-2 flex-wrap mb-3" role="group" aria-label={es ? "Estado de los proyectos" : "Project status"}>
-          <button type="button" className={showArchived ? "btn" : "btn btn-active"} aria-pressed={!showArchived} onClick={() => setShowArchived(false)}>{es ? "Activos" : "Active"}</button>
+          <button type="button" className={showArchived ? "btn" : "btn btn-active"} aria-pressed={!showArchived} onClick={() => { setShowArchived(false); setDeletePending(null); }}>{es ? "Activos" : "Active"}</button>
           <button type="button" className={showArchived ? "btn btn-active" : "btn"} aria-pressed={showArchived} onClick={() => { setShowArchived(true); loadList(); }}>{es ? "Archivados" : "Archived"}</button>
         </div>
         {showArchived ? (archived.length ? <ul className="flex flex-col gap-3">
           {archived.map((item) => <li key={item.id} className="flex flex-col gap-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
             <strong className="break-words">{item.name}</strong>
             <span className="help">{es ? "Versiones guardadas" : "Saved revisions"} · {item.revisions.length}</span>
-            <button type="button" className="btn self-start mt-1" disabled={!!busy} aria-label={(es ? "Restaurar " : "Restore ") + item.name}
-              onClick={() => changeArchive(item, "restore")}>{es ? "Restaurar" : "Restore"}</button>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <button type="button" className="btn" disabled={!!busy || !!deletePending} aria-label={(es ? "Restaurar " : "Restore ") + item.name}
+                onClick={() => changeArchive(item, "restore")}>{es ? "Restaurar" : "Restore"}</button>
+              <button type="button" className="btn btn-danger" disabled={!!busy || !!deletePending}
+                aria-expanded={deletePending?.id === item.id}
+                onClick={() => setDeletePending(item)}>{es ? "Borrar definitivamente…" : "Delete permanently…"}</button>
+            </div>
+            {deletePending?.id === item.id && <div className="flex flex-col gap-2 mt-2" role="group" aria-labelledby="project-delete-question">
+              <p id="project-delete-question" className="font-semibold break-words">
+                {es ? `¿Borrar definitivamente «${deletePending.name}»?` : `Permanently delete “${deletePending.name}”?`}
+              </p>
+              <p className="help">{es
+                ? "Se borrarán sus datos, versiones y exportaciones guardadas. No se puede deshacer."
+                : "Its data, revisions and saved exports will be deleted. This cannot be undone."}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn" disabled={!!busy} onClick={() => setDeletePending(null)}>{es ? "Cancelar" : "Cancel"}</button>
+                <button type="button" className="btn btn-danger" disabled={!!busy} onClick={() => deleteArchived(deletePending)}>{busy === "delete"
+                  ? (es ? "Borrando…" : "Deleting…")
+                  : (es ? "Confirmar borrado" : "Confirm deletion")}</button>
+              </div>
+            </div>}
           </li>)}
         </ul> : <p className="help">{es ? "No hay proyectos archivados." : "There are no archived projects."}</p>) : <>
           {!projects.length && <p className="help">{es ? "Crea una aplicación para empezar." : "Create an application to begin."}</p>}
