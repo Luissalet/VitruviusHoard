@@ -592,7 +592,7 @@ export function mountTransferAssistant(root, options = {}) {
       captureContext = context;
       return !sttWarning;
     },
-    onStatus: phase => show(captureStatus, phase === "getting_mic" ? permissionCopy.waiting : copy[phase] || sttWarning),
+    onStatus: phase => show(captureStatus, phase === "getting_mic" ? permissionCopy.waiting : permissionCopy[phase] || copy[phase] || sttWarning),
     onError: error => {
       sttWarning = error === "stt_unavailable" ? copy[error] : sttWarning;
       show(captureStatus, error === "mic_permission_denied" ? permissionCopy.denied : copy[error]);
@@ -600,7 +600,7 @@ export function mountTransferAssistant(root, options = {}) {
     onPartial: result => show(transcript, provisional + " · " + result.text),
     onFinal: (result, timing) => {
       if (captureVersion !== formVersion) return;
-      if (timing.stopReason === "adaptive") result = finishProvisionalTransfer(result);
+      if (timing.reusedProvisional) result = finishProvisionalTransfer(result);
       if (result.interpretation && result.interpretation.is_final !== true) return;
       if (result.text && !isTransferCommand(result.text)) {
         showDictation(result.interpretation?.dictation_route, result.interpretation?.dictation_name);

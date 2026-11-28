@@ -55,12 +55,17 @@ export async function recordDictation({
   function stop({cancel = false, reason = "manual"} = {}) {
     if (cancel) final.abort();
     if (stopped) return;
+    if (!cancel && (reason === "manual" || reason === "silence") && !speaking
+        && proposal?.silenceMs >= 500 && proposal.silenceMs <= 700 && proposal.result?.text?.trim()
+        && (reason === "silence" || !voicePresent())) {
+      accepted = proposal.result;
+    }
     stopped = true;
     partial?.abort();
     probing?.abort();
     captureStoppedAt = performance.now();
     speechEnd ??= captureStoppedAt;
-    stopReason = reason;
+    stopReason = accepted && reason === "silence" ? "adaptive" : reason;
     clearInterval(timer);
     if (capture.state !== "inactive") capture.stop();
     stream.getTracks().forEach(track => track.stop());
@@ -125,7 +130,8 @@ export async function recordDictation({
       const signal = AbortSignal.any([final.signal, AbortSignal.timeout(finalTimeoutMs)]);
       const result = accepted || (blob.size ? await request(blob, {partial: false, signal}) : {text: ""});
       if (!final.signal.aborted) onFinal(result, {
-        speechEnd, captureStoppedAt, stopReason, transcriptAt: result.transcribedAt ?? performance.now(),
+        speechEnd, captureStoppedAt, stopReason, reusedProvisional: Boolean(accepted),
+        transcriptAt: result.transcribedAt ?? performance.now(),
       });
     } catch {
       if (!final.signal.aborted) onError("stt_unavailable");
@@ -150,13 +156,17 @@ export async function recordDictation({
     stop({cancel: true});
     throw error;
   }
+  function voicePresent() {
+    analyser.getFloatTimeDomainData(samples);
+    const energy = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+    return energy >= .018;
+  }
+
   function sampleVoice() {
     if (stopped) return;
     const now = performance.now();
-    analyser.getFloatTimeDomainData(samples);
-    const energy = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
     const wasSpeaking = speaking;
-    speaking = energy >= .018;
+    speaking = voicePresent();
     if (speaking) {
       audibleFrames += 1;
       if (audibleFrames >= 4) speechEnd = now;
@@ -184,10 +194,8 @@ export async function recordDictation({
       }
     }
     const cutoff = proposal?.silenceMs ?? (endTurn ? ADAPTIVE_LONG_MS : silenceMs);
-    if (!speaking && pause >= cutoff) {
-      accepted = proposal?.result;
-      stop({reason: accepted ? "adaptive" : "silence"});
-    } else if (now - started >= maxDurationMs) stop({reason: "limit"});
+    if (!speaking && pause >= cutoff) stop({reason: "silence"});
+    else if (now - started >= maxDurationMs) stop({reason: "limit"});
   }
   timer = setInterval(sampleVoice, sampleMs);
   return {stop};
@@ -196,11 +204,17 @@ export async function recordDictation({
 export const MICROPHONE_TEXT = {
   es: {
     start: "Hablar", finish: "Terminar", cancel: "Cancelar solicitud",
+    connecting: "Comprobando la conexión con el servicio de voz…",
+    busy: "Espera a que termine la instrucción anterior para volver a hablar.",
+    unavailable: "El micrófono no está disponible en esta vista. Puedes escribir.",
     waiting: "Esperando permiso del micrófono… Elige Permitir en el aviso del navegador.",
     denied: "El navegador ha denegado el acceso al micrófono. Abre los permisos del sitio junto a la dirección, permite el micrófono y vuelve a pulsar Hablar. También puedes escribir.",
   },
   en: {
     start: "Speak", finish: "Finish", cancel: "Cancel request",
+    connecting: "Checking the connection to the voice service…",
+    busy: "Wait for the previous instruction to finish before speaking again.",
+    unavailable: "The microphone is unavailable in this view. You can type.",
     waiting: "Waiting for microphone permission… Choose Allow in the browser prompt.",
     denied: "The browser denied microphone access. Open the site permissions next to the address, allow the microphone and select Speak again. You can also type.",
   },
@@ -220,18 +234,21 @@ export function mountDictationMicrophone(button, {
   let capture;
   let permission;
   let phase = "";
-  let disabled = button.disabled;
+  let disabled = Boolean(button.disabled);
+  const unavailable = typeof navigator.mediaDevices?.getUserMedia !== "function";
+  const cancellable = () => phase === "connecting" || phase === "getting_mic";
+  const status = () => phase || (unavailable ? "unavailable" : disabled ? "busy" : "");
 
   function updateButton() {
-    button.textContent = phase === "getting_mic" ? copy.cancel : phase === "recording" ? copy.finish : copy.start;
+    button.textContent = cancellable() ? copy.cancel : phase === "recording" ? copy.finish : copy.start;
     button.setAttribute("aria-pressed", String(phase === "recording"));
-    button.disabled = phase !== "getting_mic" && (disabled || phase === "transcribing");
+    button.disabled = !cancellable() && (disabled || unavailable || phase === "transcribing");
   }
 
   function setPhase(next) {
     phase = next;
     updateButton();
-    onStatus(next);
+    onStatus(status());
   }
 
   function cancel() {
@@ -244,7 +261,7 @@ export function mountDictationMicrophone(button, {
   }
 
   async function click() {
-    if (phase === "getting_mic") {
+    if (cancellable()) {
       cancel();
       return;
     }
@@ -252,11 +269,10 @@ export function mountDictationMicrophone(button, {
       capture?.stop();
       return;
     }
-    if (phase || disabled) return;
+    if (status()) return;
     const current = ++sequence;
     const attempt = new AbortController();
     permission = attempt;
-    setPhase("getting_mic");
     function ifCurrent(handler) {
       return (...args) => { if (current === sequence) handler?.(...args); };
     }
@@ -266,10 +282,13 @@ export function mountDictationMicrophone(button, {
       onError(code);
     });
     try {
-      if (!await beforeStart() || current !== sequence) {
+      const ready = beforeStart();
+      if (ready?.then) setPhase("connecting");
+      if (!await ready || current !== sequence) {
         if (current === sequence) setPhase("");
         return;
       }
+      setPhase("getting_mic");
       const next = await recordDictation({
         request: transcribe, silenceMs, finalTimeoutMs, partials, onPartial: ifCurrent(onPartial),
         endTurn: adaptive() ? endTurn : undefined, permissionSignal: attempt.signal,
@@ -301,11 +320,13 @@ export function mountDictationMicrophone(button, {
   document.addEventListener("visibilitychange", whenHidden);
   setPhase("");
   return {
-    get phase() { return phase; },
+    get phase() { return status(); },
     cancel,
     setDisabled(value) {
+      const previous = status();
       disabled = value;
       updateButton();
+      if (status() !== previous) onStatus(status());
     },
     destroy() {
       cancel();

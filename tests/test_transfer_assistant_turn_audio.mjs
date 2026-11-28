@@ -114,7 +114,7 @@ test("the microphone permission message survives a delayed voice availability ch
   mountTransferAssistant(root, {loadContext: async () => ({accounts: [], contacts: []})});
   mic = root.children.flatMap(item => item.children).find(item => item.textContent === "Hablar");
   mic.dispatchEvent(new Event("click"));
-  const waiting = root.children.find(item => item.textContent?.startsWith("Esperando permiso del micrófono"));
+  const waiting = root.children.find(item => item.textContent?.startsWith("Comprobando la conexión"));
   assert.ok(waiting);
   availability.resolve(Response.json({dictation: true, stt: true, dictation_route: "direct"}));
   await requesting.promise;
@@ -300,8 +300,9 @@ function mockCapture(t) {
     Object.defineProperty(globalThis, name, {configurable: true, writable: true, value});
     t.after(() => old ? Object.defineProperty(globalThis, name, old) : delete globalThis[name]);
   }
-  return async (duration, voice = false) => {
+  return async (duration, voice = false, sample = true) => {
     voiced = voice;
+    if (!sample) return;
     for (let frame = 0; frame < duration; frame += sampleMs) {
       time += sampleMs;
       tick?.();
@@ -309,6 +310,75 @@ function mockCapture(t) {
     }
   };
 }
+
+for (const mode of ["accepted", "incomplete", "failed", "resumed", "speaking", "pending"]) {
+  test("manual microphone finish uses the correct transcript: " + mode, async t => {
+    const advance = mockCapture(t);
+    const {recordDictation} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+    const requests = [];
+    const final = [];
+    const deferred = Promise.withResolvers();
+    const capture = await recordDictation({
+      request: async (_blob, {partial}) => {
+        requests.push(partial);
+        return {text: partial ? "Veinte euros" : "Veinte euros con concepto cena"};
+      },
+      endTurn: async result => {
+        if (mode === "failed") throw new Error("Unavailable");
+        if (mode === "pending") await deferred.promise;
+        return {silenceMs: mode === "incomplete" ? 1650 : 650, result};
+      },
+      onFinal: (result, timing) => final.push({result, timing}),
+    });
+    await advance(400, true);
+    await advance(200);
+    if (mode === "resumed") {
+      await advance(125, true);
+      await advance(25);
+    }
+    if (mode === "speaking") await advance(1, true, false);
+    capture.stop();
+    deferred.resolve();
+    await new Promise(resolve => setImmediate(resolve));
+    const reused = mode === "accepted";
+    assert.deepEqual(requests, reused ? [true] : [true, false]);
+    assert.equal(final.length, 1);
+    assert.equal(final[0].result.text, reused ? "Veinte euros" : "Veinte euros con concepto cena");
+    assert.equal(final[0].timing.reusedProvisional, reused);
+    assert.equal(final[0].timing.stopReason, "manual");
+  });
+}
+
+test("busy and unavailable microphone buttons expose a reason", async t => {
+  const {mountDictationMicrophone} = await import("../vitruvius_hoard/transfer_assistant/microphone.js");
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  globalThis.document = new EventTarget();
+  globalThis.window = new EventTarget();
+  t.after(() => {
+    delete globalThis.document;
+    delete globalThis.window;
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete globalThis.navigator;
+  });
+  function mount(mediaDevices) {
+    Object.defineProperty(globalThis, "navigator", {configurable: true, value: {mediaDevices}});
+    const button = new Element();
+    const phases = [];
+    const microphone = mountDictationMicrophone(button, {request() {}, onStatus: phase => phases.push(phase)});
+    return {button, phases, microphone};
+  }
+  const ready = mount({getUserMedia() {}});
+  ready.microphone.setDisabled(true);
+  assert.equal(ready.button.disabled, true);
+  assert.equal(ready.phases.at(-1), "busy");
+  ready.microphone.setDisabled(false);
+  assert.equal(ready.button.disabled, false);
+  assert.equal(ready.phases.at(-1), "");
+
+  const unavailable = mount(undefined);
+  assert.equal(unavailable.button.disabled, true);
+  assert.equal(unavailable.phases.at(-1), "unavailable");
+});
 
 test("a renewed pause invalidates an in-flight provisional parse", async t => {
   const advance = mockCapture(t);
@@ -515,7 +585,7 @@ for (const [latency, silenceMs, cutoff] of [[450, 650, 650], [550, 650, 675], [7
         await transcript.promise;
         return {text: short ? "Veinte euros" : "Treinta y"};
       },
-      endTurn: async result => short ? {silenceMs, result} : {silenceMs},
+      endTurn: async result => ({silenceMs, result}),
       onFinal: (result, timing) => final.push({result, timing}),
     });
     await advance(400, true);

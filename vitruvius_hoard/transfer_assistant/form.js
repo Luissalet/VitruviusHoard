@@ -111,7 +111,8 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   const locale = document.documentElement.lang.toLowerCase().startsWith("en") ? "en-IE" : "es-ES";
   const copy = COPY[locale.slice(0, 2)];
   const permissionCopy = MICROPHONE_TEXT[locale.slice(0, 2)];
-  const micStatus = {getting_mic: permissionCopy.waiting, recording: copy.listening, transcribing: copy.transcribing};
+  const micStatus = {getting_mic: permissionCopy.waiting, recording: copy.listening, transcribing: copy.transcribing,
+    busy: copy.understanding};
   const root = document.createElement("section");
   root.className = "voice-form-assistant";
   root.setAttribute("aria-label", copy.title);
@@ -123,6 +124,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     '" placeholder="' + copy.input + '" maxlength="1000" required><button>' + copy.send + '</button></form>' +
     '<p class="voice-form-assistant__reply" data-reply aria-live="polite" hidden></p>' +
     '<p class="voice-form-assistant__status" data-status role="status" hidden></p>' +
+    '<p class="voice-form-assistant__status" data-reply-status role="status" hidden></p>' +
     '<details class="voice-form-assistant__trace" open hidden><summary>' + copy.trace +
     '</summary><ol></ol></details>';
   Element.prototype.after.call(form, root);
@@ -132,6 +134,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   const replay = root.querySelector("[data-replay]");
   const reply = root.querySelector("[data-reply]");
   const status = root.querySelector("[data-status]");
+  const replyStatus = root.querySelector("[data-reply-status]");
   const history = root.querySelector("details");
   const voice = createTransferReplyVoice({engine: "qwen3-tts"});
   const entries = Object.entries(schema.properties);
@@ -159,7 +162,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   }
 
   function setStatus(text) {
-    show(status, text);
+    show(replyStatus, text);
   }
 
   function startTurn(text, timing) {
@@ -307,7 +310,6 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
         respond(turn, valid ? copy.submitted : copy.invalid);
         return;
       }
-      setStatus(copy.understanding);
       let understood;
       const correction = copy.repair.test(text);
       const field = (correction && lastChanged) || asked;
@@ -409,11 +411,12 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       speech?.abort();
       speech = undefined;
       sttStarted = undefined;
+      setStatus("");
       return true;
     },
     onStatus(phase) {
-      send.disabled = phase === "recording" || phase === "transcribing";
-      setStatus(micStatus[phase] || "");
+      send.disabled = ["recording", "transcribing", "busy"].includes(phase);
+      show(status, micStatus[phase] || permissionCopy[phase] || "");
     },
     async request(blob, {signal}) {
       sttStarted = performance.now();
@@ -426,7 +429,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     },
     onError(code) {
       if (code === "mic_permission_denied") {
-        setStatus(permissionCopy.denied);
+        show(status, permissionCopy.denied);
         return;
       }
       const text = code === "stt_unavailable" ? copy.sttDown : copy.micDown;
