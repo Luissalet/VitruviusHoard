@@ -61,6 +61,45 @@ def test_agent_create_complete_custom_source_only_adds_runtime(tmp_path):
     assert explicit["files"] == custom_files
 
 
+@pytest.mark.parametrize(("lang", "home_link", "records", "search", "empty", "task", "choice", "add", "open_record",
+                          "save", "delete"), [
+    ("es", "Resumen", "Registros", "Buscar registros", "Aún no hay registros", "Tarea", "Pendiente",
+     "Añadir registro", "Abrir registro", "Guardar cambios", "Eliminar registro"),
+    ("en", "Overview", "Records", "Search records", "No records yet", "Task", "To do",
+     "Add record", "Open record", "Save changes", "Delete record"),
+])
+def test_partial_custom_starter_localizes_records_preview(
+    tmp_path, lang, home_link, records, search, empty, task, choice, add, open_record, save, delete,
+):
+    projects = AppProjects(tmp_path)
+    source = "<h1>Cuadernos Norte</h1>"
+    try:
+        project = call_tool(SimpleNamespace(app_projects=projects), "app_project_create", {
+            "name": "Cuadernos Norte", "template": "custom", "lang": lang,
+            "files": {"pages/index.html": source}, "include_files": True,
+        })
+        assert project["files"]["pages/index.html"] == source
+        url = projects.preview(project["id"])["url"]
+        _, raw = request(url + "/")
+        home = raw.decode()
+        assert f'lang="{lang}"' in home.split("<head", 1)[0]
+        assert f">{home_link}</a>" in home and f">{records}</a>" in home
+        _, raw = request(url + "/records")
+        listing = raw.decode()
+        assert all(word in listing for word in (f">{records}</h1>", search, empty, task, add))
+        assert f'value="To do">{choice}</option>' in listing
+        _, raw = request(url + "/actions/create", "POST", {"title": "Cuaderno azul", "status": "To do"})
+        item = json.loads(raw)
+        assert item["status"] == "To do"
+        _, raw = request(url + "/records")
+        assert f">{choice}</td>" in raw.decode() and f">{open_record}</a>" in raw.decode()
+        _, raw = request(url + "/records/" + item["id"])
+        assert all(f">{label}</button>" in raw.decode() for label in (save, delete))
+    finally:
+        projects.close()
+
+
+
 def test_real_preview_source_revisions_data_and_standalone_export(tmp_path):
     projects = AppProjects(tmp_path)
     try:
