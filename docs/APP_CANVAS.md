@@ -17,8 +17,9 @@ Canvas holds the first click until the preview confirms the mode.
 The click then selects or anchors the element without activating its link or form.
 The preview proxy loads the inspector before project scripts so its window capture handles subsequent clicks
 in Select and Comment as well. In Navigate, the page handles its own input.
-Picking an element in Comment mode brings the whole form into view and focuses the note field. The element's
-text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
+Picking an element in Comment mode brings the whole form into view and focuses the note field. A saved comment
+quotes the text of its anchor on the displayed page. When it changes, **Text when commented** contains the
+original quote and crop. The preview's edit confirmation and text
 editor use the same theme. The label above a selected element uses the same type and name as its card,
 with selectors and source paths available under Technical details. The label moves clear of the edit handles.
 Navigate keeps the selection in the inspector and clears its outline from the page.

@@ -15,6 +15,7 @@ const POLL_MS = 2500;
  */
 export default function PreviewComments({ projectId, running, served, previewRevision, es, notify, send, register, ready, onContext, onComments, canvas = false }) {
   const [comments, setComments] = useState([]);
+  const [anchorReport, setAnchorReport] = useState(null);
   const [draft, setDraft] = useState(null); // {element, page}
   const [note, setNote] = useState("");
   const [replies, setReplies] = useState({});
@@ -48,7 +49,7 @@ export default function PreviewComments({ projectId, running, served, previewRev
   };
 
   useEffect(() => {
-    setComments([]); setDraft(null); setNote(""); setReplies({}); setFocusId(null); setPage(null);
+    setComments([]); setAnchorReport(null); setDraft(null); setNote(""); setReplies({}); setFocusId(null); setPage(null);
     setLoadState("loading"); setWorking(null); setSaving(false); pendingAnchor.current = null;
     if (!running || !projectId) return undefined;
     load();
@@ -80,8 +81,13 @@ export default function PreviewComments({ projectId, running, served, previewRev
       else if (data.type === "dock/comment-anchors" && Array.isArray(data.anchors)) {
         // The report names the revision the page itself serves; the server refuses one the preview no longer serves.
         const reported = data.revision || previewRevision.current;
+        const texts = data.anchors.filter((anchor) => anchor?.state === "ok" && typeof anchor.text === "string");
+        setAnchorReport({ page: data.page, revision: reported, texts: new Map(texts.map((anchor) => [anchor.id, anchor.text])) });
         const changed = anchorChanges(state.current.comments, data.anchors, reported);
-        if (changed.length && projectId && reported) api.appProjectCommentAnchors(projectId, { anchors: changed, revision: reported, session: data.session || undefined }).then(load).catch(() => {});
+        if (changed.length && projectId && reported) {
+          const anchors = changed.map(({ id, state, vsrc, box }) => ({ id, state, vsrc, box }));
+          api.appProjectCommentAnchors(projectId, { anchors, revision: reported, session: data.session || undefined }).then(load).catch(() => {});
+        }
       } else if (data.type === "dock/comment-focus") {
         setFocusId(data.id);
         requestAnimationFrame(() => document.getElementById(`preview-comment-${data.id}`)?.focus());
@@ -163,8 +169,13 @@ export default function PreviewComments({ projectId, running, served, previewRev
   const { anchored, lost, closed } = groupComments(comments);
   if (!running) return null;
 
+  const visibleTexts = anchorReport && anchorReport.page === page && anchorReport.revision === now() ? anchorReport.texts : null;
   const item = (comment) => {
     const lastDecision = comment.history.findLast((entry) => entry.status !== "seen");
+    const liveText = comment.page === page ? visibleTexts?.get(comment.id) : undefined;
+    const quote = liveText ?? comment.element_text;
+    const showOriginal = liveText !== undefined && liveText !== comment.element_text && (comment.element_text || comment.has_crop);
+    const originalCrop = comment.has_crop && <img className="preview-comment-crop" src={`/design/api/app-projects/${projectId}/comments/${comment.id}/crop`} alt={es ? `Recorte de ${targetName(comment)} cuando se comentó` : `Crop of ${targetName(comment)} when it was commented`} />;
     return <li key={comment.id} id={`preview-comment-${comment.id}`} tabIndex={-1} className={`panel flex flex-col gap-1 ${focusId === comment.id ? "ring-2" : ""}`} style={{ padding: 10 }}>
       <div className="flex gap-2 items-center flex-wrap">
         <strong>#{comment.n}</strong>
@@ -173,8 +184,12 @@ export default function PreviewComments({ projectId, running, served, previewRev
         {comment.stale && <span className="chip chip-wrap" title={comment.revision}>{es ? "hecho en una versión anterior" : "made on an earlier revision"}</span>}
       </div>
       <p>{comment.note}</p>
-      {comment.element_text && <blockquote className="preview-comment-quote">{comment.element_text}</blockquote>}
-      {comment.has_crop && <img className="preview-comment-crop" src={`/design/api/app-projects/${projectId}/comments/${comment.id}/crop`} alt={es ? `Recorte de ${targetName(comment)} cuando se comentó` : `Crop of ${targetName(comment)} when it was commented`} />}
+      {quote && <blockquote className="preview-comment-quote">{quote}</blockquote>}
+      {showOriginal ? <details className="help">
+        <summary>{es ? "Texto al comentar" : "Text when commented"}</summary>
+        {comment.element_text && <blockquote>{comment.element_text}</blockquote>}
+        {originalCrop}
+      </details> : originalCrop}
       {comment.status === "resolved" && comment.summary && <p className="help"><strong>{es ? "Qué cambió: " : "What changed: "}</strong>{comment.summary}</p>}
       {lastDecision?.source_undo && <p className="help"><strong>{es ? "Cambio deshecho. Qué había cambiado: " : "Change undone. What had changed: "}</strong>{lastDecision.text}</p>}
       {comment.status === "answered" && comment.reply && <p className="help"><strong>{es ? "El agente dice: " : "The agent says: "}</strong>{comment.reply}</p>}

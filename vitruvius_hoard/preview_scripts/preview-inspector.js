@@ -1100,7 +1100,7 @@
       if (found.state === 'lost') { anchors.push({id: pin.id, state: 'lost'}); continue; }
       const r = found.element.getBoundingClientRect();
       const slot = slots.get(found.element) || 0; slots.set(found.element, slot + 1);
-      anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null,
+      anchors.push({id: pin.id, state: 'ok', vsrc: attrOf(found.element, 'data-vsrc') || null, text: textOf(found.element),
         box: {x: Math.round(r.left + window.scrollX), y: Math.round(r.top + window.scrollY), w: Math.round(r.width), h: Math.round(r.height)}});
       if (!r.width && !r.height) continue;
 
@@ -1122,7 +1122,7 @@
     }
     for (const button of stalePins.values()) button.remove();
     stage.replaceChildren(drawings);
-    const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || ''])]);
+    const key = JSON.stringify([now, anchors.map(a => [a.id, a.state, a.vsrc || '', a.text])]);
     if (pins.length && key !== anchorKey) { anchorKey = key; post('dock/comment-anchors', {page: pageId(), revision: now, session: sessionId(), anchors}); }
   }
   const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
