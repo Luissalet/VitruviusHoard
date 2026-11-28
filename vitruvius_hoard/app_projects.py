@@ -55,6 +55,44 @@ _TEMPLATES = [
 ]
 
 
+_RECORD_STARTER_COPY = {
+    "en": {
+        "application": "Application",
+        "overview": "Overview",
+        "records": "Records",
+        "count": "records in this application.",
+        "manage": "Manage records",
+        "current": "Current records",
+        "search_records": "Search records",
+        "search": "Search",
+        "add": "Add a record",
+        "saved": "Saved records",
+        "back": "Back to records",
+        "edit": "Edit record",
+    },
+    "es": {
+        "application": "Aplicación",
+        "overview": "Resumen",
+        "records": "Registros",
+        "count": "registros en esta aplicación.",
+        "manage": "Gestionar registros",
+        "current": "Registros actuales",
+        "search_records": "Buscar registros",
+        "search": "Buscar",
+        "add": "Añadir un registro",
+        "saved": "Registros guardados",
+        "back": "Volver a registros",
+        "edit": "Editar registro",
+    },
+}
+_RECORD_FIELD_LABELS_ES = {
+    "work-board": {"title": "Tarea", "status": "Estado", "notes": "Notas"},
+    "reference-library": {"title": "Título", "category": "Categoría", "source": "Fuente", "reviewed": "Revisado"},
+    "inventory": {"name": "Artículo", "quantity": "Cantidad", "location": "Ubicación"},
+}
+_BOARD_STATUS_LABELS_ES = {"To do": "Pendiente", "In progress": "En curso", "Done": "Hecho"}
+
+
 def templates():
     return json.loads(json.dumps(_TEMPLATES))
 
@@ -76,8 +114,20 @@ def starter_files(name, template="work-board", description="", accent=None, fiel
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", colour):
         raise ValueError("accent must be a six-digit hex colour")
     static = template == STATIC_PAGE_TEMPLATE["id"]
-    page_description = description_es if static and lang == "es" and description_es is not None else description
-    spec = validate_spec({"format": "vitruvius-app/v1", "name": name, "description": page_description, "fields": fields if fields is not None else selected["fields"], "template": template})
+    locale = "es" if lang == "es" else "en"
+    copy = _RECORD_STARTER_COPY[locale]
+    page_description = description_es if locale == "es" and description_es is not None else description
+    if fields is None:
+        fields = selected["fields"]
+        if locale == "es" and template in _RECORD_FIELD_LABELS_ES:
+            labels = _RECORD_FIELD_LABELS_ES[template]
+            for field in fields:
+                field["label"] = labels[field["name"]]
+                if template == "work-board" and field["name"] == "status":
+                    field["choice_labels"] = dict(_BOARD_STATUS_LABELS_ES)
+    spec = validate_spec({"format": "vitruvius-app/v1", "name": name, "description": page_description,
+                          "fields": fields, "template": template})
+
     common = {
         "project.json": json.dumps(spec, ensure_ascii=False, indent=2) + "\n",
         "server.py": _standalone_runtime(),
@@ -116,6 +166,7 @@ export const deleteRecord = (id) => request('/actions/delete', 'POST', {id});
 export const recordPath = (id) => `/records/${encodeURIComponent(id)}`;
 '''
     client = '''import {createRecord, updateRecord, deleteRecord, recordPath} from './api.js';
+const es = document.documentElement.lang === 'es';
 const form = document.querySelector('#record-form');
 const status = document.querySelector('#status');
 const dirty = new Set();
@@ -138,8 +189,9 @@ if (form instanceof HTMLFormElement && status) {
       Element.prototype.setAttribute.call(form, 'data-id', row.id);
       const now = Object.fromEntries(spec.fields.map(field => { const input = HTMLFormControlsCollection.prototype.namedItem.call(Object.getOwnPropertyDescriptor(HTMLFormElement.prototype, 'elements').get.call(form), field.name); return [field.name, input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? field.type === 'boolean' ? input instanceof HTMLInputElement && input.checked : field.type === 'number' ? Number(input.value) : input.value : null]; }));
       if (JSON.stringify(now) === captured) location.assign(recordPath(row.id));
-      else status.textContent = 'Submitted values saved. Your newer edits are still here.';
-    } catch (error) { status.textContent = error instanceof Error ? error.message : String(error); }
+      else status.textContent = es ? 'Datos guardados. Tus cambios posteriores siguen en el formulario.'
+        : 'Submitted values saved. Your newer edits are still here.';
+    } catch (error) { status.textContent = es ? 'No se pudo guardar el registro.' : (error instanceof Error ? error.message : String(error)); }
     finally { if (button) button.disabled = false; }
   });
 }
@@ -152,10 +204,33 @@ if (remove instanceof HTMLButtonElement && status) remove.addEventListener('clic
 '''
     files = {
         **common,
-        "layout.html": '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{name}}</title><link rel="stylesheet" href="/assets/style.css"></head><body><header><strong>{{name}}</strong><nav aria-label="Application"><a href="/">Overview</a><a href="/records">Records</a></nav></header><main>{{content}}</main><footer><p id="status" role="status" aria-live="polite"></p></footer><script type="module" src="/assets/client.js"></script></body></html>',
-        "pages/index.html": '<h1>{{name}}</h1><p>{{description}}</p><section><h2>Overview</h2><p>{{count}} records in this application.</p><a href="/records">Manage records</a></section><section><h2>Current records</h2><div class="table-wrap">{{table}}</div></section>',
-        "pages/records/index.html": '<h1>Records</h1><form class="search" action="/records" method="get"><label>Search records<input name="q" value="{{query}}" type="search"></label><button type="submit">Search</button></form><section><h2>Add a record</h2>{{form}}</section><section><h2>Saved records</h2><div class="table-wrap">{{table}}</div></section>',
-        "pages/records/[id].html": '<h1>{{record_title}}</h1><p><a href="/records">Back to records</a></p><section><h2>Edit record</h2>{{form}}</section>',
+        "layout.html": (
+            f'<!doctype html><html lang="{locale}"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1"><title>{{name}}</title>'
+            '<link rel="stylesheet" href="/assets/style.css"></head><body><header><strong>{{name}}</strong>'
+            f'<nav aria-label="{copy["application"]}"><a href="/">{copy["overview"]}</a>'
+            f'<a href="/records">{copy["records"]}</a></nav></header>'
+            '<main>{{content}}</main><footer><p id="status" role="status" aria-live="polite"></p></footer>'
+            '<script type="module" src="/assets/client.js"></script></body></html>'
+        ),
+        "pages/index.html": (
+            '<h1>{{name}}</h1><p>{{description}}</p>'
+            f'<section><h2>{copy["overview"]}</h2><p>' '{{count}} ' f'{copy["count"]}</p>'
+            f'<a href="/records">{copy["manage"]}</a></section><section><h2>{copy["current"]}</h2>'
+            '<div class="table-wrap">{{table}}</div></section>'
+        ),
+        "pages/records/index.html": (
+            f'<h1>{copy["records"]}</h1><form class="search" action="/records" method="get">'
+            f'<label>{copy["search_records"]}' '<input name="q" value="{{query}}" type="search"></label>'
+            f'<button type="submit">{copy["search"]}</button></form><section><h2>{copy["add"]}</h2>'
+            '{{form}}</section>' f'<section><h2>{copy["saved"]}</h2>'
+            '<div class="table-wrap">{{table}}</div></section>'
+        ),
+        "pages/records/[id].html": (
+            '<h1>{{record_title}}</h1>'
+            f'<p><a href="/records">{copy["back"]}</a></p><section><h2>{copy["edit"]}</h2>'
+            '{{form}}</section>'
+        ),
         "assets/style.css": css, "assets/api.js": api, "assets/client.js": client,
         "contracts.d.ts": contracts,
         "tsconfig.json": json.dumps({"compilerOptions": {"allowJs": True, "checkJs": True, "noEmit": True, "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022", "DOM"]}, "include": ["assets/api.js", "contracts.d.ts"]}, indent=2),

@@ -16,6 +16,7 @@ import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
+from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -570,21 +571,65 @@ def _render_template(_root, path, values):
     return re.sub(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}", lambda match: values.get(match[1], match[0]), source)
 
 
-def render_page(root, spec, store, route, params, query, *, render_template=_render_template):
+_RECORDS_COPY = {
+    "en": {
+        "open": "Open",
+        "open_record": "Open record",
+        "empty": "No records yet. Use the form to add the first one.",
+        "save": "Save changes",
+        "add": "Add record",
+        "delete": "Delete record",
+        "record": "Record",
+    },
+    "es": {
+        "open": "Abrir",
+        "open_record": "Abrir registro",
+        "empty": "Aún no hay registros. Usa el formulario para añadir el primero.",
+        "save": "Guardar cambios",
+        "add": "Añadir registro",
+        "delete": "Eliminar registro",
+        "record": "Registro",
+    },
+}
+
+
+class _LayoutLanguage(HTMLParser):
+    language = "en"
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "html":
+            language = dict(attrs).get("lang") or "en"
+            self.language = language.lower().split("-")[0]
+
+
+def _choice_label(field, value):
+    labels = field.get("choice_labels")
+    if field["type"] == "choice" and isinstance(labels, dict) and isinstance(value, str):
+        return labels.get(value, value)
+    return value
+
+
+def render_page(root, spec, store, route, params, query, *, render_template=_render_template, lang="en"):
     if isinstance(store, Collections):
         values = {"name": _text(spec["name"]), "description": _text(spec.get("description", "")), "query": _text(query)}
         values.update({"param_" + name: _text(value) for name, value in params.items()})
         values["content"] = render_template(root, route["file"], values)
         return render_template(root, Path(root) / "layout.html", values)
+    copy = _RECORDS_COPY.get(lang, _RECORDS_COPY["en"])
     fields = spec["fields"]
     rows = store.list(query)
     row = store.get(params["id"]) if route["path"] == "/records/[id]" and "id" in params else None
-    table = '<table><thead><tr>' + ''.join('<th>' + _text(field.get("label", field["name"])) + '</th>' for field in fields) + '<th>Open</th></tr></thead><tbody>'
+    headers = "".join(f'<th>{_text(field.get("label", field["name"]))}</th>' for field in fields)
+    table = f'<table><thead><tr>{headers}<th>{copy["open"]}</th></tr></thead><tbody>'
     for record in rows:
-        table += '<tr>' + ''.join('<td>' + _text(record.get(field["name"], "")) + '</td>' for field in fields) + '<td><a href="/records/' + record["id"] + '">Open record</a></td></tr>'
+        cells = "".join(
+            f'<td>{_text(_choice_label(field, record.get(field["name"], "")))}</td>' for field in fields
+        )
+        table += f'<tr>{cells}<td><a href="/records/{record["id"]}">{copy["open_record"]}</a></td></tr>'
+
     table += '</tbody></table>'
     if not rows:
-        table += '<p class="empty">No records yet. Use the form to add the first one.</p>'
+        table += f'<p class="empty">{copy["empty"]}</p>'
     controls = []
     for field in fields:
         name, kind = field["name"], field["type"]
@@ -592,17 +637,30 @@ def render_page(root, spec, store, route, params, query, *, render_template=_ren
         value = (row or {}).get(name, "")
         required = ' required' if field.get("required", True) and kind != "boolean" else ''
         if kind == "choice":
-            control = '<select name="' + name + '"' + required + '>' + ''.join('<option value="' + _text(choice) + '"' + (' selected' if choice == value else '') + '>' + _text(choice) + '</option>' for choice in field["choices"]) + '</select>'
+            options = "".join(
+                f'<option value="{_text(choice)}"' + (" selected" if choice == value else "")
+                + f'>{_text(_choice_label(field, choice))}</option>'
+                for choice in field["choices"]
+            )
+            control = f'<select name="{name}"{required}>{options}</select>'
+
         elif kind == "boolean":
             control = '<input type="checkbox" name="' + name + '"' + (' checked' if value else '') + '>'
         else:
             control = '<input name="' + name + '" type="' + ('number" step="any' if kind == "number" else 'text') + '" value="' + _text(value) + '"' + required + '>'
         controls.append('<label>' + label + control + '</label>')
-    form = '<form id="record-form" data-fields="' + _text(json.dumps(fields, ensure_ascii=False)) + '" data-id="' + _text((row or {}).get("id", "")) + '">' + ''.join(controls) + '<button type="submit">' + ('Save changes' if row else 'Add record') + '</button></form>'
+    form = (
+        f'<form id="record-form" data-fields="{_text(json.dumps(fields, ensure_ascii=False))}"'
+        f' data-id="{_text((row or {}).get("id", ""))}">{"".join(controls)}'
+        f'<button type="submit">{copy["save" if row else "add"]}</button></form>'
+    )
     if row:
-        form += '<button id="delete-record" data-id="' + row["id"] + '" type="button">Delete record</button>'
+        form += f'<button id="delete-record" data-id="{row["id"]}" type="button">{copy["delete"]}</button>'
+    fallback_title = copy["record"]
+    record_title = (row or {}).get(fields[0]["name"], fallback_title) if fields else fallback_title
     values = {"name": _text(spec["name"]), "description": _text(spec.get("description", "")), "table": table, "form": form,
-              "count": str(len(rows)), "query": _text(query), "record_title": _text((row or {}).get(fields[0]["name"], "Record") if fields else "Record")}
+              "count": str(len(rows)), "query": _text(query), "record_title": _text(record_title)}
+
     values.update({"param_" + name: _text(value) for name, value in params.items()})
     root = Path(root)
     values["content"] = render_template(root, route["file"], values)
@@ -612,6 +670,10 @@ def render_page(root, spec, store, route, params, query, *, render_template=_ren
 def make_server(root, database, *, host="127.0.0.1", port=0, revision="", render_template=_render_template):
     root = Path(root).resolve()
     spec = validate_spec(json.loads((root / "project.json").read_text(encoding="utf-8")))
+    language = _LayoutLanguage()
+    layout = root / "layout.html"
+    if layout.is_file():
+        language.feed(layout.read_text(encoding="utf-8"))
     typed = spec.get("format") == "vitruvius-app/v2"
     store = Collections(database, spec) if typed else Records(database)
     discovered = routes(root)
@@ -673,7 +735,7 @@ def make_server(root, database, *, host="127.0.0.1", port=0, revision="", render
                     match = route["regex"].match(path)
                     if match:
                         page = render_page(root, spec, store, route, dict(zip(route["names"], match.groups())), query,
-                                           render_template=render_template)
+                                           render_template=render_template, lang=language.language)
                         return self.send(200, page.encode("utf-8"), "text/html; charset=utf-8")
                 raise LookupError("Page not found")
             except LookupError as error:
