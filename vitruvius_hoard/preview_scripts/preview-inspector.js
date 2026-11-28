@@ -1077,7 +1077,7 @@
     const stalePins = new Map([...pinLayer.children].map(button => [button.dataset.pin, button]));
     const drawings = document.createDocumentFragment();
     if (active() && hovered?.isConnected && hovered !== draft && !selected.includes(hovered)) drawOutline(drawings, hovered, 'hover');
-    selected.forEach((element, index) => {
+    if (active()) selected.forEach((element, index) => {
       if (element !== draft && element.isConnected) {
         drawOutline(drawings, element, 'picked', selected.length > 1 ? index + 1 : 0, edits?.handleBounds());
       }
@@ -1340,6 +1340,8 @@
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', () => { schedule(); scheduleElements(); });
+  // Send the updated selection before the refresh acknowledges the rendered revision.
+  window.addEventListener('vitruvius:preview-updated', () => { if (selected.length) settle(); });
   window.__vitruviusInspector = {version: 1, core};
   try { const ancestor = location.ancestorOrigins && location.ancestorOrigins[0]; if (ancestor) { hostOrigin = ancestor; post('dock/inspector-ready', snapshot()); } } catch (_) { /* the host will say hello */ }
 })();

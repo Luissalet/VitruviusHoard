@@ -17,6 +17,8 @@ Picking an element in Comment mode brings the whole form into view and focuses t
 text is quoted in the interface theme alongside its original crop. The preview's edit confirmation and text
 editor use the same theme. The label above a selected element uses the same type and name as its card,
 with selectors and source paths available under Technical details. The label moves clear of the edit handles.
+Navigate keeps the selection in the inspector and clears its outline from the page.
+When an edit or undo updates the open preview, the selected cards reflect the newly displayed revision.
 The edit handles show the nearest whole pixel
 while applying and saving the precise value.
 History numbers each action in order and shows the source revision separately.
