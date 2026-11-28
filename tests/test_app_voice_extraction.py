@@ -288,6 +288,58 @@ def test_a_rejected_choice_can_be_named_by_the_forms_label():
     assert result["ambiguous"] == [{"field": "visit", "candidates": ["am"]}]
 
 
+def test_consecutive_rejections_exclude_both_choices_for_later_turns():
+    def untouched(*_, **__):
+        pytest.fail("Rejections and exhausted choices should be resolved locally")
+
+    options = {"version": DICTATION_VERSION, "schema": SCHEMA}
+    first = understand_form(untouched, untouched, {**options, "context": {
+        "draft": {"persona": "Marta", "franja": "10:00"}, "last_changed": "franja",
+    }}, "No a las diez").value
+    assert first["rejected_options"] == {"franja": ["10:00"]}
+    assert first["cleared"] == {"franja": "10:00"}
+
+    context = {"draft": {"persona": "Marta"}, "field": "franja", "rejected_options": first["rejected_options"]}
+    second = understand_form(untouched, untouched, {**options, "context": context}, "Tampoco a las doce").value
+    assert second["rejected_options"] == {"franja": ["10:00", "12:00"]}
+    assert second["fields"] == second["cleared"] == {}
+    assert second["ambiguous"] == [{"field": "franja", "candidates": []}]
+
+    repeated = understand_form(untouched, untouched, {**options, "context": {
+        **context, "rejected_options": second["rejected_options"],
+    }}, "A las diez").value
+    assert repeated["fields"] == {}
+    assert repeated["ambiguous"] == second["ambiguous"]
+
+
+@pytest.mark.parametrize(("last_changed", "current", "other", "alternatives"), [
+    ("franja", "10:00", "persona", [{"field": "franja", "candidates": ["12:00"]}]),
+    ("persona", "Marta", "franja", []),
+])
+def test_implicit_rejection_clears_the_last_changed_value(last_changed, current, other, alternatives):
+    def untouched(*_, **__):
+        pytest.fail("A rejection of the last changed value should be resolved locally")
+
+    result = understand_form(untouched, untouched, {"version": DICTATION_VERSION, "schema": SCHEMA, "context": {
+        "draft": {"persona": "Marta", "franja": "10:00"},
+        "field": other, "last_changed": last_changed,
+    }}, "No, esa no").value
+    assert result["cleared"] == {last_changed: current}
+    assert result["fields"] == {}
+    assert result["missing"] == [last_changed]
+    assert result["ambiguous"] == alternatives
+    assert [step["method"] for step in result["understanding_steps"]] == ["rules"]
+
+
+def test_a_service_cannot_put_back_a_previously_rejected_choice():
+    result = turn("Elijo la visita a las diez, a nombre de Marta", proposal({"persona": "Marta", "franja": "10:00"}),
+                  rules={"franja": {"value": "10:00", "quote": "a las diez", "validation": "valid"}},
+                  context={"rejected_options": {"franja": ["10:00"], "unrecognised": ["anything"]}})
+    assert "franja" not in result["fields"]
+    assert result["ambiguous"] == [{"field": "franja", "candidates": ["12:00"]}]
+    assert result["rejected_options"] == {"franja": ["10:00"]}
+
+
 @pytest.mark.asyncio
 async def test_preparing_once_reuses_descriptor_and_discards_a_stale_revision(monkeypatch):
     origin = "http://test.invalid"

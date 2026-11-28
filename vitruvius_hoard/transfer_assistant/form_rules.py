@@ -26,9 +26,11 @@ _CLOCK = re.compile(r"\b(?:(?:a las?\s+|at\s+)|(?=\d{1,2}:))"
                     r"(\d{1,2}|[^\W\d_]+)(?::(\d{2}))?\b(?![:\d]|\s+(?:y|and)\b)")
 _CLOCK_VALUE = re.compile(r"(?:[01]\d|2[0-3]):[0-5]\d")
 _REJECT_BEFORE = re.compile(r"\b(?:no(?:\s+(?:sea|sean|quiero|puede|puedo|pongas|ponga))?|"
-                            r"ni|not|nor|except(?: for)?)\s*$")
+                            r"tampoco|ni|not|neither|nor|except(?: for)?)\s*$")
 _REJECT_AFTER = re.compile(r"^\s*,?\s+(?:no|not)\b(?=\s*(?:$|[,.;!?]|\b(?:pero|but|gracias|thanks)\b))")
-_NEGATION = re.compile(r"\b(?:no|not|ni|nor|except)\b")
+_NEGATION = re.compile(r"\b(?:no|tampoco|not|neither|ni|nor|except)\b")
+_REJECT_LAST = re.compile(r"(?:(?:no[,\s]+)?(?:ese|esa|eso|este|esta|esto)\s+(?:no|tampoco)|"
+                          r"(?:no[,\s]+)?not that(?: one)?)")
 
 
 def fold(text):
@@ -129,11 +131,22 @@ def _clock_choices(text, options, *, correction=False):
 def form_rejections(text, properties, targets, context, draft):
     folded = fold(text).strip(" .!?")
     if not _NEGATION.search(folded):
-        return {}, {}, False
+        return {}, {}, {}, False
+    if _REJECT_LAST.fullmatch(folded):
+        key = context.get("last_changed")
+        spec = properties.get(key) if isinstance(key, str) else None
+        current = draft.get(key) if isinstance(key, str) else None
+        if (not isinstance(spec, dict) or spec.get("type") not in ("string", "number", "integer")
+                or type(current) not in (str, int, float) or current == ""):
+            return {}, {}, {}, True
+        choices = spec.get("enum")
+        if isinstance(choices, list):
+            return {key: [value for value in choices if value != current]}, {key: current}, {key: [current]}, True
+        return {key: None}, {key: current}, {}, True
     _, rejected_hours, _ = _clock_mentions(folded)
     labels = context.get("option_labels")
     labels = labels if isinstance(labels, dict) else {}
-    rejected, cleared = {}, {}
+    rejected, cleared, declined_options = {}, {}, {}
     for key, spec in properties.items():
         if not isinstance(spec, dict) or spec.get("type") not in ("string", "number", "integer"):
             continue
@@ -146,6 +159,7 @@ def form_rejections(text, properties, targets, context, draft):
                 str(value) in rejected_hours or _rejects_value(folded, value)
                 or isinstance(names.get(str(value)), str) and _rejects_value(folded, names[str(value)]))]
             if declined:
+                declined_options[key] = declined
                 is_current = current in declined
                 needs_choice = is_current or current in (None, "")
                 rejected[key] = [value for value in choices if value not in declined] if needs_choice else None
@@ -168,7 +182,7 @@ def form_rejections(text, properties, targets, context, draft):
         people = [key for key, spec in targets.items() if person_field(key, spec)]
         if len(people) == 1:
             rejected[people[0]] = None
-    return rejected, cleared, bool(name_only)
+    return rejected, cleared, declined_options, bool(name_only)
 
 
 def form_rules(text, targets, context, correction):

@@ -119,6 +119,23 @@ def _messages(targets, context, text):
     }, ensure_ascii=False, separators=(",", ":"))}]
 
 
+def _rejected_options(properties, context, declined):
+    previous = context.get("rejected_options")
+    previous = previous if isinstance(previous, dict) else {}
+    excluded = {}
+    for key in previous.keys() | declined.keys():
+        spec = properties.get(key)
+        choices = spec.get("enum") if isinstance(spec, dict) else None
+        if not isinstance(choices, list):
+            continue
+        saved = previous.get(key)
+        denied = (saved if isinstance(saved, list) else []) + declined.get(key, [])
+        values = [choice for choice in choices if choice in denied and _valid(choice, spec)]
+        if values:
+            excluded[key] = values
+    return excluded
+
+
 def _result(model, step):
     try:
         response = model.result()
@@ -189,17 +206,35 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
 
     def wire(value, rules_step, model_tried):
         steps = [rules_step, model_step] if model_tried else [rules_step]
-        return VoiceCall({**value, "cleared": cleared, "understanding_steps": steps}, ms=rules_step["ms"])
+        if rejected_options:
+            value = {**value, "ambiguous": [
+                {**row, "candidates": [choice for choice in row["candidates"]
+                                       if choice not in rejected_options.get(row.get("field"), ())]}
+                if isinstance(row.get("candidates"), list) else row
+                for row in value.get("ambiguous", [])
+            ]}
+        return VoiceCall({**value, "cleared": cleared, "rejected_options": rejected_options,
+                          "understanding_steps": steps}, ms=rules_step["ms"])
 
     started_local = monotonic()
-    rejected, cleared, name_only = form_rejections(text, properties, targets, context, draft)
+    rejected, cleared, declined, rejection_only = form_rejections(text, properties, targets, context, draft)
+    rejected_options = _rejected_options(properties, context, declined)
+    for key, denied in rejected_options.items():
+        if key not in targets or key in rejected:
+            continue
+        choices = [choice for choice in targets[key]["enum"] if choice not in denied]
+        if choices:
+            targets[key] = {**targets[key], "enum": choices}
+        else:
+            rejected[key] = []
     targets = {key: spec for key, spec in targets.items() if key not in rejected}
     draft = {key: value for key, value in draft.items() if key not in cleared}
     proposal, exclusive, alternatives = form_rules(text, targets, context, correction)
     alternatives.update({key: choices for key, choices in rejected.items() if choices is not None})
     if proposal or alternatives or rejected:
         seeded = {**empty, "ambiguous": [
-            {"field": key, "candidates": [option for option in choices if _valid(option, properties[key])]}
+            {"field": key, "candidates": [option for option in choices if option not in rejected_options.get(key, ())
+                                           and _valid(option, properties[key])]}
             for key, choices in alternatives.items()
         ]}
         local = _apply(seeded, proposal, targets, required, context, draft, text, {})
@@ -207,7 +242,9 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
     else:
         local, settled = empty, set()
     local_ms = (monotonic() - started_local) * 1000
-    if settled and (exclusive or name_only or settled >= targets.keys()):
+    if rejection_only or settled and (exclusive or settled >= targets.keys()):
+        if not settled:
+            local = _apply(local, {}, targets, required, context, draft, text, {})
         return wire(local, {"method": "rules", "ms": local_ms}, False)
     targets = {key: spec for key, spec in targets.items() if key not in settled}
     people = {key for key, spec in properties.items() if isinstance(spec, dict) and person_field(key, spec)}
@@ -218,6 +255,9 @@ def understand_form(submit, rules_call, options, text, *, correction=False):
         discarded = settled | {key for key in people & remote_fields.keys()
                                if not isinstance(remote_fields[key], dict)
                                or not name_candidate(remote_fields[key].get("value"))}
+        discarded.update(key for key in rejected_options.keys() & remote_fields.keys()
+                         if isinstance(remote_fields[key], dict)
+                         and remote_fields[key].get("value") in rejected_options[key])
         fields = {key: field for key, field in remote_fields.items() if key not in discarded}
         fields.update(local["fields"])
         ambiguous = [item for item in (remote.get("ambiguous") or [])

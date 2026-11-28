@@ -18,6 +18,9 @@ const COPY = {
     rules: "reglas", model: "modelo", superseded: "descartado",
     choices: "Opciones",
     ask: name => "¿Qué pongo en «" + name + "»?", ambiguous: name => "¿Puedes concretar «" + name + "»?",
+    cleared: name => "He vaciado «" + name + "».",
+    noChoices: name => "No quedan opciones disponibles para «" + name + "».",
+    otherTime: "¿Qué otra hora quieres?",
     changed: "He actualizado el formulario.", yes: "Sí", no: "No", review: "Revisa los datos.",
     confirm: "Si están bien, di «sí, confirmo» para enviarlo.",
     noChanges: "No he encontrado un cambio para el formulario. Di el nombre del campo y el valor.",
@@ -39,6 +42,9 @@ const COPY = {
     rules: "rules", model: "model", superseded: "discarded",
     choices: "Options",
     ask: name => "What should I enter for “" + name + "”?", ambiguous: name => "Can you clarify “" + name + "”?",
+    cleared: name => "I cleared “" + name + "”.",
+    noChoices: name => "There are no options left for “" + name + "”.",
+    otherTime: "What other time would you like?",
     changed: "I’ve updated the form.", yes: "Yes", no: "No", review: "Check the details.",
     confirm: "If they’re correct, say “I confirm” to submit.",
     noChanges: "I couldn’t find a change to make. Say the field name and its value.",
@@ -133,6 +139,7 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
   const label = name => schema.properties[name]?.title || name;
   const draft = () => Object.fromEntries(entries.map(([name, spec]) => [name, readField(controlsFor(form, name), spec)]));
   const validated = new Map();
+  const rejectedOptions = new Map();
   const dateFormat = new Intl.DateTimeFormat(locale, {dateStyle: "long", timeZone: "UTC"});
   const labelMatch = new Intl.Collator(locale, {usage: "search", sensitivity: "base"});
   let pending;
@@ -302,7 +309,8 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
         const signal = AbortSignal.any([active.signal, AbortSignal.timeout(12_000)]);
         understood = await request("form-understand", JSON.stringify({version: "cyrano.dictation/v0",
           language: locale, schema, text, vocabulary: aliases, correction,
-          context: {draft: values, option_labels, ...(field ? {field} : {})}}),
+          context: {draft: values, option_labels, field, last_changed: lastChanged,
+            rejected_options: Object.fromEntries(rejectedOptions)}}),
         "application/json", signal);
         if (understood.version !== "cyrano.dictation/v0" || understood.is_final !== true) {
           throw new Error("dictation_version");
@@ -328,15 +336,19 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
       let lastApplied;
       for (const [name, spec] of entries) {
         const controls = controlsFor(form, name);
+        if (!Object.is(readField(controls, spec), values[name])) continue;
+        const denied = understood.rejected_options?.[name];
+        if (Array.isArray(denied) && Array.isArray(spec.enum)) {
+          rejectedOptions.set(name, denied.filter(choice => spec.enum.includes(choice)));
+        }
         const rejected = understood.cleared?.[name];
-        if (rejected !== undefined && Object.is(readField(controls, spec), rejected)
-            && setField(controls, spec, undefined)) {
+        if (rejected !== undefined && Object.is(values[name], rejected) && setField(controls, spec, undefined)) {
           validated.delete(name);
           cleared.push(name);
           continue;
         }
         const result = understood.fields?.[name];
-        if (result?.validation !== "valid" || result.value === undefined
+        if (result?.validation !== "valid" || result.value === undefined || rejectedOptions.get(name)?.includes(result.value)
             || typeof result.quote !== "string" || !result.quote.trim()) continue;
         if (setField(controls, spec, result.value)) lastApplied = name;
         if (controls.length && result.value !== undefined && Object.is(readField(controls, spec), result.value)) {
@@ -352,14 +364,21 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
         || required.find(name => current[name] === undefined)
         || (correction && !cited.length && Array.isArray(schema.properties[field]?.enum) ? field : undefined);
       ready = !asked && cited.length ? JSON.stringify(current) : undefined;
-      const choices = asked && (ambiguous?.candidates ?? schema.properties[asked]?.enum);
-      const question = asked && [ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)),
-        choices?.length && copy.choices + ": " + choices.slice(0, 8).map(value => choiceLabel(asked, value)).join(", ") + ".",
-      ].filter(Boolean).join(" ");
+      const spec = schema.properties[asked];
+      const options = ambiguous?.candidates ?? spec?.enum;
+      const choices = Array.isArray(options) ? options.filter(value => !rejectedOptions.get(asked)?.includes(value)) : undefined;
+      const clock = spec?.format === "time" || (Array.isArray(spec?.enum)
+        && spec.enum.every(value => typeof value === "string" && /^\d{2}:\d{2}$/.test(value)));
+      const question = asked && (choices?.length === 0
+        ? [copy.noChoices(label(asked)), clock ? copy.otherTime : copy.ask(label(asked))].join(" ")
+        : [ambiguous ? copy.ambiguous(label(asked)) : copy.ask(label(asked)),
+          choices?.length && copy.choices + ": " + choices.slice(0, 8).map(value => choiceLabel(asked, value)).join(", ") + ".",
+        ].filter(Boolean).join(" "));
       const outcome = steps.find(step => step.method === "model")?.outcome;
       const modelNotice = outcome === "timeout" ? copy.extractionTimeout
         : outcome === "unavailable" ? copy.extractionUnavailable : "";
-      const message = [cited.length && (summarize(current) || copy.changed), modelNotice, question ||
+      const message = [cleared.map(name => copy.cleared(label(name))).join(" "),
+        cited.length && (summarize(current) || copy.changed), modelNotice, question ||
         (cited.length ? copy.review + (allowSubmit ? " " + copy.confirm : "") : copy.noChanges)];
       respond(turn, message.filter(Boolean).join(" "));
     } finally {
@@ -416,8 +435,25 @@ function mountFormAssistant(form, {schema, allowSubmit}) {
     voice.activate();
     void say(latest, latest.replay, true);
   });
+  function onFormEdit(event) {
+    const name = event.target.name;
+    if (!event.isTrusted || !Object.hasOwn(schema.properties, name) || !controlsFor(form, name).includes(event.target)) return;
+    rejectedOptions.delete(name);
+    validated.delete(name);
+    lastChanged = name;
+    ready = undefined;
+  }
+  function onFormReset() {
+    rejectedOptions.clear();
+    validated.clear();
+    lastChanged = asked = ready = undefined;
+  }
+  form.addEventListener("input", onFormEdit);
+  form.addEventListener("reset", onFormReset);
   function destroy() {
     window.removeEventListener("pagehide", destroy);
+    form.removeEventListener("input", onFormEdit);
+    form.removeEventListener("reset", onFormReset);
     microphone.destroy();
     pending?.abort();
     speech?.abort();
