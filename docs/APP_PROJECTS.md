@@ -4,7 +4,7 @@ The Applications page and `/api/app-projects` expose a complete source workspace
 
 Use `template: "static-page"` for a landing page, article or other standalone page. It starts with a single editable page, its layout and a stylesheet. Use `files` at creation to supply source you already have in one call. The work-board starter remains the default for projects that need a records interface.
 
-Pass `lang: "es"` or `lang: "en"` to set the language of the generated layout, pages and record controls. When completing partial source, the starter uses this language for missing files and keeps supplied files as written. Saved projects and exports keep their existing source.
+In **Create application**, **Application language** defaults to the current workbench language and can be changed before creating the project. The choice controls the generated layout, pages and record controls. When calling the API or agent tool, pass `lang: "es"` or `lang: "en"` to make the same choice. When completing partial source, the starter uses this language for missing files and keeps supplied files as written. Saved projects and exports keep their existing source.
 
 For a browser capture, static floor checks for colour and style skip stylesheet selectors whose required elements, IDs or classes are absent from the captured widths and page source. Selectors with interactive or more complex conditions retain their usual lint coverage. Source-only lint still checks the declared stylesheet.
 
